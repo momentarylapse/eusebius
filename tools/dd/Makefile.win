@@ -1,0 +1,29 @@
+# Project: dd
+# Makefile created by Dev-C++ 4.9.8.7
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = dd.o $(RES)
+LINKOBJ  = dd.o $(RES)
+LIBS =  -L"D:/cpp/Dev-Cpp/lib" 
+INCS =  -I"D:/cpp/Dev-Cpp/include" 
+CXXINCS =  -I"D:/cpp/Dev-Cpp/include/c++"  -I"D:/cpp/Dev-Cpp/include/c++/mingw32"  -I"D:/cpp/Dev-Cpp/include/c++/backward"  -I"D:/cpp/Dev-Cpp/include" 
+BIN  = dd.exe
+CXXFLAGS = $(CXXINCS)  -fsave-memoized -fexpensive-optimizations -O3
+CFLAGS = $(INCS)  -fsave-memoized -fexpensive-optimizations -O3
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before dd.exe all-after
+
+
+clean: clean-custom
+	rm -f $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CPP) $(LINKOBJ) -o "dd.exe" $(LIBS)
+
+dd.o: dd.cpp
+	$(CPP) -c dd.cpp -o dd.o $(CXXFLAGS)

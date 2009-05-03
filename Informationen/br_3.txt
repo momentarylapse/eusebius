@@ -1,0 +1,271 @@
+Parameter:
+	-RealMode
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + di], 0xc1                            // 80.01.c1
+adc.b [bp + di + 0xff.fe], al                    // 10.83.fe.ff
+????? -                          unbekannt       ff
+????? -                          unbekannt       3f
+add.b [bx + si], al                              // 00.00
+add.b 96: -??- , bl                              // 00.5a.35
+xor.b [bx + di], al                              // 30.01
+add.b dh, bh                                     // 00.fe
+????? -                          unbekannt       ff
+inc [di]                                         // ff.05
+????? -                          unbekannt       fe
+????? -                          unbekannt       ff
+????? -                          unbekannt       ff
+cgq/cwd                                          // 99
+xor ax, 0x01.30                                  // 35.30.01
+inc ax                                           // 40
+mov.b al, 0x0f                                   // b0.0f
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [di + 0xaa], dl                            // 00.55.aa
+
+
+
+
+
+ #                       # 
+###                     ###
+ #     natural death     # 
+ #                       # 
+ #        _              # 
+       * / b   *^| _       
+______ |/ ______ |/ * _____

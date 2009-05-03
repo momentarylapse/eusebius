@@ -1,0 +1,238 @@
+Parameter:
+	-RealMode
+jmp.b 0x48                                       // eb.48
+nop                                              // 90
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bp + di], al                              // 00.03
+add.b bh, bh                                     // 02.ff
+add.b [bx + si], al                              // 00.00
+and.b 94: -??- , dl                              // 20.50.2f
+rol.b [bx + si], 0x00                            // c0.00.00
+add.b bh, dl                                     // 02.fa
+or.b dl, 0x80                                    // 80.ca.80
+jmp 0x00.00:0x7c.53                              // ea.53.7c.00.00
+xor ax, ax                                       // 31.c0
+mov ds, ax                                       // 8e.d8
+mov ss, ax                                       // 8e.d0
+mov sp, 0x20.00                                  // bc.00.20
+sti                                              // fb
+mov al, [0x7c.40]                                // a0.40.7c
+cmp.b al, 0xff                                   // 3c.ff
+jz.b 0x02                                        // 74.02
+mov.b dl, al                                     // 88.c2
+push dx                                          // 52
+mov si, 0x7d.7b                                  // be.7b.7d
+call 0x01.36                                     // e8.36.01
+test.b dl, 0x80                                  // f6.c2.80
+jz.b 0x56                                        // 74.56
+mov.b ah, 0x41                                   // b4.41
+mov bx, 0x55.aa                                  // bb.aa.55
+int 0x13                                         // cd.13
+pop dx                                           // 5a
+push dx                                          // 52
+jb.b 0x4b                                        // 72.4b
+cmp bx, 0xaa.55                                  // 81.fb.55.aa
+jnz.b 0x45                                       // 75.45
+mov al, [0x7c.41]                                // a0.41.7c
+test.b al, al                                    // 84.c0
+js.b 0x3e                                        // 78.3e
+jnz.b 0x05                                       // 75.05
+and.b cx, 0x01                                   // 83.e1.01
+jz.b 0x37                                        // 74.37
+mov ecx, [si + 0x10]                             // 66.8b.4c.10
+mov si, 0x7c.05                                  // be.05.7c
+mov.b [si + 0xff], 0x01                          // c6.44.ff.01
+mov ebx, [0x7c.44]                               // 66.8b.1e.44.7c
+mov [si], 0x00.10                                // c7.04.10.00
+mov [si + 0x02], 0x00.01                         // c7.44.02.01.00
+mov [si + 0x08], ebx                             // 66.89.5c.08
+mov [si + 0x06], 0x70.00                         // c7.44.06.00.70
+xor eax, eax                                     // 66.31.c0
+mov [si + 0x04], ax                              // 89.44.04
+mov [si + 0x0c], eax                             // 66.89.44.0c
+mov.b ah, 0x42                                   // b4.42
+int 0x13                                         // cd.13
+jb.b 0x05                                        // 72.05
+mov bx, 0x70.00                                  // bb.00.70
+jmp.b 0x7d                                       // eb.7d
+mov.b ah, 0x08                                   // b4.08
+int 0x13                                         // cd.13
+jnb.b 0x0a                                       // 73.0a
+test.b dl, 0x80                                  // f6.c2.80
+jz 0x00.ee                                       // 0f.84.ee.00
+jmp 0x00.8d                                      // e9.8d.00
+mov si, 0x7c.05                                  // be.05.7c
+mov.b [si + 0xff], 0x00                          // c6.44.ff.00
+xor eax, eax                                     // 66.31.c0
+mov.b al, dh                                     // 88.f0
+inc ax                                           // 40
+mov [si + 0x04], eax                             // 66.89.44.04
+xor dx, dx                                       // 31.d2
+mov.b dl, cl                                     // 88.ca
+shl dx, 0x02                                     // c1.e2.02
+mov.b al, ch                                     // 88.e8
+mov.b ah, dh                                     // 88.f4
+inc ax                                           // 40
+mov [si + 0x08], ax                              // 89.44.08
+xor ax, ax                                       // 31.c0
+mov.b al, dl                                     // 88.d0
+shr.b al, 0x02                                   // c0.e8.02
+mov [si], eax                                    // 66.89.04
+mov eax, [0x31.66.7c.44]                         // 66.a1.44.7c.66.31
+????? -                          unbekannt       d2
+div eax, [si]                                    // 66.f7.34
+mov.b [si + 0x0a], dl                            // 88.54.0a
+xor edx, edx                                     // 66.31.d2
+div eax, [si + 0x04]                             // 66.f7.74.04
+mov.b [si + 0x0b], dl                            // 88.54.0b
+mov [si + 0x0c], ax                              // 89.44.0c
+cmp ax, [si + 0x08]                              // 3b.44.08
+jnl.b 0x3c                                       // 7d.3c
+mov.b dl, [si + 0x0d]                            // 8a.54.0d
+shl.b dl, 0x06                                   // c0.e2.06
+mov.b cl, [si + 0x0a]                            // 8a.4c.0a
+inc.b cl                                         // fe.c1
+or.b cl, dl                                      // 08.d1
+mov.b ch, [si + 0x0c]                            // 8a.6c.0c
+pop dx                                           // 5a
+mov.b dh, [si + 0x0b]                            // 8a.74.0b
+mov bx, 0x70.00                                  // bb.00.70
+mov es, bx                                       // 8e.c3
+xor bx, bx                                       // 31.db
+mov ax, 0x02.01                                  // b8.01.02
+int 0x13                                         // cd.13
+jb.b 0x2a                                        // 72.2a
+mov bx, es                                       // 8c.c3
+mov es, [0x7c.48]                                // 8e.06.48.7c
+pusha                                            // 60
+push ds                                          // 1e
+mov cx, 0x01.00                                  // b9.00.01
+mov ds, bx                                       // 8e.db
+xor si, si                                       // 31.f6
+xor di, di                                       // 31.ff
+cld                                              // fc
+rep                                              // f3
+????? -                          unbekannt       a5
+pop ds                                           // 1f
+popa                                             // 61
+jmp [0x7c.42]                                    // ff.26.42.7c
+mov si, 0x7d.81                                  // be.81.7d
+call 0x00.40                                     // e8.40.00
+jmp.b 0x0e                                       // eb.0e
+mov si, 0x7d.86                                  // be.86.7d
+call 0x00.38                                     // e8.38.00
+jmp.b 0x06                                       // eb.06
+mov si, 0x7d.90                                  // be.90.7d
+call 0x00.30                                     // e8.30.00
+mov si, 0x7d.95                                  // be.95.7d
+call 0x00.2a                                     // e8.2a.00
+jmp.b 0xfe                                       // eb.fe
+inc di                                           // 47
+push dx                                          // 52
+push bp                                          // 55
+inc dx                                           // 42
+and.b [bx + si], al                              // 20.00
+inc di                                           // 47
+????? -                          unbekannt       65.6f
+????? -                          unbekannt       6d
+add.b 94: -??- , cl                              // 00.48.61
+jb.b 0x64                                        // 72.64
+and.b [si + 0x69], al                            // 20.44.69
+jnb.b 0x6b                                       // 73.6b
+add.b 96: -??- , dl                              // 00.52.65
+popa                                             // 61
+FS: add.b [bx + si], ah                          // 64.00.20
+inc bp                                           // 45
+jb.b 0x72                                        // 72.72
+????? -                          unbekannt       6f
+jb.b 0x00                                        // 72.00
+mov bx, 0x00.01                                  // bb.01.00
+mov.b ah, 0x0e                                   // b4.0e
+int 0x10                                         // cd.10
+????? -                          unbekannt       ac
+cmp.b al, 0x00                                   // 3c.00
+jnz.b 0xf4                                       // 75.f4
+ret                                              // c3
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [bx + si], al                              // 00.00
+add.b [di + 0xaa], dl                            // 00.55.aa
+
+
+
+
+
+ #                       # 
+###                     ###
+ #     natural death     # 
+ #                       # 
+ #        _              # 
+       * / b   *^| _       
+______ |/ ______ |/ * _____

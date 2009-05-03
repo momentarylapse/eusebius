@@ -1,0 +1,30 @@
+# Project: makemfs
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = makemfs.o $(RES)
+LINKOBJ  = makemfs.o $(RES)
+LIBS =  -L"D:/Programme/cpp/Dev-Cpp/lib"  
+INCS =  -I"D:/Programme/cpp/Dev-Cpp/include" 
+CXXINCS =  -I"D:/Programme/cpp/Dev-Cpp/include" 
+BIN  = makemfs.exe
+CXXFLAGS = $(CXXINCS)   -fsave-memoized -fexpensive-optimizations -O3
+CFLAGS = $(INCS)   -fsave-memoized -fexpensive-optimizations -O3
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before makemfs.exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CPP) $(LINKOBJ) -o "makemfs.exe" $(LIBS)
+
+makemfs.o: makemfs.cpp
+	$(CPP) -c makemfs.cpp -o makemfs.o $(CXXFLAGS)

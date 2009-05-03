@@ -1,0 +1,39 @@
+# Project: dasm
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = dasm.o disasm.o file.o msg.o $(RES)
+LINKOBJ  = dasm.o disasm.o file.o msg.o $(RES)
+LIBS =  -L"D:/Programme/cpp/Dev-Cpp/lib"  -lwinmm -lcomctl32 -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lodbc32 -lodbccp32  
+INCS =  -I"D:/Programme/cpp/Dev-Cpp/include" 
+CXXINCS =  -I"D:/Programme/cpp/Dev-Cpp/include" 
+BIN  = dasm.exe
+CXXFLAGS = $(CXXINCS)   -fexpensive-optimizations -O1
+CFLAGS = $(INCS)   -fexpensive-optimizations -O1
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before dasm.exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CPP) $(LINKOBJ) -o "dasm.exe" $(LIBS)
+
+dasm.o: dasm.cpp
+	$(CPP) -c dasm.cpp -o dasm.o $(CXXFLAGS)
+
+disasm.o: disasm.cpp
+	$(CPP) -c disasm.cpp -o disasm.o $(CXXFLAGS)
+
+file.o: file.cpp
+	$(CPP) -c file.cpp -o file.o $(CXXFLAGS)
+
+msg.o: msg.cpp
+	$(CPP) -c msg.cpp -o msg.o $(CXXFLAGS)

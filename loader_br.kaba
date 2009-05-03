@@ -1,0 +1,98 @@
+/*----------------------------------------------------------------------------*\
+| Eusebius - Boot Loader                                                       |
+| -> Boot-Loader fuer die Root-Partition                                       |
+|   -> laedt das Image des Init-Programmes von der aktuellen Partition         |
+|      in den Speicher und fuehrt es aus                                       |
+|                                                                              |
+| zuletzt geaendert: 2008.09.14 (c) by MichiSoft TM                            |
+\*----------------------------------------------------------------------------*/
+
+
+#os
+#initial_realmode
+#code_origin 0x7c00
+
+void main()
+{
+	asm{
+		// wir befinden uns noch im 16bit RealMode
+		org 0x7c00
+		bits_16
+		// Debug
+		mov.b al, 'a'
+		mov.b ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+
+	// Image laden
+		_reset_drive:
+			mov.b dl, 0x00
+			mov.b ah, 0x00
+			int 0x13
+			or.b ah, ah
+		//jnz.b _reset_drive
+		xor ax, ax
+		mov es, ax
+		// Ziel des Images
+		mov dword ebx, 0x00007e00
+		mov.b ah, 0x02 // "ReadSector"
+		mov.b al, [_read_size] // Groesse: 1Sektor = 512b
+		mov cx, [_read_cx]
+		mov dx, [_read_dx]
+		int 0x13
+		or.b ah, ah
+		//jnz.b _reset_drive
+		// Debug
+		mov.b al, [0x7e00]
+		mov.b ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		mov.b al, [0x7e01]
+		mov.b ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		mov.b al, [0x7e02]
+		mov.b ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+
+		// wichtige Daten speichern
+		mov ax, [_partition_no]
+		mov [0x5000], ax
+		xor ax, ax
+		mov [0x5002], ax
+		mov ax, [_read_cx]
+		add ax, [_read_size]
+		mov [0x5004], ax
+		mov ax, [_read_dx]
+		mov [0x5006], ax
+		mov ax, [_read_size_kernel]
+		mov [0x5008], ax
+		xor ax, ax
+		mov [0x500a], ax
+
+
+
+		// das Image ausfuehren
+		jmp 0x00:0x7e00
+
+
+
+//--------------------------------------------------------------
+// Daten
+		// Position des zu ladenden Images      (abhaengig von der Festplatte/Partitionierung!!!)
+			//   (Partition-Beginn: h-s-c 01-01-00)
+		_read_cx:
+		dw 0x0006 // Cylinder 0, Sector 6
+		_read_dx:
+		dw 0x0180 // Head 1 ,Disk0
+		_read_size:
+		dw 0x0004 // 4 Sektoren = 2kb
+		_read_size_kernel:
+		dw 0x0040 // 64 Sektoren = 32kb
+		// auf welcher Partition befinden wir uns?
+		_partition_no:
+		dw 0x0000 // 1. primaere Partition!
+
+	}
+}
