@@ -1,7 +1,7 @@
 #include <stdlib.h>
-#include "script.h"
-#include "dasm.h"
-#include "msg.h"
+#include "script/script.h"
+//#include "dasm.h"
+#include "file/msg.h"
 
 CScript *script;
 
@@ -21,21 +21,26 @@ int main(int narg,char *arg[])
 		msg_write("    s   Show");
 		msg_write("    d   DisAssemble");
 	}else if (narg>=2){
+		ScriptInit();
 		if ((narg>2)&&(arg[1][0]=='-')){
-			//msg->Write("Parameter:");
+			//msg_write("Parameter:");
 			for (int i=1;i<strlen(arg[1]);i++){
 				if (arg[1][i]=='e'){
 					ParamExecute=true;
-					//msg->Write("	-Execute");
+					//msg_write("	-Execute");
 				}else if (arg[1][i]=='o'){
 					ParamBinary=true;
-					//msg->Write("	-Binary");
+					//msg_write("	-Binary");
+					if (narg < 4){
+						msg_error("-o benoetigt die Angabe einer Ausgabedatei!");
+						return 1;
+					}
 				}else if (arg[1][i]=='s'){
 					ParamShow=true;
-					//msg->Write("	-Show");
+					//msg_write("	-Show");
 				}else if (arg[1][i]=='d'){
 					ParamDasm=true;
-					//msg->Write("	-DisAsm");
+					//msg_write("	-DisAsm");
 				}else{
 					msg_write("	-UNBEKANNTER PARAMETER!");
 					return 1;
@@ -46,7 +51,7 @@ int main(int narg,char *arg[])
 			msg_end();
 			return 0;
 		}
-		//msg->Write(arg[2]);
+		msg_write(arg[2]);
 		script=new CScript(arg[2]);
 		if (script->Error){
 			msg_end();
@@ -55,14 +60,12 @@ int main(int narg,char *arg[])
 		if (ParamShow)
 			script->pre_script->Show();
 		if (ParamDasm)
-			msg_write(GetAsm(script->Opcode,script->OpcodeSize));
+			msg_write(Opcode2Asm(script->Opcode,script->OpcodeSize));
 		if (ParamBinary){
-			CFile *f=new CFile();
-			f->Create(arg[3]);
+			CFile *f = FileCreate(arg[3]);
 			f->SetBinaryMode(true);
 			f->WriteStr(script->Opcode,script->OpcodeSize);
-			f->Close();
-			delete(f);
+			FileClose(f);
 		}
 		if (ParamExecute)
 			script->Execute();

@@ -4,37 +4,35 @@
 |                                                                              |
 | vital properties:                                                            |
 |                                                                              |
-| last updated: 2007.03.19 (c) by MichiSoft TM                                 |
+| last updated: 2008.10.26 (c) by MichiSoft TM                                 |
 \*----------------------------------------------------------------------------*/
 #if !defined(SCRIPT_DATA_H__INCLUDED_)
 #define SCRIPT_DATA_H__INCLUDED_
 
 
 
-#define SCRIPT_MAX_FILE_SIZE		2097152
-#define SCRIPT_MAX_EXPRESSIONS		65536
-#define SCRIPT_MAX_INCLUDES			64
-#define SCRIPT_MAX_DEFINES			1024
-#define SCRIPT_MAX_DEFINE_DESTS		64
-#define SCRIPT_MAX_RULES			32
-#define SCRIPT_MAX_TYPES			256		// number of possible types
-#define SCRIPT_MAX_STRUCTS			128
-#define SCRIPT_MAX_STRUCT_ELEMENTS	32
-#define SCRIPT_MAX_NAME				32		// variables' name length (+1)
-#define SCRIPT_MAX_VARS				128		// number of variables per function (global=separate function)
-#define SCRIPT_MAX_CONSTANTS		2048	// number of constants per file
-#define SCRIPT_MAX_FUNCS			256		// own functions
-#define SCRIPT_MAX_COMMAND_BLOCKS	256		// obsolete....
-#define SCRIPT_MAX_BLOCK_COMMANDS	256		// commands per block (not including subcommands)
-#define SCRIPT_MAX_PARAMS			16		// number of possible parameters per function/command
-#define SCRIPT_MAX_COMMANDS			4096	// complete number of commands per file (including subcommands)
-#define SCRIPT_MAX_OPCODE			(2*65536)	// max. amount of opcode
-#define SCRIPT_STACK_SIZE			8192	// max. amount of stack memory
-#define SCRIPT_MAX_ASMS				256		// number of asm{...} blocks
+#define SCRIPT_MAX_FILE_SIZE			2097152
+#define SCRIPT_MAX_LINES				16384
+#define SCRIPT_MAX_LINE_SIZE			1024
+#define SCRIPT_MAX_EXPRESSIONS			65536
+#define SCRIPT_MAX_EXPRESSIONS_PER_LINE	1024
+#define SCRIPT_MAX_DEFINE_DESTS			64
+#define SCRIPT_MAX_DEFINE_RECURSIONS	128
+#define SCRIPT_MAX_NAME					42		// variables' name length (+1)
+#define SCRIPT_MAX_PARAMS				16		// number of possible parameters per function/command
+#define SCRIPT_MAX_OPCODE				(2*65536)	// max. amount of opcode
+#define SCRIPT_MAX_THREAD_OPCODE		1024
+#define SCRIPT_DEFAULT_STACK_SIZE		32768	// max. amount of stack memory
+#define SCRIPT_MAX_ASMS					256		// number of asm{...} blocks
+extern int ScriptStackSize;
 
 #define PointerSize (sizeof(char*))
 
-extern char ScriptDataVersion[128];
+
+//#define mem_align(x)	((x) + (4 - (x) % 4) % 4)
+#define mem_align(x)	((((x) + 3) / 4 ) * 4)
+
+extern char ScriptDataVersion[];
 
 
 //--------------------------------------------------------------------------------------------------
@@ -42,26 +40,27 @@ extern char ScriptDataVersion[128];
 
 struct sType{
 	char Name[SCRIPT_MAX_NAME];
-	unsigned int Size; // complete size of type
-	unsigned int ArrayLength;
-	bool IsPointer;
+	int Size; // complete size of type
+	int ArrayLength;
+	bool IsPointer, IsSilent; // pointer silent (&)
 	sType *SubType;
+	void *Owner;
 };
-extern int NumPreTypes;
-extern sType TypeUnknown;
-extern sType TypeVoid;
-extern sType TypePointer;
-extern sType TypeStruct;
-extern sType TypeBool;
-extern sType TypeInt;
-extern sType TypeFloat;
-extern sType TypeString;
+extern std::vector<sType*> PreType;
+extern sType *TypeUnknown;
+extern sType *TypeVoid;
+extern sType *TypePointer;
+extern sType *TypeStruct;
+extern sType *TypeBool;
+extern sType *TypeInt;
+extern sType *TypeFloat;
+extern sType *TypeChar;
+extern sType *TypeString;
 
-extern sType TypeVector;
-extern sType TypeRect;
-extern sType TypeColor;
-extern sType TypeQuaternion;
-extern sType *PreType[SCRIPT_MAX_TYPES];
+extern sType *TypeVector;
+extern sType *TypeRect;
+extern sType *TypeColor;
+extern sType *TypeQuaternion;
 
 
 
@@ -71,18 +70,18 @@ extern sType *PreType[SCRIPT_MAX_TYPES];
 
 struct sPrimitiveOperator{
 	char Name[4];
-	unsigned int ID;
-	// order of operators ("Punkt vor Strich")
-	unsigned char Level; // 1=Zuweisung, 2=bool'sches, 3="Strich", 4="Punkt"
+	int ID;
+	bool LeftModifiable;
+	unsigned char Level; // order of operators ("Punkt vor Strich")
 };
 extern int NumPrimitiveOperators;
 extern sPrimitiveOperator PrimitiveOperator[];
 struct sPreOperator{
-	unsigned int ID,PrimitiveID;
-	sType *ReturnType,*ParamType1,*ParamType2;
+	int PrimitiveID;
+	sType *ReturnType, *ParamType1, *ParamType2;
 };
-extern int NumPreOperators;
-extern sPreOperator PreOperator[];
+extern std::vector<sPreOperator> PreOperator;
+
 
 
 enum{
@@ -180,8 +179,7 @@ enum{
 	OperatorVectorSubtractS,
 	OperatorVectorMultiplyS,
 	OperatorVectorDivideS,
-	OperatorVectorNegate,
-	NUM_PRE_OPERATORS
+	OperatorVectorNegate
 };
 
 
@@ -190,17 +188,22 @@ enum{
 // structures
 
 struct sStructElement{
-	char *Name;
+	char Name[SCRIPT_MAX_NAME];
 	sType *Type;
-	unsigned int Shift;
+	int Offset;
+};
+struct sStructFunction{
+	char Name[SCRIPT_MAX_NAME];
+	int cmd; // PreCommand index
+	// _func_(x)  ->  p.func(x)
 };
 struct sStruct{
 	sType *RootType;
-	int NumElements;
-	sStructElement Element[SCRIPT_MAX_STRUCT_ELEMENTS];
+	std::vector<sStructElement> Element;
+	std::vector<sStructFunction> Function;
+	void *Owner;
 };
-extern int NumPreStructs;
-extern sStruct PreStruct[];
+extern std::vector<sStruct> PreStruct;
 
 
 
@@ -211,10 +214,9 @@ extern sStruct PreStruct[];
 struct sPreConstant{
 	char *Name;
 	sType *Type;
-	char *Value;
+	void *Value;
 };
-extern int NumPreConstants;
-extern sPreConstant PreConstant[];
+extern std::vector<sPreConstant> PreConstant;
 
 
 
@@ -223,11 +225,10 @@ extern sPreConstant PreConstant[];
 //--------------------------------------------------------------------------------------------------
 // pre defined global variables
 struct sPreGlobalVar{
-	char Name[SCRIPT_MAX_NAME];
-	sType *type;
+	char *Name;
+	sType *Type;
 };
-extern int NumPreGlobalVars;
-extern sPreGlobalVar PreGlobalVar[];
+extern std::vector<sPreGlobalVar> PreGlobalVar;
 
 
 
@@ -237,36 +238,37 @@ extern sPreGlobalVar PreGlobalVar[];
 
 struct sPreExternalVar{
 	char *Name;
-	unsigned int Nr;
 	sType *Type;
-	char *Pointer;
+	void *Pointer;
 };
-extern int NumPreExternalVars;
-extern sPreExternalVar PreExternalVar[];
+extern std::vector<sPreExternalVar> PreExternalVar;
+extern int NumTruePreExternalVars;
 
+//--------------------------------------------------------------------------------------------------
+// semi external variables (in the surrounding program...but has to be defined "extern")
 
 
 
 //--------------------------------------------------------------------------------------------------
 // commands
 
-struct sPCParam{
-	sType *Type;
+struct sPreCommandParam{
 	char *Name;
+	//char Name[SCRIPT_MAX_NAME];
+	sType *Type;
 };
 struct sPreCommand{
 	char *Name;
-	unsigned int Nr;
-	char *Instance,*Func;
+	//char Name[SCRIPT_MAX_NAME];
+	void *Instance, *Func;
 	sType *ReturnType;
-	unsigned char NumParams;
-	sPCParam Param[SCRIPT_MAX_PARAMS];
+	std::vector<sPreCommandParam> Param;
 };
-extern int NumPreCommands;
-extern sPreCommand PreCommand[];
+extern std::vector<sPreCommand> PreCommand;
 
 
-extern char *f_cp;
+extern void *f_cp;
+extern void *f_class;
 
 enum{
 	// structural commands
@@ -275,13 +277,17 @@ enum{
 	CommandIfElse,
 	CommandWhile,
 	CommandFor,
+	CommandBreak,
+	CommandContinue,
+	CommandSizeof,
 	CommandWait,
 	CommandWaitRT,
 	CommandWaitOneFrame,
-	CommandIntFromFloat,
-	CommandFloatFromInt,
-	CommandCharFromInt,
-	CommandIntFromChar,
+	CommandFloatToInt,
+	CommandIntToFloat,
+	CommandIntToChar,
+	CommandCharToInt,
+	CommandPointerToBool,
 	CommandVectorSet,
 	CommandRectSet,
 	CommandColorSet,
@@ -298,18 +304,21 @@ enum{
 
 typedef void *t_cast_func(void*);
 struct sTypeCast{
+	int Penalty;
 	sType *Source,*Dest;
 	int Command;
 	t_cast_func *Func;
 };
-extern int NumTypeCasts;
-extern sTypeCast TypeCast[];
+extern std::vector<sTypeCast> TypeCast;
 
 
 typedef void t_func();
 
-extern void ScriptLinkExternalData();
-extern void ScriptLinkDynamicExternalData();
+extern void ScriptInit();
+extern void ScriptResetSemiExternalVars();
+extern void ScriptLinkSemiExternalVar(char *name, void *pointer);
+extern void ScriptAddPreGlobalVar(char *name, sType *type);
+extern sType *ScriptGetPreType(char *name);
 
 
 
@@ -330,6 +339,15 @@ enum{
 	ScriptLocationRenderPost2,
 	ScriptLocationGetInputPrae,
 	ScriptLocationGetInputPost,
+	ScriptLocationNetworkSend,
+	ScriptLocationNetworkRecieve,
+	ScriptLocationNetworkAddClient,
+	ScriptLocationNetworkRemoveClient,
+	ScriptLocationOnKillObject,
+	ScriptLocationOnCollision,
+	/*ScriptLocationOnKeyDown,
+	ScriptLocationOnKeyUp,
+	ScriptLocationOnKey,*/
 	NumScriptLocations
 };
 

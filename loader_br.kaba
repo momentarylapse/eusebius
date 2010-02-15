@@ -13,12 +13,11 @@
 #code_origin 0x7c00
 
 void main()
-{
 	asm{
 		// wir befinden uns noch im 16bit RealMode
 		org 0x7c00
 		bits_16
-		// Debug
+		// Debug
 		mov.b al, 'a'
 		mov.b ah, 0x0e
 		mov bx, 0x0000
@@ -42,7 +41,7 @@ void main()
 		int 0x13
 		or.b ah, ah
 		//jnz.b _reset_drive
-		// Debug
+		// Debug
 		mov.b al, [0x7e00]
 		mov.b ah, 0x0e
 		mov bx, 0x0000
@@ -95,4 +94,3 @@ void main()
 		dw 0x0000 // 1. primaere Partition!
 
 	}
-}

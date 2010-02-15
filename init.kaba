@@ -13,9 +13,10 @@
 #initial_realmode
 #code_origin 0x7e00
 
-void main(){	//-------------------------------------------------------------	// RealMode!!!
-	asm{		bits_16
-		org 0x7e00				// Debug
+void main()	//-------------------------------------------------------------	// RealMode!!!
+	asm{
+		bits_16
+		org 0x7e00				// Debug
 		mov.b al, 'k'
 		mov.b ah, 0x0e
 		mov bx, 0x0000
@@ -115,7 +116,7 @@ void main(){	//-------------------------------------------------------------	
 		mov eax, _gdtr
 		mov [0x5114], eax
 		xor eax, eax
-	}
+	}
 
 
 	asm{
@@ -169,5 +170,4 @@ void main(){	//-------------------------------------------------------------	
 		dw 0x47 // 5 descriptors
 		dd _gdt
 	}
-}
 

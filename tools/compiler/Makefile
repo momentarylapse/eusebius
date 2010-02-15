@@ -1,28 +1,26 @@
-all : compiler
+# Project: Compiler
 
-compiler : compiler.cpp dasm.o file.o msg.o script.o script_data.o nix.o hui.o
-	g++ compiler.cpp dasm.o file.o msg.o script.o script_data.o nix.o hui.o -o compiler `pkg-config --cflags --libs gtk+-2.0` -I/opt/gnome/include -lGL -lgdk -lgtk -lGLU -L/usr/X11R6/lib -lXxf86vm
+BIN  = compiler
+MAINSOURCE = compiler.cpp
+MODULES = temp/file.a temp/hui.a temp/nix.a temp/script.a
+OBJ = temp/file.o temp/msg.o \
+temp/hui.o temp/hui_menu.o temp/hui_window.o \
+temp/nix.o temp/nix_types.o temp/nix_textures.o temp/nix_net.o temp/nix_sound.o \
+temp/script.o temp/script_data.o temp/dasm.o
+CPP  = g++
+CXXFLAGS =  `pkg-config --cflags gtk+-2.0` -Wno-write-strings -O1
+CXXFLAGSLINKING =  `pkg-config --cflags --libs gtk+-2.0` -lGL -lGLU -lXxf86vm -Wno-write-strings -O1
 
-nix.o : nix.cpp nix.h msg.o
-	g++ -c nix.cpp `pkg-config --cflags --libs gtk+-2.0` -I/opt/gnome/include -lGL -lgdk -lgtk -lGLU -L/usr/X11R6/lib -lXxf86vm
+all : $(BIN)
 
-hui.o : hui.cpp hui.h msg.o
-	g++ -c hui.cpp `pkg-config --cflags --libs gtk+-2.0` -I/opt/gnome/include -lGL -lgdk -lgtk -lGLU -L/usr/X11R6/lib -lXxf86vm
+$(BIN) : $(MAINSOURCE) $(OBJ) $(MODULES)
+	$(CPP) $(OBJ) $(MODULES) $(MAINSOURCE) -o $(BIN) $(CXXFLAGSLINKING)
 
-file.o : file.cpp file.h
-	g++ -c file.cpp
-
-msg.o : msg.cpp msg.h file.o
-	g++ -c msg.cpp
-
-dasm.o : dasm.cpp dasm.h
-	g++ -c dasm.cpp
-
-script.o : script.cpp script.h script_data.h msg.o dasm.o
-	g++ -c script.cpp
-
-script_data.o : script_data.cpp script_data.h script.h msg.o
-	g++ -c script_data.cpp `pkg-config --cflags --libs gtk+-2.0` -I/opt/gnome/include -lGL -lgdk -lgtk -lGLU -L/usr/X11R6/lib -lXxf86vm
+include file/file.mk
+include hui/hui.mk
+include nix/nix.mk
+include script/script.mk
 
 clean :
-	\rm *.o *~ compiler
+	#rm -f $(OBJ) $(BIN)
+	rm -f temp/* $(BIN)

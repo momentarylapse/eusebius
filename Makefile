@@ -1,4 +1,5 @@
 KABA  = ./tools/compiler/compiler
+#KABA  = ./compiler
 MAKEMFS = ./tools/makemfs/makemfs
 
 all : loader_br init kernel image.mfs hd_image _bochs_
