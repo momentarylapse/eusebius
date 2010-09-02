@@ -11,6 +11,7 @@
 #os
 #initial_realmode
 #code_origin 0x7c00
+//#disasm
 
 void main()
 	asm{

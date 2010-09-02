@@ -1,14 +1,18 @@
 #include <vector>
 #include <string>
 #include "dasm.h"
-#include "../file/msg.h"
+#include "../file/file.h"
 #include <stdio.h>
 
 
 int AsmCodeLength;
+int AsmOCParam;
+bool AsmError;
+int AsmErrorLine;
 
 
-char *code_buffer,mne[128];
+const char *code_buffer;
+char mne[128];
 bool EndOfLine;
 bool EndOfCode;
 sAsmMetaInfo *CurrentAsmMetaInfo = NULL;
@@ -20,18 +24,17 @@ static bool small_addr;
 //static bool ConstantIsLabel, UnknownLabel;
 static bool UnknownLabel;
 
-static bool Error;
-
-void AsmError(char *str)
+void AsmSetError(const char *str)
 {
 	msg_error(string2("%s\nline %d",str,LineNo+1));
-	Error = true;
+	AsmErrorLine = LineNo;
+	AsmError = true;
 }
 
 
 bool DebugAsm = false;
 
-static void so(char *str)
+static void so(const char *str)
 {
 	if (DebugAsm)
 		printf("%s\n",str);
@@ -42,6 +45,9 @@ static void so(int i)
 	if (DebugAsm)
 		printf("%d\n",i);
 }
+
+// penalty:  0 -> max output
+#define ASM_DB_LEVEL	10
 
 
 
@@ -73,13 +79,13 @@ inline int absolute_size(int s)
 }
 
 struct sRegister{
-	char *name;
+	const char *name;
 	int id, group, size;
 };
 std::vector<sRegister> Register;
 std::vector<sRegister*> RegisterByID;
 
-inline void add_reg(char *name, int id, int group, int size)
+inline void add_reg(const char *name, int id, int group, int size)
 {
 	sRegister r;
 	r.name = name;
@@ -91,7 +97,7 @@ inline void add_reg(char *name, int id, int group, int size)
 
 struct sInstructionName{
 	int inst;
-	char *name;
+	const char *name;
 };
 
 sInstructionName InstructionName[NumInstructionNames+1]={
@@ -178,14 +184,14 @@ sInstructionName InstructionName[NumInstructionNames+1]={
 	{inst_setnz_b,	"setnz.b"},
 	{inst_setbe_b,	"setbe.b"},
 	{inst_setnbe_b,	"setnbe.b"},
-	{inst_sets,		"sets"},
-	{inst_setns,	"setns"},
-	{inst_setp,		"setp"},
-	{inst_setnp,	"setnp"},
-	{inst_setl,		"setl"},
-	{inst_setnl,	"setnl"},
-	{inst_setle,	"setle"},
-	{inst_setnle,	"setnle"},
+	{inst_sets_b,	"sets.b"},
+	{inst_setns_b,	"setns.b"},
+	{inst_setp_b,	"setp.b"},
+	{inst_setnp_b,	"setnp.b"},
+	{inst_setl_b,	"setl.b"},
+	{inst_setnl_b,	"setn.bl"},
+	{inst_setle_b,	"setle.b"},
+	{inst_setnle_b,	"setnle.b"},
 	
 	{inst_sldt,		"sldt"},
 	{inst_str,		"str"},
@@ -243,6 +249,16 @@ sInstructionName InstructionName[NumInstructionNames+1]={
 	{inst_fmulp,	"fmulp"},
 	{inst_fsubp,	"fsubp"},
 	{inst_fdivp,	"fdivp"},
+	{inst_fldcw,	"fldcw"},
+	{inst_fnstcw,	"fnstcw"},
+	{inst_fnstsw,	"fnstsw"},
+	{inst_fistp,	"fistp"},
+	{inst_fxchg,	"fxchg"},
+	{inst_fsin,		"fsin"},
+	{inst_fcos,		"fcos"},
+	{inst_fchs,		"fchs"},
+	{inst_fabs,		"fabs"},
+	{inst_fucompp,	"fucompp"},
 	
 	{inst_loop,		"loop"},
 	{inst_loope,	"loope"},
@@ -275,6 +291,7 @@ sInstructionName InstructionName[NumInstructionNames+1]={
 
 // groups of registers
 enum{
+	RegGroupNone,
 	RegGroupGeneral,
 	RegGroupSegment,
 	RegGroupFlags,
@@ -287,6 +304,8 @@ enum{
 	ParamTImmediateDouble,
 	ParamTRegister,
 	ParamTRegisterOrMem, // ...
+	ParamTMemory,
+	//ParamTSIB,
 	ParamTNone,
 	ParamTInvalid
 };
@@ -296,7 +315,9 @@ enum{
 	__Dummy__ = 10000,
 	Eb,Ev,Ew,Ed,Gb,Gv,Gw,Gd,
 	Ib,Iv,Iw,Id,Ob,Ov,Ow,Od,
-	Rb,Rv,Rw,Rd,Cb,Cv,Cw,Cd,Sw,Ip,
+	Rb,Rv,Rw,Rd,Cb,Cv,Cw,Cd,
+	Mb,Mv,Mw,Md,Jb,Jv,Jw,Jd,
+	Sw,Ap,
 };
 
 // displacement for registers
@@ -321,6 +342,7 @@ struct sInstParam{
 	int size;
 	long long value; // disp or immediate
 	bool is_label;
+	bool immediate_is_relative;	// for jump
 };
 
 // which part of the modr/m byte is used
@@ -332,12 +354,17 @@ enum{
 
 // parameter definition (filter for real parameters)
 struct sInstParamFuzzy{
-	int type;
-	sRegister *reg; // if != NULL  -> force a single register
+	bool used;
+	bool allow_memory_address;	// [0x12.34...]
+	bool allow_memory_indirect;	// [eax]    [eax + ...]
+	bool allow_immediate;		// 0x12.34...
+	bool allow_register;		// eax
+	int _type_;					// approximate type.... (UnFuzzy without mod/rm)
+	sRegister *reg;				// if != NULL  -> force a single register
 	int reg_group;
-	bool deref;
-	int mrm_mode; // which part of the modr/m byte is used?
+	int mrm_mode;				// which part of the modr/m byte is used?
 	int size;
+	bool immediate_is_relative;	// for jump
 };
 
 struct sInstruction{
@@ -345,10 +372,10 @@ struct sInstruction{
 	int code, code_size, cap;
 	bool has_modrm;
 	sInstParamFuzzy param1, param2;
-	char *name;
+	const char *name;
 };
 
-char *SizeOut(int size)
+const char *SizeOut(int size)
 {
 	if (size == Size8)		return "8";
 	if (size == Size16)		return "16";
@@ -360,28 +387,16 @@ char *SizeOut(int size)
 
 void ParamFuzzyOut(sInstParamFuzzy *p)
 {
-	if (p->type == ParamTNone)
-		printf("	None");
-	else if (p->type == ParamTRegister){
-		if (p->deref)
+	if (p->used){
+		if (p->allow_register)
 			printf("	Reg");
-		else
-			printf("	[Reg]");
-	}else if (p->type == ParamTImmediate){
-		if (p->deref)
+		if (p->allow_immediate)
 			printf("	Im");
-		else
-			printf("	[Im]");
-	}else if (p->type == ParamTImmediateDouble){
-		if (p->deref)
-			printf("	Im:Im");
-		else
-			printf("	[Im:Im]");
-	}else if (p->type == ParamTRegisterOrMem){
-		printf("	Reg/Mem");
-	}else
-			printf("	???");
-	if (p->type != ParamTNone){
+		if (p->allow_memory_address)
+			printf("	[Mem]");
+		if (p->allow_memory_indirect)
+			printf("	[Mem + ind]");
+		    
 		if (p->reg)
 			printf("  %s", p->reg->name);
 		if (p->size != SizeUnknown)
@@ -390,6 +405,8 @@ void ParamFuzzyOut(sInstParamFuzzy *p)
 			printf("   /r");
 		else if (p->mrm_mode == MRMModRM)
 			printf("   /m");
+	}else{
+		printf("	None");
 	}
 	printf("\n");
 }
@@ -408,23 +425,34 @@ std::vector<sInstruction> Instruction;
 bool _get_inst_param_(int param, sInstParamFuzzy &ip)
 {
 	ip.reg = NULL;
+	ip.reg_group = RegGroupNone;
 	ip.mrm_mode = MRMNone;
-	ip.deref = false;
 	ip.reg_group = -1;
-	if (param < 0){	ip.type = ParamTNone;	return false;	}
+	ip._type_ = ParamTInvalid;
+	ip.allow_register = false;
+	ip.allow_immediate = false;
+	ip.allow_memory_address = false;
+	ip.allow_memory_indirect = false;
+	ip.immediate_is_relative = false;
+	if (param < 0){	ip.used = false;	ip._type_ = ParamTNone;	return false;	}
+	ip.used = true;
 
 	// is it a register?
 	for (int i=0;i<Register.size();i++)
 		if (Register[i].id == param){
+			ip._type_ = ParamTRegister;
 			ip.reg = &Register[i];
-			ip.type = ParamTRegister;
+			ip.allow_register = true;
 			ip.reg_group = Register[i].group;
 			ip.size = Register[i].size;
 			return false;
 		}
 	// general reg / mem
 	if ((param == Eb) || (param == Ev) || (param == Ew) || (param == Ed)){
-		ip.type = ParamTRegisterOrMem;
+		ip._type_ = ParamTInvalid;//ParamTRegisterOrMem;
+		ip.allow_register = true;
+		ip.allow_memory_address = true;
+		ip.allow_memory_indirect = true;
 		ip.reg_group = RegGroupGeneral;
 		ip.mrm_mode = MRMModRM;
 		if (param == Eb)	ip.size = Size8;
@@ -435,7 +463,8 @@ bool _get_inst_param_(int param, sInstParamFuzzy &ip)
 	}
 	// general reg (reg)
 	if ((param == Gb) || (param == Gv) || (param == Gw) || (param == Gd)){
-		ip.type = ParamTRegister;
+		ip._type_ = ParamTRegister;
+		ip.allow_register = true;
 		ip.reg_group = RegGroupGeneral;
 		ip.mrm_mode = MRMReg;
 		if (param == Gb)	ip.size = Size8;
@@ -446,7 +475,8 @@ bool _get_inst_param_(int param, sInstParamFuzzy &ip)
 	}
 	// general reg (mod)
 	if ((param == Rb) || (param == Rv) || (param == Rw) || (param == Rd)){
-		ip.type = ParamTRegister;
+		ip._type_ = ParamTRegister;
+		ip.allow_register = true;
 		ip.reg_group = RegGroupGeneral;
 		ip.mrm_mode = MRMModRM;
 		if (param == Rb)	ip.size = Size8;
@@ -456,28 +486,54 @@ bool _get_inst_param_(int param, sInstParamFuzzy &ip)
 		return true;
 	}
 	// immediate
-	if ((param == Ib) || (param == Iv) || (param == Iw) || (param == Id) || (param == Ip)){
-		ip.type = ParamTImmediate;
+	if ((param == Ib) || (param == Iv) || (param == Iw) || (param == Id) || (param == Ap)){
+		ip._type_ = ParamTImmediate;
+		ip.allow_immediate = true;
 		if (param == Ib)	ip.size = Size8;
 		if (param == Iv)	ip.size = Size16or32;
 		if (param == Iw)	ip.size = Size16;
 		if (param == Id)	ip.size = Size32;
-		if (param == Ip){	ip.size = Size32or48;	ip.type = ParamTImmediateDouble;	}
+		if (param == Ap){	ip.size = Size32or48;	ip._type_ = ParamTImmediateDouble;	} // TODO allowed??? (instead of ParamTImmediate)
+		return false;
+	}
+	// immediate (relative)
+	if ((param == Jb) || (param == Jv) || (param == Jw) || (param == Jd)){
+		ip._type_ = ParamTImmediate;
+		ip.allow_immediate = true;
+		ip.immediate_is_relative = true;
+		if (param == Jb)	ip.size = Size8;
+		if (param == Jv)	ip.size = Size16or32;
+		if (param == Jw)	ip.size = Size16;
+		if (param == Jd)	ip.size = Size32;
 		return false;
 	}
 	// mem
 	if ((param == Ob) || (param == Ov) || (param == Ow) || (param == Od)){
-		ip.type = ParamTImmediate;
-		ip.deref = true;
+		ip._type_ = ParamTMemory;
+		ip.allow_memory_address = true;
 		if (param == Ob)	ip.size = Size8;
 		if (param == Ov)	ip.size = Size16or32;
 		if (param == Ow)	ip.size = Size16;
 		if (param == Od)	ip.size = Size32;
 		return false;
 	}
+	// mem
+	if ((param == Mb) || (param == Mv) || (param == Mw) || (param == Md)){
+		ip._type_ = ParamTInvalid; // ...
+		ip.allow_memory_address = true;
+		ip.allow_memory_indirect = true;
+		ip.reg_group = RegGroupGeneral;
+		ip.mrm_mode = MRMModRM;
+		if (param == Mb)	ip.size = Size8;
+		if (param == Mv)	ip.size = Size16or32;
+		if (param == Mw)	ip.size = Size16;
+		if (param == Md)	ip.size = Size32;
+		return true;
+	}
 	// control reg
 	if ((param == Cb) || (param == Cv) || (param == Cw) || (param == Cd)){
-		ip.type = ParamTRegister;
+		ip._type_ = ParamTRegister;
+		ip.allow_register = true;
 		ip.reg_group = RegGroupControl;
 		ip.mrm_mode = MRMReg;
 		if (param == Cb)	ip.size = Size8;
@@ -488,7 +544,8 @@ bool _get_inst_param_(int param, sInstParamFuzzy &ip)
 	}
 	// segment reg
 	if (param == Sw){
-		ip.type = ParamTRegister;
+		ip._type_ = ParamTRegister;
+		ip.allow_register = true;
 		ip.reg_group = RegGroupSegment;
 		ip.mrm_mode = MRMReg;
 		ip.size = Size16;
@@ -504,6 +561,7 @@ bool _get_inst_param_(int param, sInstParamFuzzy &ip)
 void add_inst(int inst, int code, int code_size, int cap, int param1, int param2)
 {
 	sInstruction i;
+	memset(&i, 0, sizeof(sInstruction));
 	i.inst = inst;
 	i.code = code;
 	i.code_size = code_size;
@@ -529,7 +587,7 @@ sInstruction *Instruction=NULL;
 
 void SetInstructionSet(int set)
 {
-	msg_db_r("SetInstructionSet", 1);
+	msg_db_r("SetInstructionSet", 1+ASM_DB_LEVEL);
 	if (set==InstructionSetDefault){
 		if (sizeof(long)==8)
 			set=InstructionSetAMD64;
@@ -552,11 +610,13 @@ void SetInstructionSet(int set)
 			if (Instruction[i].inst==InstructionName[j].inst)
 				Instruction[i].name=InstructionName[j].name;
 	}
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 }*/
 
 void AsmInit()
 {
+	AsmError = false;
+	
 	Register.clear();
 	add_reg("eax",	RegEax,	RegGroupGeneral,	Size32);
 	add_reg("ax",	RegAx,	RegGroupGeneral,	Size16);
@@ -667,14 +727,14 @@ void AsmInit()
 	add_inst(inst_setnz_b	,0x950f	,2	,-1	,Eb	,-1	);
 	add_inst(inst_setbe_b	,0x960f	,2	,-1	,Eb	,-1	);
 	add_inst(inst_setnbe_b	,0x970f	,2	,-1	,Eb	,-1	);
-	add_inst(inst_sets		,0x980f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setns		,0x990f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setp		,0x9a0f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setnp		,0x9b0f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setl		,0x9c0f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setnl		,0x9d0f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setle		,0x9e0f	,2	,-1	,Ev	,-1	);
-	add_inst(inst_setnle	,0x9f0f	,2	,-1	,Ev	,-1	);
+	add_inst(inst_sets_b	,0x980f	,2	,-1	,Eb	,-1	); // error in table... "Ev"
+	add_inst(inst_setns_b	,0x990f	,2	,-1	,Eb	,-1	);
+	add_inst(inst_setp_b	,0x9a0f	,2	,-1	,Eb	,-1	);
+	add_inst(inst_setnp_b	,0x9b0f	,2	,-1	,Eb	,-1	);
+	add_inst(inst_setl_b	,0x9c0f	,2	,-1	,Eb	,-1	);
+	add_inst(inst_setnl_b	,0x9d0f	,2	,-1	,Eb	,-1	);
+	add_inst(inst_setle_b	,0x9e0f	,2	,-1	,Eb	,-1	);
+	add_inst(inst_setnle_b	,0x9f0f	,2	,-1	,Eb	,-1	);
 	add_inst(inst_imul		,0xaf0f	,2	,-1	,Gv	,Ev	);
 	add_inst(inst_movzx		,0xb60f	,2	,-1	,Gv	,Eb	);
 	add_inst(inst_movzx		,0xb70f	,2	,-1	,Gv	,Ew	);
@@ -757,22 +817,22 @@ void AsmInit()
 	add_inst(inst_push		,0x68	,1	,-1	,Iv	,-1	);
 	add_inst(inst_imul		,0x69	,1	,-1	,Ev	,Iv	);
 	add_inst(inst_push		,0x6a	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jo_b		,0x70	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jno_b		,0x71	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jb_b		,0x72	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jnb_b		,0x73	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jz_b		,0x74	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jnz_b		,0x75	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jbe_b		,0x76	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jnbe_b	,0x77	,1	,-1	,Ib	,-1	);
-	add_inst(inst_js_b		,0x78	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jns_b		,0x79	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jp_b		,0x7a	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jnp_b		,0x7b	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jl_b		,0x7c	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jnl_b		,0x7d	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jle_b		,0x7e	,1	,-1	,Ib	,-1	);
-	add_inst(inst_jnle_b	,0x7f	,1	,-1	,Ib	,-1	);
+	add_inst(inst_jo_b		,0x70	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jno_b		,0x71	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jb_b		,0x72	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jnb_b		,0x73	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jz_b		,0x74	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jnz_b		,0x75	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jbe_b		,0x76	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jnbe_b	,0x77	,1	,-1	,Jb	,-1	);
+	add_inst(inst_js_b		,0x78	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jns_b		,0x79	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jp_b		,0x7a	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jnp_b		,0x7b	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jl_b		,0x7c	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jnl_b		,0x7d	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jle_b		,0x7e	,1	,-1	,Jb	,-1	);
+	add_inst(inst_jnle_b	,0x7f	,1	,-1	,Jb	,-1	);
 	// Immediate Group 1
 	add_inst(inst_add_b		,0x80	,1	,0	,Eb	,Ib	);
 	add_inst(inst_or_b		,0x80	,1	,1	,Eb	,Ib	);
@@ -881,22 +941,30 @@ void AsmInit()
 	add_inst(inst_fdiv		,0xd8	,1	,6	,Ev	,-1	);
 	add_inst(inst_fld		,0xd9	,1	,0	,Ev	,-1	);
 	add_inst(inst_fstp		,0xd9	,1	,3	,Ev	,-1	);
+	add_inst(inst_fldcw		,0xd9	,1	,5	,Mw	,-1	);
+	add_inst(inst_fnstcw	,0xd9	,1	,7	,Mw	,-1	);
+	add_inst(inst_fxchg		,0xc9d9	,2	,-1	,RegSt0	,RegSt1	);
+	add_inst(inst_fucompp	,0xe9da	,2	,-1	,RegSt0	,RegSt1	);
+	add_inst(inst_fistp		,0xdb	,1	,3	,Md	,-1	);
+
+//	FNSTCW
 	add_inst(inst_fild		,0xdb	,1	,0	,Ev	,-1	);
 	add_inst(inst_faddp		,0xde	,1	,0	,Ev	,-1	);
 	add_inst(inst_fmulp		,0xde	,1	,1	,Ev	,-1	);
 	add_inst(inst_fsubp		,0xde	,1	,5	,Ev	,-1	);
 	add_inst(inst_fdivp		,0xde	,1	,7	,Ev	,-1	); // de.f9 ohne Parameter...?
-	add_inst(inst_loopne	,0xe0	,1	,-1	,Ib	,-1	);
-	add_inst(inst_loope		,0xe1	,1	,-1	,Ib	,-1	);
-	add_inst(inst_loop		,0xe2	,1	,-1	,Ib	,-1	);
+	add_inst(inst_fnstsw	,0xe0df	,2	,-1	,RegAx	,-1	);
+	add_inst(inst_loopne	,0xe0	,1	,-1	,Jb	,-1	);
+	add_inst(inst_loope		,0xe1	,1	,-1	,Jb	,-1	);
+	add_inst(inst_loop		,0xe2	,1	,-1	,Jb	,-1	);
 	add_inst(inst_in_b		,0xe4	,1	,-1	,RegAl	,Ib	);
 	add_inst(inst_in_b		,0xe5	,1	,-1	,RegEax,Ib	);
 	add_inst(inst_out_b		,0xe6	,1	,-1	,Ib	,RegAl	);
 	add_inst(inst_out_b		,0xe7	,1	,-1	,Ib	,RegEax);
-	add_inst(inst_call		,0xe8	,1	,-1	,Iv	,-1	);
-	add_inst(inst_jmp		,0xe9	,1	,-1	,Iv	,-1	);
-	add_inst(inst_jmp		,0xea	,1	,-1	,Ip	,-1	);
-	add_inst(inst_jmp_b		,0xeb	,1	,-1	,Ib	,-1	);
+	add_inst(inst_call		,0xe8	,1	,-1	,Jv	,-1	); // well... "Av" in tyble
+	add_inst(inst_jmp		,0xe9	,1	,-1	,Jv	,-1	); // miswritten in the table
+	add_inst(inst_jmp		,0xea	,1	,-1	,Ap	,-1	);
+	add_inst(inst_jmp_b		,0xeb	,1	,-1	,Jb	,-1	);
 	add_inst(inst_in		,0xec	,1	,-1	,RegAl	,RegDx	);
 	add_inst(inst_in		,0xed	,1	,-1	,RegEax,RegDx	);
 	add_inst(inst_out		,0xee	,1	,-1	,RegDx	,RegAl	);
@@ -929,24 +997,26 @@ void AsmInit()
 	add_inst(inst_std		,0xfd	,1	,-1	,-1	,-1	);
 	add_inst(inst_inc_b		,0xfe	,1	,0	,Eb	,-1	);
 	add_inst(inst_dec_b		,0xfe	,1	,1	,Eb	,-1	);
-	add_inst(inst_push		,0xff	,1	,6	,Ev	,-1	);
 	add_inst(inst_inc		,0xff	,1	,0	,Ev	,-1	);
 	add_inst(inst_dec		,0xff	,1	,1	,Ev	,-1	);
 	add_inst(inst_call		,0xff	,1	,2	,Ev	,-1	);
 	add_inst(inst_call_far	,0xff	,1	,3	,Ev	,-1	); // Ep statt Ev...
 	add_inst(inst_jmp		,0xff	,1	,4	,Ev	,-1	);
-	add_inst(inst_push		,0xff	,1	,5	,Ev	,-1	);
+//	add_inst(inst_jmp		,0xff	,1	,5	,Ep	,-1	);
+	add_inst(inst_push		,0xff	,1	,6	,Ev	,-1	);
 }
 
 // convert an asm parameter into a human readable expression
 void AddParam(char *str, sInstParam &p)
 {
-	msg_db_r("AddParam", 1);
+	msg_db_r("AddParam", 1+ASM_DB_LEVEL);
 	strcpy(str, "\?\?\?");
 	//msg_write("----");
 	//msg_write(p.type);
 	if (p.type == ParamTInvalid){
 		strcpy(str, "-\?\?\?-");
+	}else if (p.type == ParamTNone){
+		strcpy(str, "");
 	}else if (p.type == ParamTRegister){
 			//msg_write((int)p.reg);
 			//msg_write((int)p.disp);
@@ -984,7 +1054,7 @@ void AddParam(char *str, sInstParam &p)
 	for (int i=0;i<Register.size();i++)
 		if (param==Register[i].reg){
 			strcat(str,Register[i].name);
-			msg_db_l(1);
+			msg_db_l(1+ASM_DB_LEVEL);
 			return;
 		}
 	switch(param){
@@ -1053,16 +1123,16 @@ void AddParam(char *str, sInstParam &p)
 		default:	strcat(str,string(i2s(param),": -\?\?- "));	break;
 	};
 #endif
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 }
 
 // adjust parameter type to ... 32bit / 16bit
 inline void ApplyParamSize(sInstParamFuzzy &p)
 {
-	msg_db_r("CorrectParam", 1);
+	msg_db_r("CorrectParam", 1+ASM_DB_LEVEL);
 	if (small_param){
 		if (p.size == Size16or32){
-			if ((p.type == ParamTRegister) || (p.type == ParamTRegisterOrMem) || (p.type == ParamTImmediate))
+			//if ((p.allow_register) || (p.allow_memory_address) || (p.allow_memory_indirect) || (p.allow_immediate))
 				p.size = Size16;
 		}
 		if (p.reg){
@@ -1077,30 +1147,35 @@ inline void ApplyParamSize(sInstParamFuzzy &p)
 		}
 	}else{
 		if (p.size == Size16or32){
-			if ((p.type == ParamTRegister) || (p.type == ParamTRegisterOrMem) || (p.type == ParamTImmediate))
+			//if ((p.type == ParamTRegister) || (p.type == ParamTRegisterOrMem) || (p.type == ParamTImmediate))
+			if ((p.allow_register) || (p.allow_memory_address) || (p.allow_memory_indirect) || (p.allow_immediate))
 				p.size = Size32;
 		}
 	}
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 }
 
 inline void UnfuzzyParam(sInstParam &p, sInstParamFuzzy &pf)
 {
-	msg_db_r("UnfuzzyParam", 2);
-	p.type = pf.type;
+	msg_db_r("UnfuzzyParam", 2+ASM_DB_LEVEL);
+	p.type = pf._type_;
 	p.reg2 = NULL;
 	p.disp = DispModeNone;
 	p.reg = pf.reg;
 	p.size = pf.size;
-	p.deref = pf.deref;
+	p.deref = false; // well... FIXME
 	p.value = NULL;
 	p.is_label = false;
-	msg_db_l(2);
+	if (pf._type_ == ParamTMemory){
+		p.type = ParamTImmediate;
+		p.deref = true;
+	}
+	msg_db_l(2+ASM_DB_LEVEL);
 }
 
 inline void GetFromModRM(sInstParam &p, sInstParamFuzzy &pf, unsigned char modrm)
 {
-	msg_db_r("GetFromModRM", 2);
+	msg_db_r("GetFromModRM", 2+ASM_DB_LEVEL);
 	if (pf.mrm_mode == MRMReg){
 		unsigned char reg = modrm & 0x38; // bits 5, 4, 3
 		p.type = ParamTRegister;
@@ -1149,7 +1224,8 @@ inline void GetFromModRM(sInstParam &p, sInstParamFuzzy &pf, unsigned char modrm
 				if (rm == 0x01)	p.reg = RegisterByID[RegEcx];
 				if (rm == 0x02)	p.reg = RegisterByID[RegEdx];
 				if (rm == 0x03)	p.reg = RegisterByID[RegEbx];
-				if (rm == 0x04){p.reg = NULL;	p.type = ParamTInvalid;	}
+				//if (rm == 0x04){p.reg = NULL;	p.disp = DispModeSIB;	p.type = ParamTImmediate;}//p.type = ParamTInvalid;	AsmError("kein SIB byte...");}
+				if (rm == 0x04){p.reg = RegisterByID[RegEax];	p.disp = DispModeSIB;	} // eax = provisoric
 				if (rm == 0x05){p.reg = NULL;	p.type = ParamTImmediate;	}
 				if (rm == 0x06)	p.reg = RegisterByID[RegEsi];
 				if (rm == 0x07)	p.reg = RegisterByID[RegEdi];
@@ -1174,7 +1250,8 @@ inline void GetFromModRM(sInstParam &p, sInstParamFuzzy &pf, unsigned char modrm
 				if (rm == 0x01)	p.reg = RegisterByID[RegEcx];
 				if (rm == 0x02)	p.reg = RegisterByID[RegEdx];
 				if (rm == 0x03)	p.reg = RegisterByID[RegEbx];
-				if (rm == 0x04){p.reg = NULL;	p.type = ParamTInvalid;	}
+				//if (rm == 0x04){p.reg = NULL;	p.type = ParamTInvalid;	}
+				if (rm == 0x04){p.reg = RegisterByID[RegEax];	p.disp = DispMode8SIB;	} // eax = provisoric
 				if (rm == 0x05)	p.reg = RegisterByID[RegEbp];
 				if (rm == 0x06)	p.reg = RegisterByID[RegEsi];
 				if (rm == 0x07)	p.reg = RegisterByID[RegEdi];
@@ -1192,12 +1269,50 @@ inline void GetFromModRM(sInstParam &p, sInstParamFuzzy &pf, unsigned char modrm
 			if (rm == 0x07)	p.reg = (p.size == Size8) ? RegisterByID[RegBh] : ((p.size == Size16) ? RegisterByID[RegDi] : RegisterByID[RegEdi]);
 		}
 	}
-	msg_db_l(2);
+	msg_db_l(2+ASM_DB_LEVEL);
+}
+
+inline void TryGetSIB(sInstParam &p, char *&cur)
+{
+	if ((p.disp == DispModeSIB) || (p.disp == DispMode8SIB)){
+		bool disp8 = (p.disp == DispMode8SIB);
+		char sib = *cur;
+		cur++;
+		unsigned char ss = (sib & 0xc0); // bits 7, 6
+		unsigned char index = (sib & 0x38); // bits 5, 4, 3
+		unsigned char base = (sib & 0x07); // bits 2, 1, 0
+		/*msg_error("SIB");
+		msg_write(ss);
+		msg_write(index);
+		msg_write(base);*/
+
+		// direct?
+		//if (p.disp == DispModeSIB){
+			if (ss == 0x00){ // scale factor 1
+				p.deref = true;
+				p.disp = disp8 ? DispMode8Reg2 : DispModeReg2;
+				if (base == 0x00)		p.reg = RegisterByID[RegEax];
+				else if (base == 0x01)	p.reg = RegisterByID[RegEcx];
+				else if (base == 0x02)	p.reg = RegisterByID[RegEdx];
+				else if (base == 0x03)	p.reg = RegisterByID[RegEbx];
+				else if (base == 0x04)	p.reg = RegisterByID[RegEsp];
+				else p.disp = DispModeSIB; // ...
+				if (index == 0x00)		p.reg2 = RegisterByID[RegEax];
+				else if (index == 0x08)	p.reg2 = RegisterByID[RegEcx];
+				else if (index == 0x10)	p.reg2 = RegisterByID[RegEdx];
+				else if (index == 0x18)	p.reg2 = RegisterByID[RegEbx];
+				else if (index == 0x28)	p.reg2 = RegisterByID[RegEbp];
+				else if (index == 0x30)	p.reg2 = RegisterByID[RegEsi];
+				else if (index == 0x38)	p.reg2 = RegisterByID[RegEdi];
+				else p.disp = disp8 ? DispMode8 : DispModeNone;
+			}
+		//}
+	}
 }
 
 inline void ReadParamData(char *&cur, sInstParam &p)
 {
-	msg_db_r("ReadParamData", 2);
+	msg_db_r("ReadParamData", 2+ASM_DB_LEVEL);
 	//char *o = cur;
 	p.value = 0;
 	if (p.type == ParamTImmediate){
@@ -1227,17 +1342,20 @@ inline void ReadParamData(char *&cur, sInstParam &p)
 		}
 	}
 	//msg_write((int)cur - (int)o);
-	msg_db_l(2);
+	msg_db_l(2+ASM_DB_LEVEL);
 }
 
 // convert some opcode into (human readable) assembler language
-char *Opcode2Asm(char *code,int length,bool allow_comments)
+const char *Opcode2Asm(void *_code_,int length,bool allow_comments)
 {
-	msg_db_r("Opcode2Asm", 1);
+	msg_db_r("Opcode2Asm", 1+ASM_DB_LEVEL);
 	/*if (!Instruction)
 		SetInstructionSet(InstructionSetDefault);*/
 	
-	Error = false;
+	AsmError = false;
+
+	char *code = (char*)_code_;
+	
 	char param[256],*opcode;
 	bufstr.clear();
 	char *end=code+length;
@@ -1260,13 +1378,11 @@ char *Opcode2Asm(char *code,int length,bool allow_comments)
 		code = cur;
 
 		// done?
-		if ((length < 0) && ((opcode[0] == 0xc3) || (opcode[0] == 0xc2)))
-			break;
 		if (code >= end)
 			break;
 
-		if (Error){
-			msg_db_l(1);
+		if (AsmError){
+			msg_db_l(1+ASM_DB_LEVEL);
 			return "";
 		}
 
@@ -1366,6 +1482,8 @@ char *Opcode2Asm(char *code,int length,bool allow_comments)
 				cur ++;
 				GetFromModRM(p1, ip1, modrm);
 				GetFromModRM(p2, ip2, modrm);
+				TryGetSIB(p1, cur);
+				TryGetSIB(p2, cur);
 			}
 
 			// immediate...
@@ -1639,8 +1757,12 @@ char *Opcode2Asm(char *code,int length,bool allow_comments)
 			bufstr.append(string2("????? -                          unknown         // %s\n",d2h(code,1+long(cur)-long(code),false)));
 			cur ++;
 		}
+
+		// done?
+		if ((length < 0) && (((unsigned char)opcode[0] == 0xc3) || ((unsigned char)opcode[0] == 0xc2)))
+			break;
 	}
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 	return (char*)bufstr.c_str();
 }
 
@@ -1648,7 +1770,7 @@ char *Opcode2Asm(char *code,int length,bool allow_comments)
 //    returns true if end of code
 bool IgnoreUnimportant(int &pos)
 {
-	msg_db_r("IgnoreUnimportant", 4);
+	msg_db_r("IgnoreUnimportant", 4+ASM_DB_LEVEL);
 	bool CommentLine = false;
 	
 	// ignore comments and "white space"
@@ -1656,7 +1778,7 @@ bool IgnoreUnimportant(int &pos)
 		if (code_buffer[pos] == 0){
 			EndOfCode = true;
 			EndOfLine = true;
-			msg_db_l(4);
+			msg_db_l(4+ASM_DB_LEVEL);
 			return true;
 		}
 		if (code_buffer[pos] == '\n'){
@@ -1678,19 +1800,21 @@ bool IgnoreUnimportant(int &pos)
 			break;
 		pos ++;
 	}
-	msg_db_l(4);
+	msg_db_l(4+ASM_DB_LEVEL);
 	return false;
 }
 
 // returns one "word" in the source code
 char *FindMnemonic(int &pos)
 {
-	msg_db_r("GetMne", 1);
+	msg_db_r("GetMne", 1+ASM_DB_LEVEL);
 	EndOfLine = false;
 	strcpy(mne, "");
 
-	if (IgnoreUnimportant(pos))
+	if (IgnoreUnimportant(pos)){
+		msg_db_l(1+ASM_DB_LEVEL);
 		return mne;
+	}
 	
 	bool in_string = false;
 	for (int i=0;i<128;i++){
@@ -1738,14 +1862,14 @@ char *FindMnemonic(int &pos)
 	/*msg_write>Write(mne);
 	if (EndOfLine)
 		msg_write>Write("    eol");*/
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 	return mne;
 }
 
 // interpret an expression from source code as an assembler parameter
 void GetParam(sInstParam &p, char *param, int pn)
 {
-	msg_db_r("GetParam", 1);
+	msg_db_r("GetParam", 1+ASM_DB_LEVEL);
 	p.type = ParamTInvalid;
 	p.reg = NULL;
 	p.deref = false;
@@ -1844,9 +1968,9 @@ void GetParam(sInstParam &p, char *param, int pn)
 				sInstParam sub;
 				GetParam(sub, &param[i+1], pn);
 				if (sub.type != ParamTImmediate){
-					AsmError(string("error in hex parameter:  ",param));
+					AsmSetError(string("error in hex parameter:  ",param));
 					p.type = PKInvalid;
-					msg_db_l(1);
+					msg_db_l(1+ASM_DB_LEVEL);
 					return;						
 				}
 				p.value = (long)v;
@@ -1855,9 +1979,9 @@ void GetParam(sInstParam &p, char *param, int pn)
 				p.type = ParamTImmediateDouble;
 				break;
 			}else{
-				AsmError(string2("evil character in hex parameter:  \"%s\"",param));
+				AsmSetError(string2("evil character in hex parameter:  \"%s\"",param));
 				p.type = ParamTInvalid;
-				msg_db_l(1);
+				msg_db_l(1+ASM_DB_LEVEL);
 				return;
 			}
 			p.value = (long)v;
@@ -1893,7 +2017,7 @@ void GetParam(sInstParam &p, char *param, int pn)
 				p.size = Register[i].size;
 				if (DebugAsm)
 					printf("Register:  %s\n", Register[i].name);
-				msg_db_l(1);
+				msg_db_l(1+ASM_DB_LEVEL);
 				return;
 			}
 		if (CurrentAsmMetaInfo){
@@ -1905,7 +2029,7 @@ void GetParam(sInstParam &p, char *param, int pn)
 					p.is_label = true;
 					if (DebugAsm)
 						printf("label:  %s\n",param);
-					msg_db_l(1);
+					msg_db_l(1+ASM_DB_LEVEL);
 					return;
 				}
 			// C-Script variable (global)
@@ -1916,7 +2040,7 @@ void GetParam(sInstParam &p, char *param, int pn)
 					p.deref = true;
 					if (DebugAsm)
 						printf("global variable:  \"%s\"\n",param);
-					msg_db_l(1);
+					msg_db_l(1+ASM_DB_LEVEL);
 					return;
 				}
 			}
@@ -1935,27 +2059,27 @@ void GetParam(sInstParam &p, char *param, int pn)
 				p.value = 0;
 				p.type = ParamTImmediate;
 				p.is_label = true;
-				msg_db_l(1);
+				msg_db_l(1+ASM_DB_LEVEL);
 				return;
 			}
 		}
 	}
 	if (p.type == ParamTInvalid)
-		AsmError(string2("unknown parameter:  \"%s\"", param));
-	msg_db_l(1);
+		AsmSetError(string2("unknown parameter:  \"%s\"", param));
+	msg_db_l(1+ASM_DB_LEVEL);
 }
 
 // complete size of command??
 int CalcCommandSize(sInstruction *i, sInstParamFuzzy &ip1, sInstParamFuzzy &ip2, sInstParam &p1, sInstParam &p2)
 {
-	msg_db_r("CalcCommandSize", 1);
+	msg_db_r("CalcCommandSize", 1+ASM_DB_LEVEL);
 	int size = i->code_size;
 	if (i->has_modrm)
 		size ++;
 	
 	if ((p1.type == ParamTImmediate) && (!p1.deref))	size += absolute_size(ip1.size);
 	if ((p2.type == ParamTImmediate) && (!p2.deref))	size += absolute_size(ip2.size);
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 	return size;
 }
 
@@ -2007,17 +2131,18 @@ void OpcodeAddImmideate(char *oc, int &ocs, sInstParamFuzzy &ip, sInstParam &p, 
 		insert_val(oc, ocs, p.value >> 32, 2); // bits 33-47
 }
 
-bool AsmAddInstruction(char *oc, int &ocs, int inst, sInstParam &wp1, sInstParam &wp2, int offset, int insert_at);
+bool AsmAddInstructionLowLevel(char *oc, int &ocs, int inst, sInstParam &wp1, sInstParam &wp2, int offset, int insert_at);
 
 // convert human readable asm code into opcode
-char *Asm2Opcode(char *code)
+const char *Asm2Opcode(const char *code)
 {
-	msg_db_r("Asm2Opcode", 1);
+	msg_db_r("Asm2Opcode", 1+ASM_DB_LEVEL);
 	/*if (!Instruction)
 		SetInstructionSet(InstructionSetDefault);*/
+	
+	AsmError = false;
 
 	
-	Error = false;
 	AsmCodeLength = 0; // beginning of block -> current char
 	if (CurrentAsmMetaInfo){
 		CurrentAsmMetaInfo->PreInsertionLength = CurrentAsmMetaInfo->CurrentOpcodePos; // position of the block withing (overall) opcode
@@ -2037,8 +2162,8 @@ char *Asm2Opcode(char *code)
 	EndOfCode = false;
 	while(true){
 		resize_buffer(AsmCodeLength + 128);
-		if (Error){
-			msg_db_l(1);
+		if (AsmError){
+			msg_db_l(1+ASM_DB_LEVEL);
 			return "";
 		}
 
@@ -2085,7 +2210,7 @@ char *Asm2Opcode(char *code)
 		GetParam(p2, param2, 1);
 		if ((p1.type == ParamTInvalid) || (p2.type == ParamTInvalid)){
 			AsmCodeLength=-1;
-			msg_db_l(1);
+			msg_db_l(1+ASM_DB_LEVEL);
 			return "";
 		}
 
@@ -2233,9 +2358,9 @@ char *Asm2Opcode(char *code)
 			if (strcmp(InstructionName[i].name, cmd) == 0)
 				inst = InstructionName[i].inst;
 		if (inst < 0){
-			AsmError(string("unknown instruction:  ",cmd));
+			AsmSetError(string("unknown instruction:  ",cmd));
 			AsmCodeLength=-1;
-			msg_db_l(1);
+			msg_db_l(1+ASM_DB_LEVEL);
 			return "";
 		}
 		// praefix
@@ -2243,201 +2368,78 @@ char *Asm2Opcode(char *code)
 			buffer[AsmCodeLength ++] = 0x66;
 
 		// command
-		if (!AsmAddInstruction(buffer, AsmCodeLength, inst, p1, p2, 0, 0)){
-			AsmError(string2("instruction is not compatible with its parameters:  %s %s, %s", cmd, param1, param2));
+		if (!AsmAddInstructionLowLevel(buffer, AsmCodeLength, inst, p1, p2, 0, 0)){
+			AsmSetError(string2("instruction is not compatible with its parameters (a):  %s %s, %s", cmd, param1, param2));
 			AsmCodeLength=-1;
-			msg_db_l(1);
+			msg_db_l(1+ASM_DB_LEVEL);
 			return "";
 		}
 
-#if 0
-		bool found_any=false;
-		bool found_valid=false;
-		for (int i=0;i<Instructions;i++)
-			if (strcmp(Instruction[i].name,cmd)==0){
-				found_any=true;
-				int _AsmCodeLength=AsmCodeLength;
-				int ip1=Instruction[i].param1;
-				int ip2=Instruction[i].param2;
-				//so(ip1);
-				//so(ip2);
-				bool ok=ParamCompatible(pk1,p1,ip1)&&ParamCompatible(pk2,p2,ip2);
-				/*if (ParamCompatible(pk1,p1,ip1))
-					printf(" 1: %s\n",(d2h((char*)&Instruction[i].code,1)));
-				if (ParamCompatible(pk2,p2,ip2))
-					printf(" 2: %s\n",(d2h((char*)&Instruction[i].code,1)));*/
-				if (ok){
-					so(i);
-					found_valid=true;
-					CalcCommandSize(i);
-					bool lc_relative=((cmd[0]=='j')&&(Instruction[i].param1!=Ip)) || (strcmp(cmd,"call")==0) || (strstr(cmd,"loop"));
-					if ((ConstantIsLabel)&&(!UnknownLabel)&&(lc_relative)&&(CurrentAsmMetaInfo)){
-						int d=CurrentAsmMetaInfo->CurrentOpcodePos+CurrentAsmMetaInfo->CodeOrigin+CommandSize;
-						if (pk1==PKConstant)	p1-=d;
-						if (pk2==PKConstant)	p2-=d;
-					}
-					if (UnknownLabel){
-						CurrentAsmMetaInfo->WantedLabelSize[CurrentAsmMetaInfo->NumWantedLabels-1]=1;
-						CurrentAsmMetaInfo->WantedLabelPos[CurrentAsmMetaInfo->NumWantedLabels-1]=CurrentAsmMetaInfo->CurrentOpcodePos+1;
-						if (lc_relative)
-							CurrentAsmMetaInfo->WantedLabelAdd[CurrentAsmMetaInfo->NumWantedLabels-1]=-CurrentAsmMetaInfo->CurrentOpcodePos-CurrentAsmMetaInfo->CodeOrigin-CommandSize;
-						else
-							CurrentAsmMetaInfo->WantedLabelAdd[CurrentAsmMetaInfo->NumWantedLabels-1]=0;
-					}
-
-					if (use_mode16!=mode16)
-						buffer[AsmCodeLength++]=0x66;
-
-					buffer[AsmCodeLength++]=Instruction[i].code;
-					if (Instruction[i].code_alt>=0)
-						buffer[AsmCodeLength++]=Instruction[i].code_alt;
-					int use_rm=-1;
-					if ((ip1==Gb)||(ip1==Gw)||(ip1==Gd))	use_rm=1;
-					if ((ip2==Gb)||(ip2==Gw)||(ip2==Gd))	use_rm=2;
-					if ((ip1==Eb)||(ip1==Ew)||(ip1==Ed))	use_rm=1;
-					if ((ip2==Eb)||(ip2==Ew)||(ip2==Ed))	use_rm=2;
-					int r1=-1,r2=-1;
-					if ((pk1==PKRegister)||(pk1==PKDerefRegister))	r1=Register[p1].reg;
-					if ((pk2==PKRegister)||(pk2==PKDerefRegister))	r2=Register[p2].reg;
-					if (use_rm>=0){
-						int rm=0;
-						int ppk1=(use_rm==1)?pk1:pk2;
-						int ppk2=(use_rm==1)?pk2:pk1;
-						if (use_rm==2){
-							int t=r1;	r1=r2;	r2=t;
-						}
-						if (ppk1==PKDerefRegister){
-							if (use_mode16){
-								if (r1==SI)	rm+=0x104;
-								if (r1==DI)	rm+=0x105;
-								if (r1==BX)	rm+=0x107;
-							}else{
-								if (r1==eAX)	rm+=0x100;
-								if (r1==eCX)	rm+=0x101;
-								if (r1==eDX)	rm+=0x102;
-								if (r1==eBX)	rm+=0x103;
-								if (r1==eSI)	rm+=0x106;
-								if (r1==eDI)	rm+=0x107;
-							}
-						}else if (ppk1==PKDerefConstant){
-							if (use_mode16)
-								rm+=0x106;
-							else
-								rm+=0x105;
-						}else{
-							if ((r1==eAX)||(r1==AX)||(r1==AL))	rm+=0x1c0;
-							if ((r1==eCX)||(r1==CX)||(r1==CL))	rm+=0x1c1;
-							if ((r1==eDX)||(r1==DX)||(r1==DL))	rm+=0x1c2;
-							if ((r1==eBX)||(r1==BX)||(r1==BL))	rm+=0x1c3;
-							if ((r1==eSP)||(r1==SP)||(r1==AH))	rm+=0x1c4;
-							if ((r1==eBP)||(r1==BP)||(r1==CH))	rm+=0x1c5;
-							if ((r1==eSI)||(r1==SI)||(r1==DH))	rm+=0x1c6;
-							if ((r1==eDI)||(r1==DI)||(r1==BH))	rm+=0x1c7;
-						}
-						if ((r2==eAX)||(r2==AX)||(r2==AL)||(r2==ES))	rm+=0x200;
-						if ((r2==eCX)||(r2==CX)||(r2==CL)||(r2==CS))	rm+=0x208;
-						if ((r2==eDX)||(r2==DX)||(r2==DL)||(r2==SS))	rm+=0x210;
-						if ((r2==eBX)||(r2==BX)||(r2==BL)||(r2==DS))	rm+=0x218;
-						if ((r2==eSP)||(r2==SP)||(r2==AH)||(r2==FS))	rm+=0x220;
-						if ((r2==eBP)||(r2==BP)||(r2==CH)||(r2==GS))	rm+=0x228;
-						if ((r2==eSI)||(r2==SI)||(r2==DH))				rm+=0x230;
-						if ((r2==eDI)||(r2==DI)||(r2==BH))				rm+=0x238;
-						if (r2==CR0)	rm+=0x200;
-						if (r2==CR1)	rm+=0x208;
-						if (r2==CR2)	rm+=0x210;
-						if (r2==CR3)	rm+=0x218;
-						if (Instruction[i].cap>0)
-							rm+=Instruction[i].cap*8;
-						buffer[AsmCodeLength++]=rm;
-						if ((rm&0x100)==0){
-							found_valid=false;
-							AsmCodeLength=_AsmCodeLength;
-							so("nachtraeglich falsch!");
-							continue;
-						}
-					}
-					if ((ip1==Id)||( ((!use_mode16)) &&(pk1==PKDerefConstant)))
-						InsertConstant(p1,4,0);
-					else if ((ip1==Iw)|| ((use_mode16)&&(pk1==PKDerefConstant)))
-						InsertConstant(p1,2,0);
-					else if (ip1==Ib)
-						InsertConstant(p1,1,0);
-					else if (ip1==Ip){
-						InsertConstant(ParamConstantDouble,use_mode16?2:4,2);
-						InsertConstant(p1,2,0);
-					}
-					if (pk2==PKDerefConstant) ip2=use_mode16?Iw:Id;
-					if (ip2==Id)
-						InsertConstant(p2,4,1);
-					else if (ip2==Iw)
-						InsertConstant(p2,2,1);
-					else if (ip2==Ib)
-						InsertConstant(p2,1,1);
-
-
-					break;
-				}
-			}
-		if (!found_any){
-			AsmError(string("unknown instruction:  ",cmd));
-			AsmCodeLength=-1;
-			msg_db_l(1);
-			return NULL;
-		}
-		if (!found_valid){
-			AsmError(string("instruction is not compatible with its parameters:  ",cmd," ",param1,", ",param2));
-			AsmCodeLength=-1;
-			msg_db_l(1);
-			return NULL;
-		}
-#endif
 
 		if (EndOfCode)
 			break;
 	}
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 	return buffer;
 }
 
 inline bool _size_match_(sInstParamFuzzy &inst_p, sInstParam &wanted_p)
 {
-	return (inst_p.size == wanted_p.size) || (inst_p.size == SizeUnknown) || (wanted_p.size == SizeUnknown);
+	if (inst_p.size == wanted_p.size)
+		return true;
+	if ((inst_p.size == SizeUnknown) || (wanted_p.size == SizeUnknown))
+		return true;
+	if ((inst_p.size == Size16or32) && ((wanted_p.size == Size16) || (wanted_p.size == Size32)))
+		return true;
+	return false;
+}
+
+inline bool _deref_match_(sInstParamFuzzy &inst_p, sInstParam &wanted_p)
+{
+	if (wanted_p.deref)
+		return (inst_p.allow_memory_address) || (inst_p.allow_memory_indirect);
+	return true;
 }
 
 inline bool _test_param_(sInstParamFuzzy &inst_p, sInstParam &wanted_p)
 {
+	//ParamFuzzyOut(&inst_p);
+	
 	// none
-	if (wanted_p.type == ParamTNone)
-		return (inst_p.type == ParamTNone);
+	if ((wanted_p.type == ParamTNone) || (!inst_p.used))
+		return (wanted_p.type == ParamTNone) && (!inst_p.used);
 
 	// immediate
 	if (wanted_p.type == ParamTImmediate){
-		if (inst_p.type == ParamTImmediate)
-			return (inst_p.deref == wanted_p.deref);
-		if (inst_p.type == ParamTRegisterOrMem)
-			return wanted_p.deref;
+		if ((inst_p.allow_memory_address) && (wanted_p.deref))
+			return true;
+		if ((inst_p.allow_immediate) && (!wanted_p.deref))
+			return true;
+		return false;
 	}
 
 	// immediate double
 	if (wanted_p.type == ParamTImmediateDouble){
-		if (inst_p.type == ParamTImmediateDouble)
-			return (inst_p.deref == wanted_p.deref);
+		if ((inst_p.allow_immediate) && (inst_p._type_ == ParamTImmediateDouble))
+			return true;
 	}
 
 	// reg
 	if (wanted_p.type == ParamTRegister){
 		// direct match
-		if ((inst_p.type == ParamTRegister) && (inst_p.reg)){
-			return ((inst_p.reg == wanted_p.reg) && (inst_p.deref == wanted_p.deref));
+		if ((inst_p.allow_register) && (inst_p.reg)){
+			return ((inst_p.reg == wanted_p.reg) && (_deref_match_(inst_p, wanted_p)));
 		}
 		// fuzzy match
-		if (inst_p.type == ParamTRegister){
-			return ((inst_p.reg_group == wanted_p.reg->group) && (_size_match_(inst_p, wanted_p)) && (inst_p.deref == wanted_p.deref));
-		}
+		/*if (inst_p.allow_register){
+			msg_write("r2");
+			
+			return ((inst_p.reg_group == wanted_p.reg->group) && (_size_match_(inst_p, wanted_p)) && (_deref_match_(inst_p, wanted_p)));
+		}*/
 		// very fuzzy match
-		if (inst_p.type == ParamTRegisterOrMem){
+		if (inst_p.allow_register){
 			if (wanted_p.deref)
-				return (inst_p.reg_group == wanted_p.reg->group);
+				return ((inst_p.reg_group == wanted_p.reg->group) && (_deref_match_(inst_p, wanted_p)));
 			else
 				return ((inst_p.reg_group == wanted_p.reg->group) && (_size_match_(inst_p, wanted_p))); // FIXME (correct?)
 		}
@@ -2446,6 +2448,7 @@ inline bool _test_param_(sInstParamFuzzy &inst_p, sInstParam &wanted_p)
 	return false;
 }
 
+// translate from easy parameters to assembler usable parameters
 sInstParam _make_param_(int type, long long param)
 {
 	sInstParam i;
@@ -2454,38 +2457,45 @@ sInstParam _make_param_(int type, long long param)
 	i.deref = false;
 	i.value = 0;
 	i.disp = DispModeNone;
+	i.is_label = false;
 	if (type == PKNone){
 		i.type = ParamTNone;
-	}
-	if (type == PKConstant8){
+	}else if (type == PKConstant8){
 		i.type = ParamTImmediate;
 		i.size = Size8;
 		i.value = param;
-	}
-	if (type == PKConstant16){
+	}else if (type == PKConstant16){
 		i.type = ParamTImmediate;
 		i.size = Size16;
 		i.value = param;
-	}
-	if (type == PKConstant32){
+	}else if (type == PKConstant32){
 		i.type = ParamTImmediate;
 		i.size = Size32;
 		i.value = param;
-	}
-	if (type == PKDerefConstant){
+	}else if (type == PKDerefConstant){
 		i.type = ParamTImmediate;
 		i.deref = true;
 		i.value = param;
-	}
-	if (type == PKRegister){
+	}else if ((type == PKLocal) || (type == PKStackRel) || (type == PKEdxRel)){
+		i.type = ParamTRegister;
+		i.reg = (type == PKLocal) ? RegisterByID[RegEbp] : ((type == PKStackRel) ? RegisterByID[RegEsp] : RegisterByID[RegEdx]);
+		i.deref = true;
+		i.disp = ((param < 120) && (param > -120)) ? DispMode8 : DispMode32;
+		i.value = param;
+	}else if (type == PKLocal){
+		i.type = ParamTRegister;
+		i.reg = RegisterByID[RegEsp];
+		i.deref = true;
+		i.disp = ((param < 120) && (param > -120)) ? DispMode8 : DispMode32;
+		i.value = param;
+	}else if (type == PKRegister){
 		i.type = ParamTRegister;
 		i.reg = RegisterByID[(int)param];
 		i.size = i.reg->size;
-	}
-	if (type == PKDerefRegister){
+	}else if (type == PKDerefRegister){
 		i.type = ParamTRegister;
 		i.reg = RegisterByID[(int)param];
-		i.size = i.reg->size;
+		//i.size = i.reg->size; // ???
 		i.deref = true;
 	}
 	return i;
@@ -2540,7 +2550,7 @@ inline char CreatePartialModRMByte(sInstParamFuzzy &pf, sInstParam &p)
 		}
 	}
 	if (pf.mrm_mode != MRMNone)
-		AsmError(string2("unhandled modrm %d %d %s %d %s", pf.mrm_mode, p.type, p.reg?p.reg->name:"", p.deref, SizeOut(pf.size)));
+		AsmSetError(string2("unhandled modrm %d %d %s %d %s", pf.mrm_mode, p.type, p.reg?p.reg->name:"", p.deref, SizeOut(pf.size)));
 	return 0x00;
 }
 
@@ -2554,7 +2564,7 @@ char CreateModRMByte(sInstruction *inst, sInstParam &p1, sInstParam &p2)
 
 void OpcodeAddInstruction(char *oc, int &ocs, sInstruction *inst, sInstParam &p1, sInstParam &p2)
 {
-	msg_db_r("OpcodeAddInstruction", 1);
+	msg_db_r("OpcodeAddInstruction", 1+ASM_DB_LEVEL);
 
 	// add opcode
 	*(int*)&oc[ocs] = inst->code;
@@ -2571,28 +2581,35 @@ void OpcodeAddInstruction(char *oc, int &ocs, sInstruction *inst, sInstParam &p1
 
 
 	// encountered some interesting labels?
-	bool lc_relative = ((inst->name[0] == 'j') && (inst->param1.type != ParamTImmediateDouble)) || (strcmp(inst->name, "call") == 0) || (strstr(inst->name, "loop"));
+	bool lc_relative = ((inst->name[0] == 'j') && (inst->param1._type_ != ParamTImmediateDouble)) || (strcmp(inst->name, "call") == 0) || (strstr(inst->name, "loop"));
+	// inst->param1.immediate_is_relative
 	if ((!UnknownLabel) && (lc_relative) && (CurrentAsmMetaInfo)){
 		// relative jump.... use label only relatively!!!
 		//msg_write("----rel----");
 		//printf("ocp %d   orig %d  cmd %d\n", CurrentAsmMetaInfo->CurrentOpcodePos, CurrentAsmMetaInfo->CodeOrigin, CalcCommandSize(inst, ip1, ip2, p1, p2));
 		int diff = CurrentAsmMetaInfo->CurrentOpcodePos + CurrentAsmMetaInfo->CodeOrigin + CalcCommandSize(inst, ip1, ip2, p1, p2);
+		/*msg_write(diff);
+		msg_write(p1.is_label);
+		msg_write(p2.is_label);*/
 		if (p1.is_label)	p1.value -= diff;
 		if (p2.is_label)	p2.value -= diff;
 	}
 
+	AsmOCParam = ocs;
+
 	OpcodeAddImmideate(oc, ocs, ip1, p1, 0);
 	OpcodeAddImmideate(oc, ocs, ip2, p2, 1);
 
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 }
 
-bool AsmAddInstruction(char *oc, int &ocs, int inst, sInstParam &wp1, sInstParam &wp2, int offset, int insert_at)
+bool AsmAddInstructionLowLevel(char *oc, int &ocs, int inst, sInstParam &wp1, sInstParam &wp2, int offset, int insert_at)
 {
-	msg_db_r("AsmAddInstruction", 1);
+	msg_db_r("AsmAddInstructionLow", 1+ASM_DB_LEVEL);
 
 	int ocs0 = ocs;
 
+	// test if any instruction matches our wishes
 	int ninst = -1;
 	bool has_mod_rm = false;
 	for (int i=0;i<Instruction.size();i++)
@@ -2620,16 +2637,80 @@ bool AsmAddInstruction(char *oc, int &ocs, int inst, sInstParam &wp1, sInstParam
 		AsmError(string("unknown instruction:  ",cmd));*/
 	//msg_write(d2h(&oc[ocs0], ocs - ocs0, false));
 	
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 	return (ninst >= 0);
+}
+
+// only used for error messages
+void param2str(char *str, int type, void *param)
+{
+	switch(type){
+		case PKNone:
+			strcpy(str, "---");
+			break;
+		case PKRegister:
+			strcpy(str, "reg ");
+			if (((int)param >= 0) && ((int)param < RegisterByID.size())){
+				if (RegisterByID[(int)param])
+					strcat(str, RegisterByID[(int)param]->name);
+				else
+					strcat(str, "-----evil----");
+			}else
+				strcat(str, "-----evil----");
+			break;
+		case PKDerefRegister:
+			strcpy(str, "deref reg ");
+			if (((int)param >= 0) && ((int)param < RegisterByID.size())){
+				if (RegisterByID[(int)param])
+					strcat(str, RegisterByID[(int)param]->name);
+				else
+					strcat(str, "-----evil----");
+			}else
+				strcat(str, "-----evil----");
+			break;
+		case PKLocal:
+			strcpy(str, "local ");
+			strcat(str, d2h(&param, 4));
+			break;
+		case PKStackRel:
+			strcpy(str, "stackrel ");
+			strcat(str, d2h(&param, 4));
+			break;
+		case PKEdxRel:
+			strcpy(str, "edx rel ");
+			strcat(str, d2h(&param, 4));
+			break;
+		case PKConstant32:
+			strcpy(str, "const32 ");
+			strcat(str, d2h(&param, 4));
+			break;
+		case PKConstant16:
+			strcpy(str, "const16 ");
+			strcat(str, d2h(&param, 2));
+			break;
+		case PKConstant8:
+			strcpy(str, "const8 ");
+			strcat(str, d2h(&param, 1));
+			break;
+		case PKConstantDouble:
+			strcpy(str, "const 2x ");
+			strcat(str, d2h(&param, 6));
+			break;
+		case PKDerefConstant:
+			strcpy(str, "deref const ");
+			strcat(str, string2("[%s]", d2h(&param, 4)));
+			break;
+		default:
+			strcpy(str, string2("??? (%d)", type));
+			break;
+	}
 }
 
 bool AsmAddInstruction(char *oc, int &ocs, int inst, int param1_type, void *param1, int param2_type, void *param2, int offset, int insert_at)
 {
-	msg_db_r("AsmAddInstruction2", 1);
+	msg_db_r("AsmAddInstruction", 1+ASM_DB_LEVEL);
 	/*if (!Instruction)
 		SetInstructionSet(InstructionSetDefault);*/
-	Error = false;
 	mode16 = false;
 	small_param = mode16;
 	small_addr = mode16;
@@ -2641,11 +2722,31 @@ bool AsmAddInstruction(char *oc, int &ocs, int inst, int param1_type, void *para
 	sInstParam wp1 = _make_param_(param1_type, (long)param1);
 	sInstParam wp2 = _make_param_(param2_type, (long)param2);
 
-	bool ok = AsmAddInstruction(oc, ocs, inst, wp1, wp2, offset, insert_at);
-	if (!ok)
-		AsmError("command not compatible with its parameters");
+	AsmOCParam = ocs;
+	bool ok = AsmAddInstructionLowLevel(oc, ocs, inst, wp1, wp2, offset, insert_at);
+	if (!ok){
+		bool found = false;
+		for (int i=0;i<NumInstructionNames;i++)
+			if (InstructionName[i].inst == inst){
+				char ps1[128], ps2[128];
+				param2str(ps1, param1_type, param1);
+				param2str(ps2, param2_type, param2);
+				AsmSetError(string2("command not compatible with its parameters\n%s %s, %s", InstructionName[i].name, ps1, ps2));
+				found = true;
+			}
+		if (!found)
+			AsmSetError(string2("instruction unknown: %d", inst));
+	}
 	
-	msg_db_l(1);
+	msg_db_l(1+ASM_DB_LEVEL);
 	return ok;
 }
 
+bool AsmImmediateAllowed(int inst)
+{
+	for (int i=0;i<Instruction.size();i++)
+		if (Instruction[i].inst == inst)
+			if ((Instruction[i].param1.allow_immediate) || (Instruction[i].param2.allow_immediate))
+				return true;
+	return false;
+}

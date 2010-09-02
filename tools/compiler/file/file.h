@@ -13,16 +13,12 @@
 | vital properties:                                                            |
 |  - a single instance per file                                                |
 |                                                                              |
-| last update: 2009.11.22 (c) by MichiSoft TM                                  |
+| last update: 2010.07.01 (c) by MichiSoft TM                                  |
 \*----------------------------------------------------------------------------*/
 #if !defined(FILE_H)
 #define FILE_H
 
 
-
-#define DIR_SEARCH_MAX_ITEMS		1024
-#define REGEX_MAX_MATCHES			128
-#define FILE_STR_STACK_DEPTH		64
 
 // which operating system?
 
@@ -76,19 +72,11 @@
 	#define min(a,b)	((a<b)?a:b)
 #endif
 
+#include "msg.h"
+#include "array.h"
+#include "file_op.h"
+#include "strings.h"
 
-
-//--------------------------------------------------------------
-// michi-array
-
-#define ma_size(var)						(*(int*)((char*)var - sizeof(int)))
-#define ma_new(var, type, num_elements)		var = (type*)(new char[num_elements * sizeof(type) + sizeof(int)] + sizeof(int)); ma_size(var) = num_elements
-#define ma_delete(var)						delete[]((char*)var - sizeof(int))
-
-
-
-//#define foreach(array, pointer, loop_var)	typeof(array[0]) *pointer=&array[0]; for (int loop_var=0;loop_var<array.size();pointer=&array[++loop_var])
-#define foreach(array, pointer, loop_var)	if (array.size()>0)pointer=&array[0]; for (int loop_var=0;loop_var<array.size();++loop_var,pointer=(loop_var<array.size())?&array[loop_var]:NULL)
 
 
 //--------------------------------------------------------------
@@ -127,24 +115,30 @@ class CFile
 public:
 	CFile();
 	~CFile();
+
+	// opening
 	bool Open(const char *filename);
 	bool Create(const char *filename);
 	bool Append(const char *filename);
 	bool _cdecl Close();
 
+	// meta
 	void SetBinaryMode(bool bm);
 	void SetPos(int pos,bool absolute);
 	int GetSize();
 	int GetPos();
 	sDate _cdecl GetDate(int type);
 
+	// file format version
 	int ReadFileFormatVersion();
 	void WriteFileFormatVersion(bool binary,int fvv);
 
+	// really low level
 	int ReadBuffer(void *buffer,int size);
 	void ReadComplete(void *buffer,int &size);
 	int WriteBuffer(const void *buffer,int size);
 
+	// medium level
 	void ReadComment();
 	char ReadChar();
 	unsigned char ReadByte();
@@ -171,13 +165,22 @@ public:
 	void WriteFloat(float f);
 	void _cdecl WriteBool(bool b);
 	void WriteStr(const char *str);
-	void WriteStr(const char *str,int l);
+	void WriteStrL(const char *str,int l);
 	void WriteComment(const char *str);
 	void WriteVector(const void *v);
 
+	// high level
+	void Int(int &i);
+	void Float(float &f);
+	void Bool(bool &b);
+	void String(char *str);
+	void Vector(float *v);
+	void Struct(const char *format, void *data);
+	void StructN(const char *format, int &num, void *data, int shift);
+
 	void ShiftRight(int s);
 
-	bool Eof,Binary,SilentFileAccess;
+	bool Eof, Binary, SilentFileAccess, Reading;
 	int FloatDecimals;
 
 //private:
@@ -191,71 +194,6 @@ extern CFile *FileAppend(const char *filename);
 extern void FileClose(CFile *f);
 
 
-
-//--------------------------------------------------------------
-// string operations
-
-extern int _file_current_stack_pos_;
-extern char _file_stack_str_[FILE_STR_STACK_DEPTH][2048];
-#define _file_get_str_()	_file_stack_str_[(_file_current_stack_pos_++)%FILE_STR_STACK_DEPTH]
-
-//char *string(char *str,...);
-char *string(const char *str,const char *str2);
-char *string(const char *str,const char *str2,const char *str3);
-char *string(const char *str,const char *str2,const char *str3,const char *str4);
-char *string(const char *str,const char *str2,const char *str3,const char *str4,const char *str5);
-char *string(const char *str,const char *str2,const char *str3,const char *str4,const char *str5,const char *str6);
-char *string2(const char *str,...);
-void strcut(char *str,const char *dstr);
-char *i2s(int i);
-char *i2s2(int i,int l);
-char *f2s(float f,int dez);
-int s2i(const char *str);
-float s2f(const char *str);
-
-char *d2h(const void *data,int bytes,bool inverted=true);
-char *h2d(const char *hex_str,int bytes);
-
-
-char *SysFileName(const char *filename);
-char *dir_from_filename(const char *filename);
-char *file_from_filename(const char *filename);
-void dir_ensure_ending(char *dir,bool slash);
-char *filename_no_recursion(const char *filename);
-char *file_extension(const char *filename);
-
-
-//--------------------------------------------------------------
-// file/directory operations
-
-bool dir_create(const char *dir);
-bool dir_delete(const char *dir);
-char *get_current_dir();
-bool file_rename(const char *source,const char *target);
-bool file_copy(const char *source,const char *target);
-bool file_delete(const char *filename);
-bool file_test_existence(const char *filename);
-
-
-//--------------------------------------------------------------
-// searching directories
-
-extern int dir_search_num;
-extern char dir_search_name[DIR_SEARCH_MAX_ITEMS][128];
-extern char *dir_search_name_p[DIR_SEARCH_MAX_ITEMS];
-extern bool dir_search_is_dir[DIR_SEARCH_MAX_ITEMS];
-
-int _cdecl dir_search(const char *dir,const char *filter,bool show_directories);
-
-int regex_match(char *rex,char *str,int max_matches=1);
-char *regex_replace(char *rex,char *str,int max_matches=0);
-
-
-//--------------------------------------------------------------
-// regular expressions
-
-extern char *regex_out_match[REGEX_MAX_MATCHES];
-extern int regex_out_pos[REGEX_MAX_MATCHES],regex_out_length[REGEX_MAX_MATCHES];
 
 
 #endif

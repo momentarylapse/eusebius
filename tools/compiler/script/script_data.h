@@ -4,35 +4,32 @@
 |                                                                              |
 | vital properties:                                                            |
 |                                                                              |
-| last updated: 2008.10.26 (c) by MichiSoft TM                                 |
+| last updated: 2010.07.07 (c) by MichiSoft TM                                 |
 \*----------------------------------------------------------------------------*/
 #if !defined(SCRIPT_DATA_H__INCLUDED_)
 #define SCRIPT_DATA_H__INCLUDED_
 
 
 
-#define SCRIPT_MAX_FILE_SIZE			2097152
-#define SCRIPT_MAX_LINES				16384
-#define SCRIPT_MAX_LINE_SIZE			1024
-#define SCRIPT_MAX_EXPRESSIONS			65536
-#define SCRIPT_MAX_EXPRESSIONS_PER_LINE	1024
-#define SCRIPT_MAX_DEFINE_DESTS			64
 #define SCRIPT_MAX_DEFINE_RECURSIONS	128
 #define SCRIPT_MAX_NAME					42		// variables' name length (+1)
 #define SCRIPT_MAX_PARAMS				16		// number of possible parameters per function/command
 #define SCRIPT_MAX_OPCODE				(2*65536)	// max. amount of opcode
 #define SCRIPT_MAX_THREAD_OPCODE		1024
 #define SCRIPT_DEFAULT_STACK_SIZE		32768	// max. amount of stack memory
-#define SCRIPT_MAX_ASMS					256		// number of asm{...} blocks
 extern int ScriptStackSize;
 
 #define PointerSize (sizeof(char*))
+#define SuperArraySize	(PointerSize + 3 * sizeof(int))
 
 
 //#define mem_align(x)	((x) + (4 - (x) % 4) % 4)
 #define mem_align(x)	((((x) + 3) / 4 ) * 4)
 
 extern char ScriptDataVersion[];
+
+class CPreScript;
+struct sClass;
 
 
 //--------------------------------------------------------------------------------------------------
@@ -42,25 +39,30 @@ struct sType{
 	char Name[SCRIPT_MAX_NAME];
 	int Size; // complete size of type
 	int ArrayLength;
+	bool IsArray, IsSuperArray; // mutially exclusive!
 	bool IsPointer, IsSilent; // pointer silent (&)
+	sClass *Class;
 	sType *SubType;
-	void *Owner;
+	CPreScript *Owner; // to share and be able to delete...
 };
 extern std::vector<sType*> PreType;
 extern sType *TypeUnknown;
 extern sType *TypeVoid;
 extern sType *TypePointer;
-extern sType *TypeStruct;
+extern sType *TypeClass;
 extern sType *TypeBool;
 extern sType *TypeInt;
 extern sType *TypeFloat;
 extern sType *TypeChar;
 extern sType *TypeString;
+extern sType *TypeSuperArray;
 
 extern sType *TypeVector;
 extern sType *TypeRect;
 extern sType *TypeColor;
 extern sType *TypeQuaternion;
+
+void script_make_super_array(sType *t, CPreScript *ps = NULL);
 
 
 
@@ -149,25 +151,38 @@ enum{
 	OperatorFloatSmaller,
 	OperatorFloatSmallerEqual,
 	OperatorFloatNegate,
+//	OperatorComplexAssign,
+	OperatorComplexAdd,
+	OperatorComplexSubtract,
+	OperatorComplexMultiply,
+	OperatorComplexMultiplyFC,
+	OperatorComplexMultiplyCF,
+	OperatorComplexDivide,
+	OperatorComplexAddS,
+	OperatorComplexSubtractS,
+	OperatorComplexMultiplyS,
+	OperatorComplexDivideS,
+	OperatorComplexEqual,
+	OperatorComplexNegate,
 	OperatorStringAssignAA,
-	OperatorStringAssignAP,
+	//OperatorStringAssignAP,
 	OperatorStringAddAA,
-	OperatorStringAddAP,
+	/*OperatorStringAddAP,
 	OperatorStringAddPA,
-	OperatorStringAddPP,
+	OperatorStringAddPP,*/
 	OperatorStringAddAAS,
-	OperatorStringAddAPS,
+	//OperatorStringAddAPS,
 	OperatorStringEqualAA,
-	OperatorStringEqualPA,
+	/*OperatorStringEqualPA,
 	OperatorStringEqualAP,
-	OperatorStringEqualPP,
+	OperatorStringEqualPP,*/
 	OperatorStringNotEqualAA,
-	OperatorStringNotEqualPA,
+	/*OperatorStringNotEqualPA,
 	OperatorStringNotEqualAP,
-	OperatorStringNotEqualPP,
-	OperatorStructAssign,
-	OperatorStructEqual,
-	OperatorStructNotEqual,
+	OperatorStringNotEqualPP,*/
+	OperatorClassAssign,
+	OperatorClassEqual,
+	OperatorClassNotEqual,
 	OperatorVectorAdd,
 	OperatorVectorSubtract,
 	OperatorVectorMultiplyVV,
@@ -179,31 +194,68 @@ enum{
 	OperatorVectorSubtractS,
 	OperatorVectorMultiplyS,
 	OperatorVectorDivideS,
-	OperatorVectorNegate
+	OperatorVectorNegate,
+	OperatorSuperArrayAssign,
+	OperatorIntListAddS,
+	OperatorIntListSubtractS,
+	OperatorIntListMultiplyS,
+	OperatorIntListDivideS,
+	/*OperatorIntListAdd,
+	OperatorIntListSubtract,
+	OperatorIntListMultiply,
+	OperatorIntListDivide,*/
+	OperatorIntListAssignInt,
+	OperatorIntListAddSInt,
+	OperatorIntListSubtractSInt,
+	OperatorIntListMultiplySInt,
+	OperatorIntListDivideSInt,
+	/*OperatorIntListAddInt,
+	OperatorIntListSubtractInt,
+	OperatorIntListMultiplyInt,
+	OperatorIntListDivideInt,*/
+	OperatorFloatListAddS,
+	OperatorFloatListSubtractS,
+	OperatorFloatListMultiplyS,
+	OperatorFloatListDivideS,
+	OperatorFloatListAssignFloat,
+	OperatorFloatListAddSFloat,
+	OperatorFloatListSubtractSFloat,
+	OperatorFloatListMultiplySFloat,
+	OperatorFloatListDivideSFloat,
+	OperatorComplexListAddS,
+	OperatorComplexListSubtractS,
+	OperatorComplexListMultiplyS,
+	OperatorComplexListDivideS,
+	OperatorComplexListAssignComplex,
+	OperatorComplexListAddSComplex,
+	OperatorComplexListSubtractSComplex,
+	OperatorComplexListMultiplySComplex,
+	OperatorComplexListDivideSComplex,
+	OperatorComplexListMultiplySFloat,
 };
 
 
 
 //--------------------------------------------------------------------------------------------------
-// structures
+// classes
 
-struct sStructElement{
+struct sClassElement{
 	char Name[SCRIPT_MAX_NAME];
 	sType *Type;
 	int Offset;
 };
-struct sStructFunction{
+struct sClassFunction{
 	char Name[SCRIPT_MAX_NAME];
-	int cmd; // PreCommand index
+	int Kind, Nr; // PreCommand / Own Function?,  index
 	// _func_(x)  ->  p.func(x)
 };
-struct sStruct{
+struct sClass{
 	sType *RootType;
-	std::vector<sStructElement> Element;
-	std::vector<sStructFunction> Function;
-	void *Owner;
+	std::vector<sClassElement> Element;
+	std::vector<sClassFunction> Function;
+	CPreScript *Owner; // to share and be able to delete...
 };
-extern std::vector<sStruct> PreStruct;
+extern std::vector<sClass*> PreClass;
 
 
 
@@ -212,7 +264,7 @@ extern std::vector<sStruct> PreStruct;
 // constants
 
 struct sPreConstant{
-	char *Name;
+	const char *Name; // reference (not new'ed)
 	sType *Type;
 	void *Value;
 };
@@ -225,7 +277,7 @@ extern std::vector<sPreConstant> PreConstant;
 //--------------------------------------------------------------------------------------------------
 // pre defined global variables
 struct sPreGlobalVar{
-	char *Name;
+	const char *Name; // reference (not new'ed)
 	sType *Type;
 };
 extern std::vector<sPreGlobalVar> PreGlobalVar;
@@ -237,12 +289,12 @@ extern std::vector<sPreGlobalVar> PreGlobalVar;
 // external variables (in the surrounding program...)
 
 struct sPreExternalVar{
-	char *Name;
+	const char *Name; // reference (not new'ed)   (unless semiexternal)
 	sType *Type;
 	void *Pointer;
+	bool IsSemiExternal;
 };
 extern std::vector<sPreExternalVar> PreExternalVar;
-extern int NumTruePreExternalVars;
 
 //--------------------------------------------------------------------------------------------------
 // semi external variables (in the surrounding program...but has to be defined "extern")
@@ -253,22 +305,21 @@ extern int NumTruePreExternalVars;
 // commands
 
 struct sPreCommandParam{
-	char *Name;
+	const char *Name; // reference (not new'ed)   (unless semiexternal)
 	//char Name[SCRIPT_MAX_NAME];
 	sType *Type;
 };
 struct sPreCommand{
-	char *Name;
+	const char *Name; // reference (not new'ed)   (unless semiexternal)
 	//char Name[SCRIPT_MAX_NAME];
-	void *Instance, *Func;
+	void *Func;
+	bool IsClassFunction, IsSpecial;
 	sType *ReturnType;
 	std::vector<sPreCommandParam> Param;
+	bool IsSemiExternal;
 };
 extern std::vector<sPreCommand> PreCommand;
 
-
-extern void *f_cp;
-extern void *f_class;
 
 enum{
 	// structural commands
@@ -288,6 +339,7 @@ enum{
 	CommandIntToChar,
 	CommandCharToInt,
 	CommandPointerToBool,
+	CommandComplexSet,
 	CommandVectorSet,
 	CommandRectSet,
 	CommandColorSet,
@@ -315,10 +367,12 @@ extern std::vector<sTypeCast> TypeCast;
 typedef void t_func();
 
 extern void ScriptInit();
-extern void ScriptResetSemiExternalVars();
-extern void ScriptLinkSemiExternalVar(char *name, void *pointer);
-extern void ScriptAddPreGlobalVar(char *name, sType *type);
-extern sType *ScriptGetPreType(char *name);
+extern void ScriptEnd();
+extern void ScriptResetSemiExternalData();
+extern void ScriptLinkSemiExternalVar(const char *name, void *pointer);
+extern void ScriptLinkSemiExternalFunc(const char *name, void *pointer);
+extern void ScriptAddPreGlobalVar(const char *name, sType *type);
+extern sType *ScriptGetPreType(const char *name);
 
 
 
@@ -326,32 +380,60 @@ extern sType *ScriptGetPreType(char *name);
 //--------------------------------------------------------------------------------------------------
 // other stuff
 
+
+class CSuperArray : public CMichiArray
+{
+	public:
+	void init_by_type(sType *t);
+	// special functions
+	void int_sort();
+	void int_unique();
+	void float_sort();
+};
+
+void super_array_assign(CSuperArray *a, CSuperArray *b);
+void super_array_assign_single(CSuperArray *a, void *d);
+void super_array_assign_8_single(CSuperArray *a, complex x);
+void super_array_assign_4_single(CSuperArray *a, int x);
+void super_array_assign_1_single(CSuperArray *a, char x);
+void super_array_add_s_int(CSuperArray *a, CSuperArray *b);
+void super_array_sub_s_int(CSuperArray *a, CSuperArray *b);
+void super_array_mul_s_int(CSuperArray *a, CSuperArray *b);
+void super_array_div_s_int(CSuperArray *a, CSuperArray *b);
+void super_array_add_s_int_int(CSuperArray *a, int x);
+void super_array_sub_s_int_int(CSuperArray *a, int x);
+void super_array_mul_s_int_int(CSuperArray *a, int x);
+void super_array_div_s_int_int(CSuperArray *a, int x);
+void super_array_add_int(CSuperArray *a, CSuperArray *b, CSuperArray *c);
+void super_array_sub_int(CSuperArray *a, CSuperArray *b, CSuperArray *c);
+void super_array_mul_int(CSuperArray *a, CSuperArray *b, CSuperArray *c);
+void super_array_div_int(CSuperArray *a, CSuperArray *b, CSuperArray *c);
+void super_array_add_s_float(CSuperArray *a, CSuperArray *b);
+void super_array_sub_s_float(CSuperArray *a, CSuperArray *b);
+void super_array_mul_s_float(CSuperArray *a, CSuperArray *b);
+void super_array_div_s_float(CSuperArray *a, CSuperArray *b);
+void super_array_add_s_float_float(CSuperArray *a, float x);
+void super_array_sub_s_float_float(CSuperArray *a, float x);
+void super_array_mul_s_float_float(CSuperArray *a, float x);
+void super_array_div_s_float_float(CSuperArray *a, float x);
+void super_array_add_s_com(CSuperArray *a, CSuperArray *b);
+void super_array_sub_s_com(CSuperArray *a, CSuperArray *b);
+void super_array_mul_s_com(CSuperArray *a, CSuperArray *b);
+void super_array_div_s_com(CSuperArray *a, CSuperArray *b);
+void super_array_add_s_com_com(CSuperArray *a, complex x);
+void super_array_sub_s_com_com(CSuperArray *a, complex x);
+void super_array_mul_s_com_com(CSuperArray *a, complex x);
+void super_array_div_s_com_com(CSuperArray *a, complex x);
+void super_array_mul_s_com_float(CSuperArray *a, float x);
+
+
+
 struct sScriptLocation{
 	char Name[SCRIPT_MAX_NAME];
 	int Location;
 };
 
-enum{
-	ScriptLocationCalcMovePrae,
-	ScriptLocationCalcMovePost,
-	ScriptLocationRenderPrae,
-	ScriptLocationRenderPost1,
-	ScriptLocationRenderPost2,
-	ScriptLocationGetInputPrae,
-	ScriptLocationGetInputPost,
-	ScriptLocationNetworkSend,
-	ScriptLocationNetworkRecieve,
-	ScriptLocationNetworkAddClient,
-	ScriptLocationNetworkRemoveClient,
-	ScriptLocationOnKillObject,
-	ScriptLocationOnCollision,
-	/*ScriptLocationOnKeyDown,
-	ScriptLocationOnKeyUp,
-	ScriptLocationOnKey,*/
-	NumScriptLocations
-};
-
-extern sScriptLocation ScriptLocation[NumScriptLocations];
+extern std::vector<sScriptLocation> ScriptLocation;
 
 
 #endif

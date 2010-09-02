@@ -45,10 +45,15 @@ class CHuiMenu;
 // string conversion
 
 #ifdef HUI_OS_WINDOWS
-	extern TCHAR *hui_tchar_str(const char *str);
-	extern TCHAR *hui_tchar_str_f(const char *str);
-	extern char *hui_de_tchar_str(const TCHAR *str);
-	extern char *hui_de_tchar_str_f(const TCHAR *str);
+	extern const TCHAR *hui_tchar_str(const char *str);
+	extern const TCHAR *hui_tchar_str_f(const char *str);
+	extern const char *hui_de_tchar_str(const TCHAR *str);
+	extern const char *hui_de_tchar_str_f(const TCHAR *str);
+	#ifdef UNICODE
+		#define win_str LPWSTR
+	#else
+		#define win_str LPSTR
+	#endif
 #endif
 #ifdef HUI_API_WIN
 	#define sys_str			hui_tchar_str
@@ -56,21 +61,21 @@ class CHuiMenu;
 	#define de_sys_str		hui_de_tchar_str
 	#define de_sys_str_f	hui_de_tchar_str_f
 #else
-	extern char *sys_str(const char *str);
-	extern char *sys_str_f(const char *str);
-	extern char *de_sys_str(const char *str);
-	extern char *de_sys_str_f(const char *str);
+	extern const char *sys_str(const char *str);
+	extern const char *sys_str_f(const char *str);
+	extern const char *de_sys_str(const char *str);
+	extern const char *de_sys_str_f(const char *str);
 #endif
-	extern char *str_m2utf8(const char *str);
-	extern char *str_utf82m(const char *str);
-	extern char *str_ascii2m(const char *str);
-	extern char *str_m2ascii(const char *str);
+	extern const char *str_m2utf8(const char *str);
+	extern const char *str_utf82m(const char *str);
+	extern const char *str_ascii2m(const char *str);
+	extern const char *str_m2ascii(const char *str);
 
-	extern char *get_lang(int id,char *text,bool allow_keys=false);
+	extern const char *get_lang(int id,const char *text,bool allow_keys=false);
 #ifdef HUI_API_WIN
-	extern TCHAR *get_lang_sys(int id,char *text,bool allow_keys=false);
+	extern const TCHAR *get_lang_sys(int id,const char *text,bool allow_keys=false);
 #else
-	extern char *get_lang_sys(int id,char *text,bool allow_keys=false);
+	extern const char *get_lang_sys(int id,const char *text,bool allow_keys=false);
 #endif
 
 
@@ -180,7 +185,7 @@ int hui_main_lin
 
 // execution
 void HuiInit();
-void HuiInitExtended(char *program,char *version,void_function *error_cleanup_function,void *send_bug_report_function,bool load_res,char *def_lang);
+void HuiInitExtended(const char *program,const char *version,void_function *error_cleanup_function,void *send_bug_report_function,bool load_res,const char *def_lang);
 int HuiRun();
 void HuiSetIdleFunction(void_function *idle_function);
 void HuiRunLater(int time_ms, void_function *function);
@@ -190,28 +195,31 @@ void HuiWaitTillWindowClosed(CHuiWindow *win);
 void _cdecl HuiSleep(int duration_ms);
 extern bool HuiEndKeepMsgAlive;
 
-void _cdecl HuiSetDirectory(char *dir);
+void _cdecl HuiSetDirectory(const char *dir);
+int HuiGetCpuCount();
 
 // error handling
 void HuiSetErrorFunction(void_function *error_function);
-void HuiSetDefaultErrorHandler(char *program,char *version,void_function *error_cleanup_function,void *send_bug_report_function);
+void HuiSetDefaultErrorHandler(const char *program,const char *version,void_function *error_cleanup_function,void *send_bug_report_function);
 void HuiSendBugReport();
-void HuiRaiseError(char *message);
+void HuiRaiseError(const char *message);
 
 // file dialogs
-bool _cdecl HuiFileDialogOpen(CHuiWindow *win,char *title,char *dir,char *show_filter,char *filter);
-bool _cdecl HuiFileDialogSave(CHuiWindow *win,char *title,char *dir,char *show_filter,char *filter);
-bool _cdecl HuiFileDialogDir(CHuiWindow *win,char *title,char *dir/*,char *root_dir*/);
+bool _cdecl HuiFileDialogOpen(CHuiWindow *win,const char *title,const char *dir,const char *show_filter,const char *filter);
+bool _cdecl HuiFileDialogSave(CHuiWindow *win,const char *title,const char *dir,const char *show_filter,const char *filter);
+bool _cdecl HuiFileDialogDir(CHuiWindow *win,const char *title,const char *dir/*,char *root_dir*/);
 extern char HuiFileDialogPath[1024],HuiFileDialogFile[256],HuiFileDialogCompleteName[1024];
 bool _cdecl HuiSelectColor(CHuiWindow *win,int r,int g,int b);
 extern int HuiColor[4];
+void _cdecl HuiSetProperty(const char *name, const char *value);
+void _cdecl HuiAboutBox(CHuiWindow *win);
 
 // message dialogs
-int _cdecl HuiQuestionBox(CHuiWindow *win,char *title,char *text,bool allow_cancel=false);
-void _cdecl HuiInfoBox(CHuiWindow *win,char *title,char *text);
-void _cdecl HuiErrorBox(CHuiWindow *win,char *title,char *text);
+int _cdecl HuiQuestionBox(CHuiWindow *win,const char *title,const char *text,bool allow_cancel=false);
+void _cdecl HuiInfoBox(CHuiWindow *win,const char *title,const char *text);
+void _cdecl HuiErrorBox(CHuiWindow *win,const char *title,const char *text);
 
-int HuiLoadImage(char *filename);
+int HuiLoadImage(const char *filename);
 extern std::vector<std::string> hui_image_file; // hui internal, don't use!!!
 struct sHuiKeyCode
 {
@@ -220,24 +228,27 @@ struct sHuiKeyCode
 extern std::vector<sHuiKeyCode> HuiKeyCode; // hui internal, don't use!!!
 
 // configuration
-void _cdecl HuiConfigWriteInt(char *name,int val);
-void _cdecl HuiConfigWriteBool(char *name,bool val);
-void _cdecl HuiConfigWriteStr(char *name,char *str);
-void _cdecl HuiConfigReadInt(char *name,int &val,int default_val=0);
-void _cdecl HuiConfigReadBool(char *name,bool &val,bool default_val=false);
-void _cdecl HuiConfigReadStr(char *name,char *str,char *default_str=NULL);
-void _cdecl HuiRegisterFileType(char *ending,char *description,char *icon_path,char *open_with,char *command_name,bool set_default);
+void _cdecl HuiConfigWriteInt(const char *name, int val);
+void _cdecl HuiConfigWriteFloat(const char *name, float val);
+void _cdecl HuiConfigWriteBool(const char *name, bool val);
+void _cdecl HuiConfigWriteStr(const char *name, const char *str);
+void _cdecl HuiConfigReadInt(const char *name, int &val, int default_val = 0);
+void _cdecl HuiConfigReadFloat(const char *name, float &val, float default_val = 0);
+void _cdecl HuiConfigReadBool(const char *name, bool &val, bool default_val = false);
+void _cdecl HuiConfigReadStr(const char *name, char *str, const char *default_str = NULL);
+void _cdecl HuiSaveConfigFile();
+void _cdecl HuiRegisterFileType(const char *ending,const char *description,const char *icon_path,const char *open_with,const char *command_name,bool set_default);
 
 // clipboard
-void _cdecl HuiCopyToClipBoard(char *buffer,int length);
+void _cdecl HuiCopyToClipBoard(const char *buffer,int length);
 void _cdecl HuiPasteFromClipBoard(char **buffer,int &length);
-void _cdecl HuiOpenDocument(char *filename);
+void _cdecl HuiOpenDocument(const char *filename);
 
 // language
 extern std::vector<std::string> HuiLanguageName;
-void _cdecl HuiSetLanguage(char *language);
-char *_cdecl HuiGetLanguage(int id);
-char *_cdecl HuiGetLanguageS(char *str);
+void _cdecl HuiSetLanguage(const char *language);
+const char *_cdecl HuiGetLanguage(int id);
+const char *_cdecl HuiGetLanguageS(const char *str);
 #define L(id)	HuiGetLanguage(id)
 #define _(str)	HuiGetLanguageS(str)
 void _cdecl HuiUpdateAll();
@@ -246,12 +257,12 @@ extern char HuiCurLanguageName[128];
 
 
 // resources
-void _cdecl HuiLoadResource(char *filename);
+void _cdecl HuiLoadResource(const char *filename);
 extern std::vector<sHuiResource> _HuiResource_; // hui internal, don't use!!!
 
 // input
-char *_cdecl HuiGetKeyName(int key);
-char *_cdecl HuiGetKeyCodeName(int k);
+const char *_cdecl HuiGetKeyName(int key);
+const char *_cdecl HuiGetKeyCodeName(int k);
 
 // timers
 int _cdecl HuiCreateTimer();
@@ -273,6 +284,7 @@ extern GdkEvent *HuiGdkEvent;
 // data from hui (...don't change...)
 extern char HuiAppFilename[256],HuiAppDirectory[256],HuiInitialWorkingDirectory[256];
 extern char HuiSingleParam[512];
+extern std::vector<char*> HuiArgument;
 extern bool HuiRunning;
 
 // hui internal window lists... don't use!!!

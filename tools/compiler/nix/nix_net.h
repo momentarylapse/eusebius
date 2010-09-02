@@ -22,12 +22,12 @@ void _cdecl NixNetClose(int &s);
 void _cdecl NixNetSetBlocking(int s,bool blocking);
 int _cdecl NixNetCreate(int port,bool blocking);
 int _cdecl NixNetAccept(int sh);
-int _cdecl NixNetConnect(char *addr,int port);
+int _cdecl NixNetConnect(const char *addr,int port);
 bool _cdecl NixNetConnectionLost(int s);
 
 // send / recieve directly
-int _cdecl NixNetRead(int s,char *buf,int max_size);
-int _cdecl NixNetWrite(int s,char *buf,int size);
+int _cdecl NixNetRead(int s,void *buf,int max_size);
+int _cdecl NixNetWrite(int s,const void *buf,int size);
 bool _cdecl NixNetReadyToWrite(int s);
 bool _cdecl NixNetReadyToRead(int s);
 
@@ -51,13 +51,13 @@ void _cdecl NixNetWriteBool(bool b);
 void _cdecl NixNetWriteFloat(float f);
 void _cdecl NixNetWriteVector(vector v);
 void _cdecl NixNetWriteChar(char c);
-void _cdecl NixNetWriteStr(char *str);
-void _cdecl NixNetWriteStrL(char *str,int length);
+void _cdecl NixNetWriteStr(const char *str);
+void _cdecl NixNetWriteStrL(const char *str,int length);
 void _cdecl NixNetWriteBlockStart(int id);
 void _cdecl NixNetWriteBlockEnd();
 
 // ...
-void _cdecl NixNetSendBugReport(char *sender,char *program,char *version,char *comment);
+void _cdecl NixNetSendBugReport(const char *sender,const char *program,const char *version,const char *comment);
 
 extern float NixNetConnectTimeout;
 

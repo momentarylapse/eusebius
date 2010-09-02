@@ -23,6 +23,9 @@ enum{
 	PKNone,
 	PKRegister,			// eAX
 	PKDerefRegister,	// [eAX]
+	PKLocal,			// [ebp + 0x0000]
+	PKStackRel,			// [esp + 0x0000]
+	PKEdxRel,			// [edx + 0x0000]
 	PKConstant32,		// 0x00000000
 	PKConstant16,		// 0x0000
 	PKConstant8,		// 0x00
@@ -115,14 +118,14 @@ enum{
 	inst_setnz_b,
 	inst_setbe_b,
 	inst_setnbe_b,
-	inst_sets,
-	inst_setns,
-	inst_setp,
-	inst_setnp,
-	inst_setl,
-	inst_setnl,
-	inst_setle,
-	inst_setnle,
+	inst_sets_b,
+	inst_setns_b,
+	inst_setp_b,
+	inst_setnp_b,
+	inst_setl_b,
+	inst_setnl_b,
+	inst_setle_b,
+	inst_setnle_b,
 	
 	inst_sldt,
 	inst_str,
@@ -180,6 +183,16 @@ enum{
 	inst_fmulp,
 	inst_fsubp,
 	inst_fdivp,
+	inst_fldcw,
+	inst_fnstcw,
+	inst_fnstsw,
+	inst_fistp,
+	inst_fxchg,
+	inst_fsin,
+	inst_fcos,
+	inst_fchs,
+	inst_fabs,
+	inst_fucompp,
 	
 	inst_loop,
 	inst_loope,
@@ -259,10 +272,13 @@ struct sAsmMetaInfo
 };
 
 void AsmInit();
-char *Opcode2Asm(char *code,int length,bool allow_comments=true);
-char *Asm2Opcode(char *code);
+const char *Opcode2Asm(void *code, int length = -1, bool allow_comments = true);
+const char *Asm2Opcode(const char *code);
+extern bool AsmError;
+extern int AsmErrorLine;
 bool AsmAddInstruction(char *oc, int &ocs, int inst, int param1_type, void *param1, int param2_type, void *param2, int offset = 0, int insert_at = -1);
 void SetInstructionSet(int set);
-extern int AsmCodeLength;
+bool AsmImmediateAllowed(int inst);
+extern int AsmCodeLength, AsmOCParam;
 extern sAsmMetaInfo *CurrentAsmMetaInfo;
 

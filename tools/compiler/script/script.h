@@ -15,6 +15,8 @@ extern char ScriptVersion[32];
 
 class CScript;
 
+#include <list>
+#include <vector>
 #include "../nix/nix.h"
 #include "dasm.h"
 #include "script_data.h"
@@ -38,26 +40,26 @@ enum
 class CScript
 {
 public:
-	CScript(char *filename,bool just_analyse=false);
+	// don't call yourself.... better use LoadScript(...)
+	CScript(const char *filename, bool just_analyse = false);
 	CScript();
 	~CScript();
 
 	void Compiler();
 
-	void SetVariable(char *name, void *data);
+	void SetVariable(const char *name, void *data);
 
 	// operational code
-	char *OCAddParameter(sLinkData *link,int n_func,int level,int index,int &pk,bool allow_auto_ref=true);
+	char *OCAddParameter(sCommand *link,int n_func,int level,int index,int &pk,bool allow_auto_ref=true);
 	void OCAddBlock(sBlock *block,int n_func,int level);
 	char *OCAddCommand(sCommand *com,int n_func,int level,int index);
 
-	void DoError(char *msg);
-	void DoErrorLink(char *msg);
+	void DoError(const char *msg, int overwrite_line = -1);
+	void DoErrorLink(const char *msg);
 
 	// execution
 	void Execute();
-	void ExecuteSingleCommand(char *cmd);
-	bool ExecuteScriptFunction(char *name,...);
+	bool ExecuteScriptFunction(const char *name,...);
 
 	//debug displaying
 	void ShowVars(bool include_consts=false);
@@ -66,7 +68,7 @@ public:
 
 	CPreScript *pre_script;
 
-	char Filename[256];
+	int ReferenceCounter;
 	void *user_data; // to associate additional data with the script
 
 	char *Opcode; // executable code
@@ -80,7 +82,7 @@ public:
 	std::vector<t_func*> func;
 	t_func *first_execution, *continue_execution;
 
-	bool Error, ParserError, LinkerError, isCopy, isPrivate, JustAnalyse;
+	bool Error, ParserError, LinkerError, isCopy, isPrivate, JustAnalyse, ShowCompilerStats;
 	char ErrorMsg[256], ErrorMsgExt[2][256];
 	int ErrorLine, ErrorColumn;
 	int WaitingMode;
@@ -91,12 +93,12 @@ public:
 	int MemoryUsed;
 };
 
-extern CScript *LoadScript(char *filename,bool is_public=true);
-extern CScript *LoadScriptAsInclude(char *filename,bool just_analyse);
-extern int NumPublicScripts;
+extern CScript *LoadScript(const char *filename, bool is_public = true, bool just_analyse = false);
+extern void RemoveScript(CScript *s);
 extern char ScriptDirectory[512];
 extern void ExecutePublicScripts();
-extern void DeletePublicScripts(bool even_immortal=false);
+extern void DeleteAllScripts(bool even_immortal = false, bool force = false);
+extern void ExecuteSingleScriptCommand(const char *cmd);
 
 
 

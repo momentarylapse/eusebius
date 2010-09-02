@@ -1,5 +1,5 @@
 #include "script.h"
-#include "../file/msg.h"
+#include "../file/file.h"
 #include <malloc.h>
 #ifdef FILE_OS_WINDOWS
 	#include <windows.h>
@@ -18,11 +18,49 @@
 
 //#define ScriptDebug
 
-static int PreConstantNr,EnumNr;
+
+/*#define PRESCRIPT_DB_LEVEL	2
+#define db_r(msg,level)		msg_db_r(msg,level+PRESCRIPT_DB_LEVEL)*/
+
+static int PreConstantNr, EnumNr;
+
+inline bool type_match(sType *type, bool is_class, sType *wanted);
+inline bool type_match_with_cast(sType *type, bool is_class, bool is_modifiable, sType *wanted, int &penalty, int &cast);
+inline void CommandMakeOperator(sCommand *cmd, sCommand *p1, sCommand *p2, int op);
+ 
+#define GetPointerType(sub)	CreateNewType(string(sub->Name, "*"), PointerSize, true, false, false, 0, sub)
+#define GetReferenceType(sub)	CreateNewType(string(sub->Name, "*"), PointerSize, true, true, false, 0, sub) 
+
+inline sCommand *cp_command(CPreScript *ps, sCommand *c)
+{
+	sCommand *cmd = ps->AddCommand();
+	*cmd = *c;
+	return cmd;
+}
+
+inline void ref_command(CPreScript *ps, sCommand *c)
+{
+	sCommand *t = cp_command(ps, c);
+	c->Kind = KindReference;
+	c->NumParams = 1;
+	c->Param[0] = t;
+	c->Type = ps->GetPointerType(t->Type);
+}
+
+inline void deref_command(CPreScript *ps, sCommand *c)
+{
+	sCommand *t = cp_command(ps, c);
+	c->Kind = KindDereference;
+	c->NumParams = 1;
+	c->Param[0] = t;
+	c->Type = t->Type->SubType;
+}
 
 void reset_pre_script(CPreScript *ps)
 {
+	msg_db_r("reset_pre_script", 2);
 	//memset(ps, 0, sizeof(CPreScript));
+	strcpy(ps->Filename, "");
 	ps->Error = false;
 	strcpy(ps->ErrorMsg, "");
 	strcpy(ps->ErrorMsgExt[0], "");
@@ -33,40 +71,27 @@ void reset_pre_script(CPreScript *ps)
 	ps->Buffer = NULL;
 	ps->Exp.buffer = NULL;
 	ps->FlagShow = false;
+	ps->FlagShowPrae = false;
 	ps->FlagDisassemble = false;
 	ps->FlagCompileOS = false;
 	ps->FlagCompileInitialRealMode = false;
 	ps->FlagOverwriteVariablesOffset = false;
+	ps->FlagImmortal = false;
 	ps->AsmMetaInfo = NULL;
-	ps->Command.reserve(10000);
-	ps->Block.reserve(1000);
-	ps->Type.reserve(300);
-	ps->Function.reserve(100);
-	ps->Constant.reserve(1000);
-	ps->Enum.reserve(100);
-	ps->Define.reserve(100);
-	ps->Struct.reserve(100);
-	ps->LinkData.reserve(1000);
 	strcpy(ps->RootOfAllEvil.Name, "RootOfAllEvil");
 	ps->RootOfAllEvil.VarSize = -1;
 	ps->RootOfAllEvil.ParamSize = 0;
 	ps->RootOfAllEvil.NumParams = 0;
 	ps->RootOfAllEvil.Type = TypeVoid;
-	/*ps->Command.clear();
-	ps->Block.clear();
-	ps->Type.clear();
-	ps->Function.clear();
-	ps->Constant.clear();
-	ps->Enum.clear();
-	ps->Define.clear();
-	ps->Struct.clear();
-	ps->LinkData.clear();*/
 
+	// "include" default stuff
+	ps->NumOwnTypes = 0;
 	for (int i=0;i<PreType.size();i++)
 		ps->Type.push_back(PreType[i]);
 	
-	for (int i=0;i<PreStruct.size();i++)
-		ps->Struct.push_back(PreStruct[i]);
+	for (int i=0;i<PreClass.size();i++)
+		ps->Class.push_back(PreClass[i]);
+	msg_db_l(2);	
 }
 
 CPreScript::CPreScript()
@@ -75,12 +100,12 @@ CPreScript::CPreScript()
 }
 
 
-CPreScript::CPreScript(char *filename,bool just_analyse)
+CPreScript::CPreScript(const char *filename,bool just_analyse)
 {
 	msg_db_r("CPreScript",4);
 	reset_pre_script(this);
 	
-	strcpy(Filename,filename);
+	strcpy(Filename, SysFileName(filename));
 
 	Error = !LoadToBuffer(string(ScriptDirectory, Filename), just_analyse);
 
@@ -90,6 +115,15 @@ CPreScript::CPreScript(char *filename,bool just_analyse)
 
 	if (!Error)
 		Parser();
+	
+	if ((!Error) && (FlagShowPrae))
+		Show();
+	
+	if (!Error)
+		ConvertCallByReference();
+	
+	if ((!Error) && (FlagShow))
+		Show();
 
 	clear_exp_buffer(&Exp);
 	msg_db_l(4);
@@ -103,7 +137,7 @@ CPreScript::CPreScript(char *filename,bool just_analyse)
 
 int indent_0;
 bool indented, unindented;
-void test_indent(int i)
+inline void test_indent(int i)
 {
 	indented = (i > indent_0);
 	unindented = (i < indent_0);
@@ -111,20 +145,11 @@ void test_indent(int i)
 		
 }
 
-void reset_indent()
+inline void reset_indent()
 {
 	indented = unindented = false;
 	indent_0 = 0;
 }
-
-
-#define cur_name		Exp.cur_line->exp[Exp.cur_exp].name
-#define get_name(n)		Exp.cur_line->exp[n].name
-#define next_exp()		Exp.cur_exp ++//;ExpectNoNewline()
-#define end_of_line()	(Exp.cur_exp >= Exp.cur_line->exp.size() - 1) // the last entry is "-eol-"
-#define past_end_of_line()	(Exp.cur_exp >= Exp.cur_line->exp.size())
-#define next_line()		{Exp.cur_line ++;Exp.cur_exp=0;test_indent(Exp.cur_line->indent);}
-#define end_of_file()	((long)Exp.cur_line >= (long)&Exp.line[Exp.line.size() - 1]) // last line = "-eol-"
 
 void line_out(CPreScript *ps)
 {
@@ -138,20 +163,19 @@ void line_out(CPreScript *ps)
 
 
 char Temp[1024];
-int ExpKind;
 
 static int shift_right=0;
 
-static void stringout(char *str)
+static void stringout(const char *str)
 {
 	msg_write(str);
 }
 
-static void so(char *str)
+static void so(const char *str)
 {
 #ifdef ScriptDebug
-	if (strlen(str)>256)
-		str[256]=0;
+	/*if (strlen(str)>256)
+		str[256]=0;*/
 	msg_write(str);
 #endif
 }
@@ -179,7 +203,7 @@ static void left()
 #endif
 }
 
-int s2i2(char *str)
+int s2i2(const char *str)
 {
 	if ((str[0]=='0')&&(str[1]=='x')){
 		int r=0;
@@ -237,14 +261,13 @@ char *Kind2Str(int kind)
 	if (kind == KindCompilerFunction)	strcpy(str, "Compiler-Funktion");
 	if (kind == KindOperator)			strcpy(str, "Operator");
 	if (kind == KindPrimitiveOperator)	strcpy(str, "PRIMITIVER Operator");
-	if (kind == KindCommand)			strcpy(str, "Befehl");
 	if (kind == KindBlock)				strcpy(str, "Befehls-Block");
-	if (kind == KindPointerShift)		strcpy(str, "Pointer-Verschiebung");
+	if (kind == KindAddressShift)		strcpy(str, "Adresse-Verschiebung");
 	if (kind == KindArray)				strcpy(str, "Array-Element");
 	if (kind == KindPointerAsArray)		strcpy(str, "Pointer-Array-Element");
 	if (kind == KindReference)			strcpy(str, "Adress-Operator");
 	if (kind == KindDereference)		strcpy(str, "Dereferenzierung");
-	if (kind == KindDerefPointerShift)	strcpy(str, "deref. Pointer-Verschiebung");
+	if (kind == KindDerefAddressShift)	strcpy(str, "deref. Adresse-Verschiebung");
 	if (kind == KindType)				strcpy(str, "Typ");
 	return str;
 }
@@ -276,23 +299,22 @@ char *LinkNr2Str(CPreScript *s,int kind,int nr)
 	if (kind==KindVarFunction)		strcpy(str,i2s(nr));
 	if (kind==KindVarExternal)		strcpy(str,PreExternalVar[nr].Name);
 	if (kind==KindConstant)			strcpy(str,i2s(nr));
-	if (kind==KindFunction)			strcpy(str,i2s(nr));
+	if (kind==KindFunction)			strcpy(str,s->Function[nr].Name);
 	if (kind==KindCompilerFunction)	strcpy(str,PreCommand[nr].Name);
 	if (kind==KindOperator)			strcpy(str,Operator2Str(s,nr));
 	if (kind==KindPrimitiveOperator)strcpy(str,PrimitiveOperator2Str(nr));
-	if (kind==KindCommand)			strcpy(str,i2s(nr));
 	if (kind==KindBlock)			strcpy(str,i2s(nr));
-	if (kind==KindPointerShift)		strcpy(str,i2s(nr));
-	if (kind==KindArray)			strcpy(str,i2s(nr));
-	if (kind==KindPointerAsArray)	strcpy(str,i2s(nr));
-	if (kind==KindReference)		strcpy(str,"(keine Parameter)");
-	if (kind==KindDereference)		strcpy(str,"(keine Parameter)");
-	if (kind==KindDerefPointerShift)strcpy(str,i2s(nr));
+	if (kind==KindAddressShift)		strcpy(str,i2s(nr));
+	if (kind==KindArray)			strcpy(str,"(keine LinkNr)");
+	if (kind==KindPointerAsArray)	strcpy(str,"(keine LinkNr)");
+	if (kind==KindReference)		strcpy(str,"(keine LinkNr)");
+	if (kind==KindDereference)		strcpy(str,"(keine LinkNr)");
+	if (kind==KindDerefAddressShift)strcpy(str,i2s(nr));
 	if (kind==KindType)				strcpy(str,s->Type[nr]->Name);
 	return str;
 }
 
-void CPreScript::DoError(char *str)
+void CPreScript::DoError(const char *str, int overwrite_line)
 {
 	if (Error)
 		return;
@@ -310,6 +332,10 @@ void CPreScript::DoError(char *str)
 			exp_known = true;
 			pos = Exp.cur_line->exp[Exp.cur_exp].pos;
 		}
+	}
+	if (overwrite_line >= 0){
+		line = overwrite_line;
+		pos = 0;
 	}
 
 	if (exp_known){
@@ -336,456 +362,6 @@ void CPreScript::DoError(char *str)
 	stringout("\n\n\n");
 }
 
-void CScript::DoError(char *str)
-{
-	pre_script->DoError(str);
-	Error = true;
-	ErrorLine = pre_script->ErrorLine;
-	ErrorColumn = pre_script->ErrorColumn;
-	strcpy(ErrorMsgExt[0], pre_script->ErrorMsgExt[0]);
-	strcpy(ErrorMsgExt[1], pre_script->ErrorMsgExt[1]);
-	strcpy(ErrorMsg, pre_script->ErrorMsg);
-}
-
-void CScript::DoErrorLink(char *str)
-{
-	DoError(str);
-	LinkerError = true;
-}
-
-inline bool isNumber(char c)
-{
-	if ((c>=48)&&(c<=57))
-		return true;
-	return false;
-}
-
-inline bool isLetter(char c)
-{
-	if ((c>='a')&&(c<='z'))
-		return true;
-	if ((c>='A')&&(c<='Z'))
-		return true;
-	if ((c=='_'))
-		return true;
-	// Umlaute
-#ifdef HUI_OS_WINDOWS
-	// Windows-Zeichensatz
-	if ((c=='_')||(c==-28)||(c==-10)||(c==-4)||(c==-33)||(c==-60)||(c==-42)||(c==-36))
-		return true;
-#endif
-#ifdef HUI_OS_LINUX
-	// Linux-Zeichensatz??? testen!!!!
-#endif
-	return false;
-}
-
-inline bool isSpacing(char c)
-{
-	if ((c==' ')||(c=='\t')||(c=='\n'))
-		return true;
-	return false;
-}
-
-inline bool isSign(char c)
-{
-	if ((c=='.')||(c==':')||(c==',')||(c==';')||(c=='+')||(c=='-')||(c=='*')||(c=='%')||(c=='/')||(c=='=')||(c=='<')||(c=='>')||(c=='\''))
-		return true;
-	if ((c=='(')||(c==')')||(c=='{')||(c=='}')||(c=='&')||(c=='|')||(c=='!')||(c=='[')||(c==']')||(c=='\"')||(c=='\\')||(c=='#')||(c=='?')||(c=='$'))
-		return true;
-	return false;
-}
-
-int CPreScript::GetKind(char c)
-{
-	if (isNumber(c))
-		return ExpKindNumber;
-	else if (isLetter(c))
-		return ExpKindLetter;
-	else if (isSpacing(c))
-		return ExpKindSpacing;
-	else if (isSign(c))
-		return ExpKindSign;
-	else if (c==0)
-		return -1;
-
-	char str[8];
-	str[0]=c;
-	str[1]=0;
-	Exp.cur_exp = Exp.cur_line->exp.size();
-	strcpy(Exp.cur_line->exp[Exp.cur_exp].name,string2("   '%s' (%s)   ",str,d2h(str,1)));
-	DoError("evil character found!");
-	return -1;
-}
-
-char str_eol[] = "-eol-";
-
-void clear_exp_buffer(ps_exp_buffer_t *e)
-{
-	e->cur_line = NULL;
-	for (int i=0;i<e->line.size();i++)
-		e->line[i].exp.clear();
-	e->line.clear();
-	if (e->buffer){
-		dm("Exp.buffer", e->buffer);
-		delete[]e->buffer;
-		e->buffer = NULL;
-	}
-	e->cur_line = &e->temp_line;
-	e->cur_exp = -1;
-	e->comment_level = 0;
-}
-
-inline void exp_add_line(ps_exp_buffer_t *e)
-{
-	ps_line_t l;
-	e->line.push_back(l);
-	e->cur_line = &e->line[e->line.size()-1];
-}
-
-inline void insert_into_buffer(CPreScript *ps, char *name, int pos, int index = -1)
-{
-	ps_exp_t e;
-	e.name = ps->Exp.buf_cur;
-	ps->Exp.buf_cur += strlen(name) + 1;
-	strcpy(e.name, name);
-	e.pos = pos;
-	if (index < 0)
-		// at the end...
-		ps->Exp.cur_line->exp.push_back(e);
-	else
-		ps->Exp.cur_line->exp.insert(ps->Exp.cur_line->exp.begin() + index, e);
-}
-
-inline void remove_from_buffer(CPreScript *ps, int index)
-{
-	ps->Exp.cur_line->exp.erase(ps->Exp.cur_line->exp.begin() + index);
-}		     
-
-void CPreScript::Analyse(char *buffer, bool just_analyse)
-{
-	msg_db_r("Analyse", 4);
-	clear_exp_buffer(&Exp);
-	Exp.buffer = new char[strlen(buffer)*2];
-	am("Exp.buffer",asm_end - asm_start + 1, Exp.buffer);
-	Exp.buf_cur = Exp.buffer;
-
-	reset_indent();
-
-	// scan all lines
-	char *buf = buffer;
-	for (int i=0;i<SCRIPT_MAX_LINES;i++){
-		//exp_add_line(&Exp);
-		Exp.cur_line->physical_line = i;
-		if (AnalyseLine(buf, Exp.cur_line, i, just_analyse))
-			break;
-		if (Error){
-			msg_db_l(4);
-			return;
-		}
-		buf += Exp.cur_line->length + 1;
-	}
-
-	// glue together lines ending with a "\" or ","
-	for (int i=0;i<(int)Exp.line.size()-1;i++){
-		if ((strcmp(Exp.line[i].exp[Exp.line[i].exp.size() - 1].name, "\\") == 0) || (strcmp(Exp.line[i].exp[Exp.line[i].exp.size() - 1].name, ",") == 0)){
-			int d = (strcmp(Exp.line[i].exp[Exp.line[i].exp.size() - 1].name, "\\") == 0) ? 1 : 0;
-			// glue... (without \\ but with ,)
-			for (int j=d;j<Exp.line[i + 1].exp.size();j++){
-				ps_exp_t e;
-				e.name = Exp.line[i + 1].exp[j].name;
-				e.pos = 0; // Exp.line[i + 1].exp[j].name;
-				Exp.line[i].exp.push_back(e);
-			}
-			// remove line
-			Exp.line.erase(Exp.line.begin() + i + 1);
-			i --;
-			
-		}
-	}
-
-	/*for (int i=0;i<Exp.line.size();i++){
-		msg_write("--------------------");
-		msg_write(Exp.line[i].indent);
-		for (int j=0;j<Exp.line[i].exp.size();j++)
-			msg_write(Exp.line[i].exp[j].name);
-	}*/
-
-	
-	// safety
-	Exp.temp_line.exp.clear();
-	Exp.line.push_back(Exp.temp_line);
-	for (int i=0;i<Exp.line.size();i++){
-		ps_exp_t e;
-		e.name = str_eol;
-		e.pos = Exp.line[i].length;
-		Exp.line[i].exp.push_back(e);
-	}
-	
-	msg_db_l(4);
-}
-
-// scan one line
-//   true -> end of file
-bool CPreScript::AnalyseLine(char *buffer, ps_line_t *l, int &line_no, bool just_analyse)
-{
-	msg_db_r("AnalyseLine", 4);
-	int pos = 0;
-	l->indent = 0;
-	l->length = 0;
-	l->exp.clear();
-
-	for (int i=0;i<SCRIPT_MAX_EXPRESSIONS_PER_LINE;i++){
-		if (AnalyseExpression(buffer, pos, l, line_no, just_analyse))
-			break;
-		if (Error){
-			msg_db_l(4);
-			return false;
-		}
-	}
-	l->length = pos;
-	if (l->exp.size() > 0)
-		Exp.line.push_back(*l);
-	msg_db_l(4);
-	return (buffer[pos] == 0);
-}
-
-bool DoMultiLineComment(CPreScript *ps, char *buffer, int &pos)
-{
-	while(true){
-		if (buffer[pos] == '\n')
-			return true;
-		if ((buffer[pos] == '/') && (buffer[pos + 1] == '*'))
-			ps->Exp.comment_level ++;
-		if ((buffer[pos] == '*') && (buffer[pos + 1] == '/')){
-			ps->Exp.comment_level --;
-			if (ps->Exp.comment_level == 0){
-				pos += 2;
-				return false;
-			}
-		}
-		if ((buffer[pos] == 0)){// || (BufferPos>=BufferLength)){
-			ps->DoError("comment exceeds end of file");
-			return true;
-		}
-		pos ++;
-	}
-	//ExpKind = ExpKindSpacing;
-}
-
-void DoAsmBlock(CPreScript *ps, char *buffer, int &pos, int &line_no)
-{
-	int line_breaks = 0;
-	// find beginning
-	for (int i=0;i<1024;i++){
-		if (buffer[pos] == '{')
-			break;
-		if ((buffer[pos] != ' ') && (buffer[pos] != '\t') && (buffer[pos] != '\n')){
-			ps->DoError("'{' expected after \"asm\"");
-			return;
-		}
-		if (buffer[pos] == '\n')
-			line_breaks ++;
-		pos ++;
-	}
-	pos ++;
-	int asm_start = pos;
-	
-	// find end
-	for (int i=0;i<65536;i++){
-		if (buffer[pos] == '}')
-			break;
-		if (buffer[pos] == 0){
-			ps->DoError("'}' expected to end \"asm\"");
-			return;
-		}
-		if (buffer[pos] == '\n')
-			line_breaks ++;
-		pos ++;
-	}
-	int asm_end = pos - 1;
-	pos ++;
-
-	sAsmBlock a;
-	a.Line = ps->Exp.cur_line->physical_line;
-	a.block = new char[asm_end - asm_start + 1];
-	am("AsmBlock",asm_end - asm_start + 1, a.block);
-	memcpy(a.block, &buffer[asm_start], asm_end - asm_start);
-	a.block[asm_end - asm_start] = 0;
-	ps->AsmBlock.push_back(a);
-
-	line_no += line_breaks;
-}
-
-// scan one line
-// starts with <pos> and sets <pos> to first character after the expression
-//   true -> end of line (<pos> is on newline)
-bool CPreScript::AnalyseExpression(char *buffer, int &pos, ps_line_t *l, int &line_no, bool just_analyse)
-{
-	msg_db_r("AnalyseExpression", 4);
-	// skip whitespace and other "invisible" stuff to find the first interesting character
-	if (Exp.comment_level > 0)
-		if (DoMultiLineComment(this, buffer, pos))
-			_return_(4, true);
-
-	for (int i=0;i<SCRIPT_MAX_LINE_SIZE;i++){
-		// end of file
-		if (buffer[pos] == 0){
-			strcpy(Temp, "");
-			_return_(4, true);
-		}
-		else if (buffer[pos]=='\n'){ // line break
-			_return_(4, true);
-		}else if (buffer[pos]=='\t'){ // tab
-			if (l->exp.size() == 0)
-				l->indent ++;
-		}else if ((buffer[pos] == '/') && (buffer[pos + 1]=='/')){ // single-line comment
-			// skip to end of line
-			for (int c=0;c<SCRIPT_MAX_LINE_SIZE;c++){
-				pos ++;
-				if (buffer[pos] == '\n')
-					_return_(4, true);
-			}
-		}else if ((buffer[pos] == '/') && (buffer[pos + 1] == '*')){ // multi-line comment
-			if (DoMultiLineComment(this, buffer, pos))
-				_return_(4, true);
-			ExpKind = ExpKindSpacing;
-		}else if ((buffer[pos] == 'a') && (buffer[pos + 1] == 's') && (buffer[pos + 2] == 'm')){ // asm block
-			int pos0 = pos;
-			pos += 3;
-			DoAsmBlock(this, buffer, pos, line_no);
-			if (Error)	_return_(4, true);
-			insert_into_buffer(this, "-asm-", pos0);
-			_return_(4, true);
-		}
-		ExpKind = GetKind(buffer[pos]);
-		if (Error)
-			_return_(4, false);
-		if (ExpKind != ExpKindSpacing)
-			break;
-		pos ++;
-	}
-	int TempLength = 0;
-	//int ExpStart=BufferPos;
-
-	// string
-	if (buffer[pos] == '\"'){
-		msg_db_m("string", 1);
-		for (int i=0;i<SCRIPT_MAX_LINE_SIZE;i++){
-			char c = Temp[TempLength ++] = buffer[pos ++];
-			// end of string?
-			if ((c == '\"') && (i > 0))
-				break;
-			else if (c == '\n'){
-				_do_error_("string exceeds line", 4, false);
-			}else{
-				// escape sequence
-				if (c == '\\'){
-					if (buffer[pos] == '\\')
-						Temp[TempLength - 1] = '\\';
-					else if (buffer[pos] == '\"')
-						Temp[TempLength - 1] = '\"';
-					else if (buffer[pos] == 'n')
-						Temp[TempLength - 1] = '\n';
-					else if (buffer[pos] == 'r')
-						Temp[TempLength - 1] = '\r';
-					else if (buffer[pos] == 't')
-						Temp[TempLength - 1] = '\t';
-					else if (buffer[pos] == '0')
-						Temp[TempLength - 1] = '\0';
-					else
-						_do_error_("unknown escape in string", 4, false);
-					pos ++;
-				}
-				continue;
-			}
-		}
-
-	// macro
-	}else if ((buffer[pos] == '#') && (GetKind(buffer[pos + 1]) == ExpKindLetter)){
-		msg_db_m("macro", 4);
-		for (int i=0;i<SCRIPT_MAX_NAME;i++){
-			int kind = GetKind(buffer[pos]);
-			// may contain letters and numbers
-			if ((i > 0) && (kind != ExpKindLetter) && (kind != ExpKindNumber))
-				break;
-			Temp[TempLength ++] = buffer[pos ++];
-		}
-
-	// character
-	}else if (buffer[pos] == '\''){
-		msg_db_m("char", 4);
-		Temp[TempLength ++] = buffer[pos ++];
-		Temp[TempLength ++] = buffer[pos ++];
-		Temp[TempLength ++] = buffer[pos ++];
-		if (Temp[TempLength - 1] != '\'')
-			_do_error_("character constant should end with '''", 4, false);
-
-	// word
-	}else if (ExpKind == ExpKindLetter){
-		msg_db_m("word", 4);
-		for (int i=0;i<SCRIPT_MAX_NAME;i++){
-			int kind = GetKind(buffer[pos]);
-			// may contain letters and numbers
-			if ((kind != ExpKindLetter) && (kind != ExpKindNumber))
-				break;
-			Temp[TempLength ++] = buffer[pos ++];
-		}
-
-	// number
-	}else if (ExpKind == ExpKindNumber){
-		msg_db_m("num", 4);
-		bool hex = false;
-		for (int i=0;i<SCRIPT_MAX_LINE_SIZE;i++){
-			char c = Temp[TempLength] = buffer[pos];
-			// "0x..." -> hexadecimal
-			if ((i == 1) && (Temp[0] == '0') && (Temp[1] == 'x'))
-				hex = true;
-			int kind = GetKind(c);
-			if (hex){
-				if ((i > 1) && (kind != ExpKindNumber) && ((c < 'a') || (c > 'f')))
-					break;
-			}else{
-				// may contain numbers and '.' or 'f'
-				if ((kind != ExpKindNumber) && (c != '.'))// && (c != 'f'))
-					break;
-			}
-			TempLength ++;
-			pos ++;
-		}
-
-	// symbol
-	}else if (ExpKind == ExpKindSign){
-		msg_db_m("sym", 4);
-		// mostly single-character symbols
-		char c = Temp[TempLength ++] = buffer[pos ++];
-		// double-character symbol
-		if (((c == '=') && (buffer[pos] == '=')) || // ==
-			((c == '!') && (buffer[pos] == '=')) || // !=
-			((c == '<') && (buffer[pos] == '=')) || // <=
-			((c == '>') && (buffer[pos] == '=')) || // >=
-			((c == '+') && (buffer[pos] == '=')) || // +=
-			((c == '-') && (buffer[pos] == '=')) || // -=
-			((c == '*') && (buffer[pos] == '=')) || // *=
-			((c == '/') && (buffer[pos] == '=')) || // /=
-			((c == '+') && (buffer[pos] == '+')) || // ++
-			((c == '-') && (buffer[pos] == '-')) || // --
-			((c == '&') && (buffer[pos] == '&')) || // &&
-			((c == '|') && (buffer[pos] == '|')) || // ||
-			((c == '<') && (buffer[pos] == '<')) || // <<
-			((c == '>') && (buffer[pos] == '>')) || // >>
-			((c == '+') && (buffer[pos] == '+')) || // ++
-			((c == '-') && (buffer[pos] == '-')) || // --
-			((c == '-') && (buffer[pos] == '>'))) // ->
-				Temp[TempLength ++] = buffer[pos ++];
-	}
-
-	Temp[TempLength] = 0;
-	insert_into_buffer(this, Temp, pos - TempLength);
-
-	msg_db_l(4);
-	return (buffer[pos] == '\n');
-}
 
 bool IsIfDefed(int &num_ifdefs,bool *defed)
 {
@@ -819,66 +395,6 @@ void CreateAsmMetaInfo(CPreScript* ps)
 	msg_db_l(5);
 }
 
-// import data from an included script file
-void CPreScript::AddIncludeData(CScript *s)
-{
-	msg_db_r("AddIncludeData",5);
-	Include.push_back(s);
-	CPreScript *ps=s->pre_script;
-
-	// defines
-	for (int i=0;i<ps->Define.size();i++)
-		Define.push_back(ps->Define[i]);
-
-	// structs
-	for (int i=0;i<ps->Struct.size() - PreStruct.size();i++)
-		Struct.push_back(ps->Struct[i + PreStruct.size()]);
-
-	// types
-	for (int i=0;i<ps->Type.size() - PreType.size();i++)
-		Type.push_back(ps->Type[i + PreType.size()]);
-
-	// enums
-	for (int i=0;i<ps->Enum.size();i++)
-		Enum.push_back(ps->Enum[i]);
-	msg_db_l(5);
-}
-
-enum{
-	MacroInclude,
-	MacroDefine,
-	MacroIfdef,
-	MacroIfndef,
-	MacroEndif,
-	MacroElse,
-	MacroDisasm,
-	MacroShow,
-	MacroImmortal,
-	MacroRule,
-	MacroOs,
-	MacroInitialRealmode,
-	MacroVariablesOffset,
-	MacroCodeOrigin,
-	NumMacroNames
-};
-
-char MacroName[NumMacroNames][SCRIPT_MAX_NAME]=
-{
-	"#include",
-	"#define",
-	"#ifdef",
-	"#ifndef",
-	"#endif",
-	"#else",
-	"#disasm",
-	"#show",
-	"#immortal",
-	"#rule",
-	"#os",
-	"#initial_realmode",
-	"#variables_offset",
-	"#code_origin"
-};		
 
 #if 0
 void CPreScript::MakeExps(char *Buffer,bool just_ana				)
@@ -1099,7 +615,7 @@ void CPreScript::MakeExps(char *Buffer,bool just_ana				)
 
 bool next_extern = false;
 
-int CPreScript::AddVar(char *name, sType *type, sFunction *f)
+int CPreScript::AddVar(const char *name, sType *type, sFunction *f)
 {
 /*	// "extern" variable -> link to main program
 	if ((next_extern) && (f == &RootOfAllEvil)){
@@ -1141,76 +657,63 @@ int CPreScript::AddConstant(sType *type)
 	return Constant.size() - 1;
 }
 
-int CPreScript::AddBlock()
+sBlock *CPreScript::AddBlock()
 {
 	so("AddBlock");
-	//am("Block",sizeof(sBlock),Block[NumBlocks]);
-	Block.resize(Block.size() + 1);
-	sBlock *b = &Block[Block.size() - 1];
-	b->Nr = Block.size() - 1;
-	b->RootNr = -1;
-	return Block.size() - 1;
+	sBlock *b = new sBlock;
+	am("Block",sizeof(sBlock),b);
+	b->Index = Block.size();
+	b->Root = -1;
+	Block.push_back(b);
+	return b;
 }
 
 // functions
 
-int CPreScript::AddFunction(char *name)
+int CPreScript::AddFunction(const char *name, sType *type)
 {
 	so("AddFunction");
 	//am("Function",sizeof(sFunction),Function[NumFunctions]);
 	Function.resize(Function.size() + 1);
 	sFunction *f = &Function[Function.size() - 1];
 	strcpy(f->Name, name);
-	f->Block = &Block[AddBlock()];
+	f->Block = AddBlock();
 	if (Error)
 		return -1;
 	f->NumParams = 0;
 	f->Var.clear();
 	f->VarSize = -1;
 	f->ParamSize = 8; // space for return value and eBP
-	f->Type = TypeVoid;
+	f->Type = type;
+	f->LiteralType = type;
+	if (type->Size > 4)
+		f->ParamSize += 4;
+	//f->VarSize += type->Size;
 	return Function.size() - 1;
 }
-
-int CPreScript::AddCommand()
+sCommand *CPreScript::AddCommand()
 {
 	//am("Command",sizeof(sCommand),Command[NumCommands]);
 	so("AddCommand");
-	Command.resize(Command.size() + 1);
-	sCommand *c = &Command[Command.size() - 1];
-	c->ReturnType = TypeVoid;
+	sCommand *c = new sCommand;
+	am("Command", sizeof(sCommand), c);
+	Command.push_back(c);
+	c->Type = TypeVoid;
 	c->Kind = KindUnknown;
 	c->NumParams = 0;
-	return Command.size() - 1;
+	c->Sub1 = c->Sub2 = c->SubEnd = NULL;
+	return c;
 }
 
-inline int command_from_link(CPreScript *ps, sLinkData *link)
+
+inline sCommand *add_command_compilerfunc(CPreScript *ps, int cf)
 {
-	int ncmd = ps->AddCommand();
-	sCommand *cmd = &ps->Command[ncmd];
-	cmd->Kind = link->Kind;
-	cmd->LinkNr = link->Nr;
-	cmd->script = link->script;
-	cmd->ReturnType = link->type;
-	if (link->Kind == KindFunction){
-		if (cmd->script)
-			cmd->NumParams = cmd->script->pre_script->Function[link->Nr].NumParams;
-		else
-			cmd->NumParams = ps->Function[link->Nr].NumParams;
-	}else if (link->Kind == KindCompilerFunction){
-		ps->SetCompilerFunction(cmd->LinkNr, cmd);
-	}
-	return ncmd;
+	sCommand *c = ps->AddCommand();
+	ps->CommandSetCompilerFunction(cf, c);
+	return c;
 }
 
-inline int add_command_compilerfunc(CPreScript *ps, int cf)
-{
-	int ncmd = ps->AddCommand();
-	ps->SetCompilerFunction(cf, &ps->Command[ncmd]);
-	return ncmd;
-}
-
-int CPreScript::WhichPrimitiveOperator(char *name)
+int CPreScript::WhichPrimitiveOperator(const char *name)
 {
 	for (int i=0;i<NumPrimitiveOperators;i++)
 		if (strcmp(name, PrimitiveOperator[i].Name) == 0)
@@ -1218,7 +721,7 @@ int CPreScript::WhichPrimitiveOperator(char *name)
 	return -1;
 }
 
-int CPreScript::WhichExternalVariable(char *name)
+int CPreScript::WhichExternalVariable(const char *name)
 {
 	// wrong order -> "extern" varbiables are dominant...
 	for (int i=PreExternalVar.size()-1;i>=0;i--)
@@ -1228,7 +731,7 @@ int CPreScript::WhichExternalVariable(char *name)
 	return -1;
 }
 
-int CPreScript::WhichType(char *name)
+int CPreScript::WhichType(const char *name)
 {
 	for (int i=0;i<Type.size();i++)
 		if (strcmp(name, Type[i]->Name) == 0)
@@ -1237,29 +740,37 @@ int CPreScript::WhichType(char *name)
 	return -1;
 }
 
-int CPreScript::WhichCompilerFunction(char *name)
+std::vector<int> MultipleFunctionList;
+
+int CPreScript::WhichCompilerFunction(const char *name)
 {
+	MultipleFunctionList.clear();
 	for (int i=0;i<PreCommand.size();i++)
 		if (strcmp(name, PreCommand[i].Name) == 0)
-			return i;
+			MultipleFunctionList.push_back(i);
+			//return i;
+	if (MultipleFunctionList.size() > 0)
+		return MultipleFunctionList[0];
 	return -1;
 }
 
-bool CPreScript::GetExistence(char *name,sFunction *f)
+bool CPreScript::GetExistence(const char *name, sFunction *f)
 {
 	msg_db_r("GetExistence", 2);
+	MultipleFunctionList.clear();
 	sFunction *lf=f;
-	GetExistenceLink.type = TypeUnknown;
-	GetExistenceLink.Meta = NULL;
+	GetExistenceLink.Type = TypeUnknown;
+	GetExistenceLink.NumParams = 0;
 	GetExistenceLink.script = NULL;
+	GetExistenceLink.Sub1 = GetExistenceLink.Sub2 = GetExistenceLink.SubEnd = NULL;
 
 	// first test local variables
 	if (lf){
 		sLocalVariable *v;
 		foreach(f->Var, v, i){
 			if (strcmp(v->Name, name) == 0){
-				GetExistenceLink.type = v->Type;
-				GetExistenceLink.Nr = i;
+				GetExistenceLink.Type = v->Type;
+				GetExistenceLink.LinkNr = i;
 				GetExistenceLink.Kind = KindVarLocal;
 				msg_db_l(2);
 				return true;
@@ -1268,112 +779,121 @@ bool CPreScript::GetExistence(char *name,sFunction *f)
 	}
 
 	// then global variables (=local variables in "RootOfAllEvil")
-	lf=&RootOfAllEvil;
+	lf = &RootOfAllEvil;
 	for (int i=0;i<lf->Var.size();i++)
-		if (strcmp(lf->Var[i].Name,name)==0){
-			GetExistenceLink.type=lf->Var[i].Type;
-			GetExistenceLink.Nr=i;
-			GetExistenceLink.Kind=KindVarGlobal;
+		if (strcmp(lf->Var[i].Name, name)==0){
+			GetExistenceLink.Type = lf->Var[i].Type;
+			GetExistenceLink.LinkNr = i;
+			GetExistenceLink.Kind = KindVarGlobal;
 			msg_db_l(2);
 			return true;
 		}
 
-	// schliesslich die externen-Variablen
-	int w=WhichExternalVariable(name);
-	if (w>=0){
-		SetExternalVariable(w,GetExistenceLink);
+	// at last the external variables
+	int w = WhichExternalVariable(name);
+	if (w >= 0){
+		SetExternalVariable(w, &GetExistenceLink);
 		msg_db_l(2);
 		return true;
 	}
 
-	// in den Include-Dateien (nur global)...
+	// in include files (only global)...
 	for (int i=0;i<Include.size();i++){
-		if (Include[i]->pre_script->GetExistence(name,NULL)){
+		if (Include[i]->pre_script->GetExistence(name, NULL)){
 			if (Include[i]->pre_script->GetExistenceLink.script) // nicht rekursiv!!!
 				continue;
 			//msg_error(string("\"",name,"\" in Include gefunden!"));
-			memcpy(&GetExistenceLink,&(Include[i]->pre_script->GetExistenceLink),sizeof(sLinkData));
-			GetExistenceLink.script=Include[i];
+			memcpy(&GetExistenceLink, &(Include[i]->pre_script->GetExistenceLink), sizeof(sCommand));
+			GetExistenceLink.script = Include[i];
 			msg_db_l(2);
 			return true;
 		}
 	}
 
-	// dann die Funktionen
+	// then the (self-coded) functions
 	for (int i=0;i<Function.size();i++)
-		if (strcmp(Function[i].Name,name)==0){
-			GetExistenceLink.type=Function[i].Type;
-			GetExistenceLink.Nr=i;
-			GetExistenceLink.Kind=KindFunction;
+		if (strcmp(Function[i].Name, name) == 0){
+			GetExistenceLink.Kind = KindFunction;
+			GetExistenceLink.LinkNr = i;
+			GetExistenceLink.Type = Function[i].LiteralType;
+			GetExistenceLink.NumParams = Function[i].NumParams;
 			msg_db_l(2);
 			return true;
 		}
 
-	// dann die Compiler-Funktionen
+	// then the compiler functions
 	w = WhichCompilerFunction(name);
 	if (w >= 0){
-		GetExistenceLink.type = PreCommand[w].ReturnType;
-		GetExistenceLink.Nr = w;
 		GetExistenceLink.Kind = KindCompilerFunction;
+		GetExistenceLink.LinkNr = w;
+		GetExistenceLink.Type = PreCommand[w].ReturnType;
+		GetExistenceLink.NumParams = PreCommand[w].Param.size();
 		msg_db_l(2);
 		return true;
 	}
 
-	// die Operatoren
-	w=WhichPrimitiveOperator(name);
-	if (w>=0){
-		GetExistenceLink.Nr=w;
-		GetExistenceLink.Kind=KindPrimitiveOperator;
+	// operators
+	w = WhichPrimitiveOperator(name);
+	if (w >= 0){
+		GetExistenceLink.Kind = KindPrimitiveOperator;
+		GetExistenceLink.LinkNr = w;
 		msg_db_l(2);
 		return true;
 	}
 
-	// Typen
-	w=WhichType(name);
-	if (w>=0){
-		GetExistenceLink.Nr=w;
-		GetExistenceLink.Kind=KindType;
+	// types
+	w = WhichType(name);
+	if (w >= 0){
+		GetExistenceLink.Kind = KindType;
+		GetExistenceLink.LinkNr = w;
 		msg_db_l(2);
 		return true;
 	}
 
-	// Name nicht bekannt
-	GetExistenceLink.type = TypeUnknown;
-	GetExistenceLink.Nr = 0;
-	GetExistenceLink.Kind = 0;
+	// ...unknown
+	GetExistenceLink.Type = TypeUnknown;
+	GetExistenceLink.Kind = KindUnknown;
+	GetExistenceLink.LinkNr = 0;
 	msg_db_l(2);
 	return false;
 }
 
-void CPreScript::SetCompilerFunction(int CF, sCommand *Com)
+void CPreScript::CommandSetCompilerFunction(int CF, sCommand *Com)
 {
-	msg_db_r("SetCompilerFunction", 4);
+	msg_db_r("CommandSetCompilerFunction", 4);
+	if (FlagCompileOS)
+		if (!PreCommand[CF].IsSpecial){
+			DoError(string2("external function call (%s) not allowed with #os", PreCommand[CF].Name));
+			return;
+		}
+	
 // a function the compiler knows
 	Com->Kind = KindCompilerFunction;
 	Com->LinkNr = CF;
-	Com->NumParams = 0;
-	Com->ReturnType = TypeVoid;
 
 	Com->NumParams = PreCommand[CF].Param.size();
-	for (int p=0;p<Com->NumParams;p++)
-		Com->ParamLink[p].type = PreCommand[CF].Param[p].Type;
-	Com->ReturnType = PreCommand[CF].ReturnType;
+	for (int p=0;p<Com->NumParams;p++){
+		Com->Param[p] = AddCommand(); // temporary...
+		Com->Param[p]->Type = PreCommand[CF].Param[p].Type;
+	}
+	Com->Type = PreCommand[CF].ReturnType;
 			
 	msg_db_l(4);
 }
 
-#define is_variable(kind)	((kind == KindVarLocal) || (kind == KindVarGlobal) || (kind == KindVarExternal))
+#define is_variable(kind)	(((kind) == KindVarLocal) || ((kind) == KindVarGlobal) || ((kind) == KindVarExternal))
 
-void CPreScript::SetExternalVariable(int gv, sLinkData &link)
+void CPreScript::SetExternalVariable(int gv, sCommand *c)
 {
-	link.Kind = KindVarExternal;
-	link.Nr = gv;
-	link.type = PreExternalVar[gv].Type;
+	c->NumParams = 0;
+	c->Kind = KindVarExternal;
+	c->LinkNr = gv;
+	c->Type = PreExternalVar[gv].Type;
 }
 
 // find the type of a (potential) constant
 //  "1.2" -> float
-sType *CPreScript::GetConstantType(char *name)
+sType *CPreScript::GetConstantType()
 {
 	msg_db_r("GetConstantType", 4);
 	PreConstantNr=-1;
@@ -1381,39 +901,46 @@ sType *CPreScript::GetConstantType(char *name)
 
 	// predefined constants
 	for (PreConstantNr=0;PreConstantNr<PreConstant.size();PreConstantNr++)
-		if (strcmp(name, PreConstant[PreConstantNr].Name) == 0)
+		if (strcmp(cur_name, PreConstant[PreConstantNr].Name) == 0)
 			_return_(4, PreConstant[PreConstantNr].Type);
 	PreConstantNr = -1;
 
 	// enum
 	for (EnumNr=0;EnumNr<Enum.size();EnumNr++)
-		if (strcmp(name,Enum[EnumNr].Name)==0)
+		if (strcmp(cur_name, Enum[EnumNr].Name)==0)
 			_return_(4, TypeInt);
 	EnumNr=-1;
 
 	// character "..."
-	if ((name[0]=='\'')&&(name[strlen(name)-1]=='\''))
+	if ((cur_name[0] == '\'') && (cur_name[strlen(cur_name)-1] == '\''))
 		_return_(4, TypeChar);
 
 	// string "..."
-	if ((name[0]=='"')&&(name[strlen(name)-1]=='"'))
+	if ((cur_name[0] == '"') && (cur_name[strlen(cur_name)-1] == '"'))
 		_return_(4, TypeString);
 
 	// numerical (int/float)
 	sType *type = TypeInt;
-	bool hex = (name[0] == '0') && (name[1] == 'x');
-	for (unsigned int c=0;c<strlen(name);c++)
-		if ((name[c] < '0') || (name[c] > '9'))
+	bool hex = (cur_name[0] == '0') && (cur_name[1] == 'x');
+	for (unsigned int c=0;c<strlen(cur_name);c++)
+		if ((cur_name[c] < '0') || (cur_name[c] > '9'))
 			if (hex){
-				if ((c >= 2) && (name[c] < 'a') && (name[c] > 'f'))
+				if ((c >= 2) && (cur_name[c] < 'a') && (cur_name[c] > 'f'))
 					_return_(4, TypeUnknown);
-			}else if (name[c] == '.')
+			}else if (cur_name[c] == '.')
 				type = TypeFloat;
 			else{
-				if ((type != TypeFloat) || (name[c] != 'f')) // f in floats erlauben
-					if ((c != 0) || (name[c] != '-')) // Vorzeichen erlauben
+				//if ((type != TypeFloat) || (cur_name[c] != 'f')) // f in floats erlauben
+					if ((c != 0) || (cur_name[c] != '-')) // Vorzeichen erlauben
 						_return_(4, TypeUnknown);
 			}
+
+	// super array [...]
+	if (strcmp(cur_name, "[") == 0){
+		//msg_error("super array constant");
+		DoError("super array constant");
+		_return_(4, TypeUnknown);
+	}
 	_return_(4, type);
 }
 
@@ -1421,9 +948,9 @@ static int _some_int_;
 static float _some_float_;
 static char _some_string_[2048];
 
-void *CPreScript::GetConstantValue(char *name)
+void *CPreScript::GetConstantValue()
 {
-	sType *type = GetConstantType(name);
+	sType *type = GetConstantType();
 // named constants
 	if (PreConstantNr >= 0){
 		if ((type->Size > 4) && (!type->IsPointer))
@@ -1435,21 +962,21 @@ void *CPreScript::GetConstantValue(char *name)
 		return &Enum[EnumNr].Value;
 // literal
 	if (type == TypeChar){
-		_some_int_ = name[1];
+		_some_int_ = cur_name[1];
 		return &_some_int_;
 	}
 	if (type == TypeString){
-		for (unsigned int ui=0;ui<strlen(name) - 2;ui++)
-				_some_string_[ui] = name[ui+1];
-		_some_string_[strlen(name) - 2] = 0;
+		for (unsigned int ui=0;ui<strlen(cur_name) - 2;ui++)
+				_some_string_[ui] = cur_name[ui+1];
+		_some_string_[strlen(cur_name) - 2] = 0;
 		return _some_string_;
 	}
 	if (type == TypeInt){
-		_some_int_ = s2i2(name);
+		_some_int_ = s2i2(cur_name);
 		return &_some_int_;
 	}
 	if (type == TypeFloat){
-		_some_float_ = s2f(name);
+		_some_float_ = s2f(cur_name);
 		return &_some_float_;
 	}
 	return NULL;
@@ -1483,76 +1010,85 @@ void CPreScript::AddType(sType **type)
 		}
 	sType *t = new sType;
 	am("Type",sizeof(sType),t);
-	(*t)=(**type);
-	t->Owner=this;
-	strcpy(t->Name,(*type)->Name);
+	(*t) = (**type);
+	t->Owner = this;
+	strcpy(t->Name, (*type)->Name);
 	so(string("AddType: ",t->Name));
-	(*type)=t;
+	(*type) = t;
 	Type.push_back(t);
+	NumOwnTypes ++;
+
+	if (t->IsSuperArray)
+		script_make_super_array(t, this);
 }
 
-sType *CPreScript::CreateNewType(char *name, int size, bool is_pointer, bool is_silent, int array_size, sType *sub)
+sType *CPreScript::CreateNewType(const char *name, int size, bool is_pointer, bool is_silent, bool is_array, int array_size, sType *sub)
 {
 	sType nt, *pt = &nt;
-	nt.ArrayLength = array_size;
+	nt.IsArray = is_array && (array_size >= 0);
+	nt.IsSuperArray = is_array && (array_size < 0);
+	nt.ArrayLength = max(array_size, 0);
 	nt.IsPointer = is_pointer;
 	nt.IsSilent = is_silent;
 	strcpy(nt.Name, name);
 	nt.Size = size;
 	nt.SubType = sub;
+	nt.Class = NULL;
 	AddType(&pt);
 	return pt;
 }
 
-#define CreatePointerType(sub)	CreateNewType(string(sub->Name, "*"), PointerSize, true, false, 0, sub)
 
-inline sLinkData *add_link_data(CPreScript *ps)
-{
-	ps->LinkData.resize(ps->LinkData.size() + 1);
-	return &ps->LinkData[ps->LinkData.size()-1];
-}
-
-void DoClassFunction(CPreScript *ps, sLinkData *Operand, sStruct *s, int f_no, sFunction *f)
+void DoClassFunction(CPreScript *ps, sCommand *Operand, sClass *s, int f_no, sFunction *f)
 {
 	msg_db_r("DoClassFunc", 1);
+#if 0
 	switch(Operand->Kind){
 		case KindVarLocal:
 		case KindVarGlobal:
 		case KindVarExternal:
 		case KindVarTemp:
 		case KindConstant:
+		case KindPointerShift:
+		case KindArray:
+		case KindDerefPointerShift:
 		/*case KindRefToLocal:
 		case KindRefToGlobal:
-		case KindRefToConst:
-		case KindPointerShift:
-		case KindDerefPointerShift:*/
+		case KindRefToConst:*/
 			break;
 		default:
-			ps->DoError("class functions only allowed for object variables");
+			ps->DoError(string("class functions only allowed for object variables, not for: ", Kind2Str(Operand->Kind)));
 			_return_(1,);
 	}
+#endif
 
 	// create a command for the object
-	int cmd = command_from_link(ps, Operand);
-	//ps->ShowCommand(cmd);
+	sCommand *t = cp_command(ps, Operand);
 
 	//msg_write(LinkNr2Str(ps, Operand->Kind, Operand->Nr));
 
 	// the function
-	sLinkData link;
-    link.Kind = KindCompilerFunction;
-	link.Nr = s->Function[f_no].cmd;
-	link.type = PreCommand[s->Function[f_no].cmd].ReturnType;
-	ps->GetFunctionCall(PreCommand[s->Function[f_no].cmd].Name, Operand, &link, f);
-	ps->Command[Operand->Nr].SubLink1 = cmd;
+	Operand->script = NULL;
+    Operand->Kind = s->Function[f_no].Kind;
+	Operand->LinkNr = s->Function[f_no].Nr;
+	if (s->Function[f_no].Kind == KindCompilerFunction){
+		Operand->Type = PreCommand[s->Function[f_no].Nr].ReturnType;
+		Operand->NumParams = PreCommand[s->Function[f_no].Nr].Param.size();
+		ps->GetFunctionCall(PreCommand[s->Function[f_no].Nr].Name, Operand, f);
+	}else if (s->Function[f_no].Kind == KindFunction){
+		Operand->Type = ps->Function[s->Function[f_no].Nr].LiteralType;
+		Operand->NumParams = ps->Function[s->Function[f_no].Nr].NumParams;
+		ps->GetFunctionCall(ps->Function[s->Function[f_no].Nr].Name, Operand, f);
+		//ps->DoError("script member function call not implemented");
+	}
+	Operand->Sub1 = t;
 
 	
-//	ps->DoError("class functions not implemented yet  ...");
 	msg_db_l(1);
 }
 
 // find any ".", "->", or "[...]"'s    or operators?
-void CPreScript::GetOperandExtension(sLinkData *Operand, sFunction *f)
+void CPreScript::GetOperandExtension(sCommand *Operand, sFunction *f)
 {
 	msg_db_r("GetOperandExtension", 4);
 
@@ -1562,19 +1098,19 @@ void CPreScript::GetOperandExtension(sLinkData *Operand, sFunction *f)
 		msg_db_l(4);
 		return;
 	}
-	sLinkData link, temp;
+	//sLinkData link, temp;
 
-	// struct element?
+	// class element?
 	if ((strcmp(cur_name, ".") == 0) || (strcmp(cur_name, "->") == 0)){
-		so("->Struktur");
+		so("->Klasse");
 		next_exp();
-		link.Kind = KindPointerShift;
-		sType *type = Operand->type;
+		sType *type = Operand->Type;
 
 		// pointer -> dereference
+		bool deref = false;
 		if (type->IsPointer){
-			link.Kind = KindDerefPointerShift;
 			type = type->SubType;
+			deref = true;
 		}
 
 		if (strcmp(get_name(Exp.cur_exp-1), "->") == 0){
@@ -1585,75 +1121,104 @@ void CPreScript::GetOperandExtension(sLinkData *Operand, sFunction *f)
 
 		// find element
 		bool ok = false;
-		for (int i=0;i<Struct.size();i++)
-			if (type == Struct[i].RootType){
-				for (int e=0;e<Struct[i].Element.size();e++)
-					if (strcmp(cur_name, Struct[i].Element[e].Name) == 0){
-						link.Nr = Struct[i].Element[e].Offset;
-						link.type = Struct[i].Element[e].Type;
-						ok = true;
-						break;
-					}
-				break;
-			}
+		if (type->Class)
+			for (int e=0;e<type->Class->Element.size();e++)
+				if (strcmp(cur_name, type->Class->Element[e].Name) == 0){
+					sCommand *t = cp_command(this, Operand);
+					Operand->Kind = deref ? KindDerefAddressShift : KindAddressShift;
+					Operand->LinkNr = type->Class->Element[e].Offset;
+					Operand->Type = type->Class->Element[e].Type;
+					Operand->NumParams = 1;
+					Operand->Param[0] = t;
+					ok = true;
+					break;
+				}
 		
 		if (!ok){
 
 			// class function?
-			for (int i=0;i<Struct.size();i++)
-				if (type == Struct[i].RootType){
-					for (int e=0;e<Struct[i].Function.size();e++)
-						if (strcmp(cur_name, Struct[i].Function[e].Name) == 0){
-							next_exp();
-							DoClassFunction(this, Operand, &Struct[i], e, f);
-							//DoError(string("class functions not implemented yet  ...",Type2Str(this,type)));
-							msg_db_l(4);
-							return;
+			if (type->Class)
+				for (int e=0;e<type->Class->Function.size();e++)
+					if (strcmp(cur_name, type->Class->Function[e].Name) == 0){
+						if (!deref){
+							so("ref object");
+							ref_command(this, Operand);
 						}
-					break;
-				}
+						next_exp();
+						DoClassFunction(this, Operand, type->Class, e, f);
+						//DoError(string("class functions not implemented yet  ...",Type2Str(this,type)));
+						msg_db_l(4);
+						return;
+					}
 			
 			DoError(string("unknown element of ",Type2Str(this,type)));
 			msg_db_l(4);
 			return;
 		}
 
-		// linking
 		next_exp();
-		temp = (*Operand);
-		(*Operand) = link;
-		Operand->Meta = add_link_data(this);
-		(*Operand->Meta) = temp;
 
 	// array?
 	}else if (strcmp(cur_name, "[") == 0){
 		so("->Array");
 
 		// allowed?
-		if ((Operand->type->ArrayLength < 1) && (!Operand->type->IsPointer)){
-			DoError(string2("type \"%s\" is neither an array nor a pointer", Operand->type->Name));
+		bool allowed = ((Operand->Type->IsArray) || (Operand->Type->IsSuperArray));
+		bool pparray = false;
+		if (!allowed)
+			if (Operand->Type->IsPointer){
+				if ((Operand->Type->SubType->IsArray) || (Operand->Type->SubType->IsSuperArray)){
+					allowed = true;
+					pparray = (Operand->Type->SubType->IsSuperArray);
+				}else{
+					DoError(string2("using pointer type \"%s\" as an array (like in C) is not allowed any more", Operand->Type->Name));
+					msg_db_l(4);
+					return;
+				}
+			}
+		if (!allowed){
+			DoError(string2("type \"%s\" is neither an array nor a pointer to an array", Operand->Type->Name));
 			msg_db_l(4);
 			return;
 		}
 		next_exp();
 
+		sCommand *t = cp_command(this, Operand);
+		Operand->NumParams = 2;
+		Operand->Param[0] = t;
+		sCommand *array = Operand;
+
 		// pointer?
-		so(Operand->type->Name);
-		if (Operand->type->IsPointer){
-			link.Kind = KindPointerAsArray;
+		so(Operand->Type->Name);
+		if (pparray){
+			so("  ->Pointer-Pointer-Array");
+			//array = cp_command(this, Operand);
+			Operand->Kind = KindPointerAsArray;
+			Operand->Type = t->Type->SubType;
+			deref_command(this, Operand);
+			array = Operand->Param[0];
+		}else if ((Operand->Type->IsPointer) || (Operand->Type->IsSuperArray)){
+			Operand->Kind = KindPointerAsArray;
+			if (Operand->Type->IsPointer)
+				Operand->Type = t->Type->SubType->SubType;
+			else
+				Operand->Type = t->Type->SubType;
 			so("  ->Pointer-Array");
-		}else
-			link.Kind = KindArray;
+		}else{
+			Operand->Kind = KindArray;
+			Operand->Type = t->Type->SubType;
+		}
 
 		// array index...
-		sLinkData index = GetCommand(f);
+		sCommand *index = GetCommand(f);
 		if (Error){
 			msg_db_l(4);
 			return;
 		}
-		if (index.type != TypeInt){
+		array->Param[1] = index;
+		if (index->Type != TypeInt){
 			Exp.cur_exp --;
-			DoError(string2("type of index for an array needs to be (int), not (%s)", index.type->Name));
+			DoError(string2("type of index for an array needs to be (int), not (%s)", index->Type->Name));
 			msg_db_l(4);
 			return;
 		}
@@ -1664,34 +1229,15 @@ void CPreScript::GetOperandExtension(sLinkData *Operand, sFunction *f)
 		}
 		next_exp();
 
-		// linking
-		temp = (*Operand);
-		so(temp.type->Name);
-		(*Operand) = link;
-		Operand->Meta = add_link_data(this);
-		Operand->type = temp.type->SubType;
-		(*Operand->Meta) = temp;
-		Operand->ParamLink = add_link_data(this);
-		(*Operand->ParamLink) = index;
-
 	// unary operator?
 	}else if (op >= 0){
 		for (int i=0;i<PreOperator.size();i++)
 			if (PreOperator[i].PrimitiveID == op)
-				if ((PreOperator[i].ParamType1 == Operand->type) && (PreOperator[i].ParamType2 == TypeVoid)){
-					//DoError("Unaerer Operator",ie);
+				if ((PreOperator[i].ParamType1 == Operand->Type) && (PreOperator[i].ParamType2 == TypeVoid)){
 					so("  => unaerer Operator");
 					so(LinkNr2Str(this,KindOperator,i));
-					int nc = AddCommand();
-					//CommandMakeOperator();
-					Command[nc].Kind=KindOperator;
-					Command[nc].LinkNr=i;
-					Command[nc].NumParams=1;
-					Command[nc].ParamLink[0] = *Operand;
-					Command[nc].ReturnType=PreOperator[i].ReturnType;
-					Operand->Kind=KindCommand;
-					Operand->Nr=nc;
-					Operand->type=PreOperator[i].ReturnType;
+					sCommand *t = cp_command(this, Operand);
+					CommandMakeOperator(Operand, t, NULL, i);
 					next_exp();
 					msg_db_l(4);
 					return;
@@ -1710,26 +1256,28 @@ inline bool direct_type_match(sType *a, sType *b)
 	return ( (a==b) || ( (a->IsPointer) && (b->IsPointer) ) );
 }
 
-bool CPreScript::GetSpecialFunctionCall(char *f_name, sLinkData *Operand, sLinkData *link, sFunction *f)
+bool CPreScript::GetSpecialFunctionCall(const char *f_name, sCommand *Operand, sFunction *f)
 {
 	msg_db_r("GetSpecialFuncCall", 4);
 
 	// sizeof
-	if ((link->Kind == KindCompilerFunction) && (link->Nr == CommandSizeof)){
+	if ((Operand->Kind == KindCompilerFunction) && (Operand->LinkNr == CommandSizeof)){
+
 		so("sizeof");
 		next_exp();
 		int nc = AddConstant(TypeInt);
 		Operand->Kind = KindConstant;
-		Operand->Nr = nc;
-		Operand->type = TypeInt;
+		Operand->LinkNr = nc;
+		Operand->Type = TypeInt;
+		Operand->NumParams = 0;
 		
 		int nt = WhichType(cur_name);
 		sType *type;
 		if (nt >= 0)
 			(*(int*)(Constant[nc].data)) = Type[nt]->Size;
 		else if ((GetExistence(cur_name, f)) && ((GetExistenceLink.Kind == KindVarGlobal) || (GetExistenceLink.Kind == KindVarLocal) || (GetExistenceLink.Kind == KindVarExternal)))
-			(*(int*)(Constant[nc].data)) = GetExistenceLink.type->Size;
-		else if (type = GetConstantType(cur_name))
+			(*(int*)(Constant[nc].data)) = GetExistenceLink.Type->Size;
+		else if (type = GetConstantType())
 			(*(int*)(Constant[nc].data)) = type->Size;
 		else{
 			DoError("type-name or variable name expected in sizeof(...)");
@@ -1750,44 +1298,38 @@ bool CPreScript::GetSpecialFunctionCall(char *f_name, sLinkData *Operand, sLinkD
 	}
 
 	// sizeof
-	if ((link->Kind == KindCompilerFunction) && (link->Nr == CommandReturn)){
+	if ((Operand->Kind == KindCompilerFunction) && (Operand->LinkNr == CommandReturn)){
 		DoError("return");
 	}
 	
 	msg_db_l(4);
 	return false;
 }
-void CPreScript::FindFunctionSingleParameter(int p, sType **WantedType, sFunction *f, int cmd, int fnc)
+
+
+// cmd needs to have Param[]'s existing with correct Type!
+void CPreScript::FindFunctionSingleParameter(int p, sType **WantedType, sFunction *f, sCommand *cmd)
 {
 	msg_db_r("FindFuncSingleParam", 4);
-	sLinkData Param = GetCommand(f);
+	sCommand *Param = GetCommand(f);
 	if (Error)
 		_return_(4,);
 
-	if (Param.type->ArrayLength > 0){
-		sLinkData Meta;
-		Meta = Param;
-		//memcpy(&Meta,&Param,sizeof(sLinkData));
-		Param.type = CreateNewType(string(Param.type->Name, "*"), PointerSize, true, false, 0, Param.type);
-		Param.Kind = KindReference;
-		Param.Meta = add_link_data(this);
-		(*Param.Meta) = Meta;
-		so("C-Standart:  Arrays als Parameter werden referenziert!");
-	}
-
-	WantedType[p] = Command[cmd].ParamLink[p].type;
-	if (fnc >= 0){
-		if (Command[cmd].script)
-			WantedType[p] = Command[cmd].script->pre_script->Function[fnc].Var[p].Type;
+	WantedType[p] = TypeUnknown;
+	if (cmd->Kind == KindFunction){
+		if (cmd->script)
+			WantedType[p] = cmd->script->pre_script->Function[cmd->LinkNr].LiteralParamType[p];
 		else
-			WantedType[p] = Function[fnc].Var[p].Type;
+			WantedType[p] = Function[cmd->LinkNr].LiteralParamType[p];
 	}
+	if (cmd->Kind == KindCompilerFunction)
+		WantedType[p] = PreCommand[cmd->LinkNr].Param[p].Type;
 	// link parameters
-	Command[cmd].ParamLink[p] = Param;
+	cmd->Param[p] = Param;
 	msg_db_l(4);
 }
 
-void CPreScript::FindFunctionParameters(int &np, sType **WantedType, sFunction *f, int cmd, int fnc)
+void CPreScript::FindFunctionParameters(int &np, sType **WantedType, sFunction *f, sCommand *cmd)
 {
 	if (strcmp(cur_name, "(") != 0){
 		DoError("\"(\" expected in front of function parameter list");
@@ -1804,7 +1346,7 @@ void CPreScript::FindFunctionParameters(int &np, sType **WantedType, sFunction *
 		np ++;
 		// find parameter
 
-		FindFunctionSingleParameter(p, WantedType, f, cmd, fnc);
+		FindFunctionSingleParameter(p, WantedType, f, cmd);
 		if (Error)
 			_return_(4,);
 
@@ -1820,15 +1362,16 @@ void CPreScript::FindFunctionParameters(int &np, sType **WantedType, sFunction *
 	msg_db_l(4);
 }
 
-void apply_type_cast(CPreScript *ps, int tc, sLinkData *param);
+void apply_type_cast(CPreScript *ps, int tc, sCommand *param);
+
 
 // check, if the command <link> links to really has type <type>
 //   ...and try to cast, if not
-void CPreScript::CheckParamLink(sLinkData *link, sType *type, char *f_name, int param_no)
+void CPreScript::CheckParamLink(sCommand *link, sType *type, const char *f_name, int param_no)
 {
 	msg_db_r("CheckParamLink", 4);
 	// type cast needed and possible?
-	sType *pt = link->type;
+	sType *pt = link->Type;
 	sType *wt = type;
 
 	// "silent" pointer (&)?
@@ -1836,11 +1379,11 @@ void CPreScript::CheckParamLink(sLinkData *link, sType *type, char *f_name, int 
 		if (direct_type_match(pt, wt->SubType)){
 			so("<silent Ref &>");
 
-			sLinkData Meta = *link;
-			link->type = CreatePointerType(pt);
-			link->Kind = KindReference;
-			link->Meta = add_link_data(this);
-			(*link->Meta) = Meta;
+			ref_command(this, link);
+		}else if ((pt->IsPointer) && (direct_type_match(pt->SubType, wt->SubType))){
+			so("<silent Ref & of *>");
+
+			// no need to do anything...
 		}else{
 			Exp.cur_exp --;
 			DoError(string2("(c) parameter %d for function \"%s\" has type (%s), (%s) expected", param_no + 1, f_name, pt->Name, wt->Name));
@@ -1865,19 +1408,20 @@ void CPreScript::CheckParamLink(sLinkData *link, sType *type, char *f_name, int 
 	msg_db_l(4);
 }
 
-// creates <Operand> to be the function call described by <link>
-void CPreScript::GetFunctionCall(char *f_name, sLinkData *Operand, sLinkData *link, sFunction *f)
+// creates <Operand> to be the function call
+//  on entry <Operand> only contains information from GetExistence (Kind, Nr, Type, NumParams)
+void CPreScript::GetFunctionCall(const char *f_name, sCommand *Operand, sFunction *f)
 {
 	msg_db_r("GetFunctionCall", 4);
 	
 	// function as a variable?
 	if (Exp.cur_exp >= 2)
 	if ((strcmp(get_name(Exp.cur_exp - 2), "&") == 0) && (strcmp(cur_name, "(") != 0)){
-		if (link->Kind == KindFunction){
+		if (Operand->Kind == KindFunction){
 			so("Funktion als Variable!");
 			Operand->Kind = KindVarFunction;
-			Operand->type = TypeVoid;
-			Operand->Nr = link->Nr;
+			Operand->Type = TypePointer;
+			Operand->NumParams = 0;
 		}else{
 			Exp.cur_exp --;
 			//DoError("\"(\" expected in front of parameter list");
@@ -1888,24 +1432,15 @@ void CPreScript::GetFunctionCall(char *f_name, sLinkData *Operand, sLinkData *li
 
 	
 	// "special" functions
-    if (link->Kind == KindCompilerFunction)
-	    if (link->Nr == CommandSizeof){
-			GetSpecialFunctionCall(f_name, Operand, link, f);
+    if (Operand->Kind == KindCompilerFunction)
+	    if (Operand->LinkNr == CommandSizeof){
+			GetSpecialFunctionCall(f_name, Operand, f);
 			_return_(4,);
 		}
 
-	// create command
-	int ncmd = command_from_link(this, link);
-	int fnc = -1;
-	if (link->Kind == KindFunction)
-		fnc = link->Nr;
-
-	so(Type2Str(this, Command[ncmd].ReturnType));
+	so(Type2Str(this, Operand->Type));
 	// link operand onto this command
-	Operand->Kind = KindCommand;
-	Operand->Nr = ncmd;
-	Operand->type = link->type;
-	so(Command[ncmd].NumParams);
+//	so(cmd->NumParams);
 
 
 	
@@ -1913,31 +1448,32 @@ void CPreScript::GetFunctionCall(char *f_name, sLinkData *Operand, sLinkData *li
 	int np;
 	sType *WantedType[SCRIPT_MAX_PARAMS];
 	
-	bool needs_brackets = ((Command[ncmd].ReturnType != TypeVoid) || (Command[ncmd].NumParams != 1));
+	bool needs_brackets = ((Operand->Type != TypeVoid) || (Operand->NumParams != 1));
 	if (needs_brackets){
-		FindFunctionParameters(np, WantedType, f, ncmd, fnc);
+		FindFunctionParameters(np, WantedType, f, Operand);
 		
 	}else{
 		np = 1;
-		FindFunctionSingleParameter(0, WantedType, f, ncmd, fnc);
+		FindFunctionSingleParameter(0, WantedType, f, Operand);
 	}
 	if (Error){
 		_return_(4,);
 	}
+	
+
+	// return: parameter type by function
+	if ((Operand->Kind == KindCompilerFunction) && (Operand->LinkNr == CommandReturn))
+		WantedType[0] = f->LiteralType;
 
 	// test compatibility
-	if (np != Command[ncmd].NumParams){
+	if (np != Operand->NumParams){
 		Exp.cur_exp --;
-		DoError(string2("function \"%s\" expects %d parameters, %d were found",f_name, Command[ncmd].NumParams, np));
+		DoError(string2("function \"%s\" expects %d parameters, %d were found",f_name, Operand->NumParams, np));
 		_return_(4,);
 	}
 	for (int p=0;p<np;p++){
 
-		// return-Typ der aktuellen Funktion anpassen
-		if ((Command[ncmd].Kind == KindCompilerFunction) && (Command[ncmd].LinkNr == CommandReturn))
-			WantedType[p] = f->Type;
-
-		CheckParamLink(&Command[ncmd].ParamLink[p], WantedType[p], f_name, p);
+		CheckParamLink(Operand->Param[p], WantedType[p], f_name, p);
 		if (Error){
 			_return_(4,);
 		}
@@ -1945,83 +1481,61 @@ void CPreScript::GetFunctionCall(char *f_name, sLinkData *Operand, sLinkData *li
 	msg_db_l(4);
 }
 
-inline bool type_match(sType *type, bool is_struct, sType *wanted);
-inline bool type_match_with_cast(sType *type, bool is_struct, bool is_modifiable, sType *wanted, int &penalty, int &cast);
-
-sLinkData CPreScript::GetOperand(sFunction *f)
+sCommand *CPreScript::GetOperand(sFunction *f)
 {
 	msg_db_r("GetOperand", 4);
-	sLinkData Operand;
-	Operand.Meta = NULL;
+	sCommand *Operand = NULL;
 	so(cur_name);
 
 	// ( -> one level down and combine commands
 	if (strcmp(cur_name, "(") == 0){
 		next_exp();
 		Operand = GetCommand(f);
-		if (strcmp(cur_name, ")") != 0){
-			DoError("\")\" expected");
-			msg_db_l(4);
-			return Operand;
-		}
+		if (strcmp(cur_name, ")") != 0)
+			_do_error_("\")\" expected", 4, Operand);
 		next_exp();
 	}else if (strcmp(cur_name, "&") == 0){ // & -> address operator
 		so("<Adress-Operator &>");
 		next_exp();
-		Operand.Meta = add_link_data(this);
-		sLinkData ttt = GetOperand(f);
-		(*Operand.Meta) = ttt;
-		if (Error){
-			msg_db_l(4);
-			return Operand;
-		}
-		Operand.Kind = KindReference;
-		// create a new type as a pointer onto the meta type
-		Operand.type = CreatePointerType(Operand.Meta->type);
+		Operand = GetOperand(f);
+		if (Error)
+			_return_(4, Operand);
+		ref_command(this, Operand);
 	}else if (strcmp(cur_name, "*") == 0){ // * -> dereference
 		so("<Dereferenzierung *>");
 		next_exp();
-		Operand.Meta = add_link_data(this);
-		(*Operand.Meta) = GetOperand(f);
-		if (Error){
-			msg_db_l(4);
-			return Operand;
-		}
-		if (!Operand.Meta->type->IsPointer){
+		Operand = GetOperand(f);
+		if (Error)
+			_return_(4, Operand);
+		if (!Operand->Type->IsPointer){
 			Exp.cur_exp --;
-			DoError("only pointers can be dereferenced using \"*\"");
-			msg_db_l(4);
-			return Operand;
+			_do_error_("only pointers can be dereferenced using \"*\"", 4, Operand);
 		}
-		Operand.Kind=KindDereference;
-		Operand.type=Operand.Meta->type->SubType;
+		deref_command(this, Operand);
 	}else{
 		// direct operand
 		if (GetExistence(cur_name, f)){
-			sLinkData link = GetExistenceLink;
+			Operand = cp_command(this, &GetExistenceLink);
 			char f_name[SCRIPT_MAX_NAME * 2];
 			strcpy(f_name, cur_name);
-			so(string("=> ", Kind2Str(link. Kind)));
-			Operand = link;
+			so(string("=> ", Kind2Str(Operand->Kind)));
 			next_exp();
 			// variables get linked directly...
 
 			// operand is executable
-			if ((link.Kind == KindFunction) || (link.Kind == KindCompilerFunction)){
-				GetFunctionCall(f_name, &Operand, &link, f);
+			if ((Operand->Kind == KindFunction) || (Operand->Kind == KindCompilerFunction)){
+				GetFunctionCall(f_name, Operand, f);
 				
-			}else if (link.Kind == KindPrimitiveOperator){
+			}else if (Operand->Kind == KindPrimitiveOperator){
 				// unary operator
 				int _ie=Exp.cur_exp-1;
 				so("  => unaerer Operator");
-				int po = link.Nr, o=-1;
-				sLinkData sub_command = GetOperand(f);
-				if (Error){
-					msg_db_l(4);
-					return Operand;
-				}
+				int po = Operand->LinkNr, o=-1;
+				sCommand *sub_command = GetOperand(f);
+				if (Error)
+					_return_(4, Operand);
 				sType *r = TypeVoid;
-				sType *p2 = sub_command.type;
+				sType *p2 = sub_command->Type;
 
 				// exact match?
 				bool ok=false;
@@ -2053,7 +1567,7 @@ sLinkData CPreScript::GetOperand(sFunction *f)
 						}
 					// cast
 					if (ok){
-						apply_type_cast(this, c2_best, &sub_command);
+						apply_type_cast(this, c2_best, sub_command);
 						if (Error)
 							_return_(4, Operand);
 					}
@@ -2062,93 +1576,71 @@ sLinkData CPreScript::GetOperand(sFunction *f)
 
 				if (!ok){
 					Exp.cur_exp = _ie;
-					DoError(string("unknown unitary operator  ", p2->Name));
-					msg_db_l(4);
-					return Operand;
+					_do_error_(string("unknown unitary operator  ", p2->Name), 4, Operand);
 				}
-				int cmd = AddCommand();
-				sCommand *c = &Command[cmd];
-				c->Kind=KindOperator;
-				c->LinkNr=o;
-				c->NumParams=1;
-				c->ParamLink[0]=sub_command;
-				c->ReturnType=PreOperator[o].ReturnType;
-				Operand.Kind=KindCommand;
-				Operand.Nr=cmd;
-				Operand.type=PreOperator[o].ReturnType;
+				CommandMakeOperator(Operand, sub_command, NULL, o);
 				so(Operator2Str(this,o));
-				msg_db_l(4);
-				return Operand;
+				_return_(4, Operand);
 			}
 		}else{
-			sType *t = GetConstantType(cur_name);
+			sType *t = GetConstantType();
+			if (Error)	_return_(4, Operand);
 			if (t != TypeUnknown){
 				so("=> Konstante");
-				Operand.Kind = KindConstant;
+				Operand = AddCommand();
+				Operand->Kind = KindConstant;
 				// constant for parameter (via variable)
-				Operand.type = t;
-				Operand.Nr = AddConstant(t);
-				memcpy(Constant[Operand.Nr].data, GetConstantValue(cur_name), t->Size);
+				Operand->Type = t;
+				Operand->LinkNr = AddConstant(t);
+				memcpy(Constant[Operand->LinkNr].data, GetConstantValue(), t->Size);
 				next_exp();
 			}else{
-				DoError("unknown operand");
 				//Operand.Kind=0;
-				msg_db_l(4);
-				return Operand;
+				_do_error_("unknown operand", 4, Operand);
 			}
 		}
 
 	}
-	if (Error){
-		msg_db_l(4);
-		return Operand;
-	}
+	if (Error)
+			_return_(4, Operand);
 
 	// Arrays, Strukturen aufloessen...
-	GetOperandExtension(&Operand,f);
+	GetOperandExtension(Operand,f);
 
 	so(string("Operand endet mit ", get_name(Exp.cur_exp - 1)));
-	msg_db_l(4);
-	return Operand;
+	_return_(4, Operand);
 }
 
-static sLinkData LastOperator;
-
-// nur "primitiver" Operator -> keine Typen-Angaben
-bool CPreScript::GetOperator(sFunction *f)
+// only "primitive" operator -> no type information
+sCommand *CPreScript::GetOperator(sFunction *f)
 {
 	msg_db_r("GetOperator",4);
 	so(cur_name);
 	int op = WhichPrimitiveOperator(cur_name);
 	if (op >= 0){
 
-		// Befehl aus Operator
-		int cmd = AddCommand();
-		Command[cmd].Kind = KindPrimitiveOperator;
-		Command[cmd].LinkNr = op;
-		// nur provisorisch (nur die Art des Zeichens, Parameter und deren Art erst am Ende von GetCommand!!!)
-
-		// Befehl
-		LastOperator.Kind = KindCommand;
-		LastOperator.Nr = cmd;
-		LastOperator.type = Command[cmd].ReturnType; // ???
+		// command from operator
+		sCommand *cmd = AddCommand();
+		cmd->Kind = KindPrimitiveOperator;
+		cmd->LinkNr = op;
+		// only provisorically (only operator sign, parameters and their types by GetCommand!!!)
 
 		next_exp();
 		msg_db_l(4);
-		return true;
+		return cmd;
 	}
 	msg_db_l(4);
-	return false;
+	return NULL;
 }
 
-inline void CommandMakeOperator(sCommand *cmd, sLinkData &p1, sLinkData &p2, int op)
+inline void CommandMakeOperator(sCommand *cmd, sCommand *p1, sCommand *p2, int op)
 {
 	cmd->Kind = KindOperator;
 	cmd->LinkNr = op;
-	cmd->NumParams = (PreOperator[op].ParamType2 == TypeVoid) ? 1 : 2; // unary / binary
-	cmd->ParamLink[0] = p1;
-	cmd->ParamLink[1] = p2;
-	cmd->ReturnType = PreOperator[op].ReturnType;
+	cmd->NumParams = ((PreOperator[op].ParamType1 == TypeVoid) || (PreOperator[op].ParamType2 == TypeVoid)) ? 1 : 2; // unary / binary
+	cmd->Param[0] = p1;
+	cmd->Param[1] = p2;
+	cmd->Type = PreOperator[op].ReturnType;
 }
 
 /*inline int find_operator(int primitive_id, sType *param_type1, sType *param_type2)
@@ -2163,23 +1655,25 @@ inline void CommandMakeOperator(sCommand *cmd, sLinkData &p1, sLinkData &p2, int
 
 // both operand types have to match the operator's types
 //   (operater wants a pointer -> all pointers are allowed!!!)
-//   (same for structs of same type...)
-inline bool type_match(sType *type, bool is_struct, sType *wanted)
+//   (same for classes of same type...)
+inline bool type_match(sType *type, bool is_class, sType *wanted)
 {
 	if (type == wanted)
 		return true;
 	if ((type->IsPointer) && (wanted == TypePointer))
 		return true;
-	if ((is_struct) && (wanted == TypeStruct))
+	if ((is_class) && (wanted == TypeClass))
+		return true;
+	if ((type->IsSuperArray) && (wanted == TypeSuperArray))
 		return true;
 	return false;
 }
 
-inline bool type_match_with_cast(sType *type, bool is_struct, bool is_modifiable, sType *wanted, int &penalty, int &cast)
+inline bool type_match_with_cast(sType *type, bool is_class, bool is_modifiable, sType *wanted, int &penalty, int &cast)
 {
 	penalty = 0;
 	cast = -1;
-	if (type_match(type, is_struct, wanted))
+	if (type_match(type, is_class, wanted))
 	    return true;
 	if (is_modifiable) // is a variable getting assigned.... better not cast
 		return false;
@@ -2192,70 +1686,66 @@ inline bool type_match_with_cast(sType *type, bool is_struct, bool is_modifiable
 	return false;
 }
 
-void apply_type_cast(CPreScript *ps, int tc, sLinkData *param)
+void apply_type_cast(CPreScript *ps, int tc, sCommand *param)
 {
 	if (tc < 0)
 		return;
 	so(string2("Benoetige automatischen TypeCast: %s -> %s", TypeCast[tc].Source->Name, TypeCast[tc].Dest->Name));
 	if (param->Kind == KindConstant){
-		void *d = TypeCast[tc].Func(ps->Constant[param->Nr].data);
-		memcpy(ps->Constant[param->Nr].data, d, TypeCast[tc].Dest->Size);
-		ps->Constant[param->Nr].type = TypeCast[tc].Dest;
-		param->type = TypeCast[tc].Dest;
+		char *data_old = ps->Constant[param->LinkNr].data;
+		char *data_new = (char*)TypeCast[tc].Func(data_old);
+		if (TypeCast[tc].Dest->IsArray){
+			// arrays as return value -> reference!
+			delete[] data_old;
+			ps->Constant[param->LinkNr].data = new char[TypeCast[tc].Dest->Size];
+			data_new = *(char**)data_new;
+			memcpy(ps->Constant[param->LinkNr].data, data_new, TypeCast[tc].Dest->Size);
+		}else
+			memcpy(ps->Constant[param->LinkNr].data, data_new, TypeCast[tc].Dest->Size);
+		ps->Constant[param->LinkNr].type = TypeCast[tc].Dest;
+		param->Type = TypeCast[tc].Dest;
 		so("  ...Konstante wurde direkt gewandelt!");
 	}else{
-		int cmd = ps->AddCommand();
-		//ps->SetCompilerFunction(TypeCast[tc].Command, ps->Command[cmd]);
-		ps->Command[cmd].Kind = KindCompilerFunction;
-		ps->Command[cmd].LinkNr = TypeCast[tc].Command;
-		ps->Command[cmd].NumParams = 1;
-		ps->Command[cmd].ParamLink[0] = *param;
-		ps->Command[cmd].ReturnType = TypeCast[tc].Dest;
-
-		// relink param
-		param->Kind = KindCommand;
-		param->Nr = cmd;
-		param->type = TypeCast[tc].Dest;
+		sCommand *sub_cmd = cp_command(ps, param);
+		ps->CommandSetCompilerFunction(TypeCast[tc].Command, param);
+		param->Param[0] = sub_cmd;
 		so("  ...keine Konstante: Wandel-Befehl wurde hinzugefuegt!");
 	}
 }
 
-void CPreScript::LinkMostImportantOperator(int &NumOperators, sLinkData *Operand, sLinkData *Operator, int *op_exp)
+void CPreScript::LinkMostImportantOperator(int &NumOperators, sCommand **Operand, sCommand **Operator, int *op_exp)
 {
 	msg_db_r("LinkMostImpOp",4);
 // find the most important operator (mio)
 	int mio=0;
 	for (int i=0;i<NumOperators;i++){
-		so(string(i2s(PrimitiveOperator[Command[Operator[i].Nr].LinkNr].Level),", ",i2s(Command[Operator[i].Nr].LinkNr)));
-		if (PrimitiveOperator[Command[Operator[i].Nr].LinkNr].Level>PrimitiveOperator[Command[Operator[mio].Nr].LinkNr].Level)
+		so(string(i2s(Operator[i]->LinkNr),", ",i2s(Operator[i]->LinkNr)));
+		if (PrimitiveOperator[Operator[i]->LinkNr].Level > PrimitiveOperator[Operator[mio]->LinkNr].Level)
 			mio=i;
 	}
 	so(mio);
 
 // link it
-	sLinkData param1 = Operand[mio];
-	sLinkData param2 = Operand[mio + 1];
-	bool left_modifiable = PrimitiveOperator[Command[Operator[mio].Nr].LinkNr].LeftModifiable;
+	sCommand *param1 = Operand[mio];
+	sCommand *param2 = Operand[mio + 1];
+	bool left_modifiable = PrimitiveOperator[Operator[mio]->LinkNr].LeftModifiable;
 	
-	int po = Command[Operator[mio].Nr].LinkNr, o = -1;
-	sType *r = TypeVoid;
-	sType *p1 = Operand[mio].type;
-	sType *p2 = Operand[mio+1].type;
-	bool equal_structs = false;
-	if (p1 == p2){
-		for (int i=0;i<Struct.size();i++)
-			if (Struct[i].RootType == p1)
-				equal_structs = true;
-	}
+	int po = Operator[mio]->LinkNr, o = -1;
+	sType *p1 = Operand[mio]->Type;
+	sType *p2 = Operand[mio+1]->Type;
+	bool equal_classes = false;
+	if (p1 == p2)
+		if (!p1->IsSuperArray)
+			if (p1->Class)
+				equal_classes = true;
 
 
 	// exact match?
 	bool ok = false;
 	for (int i=0;i<PreOperator.size();i++)
 		if (po == PreOperator[i].PrimitiveID)
-			if (type_match(p1, equal_structs, PreOperator[i].ParamType1) && type_match(p2, equal_structs, PreOperator[i].ParamType2)){
+			if (type_match(p1, equal_classes, PreOperator[i].ParamType1) && type_match(p2, equal_classes, PreOperator[i].ParamType2)){
 				o = i;
-				r = PreOperator[i].ReturnType;
 				ok = true;
 				break;
 			}
@@ -2268,10 +1758,9 @@ void CPreScript::LinkMostImportantOperator(int &NumOperators, sLinkData *Operand
 		int pen_min = 200;
 		for (int i=0;i<PreOperator.size();i++)
 			if ((unsigned)po == PreOperator[i].PrimitiveID)
-				if (type_match_with_cast(p1, equal_structs, left_modifiable, PreOperator[i].ParamType1, pen1, c1) && type_match_with_cast(p2, equal_structs, false, PreOperator[i].ParamType2, pen2, c2)){
+				if (type_match_with_cast(p1, equal_classes, left_modifiable, PreOperator[i].ParamType1, pen1, c1) && type_match_with_cast(p2, equal_classes, false, PreOperator[i].ParamType2, pen2, c2)){
 					ok = true;
 					if (pen1 + pen2 < pen_min){
-						r = PreOperator[i].ReturnType;
 						o = i;
 						pen_min = pen1 + pen2;
 						c1_best = c1;
@@ -2280,16 +1769,15 @@ void CPreScript::LinkMostImportantOperator(int &NumOperators, sLinkData *Operand
 			}
 		// cast
 		if (ok){
-			apply_type_cast(this, c1_best, &param1);
-			apply_type_cast(this, c2_best, &param2);
+			apply_type_cast(this, c1_best, param1);
+			apply_type_cast(this, c2_best, param2);
 			if (Error)
 				_return_(4,);
 		}
 	}
 
 	if (ok){
-		CommandMakeOperator(&Command[Operator[mio].Nr], param1, param2, o);
-		Operator[mio].type=r;
+		CommandMakeOperator(Operator[mio], param1, param2, o);
 	}else{
 		Exp.cur_exp = op_exp[mio];
 		_do_error_(string2("no operator found: (%s) %s (%s)",Type2Str(this,p1),PrimitiveOperator2Str(po),Type2Str(this,p2)), 4,);
@@ -2306,12 +1794,12 @@ void CPreScript::LinkMostImportantOperator(int &NumOperators, sLinkData *Operand
 	msg_db_l(4);
 }
 
-sLinkData CPreScript::GetCommand(sFunction *f)
+sCommand *CPreScript::GetCommand(sFunction *f)
 {
 	msg_db_r("GetCommand", 4);
 	int NumOperands = 0;
-	std::vector<sLinkData> Operand;
-	std::vector<sLinkData> Operator;
+	std::vector<sCommand*> Operand;
+	std::vector<sCommand*> Operator;
 	std::vector<int> op_exp;
 
 	// find the first operand
@@ -2325,22 +1813,23 @@ sLinkData CPreScript::GetCommand(sFunction *f)
 	// je einen Operator und einen Operanden finden
 	for (int i=0;true;i++){
 		op_exp.push_back(Exp.cur_exp);
-		if (GetOperator(f)){
-			Operator.push_back(LastOperator);
+		sCommand *op = GetOperator(f);
+		if (op){
+			Operator.push_back(op);
 			if (end_of_line()){
 				//Exp.cur_exp --;
-				_do_error_("unexpected end of line after operator", 4, Operand[0]);
+				_do_error_("unexpected end of line after operator", 4, NULL);
 			}
 			Operand.push_back(GetOperand(f));
 			if (Error){
 				msg_db_l(4);
-				return Operand[0];
+				return NULL;
 			}
 			NumOperands++;
 		}else{
 			if (Error){
 				msg_db_l(4);
-				return Operand[0];
+				return NULL;
 			}
 			so("(kein weiterer Operator)");
 			so(cur_name);
@@ -2359,7 +1848,7 @@ sLinkData CPreScript::GetCommand(sFunction *f)
 		}
 	}
 
-	sLinkData ret = Operand[0];
+	sCommand *ret = Operand[0];
 	Operand.clear();
 	Operator.clear();
 	op_exp.clear();
@@ -2373,17 +1862,7 @@ sLinkData CPreScript::GetCommand(sFunction *f)
 	return ret;
 }
 
-inline sLinkData GetLinkForCommand(CPreScript *ps, int cmd, sType *type)
-{
-	sLinkData link;
-	link.Kind = KindCommand;
-	link.Nr = cmd;
-	link.type = type;
-	link.Meta = link.ParamLink = NULL;
-	link.script = NULL;
-	return link;
-}
-
+#if 0
 
 struct loop_data_t
 {
@@ -2401,19 +1880,20 @@ loop_data_t *loop_start()
 	CurLoop->NumBreaks = CurLoop->NumContinues = 0;
 	return last;
 }
-void loop_end(CPreScript *ps, loop_data_t *last_loop, int cmd_cont, int cmd_end)
+void loop_end(CPreScript *ps, loop_data_t *last_loop, sCommand *cmd_cont, sCommand *cmd_end)
 {
 	// correct breaks...
 	for (int i=0;i<CurLoop->NumBreaks;i++)
-		ps->Command[CurLoop->BreakCmd[i]].SubLink1 = cmd_end;
+		ps->Command[CurLoop->BreakCmd[i]]->Sub1 = cmd_end;
 	// correct continues...
 	for (int i=0;i<CurLoop->NumContinues;i++)
-		ps->Command[CurLoop->ContinueCmd[i]].SubLink1 = cmd_cont;
+		ps->Command[CurLoop->ContinueCmd[i]]->Sub1 = cmd_cont;
 	//...
-	delete(CurLoop);
 	dm("CurLoop", CurLoop);
+	delete(CurLoop);
 	CurLoop = last_loop;
 }
+#endif
 
 
 void CPreScript::GetSpecialCommand(sBlock *block, sFunction *f)
@@ -2425,9 +1905,9 @@ void CPreScript::GetSpecialCommand(sBlock *block, sFunction *f)
 		// variable
 		next_exp();
 		GetExistence(cur_name, f);
-		sLinkData for_var = GetExistenceLink;
+ 		sCommand *for_var = cp_command(this, &GetExistenceLink);
 		if (Error)	_return_(4,);
-		if ((!is_variable(for_var.Kind)) || ((for_var.type != TypeInt) && (for_var.type != TypeFloat)))
+		if ((!is_variable(for_var->Kind)) || ((for_var->Type != TypeInt) && (for_var->Type != TypeFloat)))
 			_do_error_("int or float variable expected after \"for\"", 4,);
 		next_exp();
 
@@ -2435,38 +1915,38 @@ void CPreScript::GetSpecialCommand(sBlock *block, sFunction *f)
 		if (strcmp(cur_name, ",") != 0)
 			_do_error_("\",\" expected after variable in for", 4,);
 		next_exp();
-		sLinkData val0 = GetCommand(f);
+		sCommand *val0 = GetCommand(f);
 		if (Error)	_return_(4,);
-		if (val0.type != for_var.type){
+		if (val0->Type != for_var->Type){
 			Exp.cur_exp --;
-			_do_error_(string2("%s expected as first value of for", for_var.type->Name), 4,);
+			_do_error_(string2("%s expected as first value of for", for_var->Type->Name), 4,);
 		}
 
 		// last value
 		if (strcmp(cur_name, ",") != 0)
 			_do_error_("\",\" expected after variable in for", 4,);
 		next_exp();
-		sLinkData val1 = GetCommand(f);
+		sCommand *val1 = GetCommand(f);
 		if (Error)	_return_(4,);
-		if (val1.type != for_var.type){
+		if (val1->Type != for_var->Type){
 			Exp.cur_exp --;
-			_do_error_(string2("%s expected as last value of for", for_var.type->Name), 4,);
+			_do_error_(string2("%s expected as last value of for", for_var->Type->Name), 4,);
 		}
 
 		// implement
 		// for_var = val0
-		int cmd = AddCommand();
-		CommandMakeOperator(&Command[cmd], for_var, val0, OperatorIntAssign);
-		block->Command.push_back(cmd);
+		sCommand *cmd_assign = AddCommand();
+		CommandMakeOperator(cmd_assign, for_var, val0, OperatorIntAssign);
+		block->Command.push_back(cmd_assign);
 			
 		// while(for_var < val1)
-		int cmd_cmp = AddCommand();
-		CommandMakeOperator(&Command[cmd_cmp], for_var, val1, OperatorIntSmaller);
+		sCommand *cmd_cmp = AddCommand();
+		CommandMakeOperator(cmd_cmp, for_var, val1, OperatorIntSmaller);
 			
-		cmd = add_command_compilerfunc(this, CommandWhile);
-		Command[cmd].ParamLink[0] = GetLinkForCommand(this, cmd_cmp, for_var.type);
-		block->Command.push_back(cmd);
-		Command[cmd].SubLink1 = block->Command.size()-1;
+		sCommand *cmd_while = add_command_compilerfunc(this, CommandWhile);
+		cmd_while->Param[0] = cmd_cmp;
+		block->Command.push_back(cmd_while);
+//		cmd_while->Sub1 = link_from_cmd(this, block->Command.size()-1);
 		if (ExpectNewline())
 			_return_(4,);
 		// ...block
@@ -2474,104 +1954,164 @@ void CPreScript::GetSpecialCommand(sBlock *block, sFunction *f)
 		if (ExpectIndent())
 			_return_(4,);
 		int loop_block_no = Block.size(); // should get created...soon
-		loop_data_t *last_loop = loop_start();
+//		loop_data_t *last_loop = loop_start();
 		GetCompleteCommand(block, f);
-		Command[cmd].SubLinkEnd = block->Command.size(); // -> next command
+//		cmd_while->SubLinkEnd = link_from_cmd(this, block->Command.size()); // -> next command
 			
 		// ...for_var += 1
-		int cmd_inc = AddCommand();
-		if (for_var.type == TypeInt){
-			CommandMakeOperator(&Command[cmd_inc], for_var, val1 /*dummy*/, OperatorIntIncrease);
+		sCommand *cmd_inc = AddCommand();
+		if (for_var->Type == TypeInt){
+			CommandMakeOperator(cmd_inc, for_var, val1 /*dummy*/, OperatorIntIncrease);
 		}else{
 			int nc = AddConstant(TypeFloat);
 			*(float*)Constant[nc].data = 1.0;
-			sLinkData val_add;
-			val_add.Kind = KindConstant;
-			val_add.Nr = nc;
-			val_add.type = TypeFloat;
-			CommandMakeOperator(&Command[cmd_inc], for_var, val_add, OperatorFloatAddS);
+			sCommand *val_add = AddCommand();
+			val_add->Kind = KindConstant;
+			val_add->LinkNr = nc;
+			val_add->Type = TypeFloat;
+			CommandMakeOperator(cmd_inc, for_var, val_add, OperatorFloatAddS);
 		}
-		sBlock *loop_block = &Block[loop_block_no];
+		sBlock *loop_block = Block[loop_block_no];
 		loop_block->Command.push_back(cmd_inc); // add to loop-block
-		loop_end(this, last_loop, cmd_inc, block->Command.size());
-		
-	}else if (strcmp(cur_name, "while") == 0){
+//		loop_end(this, last_loop, cmd_inc, block->Command.size());
+
+	}else if (strcmp(cur_name, "forall") == 0){
+		// variable
 		next_exp();
-		sLinkData cmp = GetCommand(f);
-		CheckParamLink(&cmp, TypeBool, "while", 0);
+		GetExistence(cur_name, f);
+		sCommand *for_var = cp_command(this, &GetExistenceLink);
 		if (Error)	_return_(4,);
-		if (ExpectNewline())
-			_return_(4,);
-			
-		int cmd = add_command_compilerfunc(this, CommandWhile);
-		Command[cmd].ParamLink[0] = cmp;
-		block->Command.push_back(cmd);
-		Command[cmd].SubLink1 = block->Command.size()-1;
+		if ((!is_variable(for_var->Kind)) || (!for_var->Type->IsPointer))
+			_do_error_("pointer variable expected after \"forall\"", 4,);
+		next_exp();
+
+		// super array
+		if (strcmp(cur_name, ",") != 0)
+			_do_error_("\",\" expected after variable in forall", 4,);
+		next_exp();
+		GetExistence(cur_name, f);
+		sCommand *for_array = cp_command(this, &GetExistenceLink);
+		if (Error)	_return_(4,);
+		if ((!is_variable(for_array->Kind)) || (!for_array->Type->IsSuperArray))
+			_do_error_("list variable expected as second parameter in \"forall\"", 4,);
+
+		// implement
+		// for_var = NULL
+		sCommand *cmd_null = AddCommand();
+		int nc = AddConstant(TypePointer);
+		*(void**)Constant[nc].data = NULL;
+		sCommand *val0 = AddCommand();
+		val0->Kind = KindConstant;
+		val0->LinkNr = nc;
+		val0->Type = TypePointer;
+		CommandMakeOperator(cmd_null, for_var, val0, OperatorPointerAssign);
+		block->Command.push_back(cmd_null);
+
+		// &pointer
+		sCommand *ref = cp_command(this, for_var);
+		ref_command(this, ref);
+
+		// array.iterate(&pointer)
+		sCommand *cmd_iter = AddCommand();
+		for (int e=0;e<for_array->Type->Class->Function.size();e++)
+			if (strcmp("iterate", for_array->Type->Class->Function[e].Name) == 0)
+				CommandSetCompilerFunction(for_array->Type->Class->Function[e].Nr, cmd_iter);
+		cmd_iter->Param[0] = ref;
+		cmd_iter->Sub1 = for_array;
+
+
+		// while array.iterate(&pointer)...
+		sCommand *cmd_while = add_command_compilerfunc(this, CommandWhile);
+		cmd_while->Param[0] = cmd_iter;
+		block->Command.push_back(cmd_while);
+//		cmd_while->SubLink1 = link_from_cmd(this, block->Command.size()-1);
 		// ...block
 		next_line();
 		if (ExpectIndent())
 			_return_(4,);
-		loop_data_t *last_loop = loop_start();
+//		loop_data_t *last_loop = loop_start();
 		GetCompleteCommand(block, f);
-		Command[cmd].SubLinkEnd = block->Command.size(); // -> next command
-		loop_end(this, last_loop, -1, block->Command.size());
+//		Command[cmd]->SubLinkEnd = link_from_cmd(this, block->Command.size()); // -> next command
+//		loop_end(this, last_loop, -1, block->Command.size());
+	}else if (strcmp(cur_name, "while") == 0){
+		next_exp();
+		sCommand *cmd_cmp = GetCommand(f);
+		if (Error)	_return_(4,);
+		CheckParamLink(cmd_cmp, TypeBool, "while", 0);
+		if (Error)	_return_(4,);
+		if (ExpectNewline())
+			_return_(4,);
+			
+		sCommand *cmd_while = add_command_compilerfunc(this, CommandWhile);
+		cmd_while->Param[0] = cmd_cmp;
+		block->Command.push_back(cmd_while);
+		cmd_while->Sub1 = block->Command[block->Command.size()-1];
+		// ...block
+		next_line();
+		if (ExpectIndent())
+			_return_(4,);
+//		loop_data_t *last_loop = loop_start();
+		GetCompleteCommand(block, f);
+//		Command[cmd]->SubLinkEnd = link_from_cmd(this, block->Command.size()); // -> next command
+//		loop_end(this, last_loop, -1, block->Command.size());
 		
  	}else if (strcmp(cur_name, "break") == 0){
 		next_exp();
-		int cmd = add_command_compilerfunc(this, CommandBreak);
+		sCommand *cmd = add_command_compilerfunc(this, CommandBreak);
 		block->Command.push_back(cmd);
-		if (!CurLoop)
-			_do_error_("break has to be within a loop", 4,);
-		CurLoop->BreakCmd[CurLoop->NumBreaks ++] = cmd;
+//		if (!CurLoop)
+//			_do_error_("break has to be within a loop", 4,);
+//		CurLoop->BreakCmd[CurLoop->NumBreaks ++] = cmd;
 		
 	}else if (strcmp(cur_name, "continue") == 0){
 		next_exp();
-		int cmd = add_command_compilerfunc(this, CommandContinue);
+		sCommand *cmd = add_command_compilerfunc(this, CommandContinue);
 		block->Command.push_back(cmd);
-		if (!CurLoop)
-			_do_error_("continue has to be within a loop", 4,);
-		CurLoop->ContinueCmd[CurLoop->NumContinues ++] = cmd;
+//		if (!CurLoop)
+//			_do_error_("continue has to be within a loop", 4,);
+//		CurLoop->ContinueCmd[CurLoop->NumContinues ++] = cmd;
 		
 	}else if (strcmp(cur_name, "if") == 0){
 		int ind = Exp.cur_line->indent;
 		next_exp();
-		sLinkData cmp = GetCommand(f);
-		CheckParamLink(&cmp, TypeBool, "if", 0);
+		sCommand *cmd_cmp = GetCommand(f);
+		if (Error)	_return_(4,);
+		CheckParamLink(cmd_cmp, TypeBool, "if", 0);
 		if (Error)	_return_(4,);
 		if (ExpectNewline())
 			_return_(4,);
 			
-		int cmd = add_command_compilerfunc(this, CommandIf);
-		Command[cmd].ParamLink[0] = cmp;
-		block->Command.push_back(cmd);
-		Command[cmd].SubLink1 = block->Command.size()-1;
+		sCommand *cmd_if = add_command_compilerfunc(this, CommandIf);
+		cmd_if->Param[0] = cmd_cmp;
+		block->Command.push_back(cmd_if);
+//		cmd_if->Sub1 = link_from_cmd(this, block->Command.size()-1);
 		// ...block
 		next_line();
 		if (ExpectIndent())
 			_return_(4,);
 		GetCompleteCommand(block, f);
-		Command[cmd].SubLinkEnd = block->Command.size(); // -> next command
+//		Command[cmd]->SubLinkEnd = link_from_cmd(this, block->Command.size()); // -> next command
 		next_line();
 
 		// else?
 		if ((!end_of_file()) && (strcmp(cur_name, "else") == 0) && (Exp.cur_line->indent >= ind)){
-			Command[cmd].LinkNr = CommandIfElse;
+			cmd_if->LinkNr = CommandIfElse;
 			next_exp();
 			// iterative if
 			if (strcmp(cur_name, "if") == 0){
 				// sub-if's in a new block
-				int NewBlock = AddBlock();
+				sBlock *new_block = AddBlock();
 				if (Error)
 					_return_(4,);
 				// parse the next if
-				GetCompleteCommand(&Block[NewBlock], f);
+				GetCompleteCommand(new_block, f);
 				// command for the found block
-				int cmd = AddCommand();
-				Command[cmd].Kind=KindBlock;
-				Command[cmd].LinkNr=NewBlock;
+				sCommand *cmd_block = AddCommand();
+				cmd_block->Kind = KindBlock;
+				cmd_block->LinkNr = new_block->Index;
 				// ...
-				block->Command.push_back(cmd);
-				Command[cmd].SubLinkEnd = block->Command.size(); // -> next command
+				block->Command.push_back(cmd_block);
+//				Command[cmd]->SubEnd = link_from_cmd(this, block->Command.size()); // -> next command
 				//_do_error_("elsif", 4,);
 				_return_(4,);
 			}
@@ -2582,7 +2122,7 @@ void CPreScript::GetSpecialCommand(sBlock *block, sFunction *f)
 			if (ExpectIndent())
 				_return_(4,);
 			GetCompleteCommand(block, f);
-			Command[cmd].SubLinkEnd = block->Command.size(); // -> next command
+//			Command[cmd]->SubEnd = link_from_cmd(this, block->Command.size()); // -> next command
 			//next_line();
 		}else{
 			Exp.cur_line --;
@@ -2592,6 +2132,10 @@ void CPreScript::GetSpecialCommand(sBlock *block, sFunction *f)
 	
 	msg_db_l(4);
 }
+
+/*void ParseBlock(sBlock *block, sFunction *f)
+{
+}*/
 
 // we already are in the line to analyse ...indentation for a new block should compare to the last line
 void CPreScript::GetCompleteCommand(sBlock *block, sFunction *f)
@@ -2607,23 +2151,23 @@ void CPreScript::GetCompleteCommand(sBlock *block, sFunction *f)
 		indented = false;
 		Exp.cur_exp = 0; // bad hack...
 		msg_db_r("Block", 4);
-		int NewBlock=AddBlock();
+		sBlock *new_block = AddBlock();
 		if (Error){
 			msg_db_l(4);
 			_return_(4,);
 		}
-		Block[NewBlock].RootNr = block->Nr;
+		new_block->Root = block->Index;
 
-		int cmd = AddCommand();
-		Command[cmd].Kind=KindBlock;
-		Command[cmd].LinkNr=NewBlock;
-		block->Command.push_back(cmd);
+		sCommand *c = AddCommand();
+		c->Kind = KindBlock;
+		c->LinkNr = new_block->Index;
+		block->Command.push_back(c);
 
 		for (int i=0;true;i++){
 			if (((i > 0) && (Exp.cur_line->indent < last_indent)) || (end_of_file()))
 				break;
 
-			GetCompleteCommand(&Block[NewBlock], f);
+			GetCompleteCommand(new_block, f);
 			if (Error){
 				msg_db_l(4);
 				_return_(4,);
@@ -2640,8 +2184,8 @@ void CPreScript::GetCompleteCommand(sBlock *block, sFunction *f)
 	}else if (strcmp(cur_name, "-asm-") == 0){
 		next_exp();
 		so("<Asm-Block>");
-		int cmd = add_command_compilerfunc(this, CommandAsm);
-		block->Command.push_back(cmd);
+		sCommand *c = add_command_compilerfunc(this, CommandAsm);
+		block->Command.push_back(c);
 
 	// local (variable) definitions...
 	// type of variable
@@ -2652,11 +2196,10 @@ void CPreScript::GetCompleteCommand(sBlock *block, sFunction *f)
 			// assignment?
 			if (strcmp(cur_name, "=") == 0){
 				Exp.cur_exp --;
-				sLinkData link = GetCommand(f);
+				sCommand *c = GetCommand(f);
 				if (Error)
 					_return_(4,);
-				if (link.Kind == KindCommand)
-					block->Command.push_back(link.Nr);
+				block->Command.push_back(c);
 			}
 			if (end_of_line())
 				break;
@@ -2669,20 +2212,18 @@ void CPreScript::GetCompleteCommand(sBlock *block, sFunction *f)
 
 		
 	// commands (the actual code!)
-		if ((strcmp(cur_name, "for") == 0) || (strcmp(cur_name, "while") == 0) || (strcmp(cur_name, "break") == 0) || (strcmp(cur_name, "continue") == 0) || (strcmp(cur_name, "if") == 0)){
+		if ((strcmp(cur_name, "for") == 0) || (strcmp(cur_name, "forall") == 0) || (strcmp(cur_name, "while") == 0) || (strcmp(cur_name, "break") == 0) || (strcmp(cur_name, "continue") == 0) || (strcmp(cur_name, "if") == 0)){
 			GetSpecialCommand(block, f);
 
 		}else{
 
 			// normal commands
-			sLinkData link = GetCommand(f);
+			sCommand *c = GetCommand(f);
 			if (Error)
 				_return_(4,);
 
-			if (link.Kind == KindCommand){
-				// link
-				block->Command.push_back(link.Nr);
-			}
+			// link
+			block->Command.push_back(c);
 		}
 	}
 
@@ -2696,7 +2237,7 @@ void CPreScript::TestArrayDefinition(sType **type, bool is_pointer)
 {
 	msg_db_r("TestArrayDef", 4);
 	if (is_pointer){
-		(*type) = CreatePointerType((*type));
+		(*type) = GetPointerType((*type));
 	}
 	if (strcmp(cur_name, "[") == 0){
 		sType nt,*pt = &nt;
@@ -2706,34 +2247,45 @@ void CPreScript::TestArrayDefinition(sType **type, bool is_pointer)
 		int or_name_length = strlen(or_name);
 		so("-Array-");
 		next_exp();
-		if (GetConstantType(cur_name) == TypeInt){
-			array_size = *(int*)GetConstantValue(cur_name);
+		if (strcmp(cur_name, "]") == 0){
+			array_size = -1;
+		}else if (GetConstantType() == TypeInt){
+			array_size = *(int*)GetConstantValue();
+			next_exp();
+			if (strcmp(cur_name, "]") != 0){
+				DoError("\"]\" expected after array size");
+				msg_db_l(4);
+				return;
+			}
 		}else{
 			DoError("only constants of type \"int\" allowed for size of arrays");
 			msg_db_l(4);
 			return;
 		}
 		next_exp();
-		if (strcmp(cur_name, "]") != 0){
-			DoError("\"]\" expected after array size");
-			msg_db_l(4);
-			return;
-		}
-		next_exp();
 		// recursion
 		TestArrayDefinition(type, false); // is_pointer=false, since pointers have been handled
-		
+
 		// create array       (complicated name necessary to get correct ordering   int a[2][4] = (int[4])[2])
-		(*type) = CreateNewType(	string2("%s[%d]%s", or_name, array_size, &(*type)->Name[or_name_length]),
-		                        	(*type)->Size * array_size, false, false, array_size, (*type));
+		if (array_size < 0){
+			(*type) = CreateNewType(	string2("%s[]%s", or_name, &(*type)->Name[or_name_length]),
+			                        	SuperArraySize, false, false, true, array_size, (*type));
+		}else{
+			(*type) = CreateNewType(	string2("%s[%d]%s", or_name, array_size, &(*type)->Name[or_name_length]),
+			                        	(*type)->Size * array_size, false, false, true, array_size, (*type));
+		}
+		if (strcmp(cur_name, "*") == 0){
+			so("nachtraeglich Pointer");
+			next_exp();
+			TestArrayDefinition(type, true);
+		}
 	}
 	msg_db_l(4);
 }
 
 
-
 // Datei auslesen (und Kommentare auslesen)
-bool CPreScript::LoadToBuffer(char *filename,bool just_analyse)
+bool CPreScript::LoadToBuffer(const char *filename,bool just_analyse)
 {
 	msg_db_r("LoadToBuffer",4);
 
@@ -2755,452 +2307,13 @@ bool CPreScript::LoadToBuffer(char *filename,bool just_analyse)
 	Analyse(Buffer, just_analyse);
 
 
-	delete[](Buffer);
 	dm("Buffer",Buffer);
+	delete[](Buffer);
 
 	msg_db_l(4);
 	return !Error;
 }
 
-void CPreScript::HandleMacro(ps_line_t *l, int &line_no, int &NumIfDefs, bool *IfDefed, bool just_analyse)
-{
-	msg_db_r("HandleMacro", 4);
-	Exp.cur_line = l;
-	Exp.cur_exp = 0;
-	int ln;
-	char filename[256];
-	CScript *include;
-	
-	int macro_no=-1;
-	for (int i=0;i<NumMacroNames;i++)
-		if (strcmp(cur_name, MacroName[i]) == 0)
-			macro_no = i;
-	
-	switch(macro_no){
-		case MacroInclude:
-			next_exp();
-			/*if (!IsIfDefed(NumIfDefs, IfDefed))
-				continue;*/
-			strcpy(filename, dir_from_filename(Filename));
-			strcat(filename, &cur_name[1]);
-			filename[strlen(filename) - 1] = 0; // remove "
-			strcpy(filename, filename_no_recursion(filename));
-
-			so("lade Include-Datei");
-			right();
-
-			include = LoadScriptAsInclude(filename, just_analyse);
-
-			left();
-			if ((!include) || (include->Error)){
-				IncludeLinkerError |= include->LinkerError;
-				DoError(string2("error in inluded file \"%s\":\n[ %s (line %d:) ]", filename, include->ErrorMsg, include->ErrorLine, include->ErrorColumn));
-				return;
-			}
-			AddIncludeData(include);
-			//DoError("include noch nicht implementiert");
-			break;
-		case MacroDefine:
-			sDefine d;
-			// source
-			next_exp();
-			strcpy(d.Source, cur_name);
-			d.NumDests = 0;
-			// dests
-			for (int i=0;i<SCRIPT_MAX_DEFINE_DESTS;i++){
-				next_exp();
-				if (end_of_line())
-					break;
-				strcpy(d.Dest[d.NumDests++], cur_name);
-			}
-			Define.push_back(d);
-			break;
-		/*case MacroIfdef:
-			next_exp();
-			//IfDefed[NumIfDefs] = false;
-			bool defed = false;
-			for (int i=0;i<NumDefines;i++)
-				if (strcmp(Temp, Define[i]->Source) == 0){
-					//IfDefed[NumIfDefs] = true;
-					defed = true;
-					break;
-				}
-			//NumIfDefs ++;
-			if (!defed){
-			}
-			break;*/
-	/*	case MacroIfndef:
-			NextExp(Buffer);
-			IfDefed[NumIfDefs]=true;
-			for (i=0;i<NumDefines;i++)
-				if (strcmp(Temp,Define[i]->Source)==0){
-					IfDefed[NumIfDefs]=false;
-					break;
-				}
-			NumIfDefs++;
-			break;
-		case MacroElse:
-			if (NumIfDefs<1){
-				strcpy(Exp->Name[Exp->NumExps],Temp);
-				Exp->Line[Exp->NumExps]=Exp->TempLine;
-				Exp->Column[Exp->NumExps]=Exp->TempColumn;
-				DoError("\"#else\" found but no matching \"#ifdef\"",Exp->NumExps);
-				return;
-			}
-			IfDefed[NumIfDefs-1]=!IfDefed[NumIfDefs-1];
-			break;
-		case MacroEndif:
-			if (NumIfDefs<1){
-				strcpy(Exp->Name[Exp->NumExps],Temp);
-				Exp->Line[Exp->NumExps]=Exp->TempLine;
-				Exp->Column[Exp->NumExps]=Exp->TempColumn;
-				DoError("\"#endif\" found but no matching \"#ifdef\"",Exp->NumExps);
-				return;
-			}
-			NumIfDefs--;
-			break;*/
-		case MacroRule:
-			next_exp();
-			ln = -1;
-			for (int i=0;i<NumScriptLocations;i++)
-				if (strcmp(ScriptLocation[i].Name, cur_name)==0)
-					ln=i;
-			if (ln < 0){
-				DoError("unknown location in script rule");
-				msg_db_l(4);
-				return;
-			}
-			sPreScriptRule pr;
-			PreScriptRule.push_back(pr);
-			pr.Location = ScriptLocation[ln].Location;
-			next_exp();
-			pr.Level = s2i(Temp);
-			next_exp();
-			strcpy(pr.Name, &cur_name[1]);
-			pr.Name[strlen(pr.Name) - 1] = 0;
-			break;
-		case MacroDisasm:
-			FlagDisassemble=true;
-			break;
-		case MacroShow:
-			FlagShow=true;
-			break;
-		case MacroImmortal:
-			FlagImmortal=true;
-			break;
-		case MacroOs:
-			FlagCompileOS=true;
-			break;
-		case MacroInitialRealmode:
-			FlagCompileInitialRealMode=true;
-			break;
-		case MacroVariablesOffset:
-			FlagOverwriteVariablesOffset=true;
-			next_exp();
-			VariablesOffset=s2i2(cur_name);
-			break;
-		case MacroCodeOrigin:
-			next_exp();
-			CreateAsmMetaInfo(this);
-			((sAsmMetaInfo*)AsmMetaInfo)->CodeOrigin = s2i2(cur_name);
-			break;
-		default:
-			DoError("unknown makro atfer \"#\"");
-			msg_db_l(4);
-			return;
-	}
-
-	// remove macro line
-	Exp.line[line_no].exp.clear();
-	Exp.line.erase(Exp.line.begin() + line_no);
-	line_no --;
-	msg_db_l(4);
-}
-
-// ... maybe some time later
-void CPreScript::PreCompiler(bool just_analyse)
-{
-	if (Error)	return;
-	msg_db_r("PreCompiler", 4);
-
-	int NumIfDefs = 0;
-	bool IfDefed[1024];
-	
-	for (int i=0;i<Exp.line.size()-1;i++){
-		Exp.cur_exp = 0;
-		Exp.cur_line = &Exp.line[i];
-		if (Exp.line[i].exp[0].name[0] == '#')
-			HandleMacro(Exp.cur_line, i, NumIfDefs, IfDefed, just_analyse);
-		else{
-
-			// replace by definition?
-			int num_defs_inserted = 0;
-			while(!end_of_line()){
-				sDefine *d;
-				foreach(Define, d, j){
-					if (strcmp(cur_name, d->Source) == 0){
-						int pos = Exp.cur_line->exp[Exp.cur_exp].pos;
-						remove_from_buffer(this, Exp.cur_exp);
-						for (int k=0;k<d->NumDests;k++){
-							insert_into_buffer(this, d->Dest[k], pos, Exp.cur_exp);
-							next_exp();
-						}
-						Exp.cur_exp -= d->NumDests;
-						num_defs_inserted ++;
-						if (num_defs_inserted > SCRIPT_MAX_DEFINE_RECURSIONS){
-							DoError("recursion in #define macros");
-							msg_db_l(4);
-							return;
-						}
-						break;
-					}
-				}
-				next_exp();
-			}
-
-			// "-" in front of numbers (after ( , : [ = < >)
-			Exp.cur_exp = 1;
-			while(!end_of_line()){
-				if (strcmp(cur_name, "-") == 0){
-					if ((strcmp(get_name(Exp.cur_exp - 1), "(") == 0) ||
-						(strcmp(get_name(Exp.cur_exp - 1), ",") == 0) ||
-						(strcmp(get_name(Exp.cur_exp - 1), ":") == 0) ||
-						(strcmp(get_name(Exp.cur_exp - 1), "[") == 0) ||
-						(strcmp(get_name(Exp.cur_exp - 1), "=") == 0) ||
-						(strcmp(get_name(Exp.cur_exp - 1), "<") == 0) ||
-						(strcmp(get_name(Exp.cur_exp - 1), ">") == 0)){
-						if (isNumber(get_name(Exp.cur_exp + 1)[0])){
-							char name[SCRIPT_MAX_NAME * 2];
-							strcpy(name, string("-", get_name(Exp.cur_exp + 1)));
-							int pos = Exp.cur_line->exp[Exp.cur_exp].pos;
-							remove_from_buffer(this, Exp.cur_exp);
-							remove_from_buffer(this, Exp.cur_exp);
-							insert_into_buffer(this, name, pos, Exp.cur_exp);
-						}
-					}
-				}
-				next_exp();
-			}
-		}
-	}
-
-	
-
-	/*msg_db_r("MakeExps",4);
-	int i,NumIfDefs=0,ln;
-	bool IfDefed[1024];
-	Exp=new exp_buffer;
-	am("exp_buffer",sizeof(exp_buffer),Exp);
-	Exp->BufferUsed=0;
-	BufferPos=0;
-	Exp->TempLine=1;
-	Exp->TempColumn=0;
-	Exp->NumExps=0;
-	char filename[256];
-	CScript *include;
-	
-	while(true){
-		int l=(Exp->NumExps==0)?0:Exp->TempLine;
-		NextExp(Buffer);
-		if (Error)	return;
-		if (Temp[0]==0)
-			break;
-
-		if ((Exp->TempLine>l)&&(strcmp(Temp,"#")==0)){
-			msg_db_m("makro",4);
-			l=Exp->TempLine;
-			so("# -Makro");
-			NextExp(Buffer);
-
-			int macro_no=-1;
-			for (i=0;i<NumMacroNames;i++)
-				if (strcmp(Temp,MacroName[i])==0)
-					macro_no=i;
-
-			switch(macro_no){
-				case MacroInclude:
-					NextExp(Buffer);
-					if (!IsIfDefed(NumIfDefs,IfDefed))
-						continue;
-					strcpy(filename,dir_from_filename(Filename));
-					strcat(filename,&Temp[1]);
-					filename[strlen(filename)-1]=0; // remove "
-					strcpy(filename,filename_no_recursion(filename));
-
-					so("lade Include-Datei");
-					right();
-
-					include=LoadScriptAsInclude(filename,just_analyse);
-
-					left();
-					if ((!include)||(include->Error)){
-						IncludeLinkerError|=include->LinkerError;
-						DoError(string2("error in inluded file \"%s\":\n[ %s (line %d:) ]",filename,include->ErrorMsg,include->ErrorLine,include->ErrorColumn),Exp->ExpNr);
-						return;
-					}
-					AddIncludeData(include);
-					Exp->ExpNr++;
-					break;
-				case MacroDefine:
-					Define[NumDefines]=new sDefine;
-					am("Define",sizeof(sDefine),Define[NumDefines]);
-					Define[NumDefines]->Owner=this;
-					// Source
-					NextExp(Buffer);
-					strcpy(Define[NumDefines]->Source,Temp);
-					Define[NumDefines]->NumDests=0;
-					// Dests
-					int t;
-					for (i=0;i<SCRIPT_MAX_DEFINE_DESTS;i++){
-						t=BufferPos;
-						NextExp(Buffer);
-						if (Exp->TempLine>l){
-							BufferPos=t;
-							break;
-						}
-						strcpy(Define[NumDefines]->Dest[Define[NumDefines]->NumDests],Temp);
-						Define[NumDefines]->NumDests++;
-					}
-					Exp->TempLine=l;
-					NumDefines++;
-					break;
-				case MacroIfdef:
-					NextExp(Buffer);
-					IfDefed[NumIfDefs]=false;
-					for (i=0;i<NumDefines;i++)
-						if (strcmp(Temp,Define[i]->Source)==0){
-							IfDefed[NumIfDefs]=true;
-							break;
-						}
-					NumIfDefs++;
-					break;
-				case MacroIfndef:
-					NextExp(Buffer);
-					IfDefed[NumIfDefs]=true;
-					for (i=0;i<NumDefines;i++)
-						if (strcmp(Temp,Define[i]->Source)==0){
-							IfDefed[NumIfDefs]=false;
-							break;
-						}
-					NumIfDefs++;
-					break;
-				case MacroElse:
-					if (NumIfDefs<1){
-						strcpy(Exp->Name[Exp->NumExps],Temp);
-						Exp->Line[Exp->NumExps]=Exp->TempLine;
-						Exp->Column[Exp->NumExps]=Exp->TempColumn;
-						DoError("\"#else\" found but no matching \"#ifdef\"",Exp->NumExps);
-						return;
-					}
-					IfDefed[NumIfDefs-1]=!IfDefed[NumIfDefs-1];
-					break;
-				case MacroEndif:
-					if (NumIfDefs<1){
-						strcpy(Exp->Name[Exp->NumExps],Temp);
-						Exp->Line[Exp->NumExps]=Exp->TempLine;
-						Exp->Column[Exp->NumExps]=Exp->TempColumn;
-						DoError("\"#endif\" found but no matching \"#ifdef\"",Exp->NumExps);
-						return;
-					}
-					NumIfDefs--;
-					break;
-				case MacroRule:
-					NextExp(Buffer);
-					ln=-1;
-					for (i=0;i<NumScriptLocations;i++)
-						if (strcmp(ScriptLocation[i].Name,Temp)==0)
-							ln=i;
-					if (ln<0){
-						strcpy(Exp->Name[Exp->NumExps],Temp);
-						Exp->Line[Exp->NumExps]=Exp->TempLine;
-						Exp->Column[Exp->NumExps]=Exp->TempColumn;
-						DoError("unknown location in script rule",Exp->NumExps);
-						return;
-					}
-					PreScriptRule[NumPreScriptRules]=new sPreScriptRule;
-					am("PreScriptRule",sizeof(sPreScriptRule),PreScriptRule[NumPreScriptRules]);
-					PreScriptRule[NumPreScriptRules]->Location=ScriptLocation[ln].Location;
-					NextExp(Buffer);
-					PreScriptRule[NumPreScriptRules]->Level=s2i(Temp);
-					NextExp(Buffer);
-					Temp[strlen(Temp)-1]=0;
-					strcpy(PreScriptRule[NumPreScriptRules]->Name,&Temp[1]);
-					NumPreScriptRules++;
-					break;
-				case MacroDisasm:
-					FlagDisassemble=true;
-					break;
-				case MacroShow:
-					FlagShow=true;
-					break;
-				case MacroImmortal:
-					FlagImmortal=true;
-					break;
-				case MacroOs:
-					FlagCompileOS=true;
-					break;
-				case MacroInitialRealmode:
-					FlagCompileInitialRealMode=true;
-					break;
-				case MacroVariablesOffset:
-					FlagOverwriteVariablesOffset=true;
-					NextExp(Buffer);
-					VariablesOffset=s2i2(Temp);
-					break;
-				case MacroCodeOrigin:
-					NextExp(Buffer);
-					CreateAsmMetaInfo(this);
-					((sAsmMetaInfo*)AsmMetaInfo)->CodeOrigin=s2i2(Temp);
-					break;
-				default:
-					strcpy(Exp->Name[Exp->NumExps],Temp);
-					Exp->Line[Exp->NumExps]=Exp->TempLine;
-					Exp->Column[Exp->NumExps]=Exp->TempColumn;
-					DoError("unknown makro atfer \"#\"",Exp->NumExps);
-					return;
-			}
-			continue;
-		}
-	//msg_db_m("def",4);
-
-		bool defed=false;
-		for (i=0;i<NumDefines;i++)
-			if (strcmp(Temp,Define[i]->Source)==0){
-				defed=true;
-				for (int j=0;j<Define[i]->NumDests;j++){
-					strcpy(Exp->Name[Exp->NumExps],Define[i]->Dest[j]);
-					Exp->BufferUsed+=strlen(Define[i]->Dest[j])+1;
-					Exp->Name[Exp->NumExps+1]=&Exp->Buffer[Exp->BufferUsed];
-					Exp->Line[Exp->NumExps]=Exp->TempLine;
-					Exp->Column[Exp->NumExps]=Exp->TempColumn;
-					Exp->NumExps++;
-				}
-				break;
-			}
-			
-	//msg_db_m("postdef",4);
-		if (defed)
-			continue;
-
-		if (!IsIfDefed(NumIfDefs,IfDefed))
-			continue;
-	//msg_db_m("zzz",4);
-
-		strcpy(Exp->Name[Exp->NumExps],Temp);
-		Exp->Line[Exp->NumExps]=Exp->TempLine;
-		Exp->Column[Exp->NumExps]=Exp->TempColumn;
-		Exp->NumExps++;
-	}
-	if (NumIfDefs>0){
-		DoError("\"#ifdef\" found but no matching \"#endif\"",Exp->NumExps);
-		return;
-	}
-	Exp->ExpNr=0;
-	msg_db_l(4);*/
-
-	
-	msg_db_l(4);
-}
 
 void CPreScript::ParseEnum()
 {
@@ -3223,9 +2336,9 @@ void CPreScript::ParseEnum()
 				next_exp();
 				if (ExpectNoNewline())
 					_return_(4,);
-				sType *type = GetConstantType(cur_name);
+				sType *type = GetConstantType();
 				if (type == TypeInt)
-					value = *(int*)GetConstantValue(cur_name);
+					value = *(int*)GetConstantValue();
 				else
 					_do_error_("integer constant expected after \":\" for explicit value of enum", 4,);
 				next_exp();
@@ -3248,25 +2361,47 @@ void CPreScript::ParseEnum()
 	msg_db_l(4);
 }
 
+void ParseClassFunction(CPreScript *ps, sClass *s)
+{
+	ps->ParseFunction(ps->GetPointerType(s->RootType));
+
+	// convert name to Class.Function
+	sFunction *f = &ps->Function[ps->Function.size() - 1];
+	strcpy(f->Name, string(s->RootType->Name, ".", f->Name));
+
+	// remove instance parameter....
+	//f->Var.erase(f->Var.begin());
+	f->NumParams --;
+	msg_todo("Kaba: Class Function parameters...");
+}
+
 inline bool type_needs_alignment(sType *t)
 {
-	if (t->ArrayLength > 0)
+	if (t->IsArray)
 		return type_needs_alignment(t->SubType);
 	return (t->Size >= 4);
 }
 
-void CPreScript::ParseStruct()
+void CPreScript::ParseClass()
 {
-	msg_db_r("ParseStruct", 4);
-	sStruct s;
-	s.Owner = this;
+	msg_db_r("ParseClass", 4);
+
+	int indent0 = Exp.cur_line->indent;
 	int _offset = 0;
-	next_exp(); // 'enum'
+	next_exp(); // 'class'
 	char name[SCRIPT_MAX_NAME * 2];
 	strcpy(name, cur_name);
 	next_exp();
 
-	// parent structure
+	// create class and type
+	sClass *s = new sClass;
+	am("Class",sizeof(sClass),s);
+	s->RootType = CreateNewType(name, 0, false, false, false, 0, NULL);
+	s->Owner = this;
+	s->RootType->Class = s;
+	Class.push_back(s);
+
+	// parent class
 	if (strcmp(cur_name, ":") == 0){
 		so("vererbung der struktur");
 		next_exp();
@@ -3276,17 +2411,14 @@ void CPreScript::ParseStruct()
 			return;
 		}
 		bool found = false;
-		sStruct *ss;
-		foreach(Struct, ss, i)
-			if (ss->RootType == ancestor){
-				// inheritance of elements
-				s.Element.assign(ss->Element.begin(), ss->Element.end());
-				_offset = ss->RootType->Size;
-				found = true;
-				break;
-			}
+		if (ancestor->Class){
+			// inheritance of elements
+			s->Element.assign(ancestor->Class->Element.begin(), ancestor->Class->Element.end());
+			_offset = ancestor->Size;
+			found = true;
+		}
 		if (!found){
-			DoError(string2("parental type in structure definition after \":\" has to be a structure, but (%s) is not", ancestor->Name));
+			DoError(string2("parental type in class definition after \":\" has to be a class, but (%s) is not", ancestor->Name));
 			msg_db_l(4);
 			return;
 		}
@@ -3299,15 +2431,20 @@ void CPreScript::ParseStruct()
 	// elements
 	for (int num=0;true;num++){
 		next_line();
-		if (unindented)
+		if (Exp.cur_line->indent <= indent0) //(unindented)
 			break;
+		if (end_of_file())
+			break;
+		int ie = Exp.cur_exp;
 		sType *tType = GetType(Exp.cur_exp, true);
 		if (Error){
 			msg_db_l(4);
 			return;
 		}
 		for (int j=0;!end_of_line();j++){
-			sStructElement el;
+			//int indent = Exp.cur_line->indent;
+			
+			sClassElement el;
 			bool is_pointer = false;
 			sType *type = tType;
 			if (strcmp(cur_name, "*") == 0){
@@ -3316,29 +2453,46 @@ void CPreScript::ParseStruct()
 			}
 			strcpy(el.Name, cur_name);
 			next_exp();
-			so(string2("Struct-Element: %s %s  Offset: %d", type->Name, el.Name, _offset));
 			TestArrayDefinition(&type, is_pointer);
 			el.Type = type;
+
+			// is a function?
+			bool is_function = false;
+			if (strcmp(cur_name, "(") == 0)
+			    is_function = true;
+			if (is_function){
+				Exp.cur_exp = ie;
+				ParseClassFunction(this, s);
+				sClassFunction f;
+				strcpy(f.Name, el.Name);
+				f.Kind = KindFunction;
+				f.Nr = Function.size() - 1;
+				s->Function.push_back(f);
+				
+				break;
+			}
+
+			
+			if (type_needs_alignment(type))
+				_offset = mem_align(_offset);
+			so(string2("Class-Element: %s %s  Offset: %d", type->Name, el.Name, _offset));
 			if ((strcmp(cur_name, ",") != 0) && (!end_of_line())){
-				DoError("\",\" or newline expected after struct element");
+				DoError("\",\" or newline expected after class element");
 				msg_db_l(4);
 				return;
 			}
 			el.Offset = _offset;
 			_offset += type->Size;
-			if (type_needs_alignment(type))
-				_offset = mem_align(_offset);
-			s.Element.push_back(el);
+			s->Element.push_back(el);
 			if (end_of_line())
 				break;
 			next_exp();
 		}
 	}
-	for (int i=0;i<s.Element.size();i++)
-		if (type_needs_alignment(s.Element[i].Type))
+	for (int i=0;i<s->Element.size();i++)
+		if (type_needs_alignment(s->Element[i].Type))
 			_offset = mem_align(_offset);
-	s.RootType = CreateNewType(name, _offset, false, false, 0, NULL);
-	Struct.push_back(s);
+	s->RootType->Size = _offset;
 
 	Exp.cur_line --;
 	msg_db_l(4);
@@ -3371,6 +2525,33 @@ bool CPreScript::ExpectIndent()
 	return false;
 }
 
+void AddExternalVar(char *name, sType *type)
+{
+	so("extern");
+	// already existing?
+	bool found = false;
+	for (int i=0;i<PreExternalVar.size();i++)
+		if (PreExternalVar[i].IsSemiExternal)
+			if (strcmp(PreExternalVar[i].Name, name) == 0){
+				PreExternalVar[i].Type = type;
+				found = true;
+				break;
+			}
+
+		// not found -> create provisorium (not linkable.... but parsable)
+		if (!found){
+			// ScriptLinkSemiExternalVar()
+			sPreExternalVar v;
+			v.Name = new char[strlen(name) + 1];
+			am("ExternalVar.Name", strlen(name) + 1, v.Name);
+			strcpy((char*)v.Name, name);
+			v.Pointer = NULL;
+			v.Type = type;
+			v.IsSemiExternal = true;
+			PreExternalVar.push_back(v);
+		}
+}
+
 sType *CPreScript::ParseVariableDefSingle(sType *type, sFunction *f, bool as_param)
 {
 	msg_db_r("ParseVariableDefSingle", 6);
@@ -3391,37 +2572,18 @@ sType *CPreScript::ParseVariableDefSingle(sType *type, sFunction *f, bool as_par
 
 	// array?
 	TestArrayDefinition(&type, is_pointer);
-	if ((as_param) && (type->ArrayLength > 0)){
+/*	if ((as_param) && ((type->IsArray) || (type->IsSuperArray))){
 		// function parameter:  array -> pointer
-		type = type->SubType;
-		TestArrayDefinition(&type, true);
-		so("C-Standart:   Array wurde in Pointer umgewandelt!!!!");
-	}
+
+		type = GetReferenceType(type);
+		so("C-Standart:   Array wurde in Referenz umgewandelt!!!!");
+	}*/
 
 	// add
-	if (next_extern){
-		so("extern");
-		// already existing?
-		bool found = false;
-		for (int i=NumTruePreExternalVars;i<PreExternalVar.size();i++)
-			if (strcmp(PreExternalVar[i].Name, name) == 0){
-				PreExternalVar[i].Type = type;
-				found = true;
-				break;
-			}
-
-		// not found -> create provisorium (not linkable.... but parsable)
-		if (!found){
-			sPreExternalVar v;
-			v.Name = new char[strlen(name) + 1];
-			strcpy(v.Name, name);
-			v.Pointer = NULL;
-			v.Type = type;
-			PreExternalVar.push_back(v);
-		}
-	}else{
+	if (next_extern)
+		AddExternalVar(name, type);
+	else
 		AddVar(name, type, f);
-	}
 	msg_db_l(6);
 	return type;
 }
@@ -3457,30 +2619,83 @@ void CPreScript::ParseVariableDef(bool single, sFunction *f)
 	msg_db_l(4);
 }
 
-void CPreScript::ParseFunction()
+void CopyFuncDataToExternal(sFunction *f, sPreCommand *c)
+{
+	c->ReturnType = f->Type;
+	for (int j=0;j<f->NumParams;j++){
+		sPreCommandParam p;
+		p.Name = new char[strlen(f->Var[j].Name) + 1];
+		am("CommandParam.Name", strlen(f->Var[j].Name) + 1, p.Name);
+		strcpy((char*)p.Name, f->Var[j].Name);
+		p.Type = f->Var[j].Type;
+		c->Param.push_back(p);
+	}
+}
+
+void AddExternalFunc(CPreScript *ps, sFunction *f)
+{
+	so("extern");
+	
+	// already existing?
+	bool found = false;
+	for (int i=0;i<PreCommand.size();i++)
+		if (PreCommand[i].IsSemiExternal)
+			if (strcmp(PreCommand[i].Name, f->Name) == 0){
+				CopyFuncDataToExternal(f, &PreCommand[i]);
+				found = true;
+				break;
+			}
+	
+	// not found -> create provisorium (not linkable.... but parsable)
+	if (!found){
+		sPreCommand c;
+		c.Name = new char[strlen(f->Name) + 1];
+		am("Command.Name", strlen(f->Name) + 1, c.Name);
+		strcpy((char*)c.Name, f->Name);
+		c.Func = NULL;
+		CopyFuncDataToExternal(f, &c);
+		c.IsSemiExternal = true;
+		PreCommand.push_back(c);
+	}
+	f->Var.clear();
+	ps->Function.pop_back();
+}
+
+void CPreScript::ParseFunction(sType *class_type)
 {
 	msg_db_r("ParseFunction", 4);
+	
+// return type
 	sType *type = GetType(Exp.cur_exp, true);
 	if (Error){
 		msg_db_l(4);
 		return;
 	}
 
+	// pointer?
+	if (strcmp(cur_name, "*") == 0){
+		next_exp();
+		type = GetPointerType(type);
+	}
+
 	so(cur_name);
-	int function = AddFunction(cur_name);
+	int function = AddFunction(cur_name, type);
 	if (Error){
 		msg_db_l(4);
 		return;
 	}
+	bool func_extern = next_extern;
+	next_extern = false;
 	sFunction *f = &Function[function];
-	f->Type = type;
-	if (type->Size > 4)
-		Function[function].ParamSize += 4;
-	//Function[function]->VarSize += type->Size;
 	next_exp();
 	next_exp(); // '('
 
-	// parameter list
+// parameter list
+	if (class_type){
+		f->NumParams ++;
+		AddVar("self", class_type, f);
+	}
+	
 	if (strcmp(cur_name, ")") != 0)
 		for (int k=0;k<SCRIPT_MAX_PARAMS;k++){
 			// like variable definitions
@@ -3509,8 +2724,18 @@ void CPreScript::ParseFunction()
 	next_exp(); // ')'
 	f->VarSize = 0;
 
+	// save "original" param types (Var[].Type gets altered for call by reference)
+	for (int i=0;i<f->NumParams;i++)
+		f->LiteralParamType[i] = f->Var[i].Type;
+
 	if (!end_of_line()){
 		DoError("newline expected after parameter list");
+		msg_db_l(4);
+		return;
+	}
+
+	if (func_extern){
+		AddExternalFunc(this, f);
 		msg_db_l(4);
 		return;
 	}
@@ -3518,8 +2743,8 @@ void CPreScript::ParseFunction()
 	ps_line_t *this_line = Exp.cur_line;
 	
 
-	// instructions
-	for (int k=0;k<SCRIPT_MAX_LINES;k++){
+// instructions
+	while(true){
 		next_line();
 		indented = false;
 
@@ -3567,7 +2792,7 @@ void CPreScript::Parser()
 	Exp.cur_exp = 0;
 	reset_indent();
 
-	// global definitions (enum, struct, variables and functions)
+	// global definitions (enum, class, variables and functions)
 	while (!end_of_file()){
 		if (Error)
 			return;
@@ -3583,9 +2808,9 @@ void CPreScript::Parser()
 		if (strcmp(cur_name, "enum") == 0){
 			ParseEnum();
 
-		// struct
-		}else if (strcmp(cur_name, "struct") == 0){
-			ParseStruct();
+		// class
+		}else if ((strcmp(cur_name, "struct") == 0) || (strcmp(cur_name, "class") == 0)){
+			ParseClass();
 			
 		}else{
 
@@ -3616,62 +2841,205 @@ void CPreScript::Parser()
 	msg_db_l(4);
 }
 
-
-void delete_cnst(sConstant *v)
+void conv_cbr(CPreScript *ps, sCommand *c, int var)
 {
-	delete[](v->data);
-	dm("var->data",v->data);
-}
-
-void delete_link(sLinkData *l)
-{
-	//msg_write(Kind2Str(l->Kind));
-	if ((l->Kind==KindArray)||(l->Kind==KindPointerShift)||(l->Kind==KindDerefPointerShift)||(l->Kind==KindReference)||(l->Kind==KindDereference)){
-		delete_link(l->Meta);
-		delete(l->Meta);
-		dm("link (meta)",l->Meta);
+	msg_db_r("conv_cbr", 1);
+	// recursion...
+	//so(Kind2Str(c->Kind));
+	so(c->NumParams);
+	for (int i=0;i<c->NumParams;i++)
+		conv_cbr(ps, c->Param[i], var);
+	if (c->Kind == KindBlock){
+		for (int i=0;i<ps->Block[c->LinkNr]->Command.size();i++)
+			conv_cbr(ps, ps->Block[c->LinkNr]->Command[i], var);
 	}
-	if (l->Kind==KindArray){
-		delete_link(l->ParamLink);
-		delete(l->ParamLink);
-		dm("link (para)",l->ParamLink);
+	so("a");
+	
+	if ((c->Kind == KindVarLocal) && (c->LinkNr == var)){
+		so("conv");
+		c->Type = ps->GetPointerType(c->Type);
+		deref_command(ps, c);
 	}
+	msg_db_l(1);
 }
 
 #if 0
-void delete_cmd(sCommand *c)
+void conv_return(CPreScript *ps, sCommand *c)
 {
-	/*delete_link(&c->ReturnLink);
+	// recursion...
 	for (int i=0;i<c->NumParams;i++)
-		delete_link(&c->ParamLink[i]);*/
-	delete(c);
-	dm("Command",c);
+		conv_return(ps, c->Param[i]);
+	
+	if ((c->Kind == KindCompilerFunction) && (c->LinkNr == CommandReturn)){
+		msg_write("conv ret");
+		ref_command(ps, c);
+	}
 }
 #endif
 
+void easyfy(CPreScript *ps, sCommand *c, int l)
+{
+	msg_db_r("easyfy", 1);
+	//msg_write(l);
+	//msg_write("a");
+	// recursion...
+	//msg_write((int)c);
+	
+	//msg_write(Kind2Str(c->Kind));
+	//msg_write(c->NumParams);
+	for (int i=0;i<c->NumParams;i++)
+		easyfy(ps, c->Param[i], l+1);
+	if (c->Kind == KindBlock)
+		for (int i=0;i<ps->Block[c->LinkNr]->Command.size();i++)
+			easyfy(ps, ps->Block[c->LinkNr]->Command[i], l+1);
+	
+	//msg_write("b");
+
+
+	if (c->Kind == KindReference){
+		if (c->Param[0]->Kind == KindDereference){
+			so("rem 2");
+			// remove 2 knots...
+			sCommand *t = c->Param[0]->Param[0];
+			*c = *t;
+		}
+	}else if ((c->Kind == KindAddressShift) || (c->Kind == KindArray)){
+		if (c->Param[0]->Kind == KindDereference){
+			so("rem 1 (unify)");
+			// unify 2 knots (remove 1)
+			sCommand *t = c->Param[0]->Param[0];
+			c->Kind = (c->Kind == KindAddressShift) ? KindDerefAddressShift : KindPointerAsArray;
+			c->Param[0] = t;
+		}
+	}
+	//msg_write("ok");
+	msg_db_l(1);
+}
+
+void CPreScript::ConvertCallByReference()
+{
+	msg_db_r("ConvertCallByReference", 1);
+
+
+	// convert functions
+	for (int i=0;i<Function.size();i++){
+		sFunction *f = &Function[i];
+		
+		// parameter: array/class as refrerence
+		for (int j=0;j<f->NumParams;j++)
+			if ((f->Var[j].Type->IsArray) || (f->Var[j].Type->IsSuperArray) || (f->Var[j].Type->Class)){
+				f->Var[j].Type = GetPointerType(f->Var[j].Type);
+
+				// internal usage...
+				for (int k=0;k<f->Block->Command.size();k++)
+					conv_cbr(this, f->Block->Command[k], j);
+			}
+
+		// return: array as reference
+		if ((f->Type->IsArray) /*|| (f->Type->IsSuperArray)*/){
+			f->Type = GetPointerType(f->Type);
+			/*for (int k=0;k<f->Block->Command.size();k++)
+				conv_return(this, f->Block->Command[k]);*/
+			// no need... return gets converted automatically (all calls...)
+		}
+
+		// recalculate the local variable offsets...
+		f->ParamSize = 8; // space for return value and eBP
+		if (f->Type->Size > 4)
+			f->ParamSize += 4;
+		for (int j=0;j<f->NumParams;j++){
+			int s = mem_align(f->Var[j].Type->Size);
+			f->Var[j].Offset = f->ParamSize;
+			f->ParamSize += s;
+		}
+	}
+
+	msg_db_m("a", 2);
+
+	// convert function calls
+	for (int i=0;i<Command.size();i++){
+		sCommand *c = Command[i];
+		if (c->Kind == KindCompilerFunction)
+			if (c->LinkNr == CommandReturn){
+				if ((c->Param[0]->Type->IsArray) /*|| (c->Param[j]->Type->IsSuperArray)*/){
+					so("conv param (return)");
+					so(c->Param[0]->Type->Name);
+					ref_command(this, c->Param[0]);
+				}
+				continue;
+			}
+		
+		if ((c->Kind == KindFunction)|| (c->Kind == KindCompilerFunction)){
+			// parameters: array/class as reference
+			for (int j=0;j<c->NumParams;j++)
+				if ((c->Param[j]->Type->IsArray) || (c->Param[j]->Type->IsSuperArray) || (c->Param[j]->Type->Class)){
+					so("conv param");
+					so(c->Param[j]->Type->Name);
+					ref_command(this, c->Param[j]);
+				}
+
+			// return: array reference (-> dereference)
+			if ((c->Type->IsArray) /*|| (c->Type->IsSuperArray)*/){
+				so("conv ret");
+				so(c->Type->Name);
+				c->Type = GetPointerType(c->Type);
+				deref_command(this, c);
+			}
+				
+		}
+	}
+	msg_db_m("a2", 2);
+
+	// remove &*
+	for (int i=0;i<Function.size();i++){
+		sFunction *f = &Function[i];
+		for (int k=0;k<f->Block->Command.size();k++)
+			easyfy(this, f->Block->Command[k],0);
+	}
+	
+
+	
+	msg_db_l(1);
+}
+
+
+void delete_cnst(sConstant *v)
+{
+	dm("var->data",v->data);
+	delete[](v->data);
+}
+
+// no included scripts may be deleted before us!!!
 CPreScript::~CPreScript()
 {
 	msg_db_r("~CPreScript", 4);
+	
+	clear_exp_buffer(&Exp);
 
 	// delete all types created by this script
-	for (int i=PreType.size();i<Type.size();i++)
-		if (Type[i]->Owner==this){
-			delete(Type[i]);
+	for (int i=Type.size()-NumOwnTypes;i<Type.size();i++)
+		if (Type[i]->Owner == this){ // redundant...
 			dm("Type",Type[i]);
+			delete(Type[i]);
 		}
 	Type.clear();
-
-	Struct.clear();
 	Enum.clear();
-	Define.clear();
-
+	msg_db_m("class", 8);
+	for (int i=0;i<Class.size();i++)
+		if (Class[i]->Owner == this){
+			Class[i]->Element.clear();
+			Class[i]->Function.clear();
+			dm("Class",Class[i]);
+			delete(Class[i]);
+		}
+	Class.clear();
 	
-	/*msg_db_m("def", 8);
-	for (int i=0;i<NumDefines;i++)
-		if (Define[i]->Owner==this){
-			delete(Define[i]);
-			dm("Define",Define[i]);
-		}*/
+	for (int i=0;i<Define.size();i++){
+		for (int j=0;j<Define[i].Dest.size();j++)
+			Define[i].Dest[j].clear();
+		Define[i].Dest.clear();
+	}
+	Define.clear();
 
 
 	PreScriptRule.clear();
@@ -3679,12 +3047,12 @@ CPreScript::~CPreScript()
 	
 	msg_db_m("asm", 8);
 	if (AsmMetaInfo){
-		delete(AsmMetaInfo);
 		dm("AsmMetaInfo",AsmMetaInfo);
+		delete(AsmMetaInfo);
 	}
 	for (int i=0;i<AsmBlock.size();i++){
-		delete[](AsmBlock[i].block);
 		dm("AsmBlock",AsmBlock[i].block);
+		delete[](AsmBlock[i].block);
 	}
 	AsmBlock.clear();
 	
@@ -3695,67 +3063,58 @@ CPreScript::~CPreScript()
 
 	
 	msg_db_m("cmd", 8);
-	//for (int i=0;i<Command.size();i++)
-	//	delete_cmd(&Command[i]);
+	for (int i=0;i<Command.size();i++){
+		dm("Command",Command[i]);
+		delete(Command[i]);
+    }
 	Command.clear();
 
 	msg_db_m("rest", 8);
 
+	for (int i=0;i<Block.size();i++){
+		dm("Block",Block[i]);
+		delete(Block[i]);
+	}
 	Block.clear();
-	LinkData.clear();
+	for (int i=0;i<Function.size();i++)
+		Function[i].Var.clear();
 	Function.clear();
 	
 	msg_db_l(4);
 }
 
-
-void CPreScript::ShowLink(sLinkData *link)
+void CPreScript::ShowCommand(sCommand *c)
 {
+	msg_write(string2("Befehl: %s, %s", Kind2Str(c->Kind), LinkNr2Str(this,c->Kind,c->LinkNr)));
 	msg_right();
-	msg_write(string(Kind2Str(link->Kind),", ",LinkNr2Str(this,link->Kind,link->Nr)));
-	msg_write(Type2Str(this,link->type));
-	if ((link->Kind==KindPointerShift)||(link->Kind==KindArray)||(link->Kind==KindPointerAsArray)||(link->Kind==KindReference)||(link->Kind==KindDereference)){
-		msg_write("Meta-Link");
-		ShowLink(link->Meta);
-	}
-	if ((link->Kind==KindArray)||(link->Kind==KindPointerAsArray)){
-		msg_write("Param-Link");
-		ShowLink(link->ParamLink);
-	}
-	if (link->Kind==KindCommand){
-		ShowCommand(link->Nr);
-	}
-	msg_left();
-}
-
-void CPreScript::ShowCommand(int c)
-{
-	msg_write(string(i2s(c),": ",Kind2Str(Command[c].Kind),", ",LinkNr2Str(this,Command[c].Kind,Command[c].LinkNr)));
-	msg_right();
-	msg_write(string("Return: ",Type2Str(this,Command[c].ReturnType)));
-	for (int p=0;p<Command[c].NumParams;p++){
+	msg_write(string("Typ: ",Type2Str(this,c->Type)));
+	for (int p=0;p<c->NumParams;p++){
 		msg_write("Parameter");
-		ShowLink(&Command[c].ParamLink[p]);
+		ShowCommand(c->Param[p]);
 	}
-	if (Command[c].Kind == KindCompilerFunction)
-		if (PreCommand[Command[c].LinkNr].Instance == f_class){
+	if (c->Kind == KindCompilerFunction)
+		if (PreCommand[c->LinkNr].IsClassFunction){
 			msg_write("Objekt:");
-			ShowCommand(Command[c].SubLink1);
+ 			ShowCommand(c->Sub1);
+		}
+	if (c->Kind == KindFunction)
+		if (strstr(Function[c->LinkNr].Name, ".")){
+			msg_write("Objekt:");
+			ShowCommand(c->Sub1);
 		}
 	msg_left();
 	msg_write("");
 }
 
-void CPreScript::ShowBlock(int b)
+void CPreScript::ShowBlock(sBlock *b)
 {
 	msg_write("b");
 	msg_right();
-	for (int c=0;c<Block[b].Command.size();c++){
-		//msg_write(Block[b].Command[c]);
-		if (Command[Block[b].Command[c]].Kind==KindBlock)
-			ShowBlock(Command[Block[b].Command[c]].LinkNr);
+	for (int c=0;c<b->Command.size();c++){
+		if (b->Command[c]->Kind == KindBlock)
+			ShowBlock(Block[b->Command[c]->LinkNr]);
 		else
-			ShowCommand(Block[b].Command[c]);
+			ShowCommand(b->Command[c]);
 	}
 	msg_left();
 	msg_write("/b");
@@ -3764,7 +3123,7 @@ void CPreScript::ShowBlock(int b)
 void CPreScript::ShowFunction(int f)
 {
 	msg_write(string(i2s(f),": ",Function[f].Name,"  --------------------------------------------"));
-	ShowBlock(Function[f].Block->Nr);
+	ShowBlock(Function[f].Block);
 }
 
 void CPreScript::Show()

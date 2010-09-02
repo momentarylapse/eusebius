@@ -14,7 +14,7 @@
 void NixSoundInit();
 
 // sound
-int NixSoundLoad(char *filename);
+int NixSoundLoad(const char *filename);
 void NixSoundDelete(int index);
 void NixSoundPlay(int index,bool repeat);
 void NixSoundStop(int index);
@@ -22,11 +22,11 @@ void NixSoundSetPause(int index,bool pause);
 bool NixSoundIsPlaying(int index);
 bool NixSoundEnded(int index);
 void NixSoundTestRepeat();
-void NixSoundSetData(int index,vector &pos,vector &vel,float min_dist,float max_dist,float speed,float volume,bool set_now=false);
-void NixSoundSetListener(vector &pos,vector &ang,vector &vel,float meters_per_unit);
+void NixSoundSetData(int index,const vector &pos,const vector &vel,float min_dist,float max_dist,float speed,float volume,bool set_now=false);
+void NixSoundSetListener(const vector &pos,const vector &ang,const vector &vel,float meters_per_unit);
 
 // music
-int _cdecl NixMusicLoad(char *filename);
+int _cdecl NixMusicLoad(const char *filename);
 void _cdecl NixMusicPlay(int index,bool repeat);
 void _cdecl NixMusicSetRate(int index,float rate);
 void _cdecl NixMusicStop(int index);

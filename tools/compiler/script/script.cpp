@@ -4,10 +4,10 @@
 |                                                                              |
 | vital properties:                                                            |
 |                                                                              |
-| last updated: 2010.02.14 (c) by MichiSoft TM                                 |
+| last updated: 2010.07.07 (c) by MichiSoft TM                                 |
 \*----------------------------------------------------------------------------*/
 #include "script.h"
-#include "../file/msg.h"
+#include "../file/file.h"
 #include <malloc.h>
 #ifdef FILE_OS_WINDOWS
 	#include <windows.h>
@@ -23,7 +23,7 @@
 	#include "../x/x.h"
 #endif
 
-char ScriptVersion[] = "0.5.3.0 -alpha-";
+char ScriptVersion[] = "0.7.0.-2";
 
 //#define ScriptDebug
 
@@ -33,21 +33,36 @@ static float GlobalTimeToWait;
 static char *GlobalOpcode = NULL;
 static int GlobalOpcodeSize;
 
+static std::vector<CScript*> cur_script_stack;
+inline void push_cur_script(CScript *s)
+{
+	cur_script_stack.push_back(s);
+	cur_script = s;
+}
+inline void pop_cur_script()
+{
+	cur_script_stack.resize(cur_script_stack.size() - 1);
+	if (cur_script_stack.size() >= 1)
+		cur_script = cur_script_stack[cur_script_stack.size() - 1];
+	else
+		cur_script = NULL;
+}
+
 
 
 
 static int shift_right=0;
 
-static void stringout(char *str)
+static void stringout(const char *str)
 {
 	msg_write(str);
 }
 
-static void so(char *str)
+static void so(const char *str)
 {
 #ifdef ScriptDebug
 	if (strlen(str)>256)
-		str[256]=0;
+		((char*)str)[256]=0;
 	msg_write(str);
 #endif
 }
@@ -76,11 +91,10 @@ static void left()
 }
 
 
-int NumPublicScripts=0;
-struct sPublicScript{
-	char *filename;
-	CScript *script;
-}PublicScript[256];
+
+std::vector<CScript*> PublicScript;
+std::vector<CScript*> PrivateScript;
+std::vector<CScript*> DeadScript;
 
 
 char ScriptDirectory[512]="";
@@ -88,20 +102,16 @@ char ScriptDirectory[512]="";
 
 
 
-CScript *LoadScript(char *filename,bool is_public)
+CScript *LoadScript(const char *filename, bool is_public, bool just_analyse)
 {
 	//msg_write(string("Lade ",filename));
-	if (strlen(filename)<1){
-		msg_error("no script file!");
-		return NULL;
-	}
-	CScript *s=NULL;
+	CScript *s = NULL;
 
 	// public und private aus dem Speicher versuchen zu laden
 	if (is_public){
-		for (int i=0;i<NumPublicScripts;i++)
-			if (strcmp(PublicScript[i].filename,SysFileName(filename))==0)
-				return PublicScript[i].script;
+		for (int i=0;i<PublicScript.size();i++)
+			if (strcmp(PublicScript[i]->pre_script->Filename, SysFileName(filename)) == 0)
+				return PublicScript[i];
 	}
 #if 0
 	int ae=-1;
@@ -129,42 +139,41 @@ CScript *LoadScript(char *filename,bool is_public)
 	}
 #endif
 
-	s=new CScript(filename);
+	s = new CScript(filename, just_analyse);
 	am("CScript",sizeof(CScript),s);
-	s->isPrivate=!is_public;
+	s->isPrivate = !is_public;
 
 	// nur public speichern
 	if (is_public){
-		PublicScript[NumPublicScripts].filename=new char[strlen(filename)+1];
-		am("PublicScript.filename",strlen(filename)+1,PublicScript[NumPublicScripts].filename);
-		strcpy(PublicScript[NumPublicScripts].filename,SysFileName(filename));
-		PublicScript[NumPublicScripts].script=s;
-		NumPublicScripts++;
 		//msg_write("...neu (public)");
-	}//else
+		PublicScript.push_back(s);
+	}else{
 		//msg_write("...neu (private)");
+		PrivateScript.push_back(s);
+	}
 	//msg_error(i2s(NumPublicScripts));
 	return s;
 }
 
-CScript *LoadScriptAsInclude(char *filename,bool just_analyse)
+#if 0
+CScript *LoadScriptAsInclude(char *filename, bool just_analyse)
 {
 	msg_db_r("LoadAsInclude",4);
 	//msg_write(string("Include ",filename));
 	// aus dem Speicher versuchen zu laden
-	for (int i=0;i<NumPublicScripts;i++)
-		if (strcmp(PublicScript[i].filename,SysFileName(filename))==0){
+	for (int i=0;i<ublicScript.size();i++)
+		if (strcmp(PublicScript[i].filename, SysFileName(filename)) == 0){
 			//msg_write("...pointer");
 			msg_db_l(4);
 			return PublicScript[i].script;
 		}
 
 	//msg_write("nnneu");
-	CScript *s=new CScript(filename,just_analyse);
+	CScript *s = new CScript(filename, just_analyse);
 	am("script",sizeof(CScript),s);
 	so("geladen....");
 	//msg_write("...neu");
-	s->isPrivate=false;
+	s->isPrivate = false;
 
 	// als public speichern
 	PublicScript[NumPublicScripts].filename=new char[strlen(filename)+1];
@@ -175,25 +184,70 @@ CScript *LoadScriptAsInclude(char *filename,bool just_analyse)
 	msg_db_l(4);
 	return s;
 }
+#endif
 
-void ExecutePublicScripts()
+void ExecuteAllScripts()
 {
+	for (int i=0;i<PrivateScript.size();i++)
+		PrivateScript[i]->Execute();
+	
+	for (int i=0;i<PublicScript.size();i++)
+		PublicScript[i]->Execute();
 }
 
-void DeletePublicScripts(bool even_immortal)
+void RemoveScript(CScript *s)
 {
-	for (int i=NumPublicScripts-1;i>=0;i--)
-		if ((!PublicScript[i].script->pre_script->FlagImmortal) || (even_immortal)){
-			delete[](PublicScript[i].filename);
-			dm("pub.filename",PublicScript[i].filename);
-			delete(PublicScript[i].script);
-			dm("script",PublicScript[i].script);
-			NumPublicScripts--;
-			for (int j=i;j<NumPublicScripts;j++)
-				PublicScript[j]=PublicScript[j+1];
-		}
+	msg_db_r("RemoveScript", 0);
+	// remove references
+	for (int i=0;i<s->pre_script->Include.size();i++)
+		s->pre_script->Include[i]->ReferenceCounter --;
 
-	ScriptResetSemiExternalVars();
+	// put on to-delete-list
+	DeadScript.push_back(s);
+
+	// remove from normal list
+	if (s->isPrivate){
+		for (int i=0;i<PrivateScript.size();i++)
+			if (PrivateScript[i] == s)
+				PrivateScript.erase(PrivateScript.begin() + i);
+	}else{
+		for (int i=0;i<PublicScript.size();i++)
+			if (PublicScript[i] == s)
+				PublicScript.erase(PublicScript.begin() + i);
+	}
+
+	// delete all deletables
+	for (int i=DeadScript.size()-1;i>=0;i--)
+		if (DeadScript[i]->ReferenceCounter <= 0){
+			dm("script",DeadScript[i]);
+			delete(DeadScript[i]);
+			DeadScript.erase(DeadScript.begin() + i);
+		}
+	msg_db_l(0);
+}
+
+void DeleteAllScripts(bool even_immortal, bool force)
+{
+	msg_db_r("DeleteAllScripts", 1);
+
+	// try to erase them...
+	for (int i=PublicScript.size()-1;i>=0;i--)
+		if ((!PublicScript[i]->pre_script->FlagImmortal) || (even_immortal))
+			RemoveScript(PublicScript[i]);
+	for (int i=PrivateScript.size()-1;i>=0;i--)
+		if ((!PrivateScript[i]->pre_script->FlagImmortal) || (even_immortal))
+			RemoveScript(PrivateScript[i]);
+
+	// undead... really KILL!
+	if (force){
+		for (int i=DeadScript.size()-1;i>=0;i--){
+			dm("script",DeadScript[i]);
+			delete(DeadScript[i]);
+		}
+		DeadScript.clear();
+	}
+
+	//ScriptResetSemiExternalData();
 
 	
 	/*msg_write("------------------------------------------------------------------");
@@ -202,33 +256,62 @@ void DeletePublicScripts(bool even_immortal)
 		msg_write(string2("  fehlt:   %s  %p  (%d)",ppn[i],ppp[i],pps[i]));
 	*/
 	om();
+	msg_db_l(1);
 }
 
-CScript::CScript(char *filename,bool just_analyse)
+void reset_script(CScript *s)
+{
+	s->ReferenceCounter = 0;
+	s->Error = false;
+	s->ParserError = false;
+	s->LinkerError = false;
+	s->isCopy = false;
+	s->isPrivate = false;
+	
+	s->ErrorLine = 0;
+	s->ErrorColumn = 0;
+	s->WaitingMode = 0;
+	s->TimeToWait = 0;
+	s->ShowCompilerStats = false;
+	
+	s->pre_script = NULL;
+	s->user_data = NULL;
+
+	s->Opcode = NULL;
+	s->OpcodeSize = 0;
+	s->ThreadOpcode = NULL;
+	s->ThreadOpcodeSize = 0;
+	s->Memory = NULL;
+	s->MemorySize = 0;
+	s->MemoryUsed = 0;
+	s->Stack = NULL;
+
+	//func.clear();
+	//g_var.clear();
+	//cnst.clear();
+}
+
+CScript::CScript(const char*filename, bool just_analyse)
 {
 	msg_db_r("CScript",4);
-	memset(this,0,sizeof(CScript));
-	cur_script = this;
-	strcpy(Filename,filename);
-	Error = false;
-	isCopy = false;
+	reset_script(this);
+	push_cur_script(this);
 	JustAnalyse = just_analyse;
-	msg_write(string("loading script: ",Filename));
+	msg_write(string("loading script: ",filename));
 	msg_right();
 
 	WaitingMode = WaitingModeFirst;
+	ShowCompilerStats = true;
 
-	pre_script=new CPreScript(Filename,just_analyse);
+	pre_script = new CPreScript(filename,just_analyse);
 	am("pre_script",sizeof(CPreScript),pre_script);
-	if (pre_script->FlagShow)
-		pre_script->Show();
-	ParserError=Error=pre_script->Error;
-	LinkerError=pre_script->IncludeLinkerError;
-	ErrorLine=pre_script->ErrorLine;
-	ErrorColumn=pre_script->ErrorColumn;
-	strcpy(ErrorMsg,pre_script->ErrorMsg);
-	strcpy(ErrorMsgExt[0],pre_script->ErrorMsgExt[0]);
-	strcpy(ErrorMsgExt[1],pre_script->ErrorMsgExt[1]);
+	ParserError = Error = pre_script->Error;
+	LinkerError = pre_script->IncludeLinkerError;
+	ErrorLine = pre_script->ErrorLine;
+	ErrorColumn = pre_script->ErrorColumn;
+	strcpy(ErrorMsg, pre_script->ErrorMsg);
+	strcpy(ErrorMsgExt[0], pre_script->ErrorMsgExt[0]);
+	strcpy(ErrorMsgExt[1], pre_script->ErrorMsgExt[1]);
 
 	if ((!Error)&&(!JustAnalyse))
 		Compiler();
@@ -236,54 +319,103 @@ CScript::CScript(char *filename,bool just_analyse)
 		pre_script->Show();*/
 	if (pre_script->FlagDisassemble){
 		printf("%s\n\n", Opcode2Asm(ThreadOpcode,ThreadOpcodeSize));
-		printf("%s\n\n", Opcode2Asm(Opcode,OpcodeSize));
-		//msg_write(Opcode2Asm(Opcode,OpcodeSize));
+		//printf("%s\n\n", Opcode2Asm(Opcode,OpcodeSize));
+		msg_write(Opcode2Asm(Opcode,OpcodeSize));
 	}
 
+	pop_cur_script();
 	msg_ok();
 	msg_left();
 	msg_db_l(4);
 }
 
-void CScript::SetVariable(char *name, void *data)
+void CScript::DoError(const char *str, int overwrite_line)
 {
+	pre_script->DoError(str, overwrite_line);
+	Error = true;
+	ErrorLine = pre_script->ErrorLine;
+	ErrorColumn = pre_script->ErrorColumn;
+	strcpy(ErrorMsgExt[0], pre_script->ErrorMsgExt[0]);
+	strcpy(ErrorMsgExt[1], pre_script->ErrorMsgExt[1]);
+	strcpy(ErrorMsg, pre_script->ErrorMsg);
+}
+
+void CScript::DoErrorLink(const char *str)
+{
+	DoError(str);
+	LinkerError = true;
+}
+
+void CScript::SetVariable(const char*name, void *data)
+{
+	msg_db_r("SetVariable", 4);
+	//msg_write(name);
 	for (int i=0;i<pre_script->RootOfAllEvil.Var.size();i++)
 		if (strcmp(pre_script->RootOfAllEvil.Var[i].Name, name) == 0){
+			/*msg_write("var");
+			msg_write(pre_script->RootOfAllEvil.Var[i].Type->Size);
+			msg_write((int)g_var[i]);*/
 			memcpy(g_var[i], data, pre_script->RootOfAllEvil.Var[i].Type->Size);
+			msg_db_l(4);
 			return;
 		}
 	msg_error(string("CScript::SetVariable: variable ", name, " not found"));
+	msg_db_l(4);
 }
+
+int LocalOffset,LocalOffsetMax;
+
+/*int get_func_temp_size(sFunction *f)
+{
+}*/
+
+inline int add_temp_var(int size)
+{
+	LocalOffset += size;
+	if (LocalOffset > LocalOffsetMax)
+		LocalOffsetMax = LocalOffset;
+	return LocalOffset;
+}
+
 
 #define MAX_JUMPS			64
 #define MAX_JUMP_LEVELS		128
 
-int LOffset,LOffsetMax,OCOffset[MAX_JUMP_LEVELS][MAX_JUMP_LEVELS],TaskReturnOffset;
+int OCOffset[MAX_JUMP_LEVELS][MAX_JUMP_LEVELS],TaskReturnOffset;
 int NumJumps[MAX_JUMP_LEVELS],JumpSourceOffset[MAX_JUMP_LEVELS][MAX_JUMPS],JumpDest[MAX_JUMP_LEVELS][MAX_JUMPS],JumpCode[MAX_JUMPS][MAX_JUMPS];
-int NumNewJumps,NewJumpSourceLevel[MAX_JUMPS],NewJumpSource[MAX_JUMPS],NewJumpDest[MAX_JUMPS],NewJumpDestLevel[MAX_JUMPS],NewJumpCode[MAX_JUMPS];
+
+struct sNewJump
+{
+	int SourceLevel, Source;
+	int DestLevel, Dest;
+	int Code;
+};
+std::vector<sNewJump> NewJump;
+/*struct sJump
+{
+	int OCOffset[MAX_JUMP_LEVELS][MAX_JUMP_LEVELS],TaskReturnOffset;
+int NumJumps[MAX_JUMP_LEVELS],JumpSourceOffset[MAX_JUMP_LEVELS][MAX_JUMPS],JumpDest[MAX_JUMP_LEVELS][MAX_JUMPS],JumpCode[MAX_JUMPS][MAX_JUMPS];
+};
+std::vector<sJump> Jump;*/
+//int NumNewJumps,NewJumpSourceLevel[MAX_JUMPS],NewJumpSource[MAX_JUMPS],NewJumpDest[MAX_JUMPS],NewJumpDestLevel[MAX_JUMPS],NewJumpCode[MAX_JUMPS];
+
 inline void add_jump(int source_level, int source, int dest_level, int dest, int code)
 {
-	NewJumpSourceLevel[NumNewJumps] = source_level;
-	NewJumpSource[NumNewJumps] = source;
-	NewJumpDestLevel[NumNewJumps] = dest_level;
-	NewJumpDest[NumNewJumps] = dest;
-	NewJumpCode[NumNewJumps] = code;
-	NumNewJumps ++;
+	sNewJump n;
+	n.SourceLevel = source_level;
+	n.Source = source;
+	n.DestLevel = dest_level;
+	n.Dest = dest;
+	n.Code = code;
+	NewJump.push_back(n);
 }
 inline void insert_new_jump(int n, int offset)
 {
-	int level = NewJumpDestLevel[n];
+	int level = NewJump[n].DestLevel;
 	JumpSourceOffset[level][NumJumps[level]] = offset;
-	JumpDest[level][NumJumps[level]] = NewJumpDest[n];
-	JumpCode[level][NumJumps[level]] = NewJumpCode[n];
-	for (int i=n;i<NumNewJumps;i++){
-		NewJumpSourceLevel[i] = NewJumpSourceLevel[i + 1];
-		NewJumpSource[i] = NewJumpSource[i + 1];
-		NewJumpDestLevel[i] = NewJumpDestLevel[i + 1];
-		NewJumpDest[i] = NewJumpDest[i + 1];
-		NewJumpCode[i] = NewJumpCode[i + 1];
-	}
-	NumNewJumps --;
+	JumpDest[level][NumJumps[level]] = NewJump[n].Dest;
+	JumpCode[level][NumJumps[level]] = NewJump[n].Code;
+	NewJump.erase(NewJump.begin() + n);
 	NumJumps[level] ++;
 }
 
@@ -310,7 +442,7 @@ enum{
 	inMovMEsp,
 	inLeaEaxM,
 	inLeaEdxM,
-	inPush,
+	inPushM,
 	inPushEax,
 	inPushEdx,
 	inPopEax,
@@ -359,241 +491,210 @@ enum{
 	NumAsmInstructions
 };
 
-struct sAsmInstruction{
-	short oc_l8[3];		// fuer lokale Variablen (1b Offset)
-//	short oc_l16[3];	// lokal (2b Offset)
-	short oc_l32[3];	// lokal (4b Offset)
-	short oc_g[3];		// global
-	short oc_c[3];		// const
-	short oc_dr[3];		// zu dereferenzierende Variable
-	short oc_p;			// Abschluss
-	short const_size;	// falls const
-};
 
-
-sAsmInstruction AsmInstruction[NumAsmInstructions]={
-	//	local +8b		local +32b		global			const			reference[edx]	ending	const_size
-	{	0x90,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // NOP
-	{	0x55,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // PUSH eBP
-	{	0x89,0xe5,-1,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // MOV eBP,eSP
-	{	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0xbc,-1,-1,		-1,-1,-1,		-1,		32	}, // MOV eSP,c32
-	{	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0x89,0x42,-1,	-1,-1,-1,		-1,		8	}, // MOV [eDX+c8],eAX
-	{	0xc9,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // LEAVE
-	{	0xc3,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // RET
-	{	0xc2,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0x04,	-1	}, // RET 4
-	{	0x8b,0x45,-1,	0x8b,0x85,-1,	0xa1,-1,-1,		0xb8,-1,-1,		0x8b,0x02,-1,	-1,		32	}, // MOV eAX,m
-	{	0x89,0x45,-1,	0x89,0x85,-1,	0xa3,-1,-1,		-1,-1,-1,		0x89,0x02,-1,	-1,		32	}, // MOV m,eAX
-	{	0x8b,0x55,-1,	0x8b,0x95,-1,	0x8b,0x15,-1,	0xba,-1,-1,		-1,-1,-1,		-1,		32	}, // MOV eDX,m
-	{	0x89,0x55,-1,	0x89,0x95,-1,	0x89,0x15,-1,	-1,-1,-1,		-1,-1,-1,		-1,		32	}, // MOV m,eDX
-	{	0x8a,0x45,-1,	0x8a,0x85,-1,	0xa0,-1,-1,		0xb0,-1,-1,		0x8a,0x02,-1,	-1,		8	}, // MOV.b AL,m
-	{	0x8a,0x65,-1,	0x8a,0xa5,-1,	0x8a,0x25,-1,	0xb4,-1,-1,		0x8a,0x02,-1,	-1,		8	}, // MOV.b AH,m
-	{	0x8a,0x5d,-1,	0x8a,0x9d,-1,	0x8a,0x1d,-1,	0xb3,-1,-1,		0x8a,0x02,-1,	-1,		8	}, // MOV.b BL,m
-	{	0x8a,0x7d,-1,	0x8a,0xbd,-1,	0x8a,0x3d,-1,	0xb7,-1,-1,		0x8a,0x02,-1,	-1,		8	}, // MOV.b BH,m
-	{	0x8a,0x4d,-1,	0x8a,0x8d,-1,	0x8a,0x0d,-1,	0xb1,-1,-1,		0x8a,0x0a,-1,	-1,		8	}, // MOV.b CL,m
-	{	0x88,0x45,-1,	0x88,0x85,-1,	0xa2,-1,-1,		-1,-1,-1,		0x88,0x02,-1,	-1,		8	}, // MOV.b m,AL
-	{	0x89,0x6d,-1,	0x89,0xad,-1,	0x89,0x2d,-1,	-1,-1,-1,		-1,-1,-1,		-1,		32	}, // MOV eAX,eBP
-	{	0x89,0x65,-1,	0x89,0xa5,-1,	0x89,0x25,-1,	-1,-1,-1,		-1,-1,-1,		-1,		32	}, // MOV eAX,eSP
-	{	0x8d,0x45,-1,	0x8d,0x85,-1,	0x8d,0x05,-1,	-1,-1,-1,		0x8d,0x02,-1,	-1,		32	}, // LEA eAX,m
-	{	0x8d,0x55,-1,	0x8d,0x95,-1,	0x8d,0x15,-1,	-1,-1,-1,		0x8d,0x12,-1,	-1,		32	}, // LEA eDX,m
-	{	0xff,0x75,-1,	0xff,0xb5,-1,	0xff,0x35,-1,	0x68,-1,-1,		0xff,0x32,-1,	-1,		32	}, // PUSH m
-	{	0x50,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // PUSH eAX
-	{	0x52,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // PUSH eDX
-	{	0x58,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // POP eAX
-	{	0x5c,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // POP eSP
-	{	0x23,0x45,-1,	0x23,0x85,-1,	0x23,0x05,-1,	0x25,-1,-1,		0x23,0x02,-1,	-1,		32	}, // AND eAX,m
-	{	0x0b,0x45,-1,	0x0b,0x85,-1,	0x0b,0x05,-1,	0x0d,-1,-1,		0x0b,0x02,-1,	-1,		32	}, // OR eAX,m
-	{	0x33,0x45,-1,	0x33,0x85,-1,	0x33,0x05,-1,	0x35,-1,-1,		0x33,0x02,-1,	-1,		32	}, // XOR eAX,m
-	{	0x03,0x45,-1,	0x03,0x85,-1,	0x03,0x05,-1,	0x05,-1,-1,		0x03,0x02,-1,	-1,		32	}, // ADD eAX,m
-	{	0x03,0x55,-1,	0x03,0x95,-1,	0x03,0x15,-1,	0x81,0xc2,-1,	-1,-1,-1,		-1,		32	}, // ADD edX,m
-	{	0x01,0x45,-1,	0x01,0x85,-1,	0x01,0x05,-1,	-1,-1,-1,		0x01,0x02,-1,	-1,		-1	}, // ADD m,eAX
-	{	0x2b,0x45,-1,	0x2b,0x85,-1,	0x2b,0x05,-1,	0x2d,-1,-1,		0x2b,0x02,-1,	-1,		32	}, // SUB eAX,m
-	{	0x29,0x45,-1,	0x29,0x85,-1,	0x29,0x05,-1,	-1,-1,-1,		0x29,0x02,-1,	-1,		-1	}, // SUB m,eAX
-	{	0x0f,0xaf,0x45,	0x0f,0xaf,0x85,	0x0f,0xaf,0x05,	0x69,0xc0,-1,	0x0f,0xaf,0x02,	-1,		32	}, // MUL eAX,m
-	{	0xf7,0x7d,-1,	0xf7,0xbd,-1,	0xf7,0x3d,-1,	-1,-1,-1,		0xf7,0x3a,-1,	-1,		32	}, // DIV eAX,m
-	{	0xf7,0xfb,-1,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // DIV eAX,eBX
-	{	0x3b,0x45,-1,	0x3b,0x85,-1,	0x3b,0x05,-1,	0x3d,-1,-1,		0x3b,0x02,-1,	-1,		32	}, // CMP eAX,m
-	{	0x3a,0x45,-1,	0x3a,0x85,-1,	0x3a,0x05,-1,	0x3c,-1,-1,		0x3a,0x02,-1,	-1,		8	}, // CMP.b AL,m
-	{	0x80,0x7d,-1,	0x80,0xbd,-1,	0x80,0x3d,-1,	-1,-1,-1,		0x80,0x3a,-1,	0x00,	8	}, // CMP.b m,0
-	{	0x0f,0x94,0xc0,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SETZ AL
-	{	0x0f,0x95,0xc0,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SETNZ AL
-	{	0x0f,0x9f,0xc0,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SETNLE AL
-	{	0x0f,0x9d,0xc0,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SETNL AL
-	{	0x0f,0x9c,0xc0,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SETL AL
-	{	0x0f,0x9e,0xc0,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SETLE AL
-	{	0x22,0x45,-1,	0x22,0x85,-1,	0x22,0x05,-1,	0x24,-1,-1,		0x22,0x02,-1,	-1,		8	}, // AND.b AL,m
-	{	0x0a,0x45,-1,	0x0a,0x85,-1,	0x0a,0x05,-1,	0x0c,-1,-1,		0x0a,0x02,-1,	-1,		8	}, // OR.b AL,m
-	{	0x32,0x45,-1,	0x32,0x85,-1,	0x32,0x05,-1,	0x34,-1,-1,		0x32,0x02,-1,	-1,		8	}, // XOR.b AL,m
-	{	0x02,0x45,-1,	0x02,0x85,-1,	0x02,0x05,-1,	0x04,-1,-1,		0x02,0x02,-1,	-1,		8	}, // ADD.b AL,m
-	{	0x00,0x45,-1,	0x00,0x85,-1,	0x00,0x05,-1,	-1,-1,-1,		0x00,0x02,-1,	-1,		-1	}, // ADD.b m,AL
-	{	0x2a,0x45,-1,	0x2a,0x85,-1,	0x2a,0x05,-1,	0x2c,-1,-1,		0x2a,0x02,-1,	-1,		8	}, // SUB.b AL,m
-	{	0x28,0x45,-1,	0x28,0x85,-1,	0x28,0x05,-1,	-1,-1,-1,		0x28,0x02,-1,	-1,		-1	}, // SUB.b m,AL
-	{	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0xe8,-1,-1,		-1,-1,-1,		-1,		32	}, // CALL const
-	{	0xff,0xe0,-1,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // JMP eAX
-	{	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0xe9,-1,-1,		-1,-1,-1,		-1,		-1	}, // JMP const
-	{	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0x74,-1,-1,		-1,-1,-1,		-1,		8	}, // JZ.b const
-	{	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		0x0f,0x84,-1,	-1,-1,-1,		-1,		32	}, // JZ.d const
-	{	0xd9,0x45,-1,	0xd9,0x85,-1,	0xd9,0x05,-1,	-1,-1,-1,		0xd9,0x02,-1,	-1,		32	}, // LOAD.f m
-	{	0xd9,0x5d,-1,	0xd9,0x9d,-1,	0xd9,0x1d,-1,	-1,-1,-1,		0xd9,0x1a,-1,	-1,		32	}, // SAVE.f m
-	{	0xdb,0x45,-1,	0xdb,0x85,-1,	0xdb,0x05,-1,	-1,-1,-1,		0xdb,0x02,-1,	-1,		32	}, // LOAD.fi m
-	{	0xd8,0x45,-1,	0xd8,0x85,-1,	0xd8,0x05,-1,	-1,-1,-1,		0xd8,0x02,-1,	-1,		32	}, // ADD.f m
-	{	0xd8,0x65,-1,	0xd8,0xa5,-1,	0xd8,0x25,-1,	-1,-1,-1,		0xd8,0x22,-1,	-1,		32	}, // SUB.f m
-	{	0xd8,0x4d,-1,	0xd8,0x8d,-1,	0xd8,0x0d,-1,	-1,-1,-1,		0xd8,0x0a,-1,	-1,		32	}, // MUL.f m
-	{	0xd8,0x75,-1,	0xd8,0xb5,-1,	0xd8,0x35,-1,	-1,-1,-1,		0xd8,0x32,-1,	-1,		32	}, // DIV.f m
-	{	0xd3,0xe8,-1,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SHR eAX, CL
-	{	0xd3,0xe0,-1,	-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,-1,-1,		-1,		-1	}, // SHL eAX, CL
-};
 #define CallRel32OCSize			5
 #define AfterWaitOCSize			10
 
 
 
-void OCAddChar(char *oc,int &ocs,int c)
+inline void OCAddChar(char *oc,int &ocs,int c)
 {	oc[ocs]=(char)c;	ocs++;	}
 
-void OCAddWord(char *oc,int &ocs,int i)
+inline void OCAddWord(char *oc,int &ocs,int i)
 {	*(short*)&oc[ocs]=i;	ocs+=2;	}
 
-void OCAddInt(char *oc,int &ocs,int i)
+inline void OCAddInt(char *oc,int &ocs,int i)
 {	*(int*)&oc[ocs]=i;	ocs+=4;	}
 
 int OCOParam;
-void OCAddInstruction(char *oc,int &ocs,int inst,int kind,void *param=NULL,int offset=0,int insert_at=-1)
+
+// offset: used to shift addresses   (i.e. mov iteratively to a big local variable)
+void OCAddInstruction(char *oc, int &ocs, int inst, int kind, void *param = NULL, int offset = 0)
 {
-	if (insert_at<0)
-		insert_at=ocs;
-	int insert_length=0;
-	//char insert_oc[128];
-	if ((kind!=KindRefToLocal)&&(kind!=KindRefToGlobal))
-		param = (void*)((long)param + offset);
-	int l=8;
-	if (((long)param>125)||((long)param<-125))	l=32; // l=16;
-	//if (((int)param>65530)||((int)param<-65530))	l=32;
-	short *p_oc=&AsmInstruction[inst].oc_g[0];
-	if ((kind==KindVarLocal)&&(l==8))
-		p_oc=&AsmInstruction[inst].oc_l8[0];
-	if ((kind==KindVarLocal)&&(l==32))
-		p_oc=&AsmInstruction[inst].oc_l32[0];
-	if ((kind==KindConstant)||(kind==KindRefToConst)){
-		if (AsmInstruction[inst].oc_c[0]>=0)
-			p_oc=&AsmInstruction[inst].oc_c[0];
-		else
-			kind=KindVarGlobal;
-	}
-	if (kind<0)
-		p_oc=&AsmInstruction[inst].oc_l8[0];
-	if ((kind==KindRefToLocal)||(kind==KindRefToGlobal)){
-		if (kind==KindRefToLocal)
-			OCAddInstruction(oc,ocs,inMovEdxM,KindVarLocal,param);
-		if (kind==KindRefToGlobal)
-			OCAddInstruction(oc,ocs,inMovEdxM,KindVarGlobal,param);
-		if (offset!=0)
-			OCAddInstruction(oc,ocs,inAddEdxM,KindConstant,(char*)offset);
-		p_oc=&AsmInstruction[inst].oc_dr[0];
+	int code = 0;
+	int pk[2] = {PKNone, PKNone};
+	void *p[2] = {NULL, NULL};
+	int m = -1;
+	int size = 32;
+	//msg_write(offset);
+
+// corrections
+	// lea
+	if ((inst == inLeaEaxM) && (kind == KindRefToConst)){
+		OCAddInstruction(oc, ocs, inst, KindVarGlobal, param, offset);
+		return;
 	}
 
-	if (p_oc[0]>=0)	OCAddChar(oc,ocs,(char)p_oc[0]);
-	if (p_oc[1]>=0)	OCAddChar(oc,ocs,(char)p_oc[1]);
-	if (p_oc[2]>=0)	OCAddChar(oc,ocs,(char)p_oc[2]);
-	OCOParam=ocs;
-	if (kind==KindVarLocal){ // local
-		if (l==8)
-			OCAddChar(oc,ocs,(long)param);
-//		else if (l==16)
-//			OCAddWord(oc,ocs,(long)param);
-		else if (l==32)
-			OCAddInt(oc,ocs,(long)param);
-	}else if (kind==KindVarGlobal)
-		OCAddInt(oc,ocs,(long)param); // global
-	else if (kind==KindConstant){
-		if (AsmInstruction[inst].const_size==8)
-			OCAddChar(oc,ocs,(long)param);
-		else if (AsmInstruction[inst].const_size==16)
-			OCAddWord(oc,ocs,(long)param);
-		else if (AsmInstruction[inst].const_size==32)
-			OCAddInt(oc,ocs,(long)param);
-	}else if (kind==KindRefToConst){
-		if (AsmInstruction[inst].const_size==8)
-			OCAddChar(oc,ocs,*(int*)param);
-		else if (AsmInstruction[inst].const_size==16)
-			OCAddWord(oc,ocs,*(int*)param);
-		else if (AsmInstruction[inst].const_size==32)
-			OCAddInt(oc,ocs,*(int*)param);
+	
+	switch(inst){
+		case inNop:			code = inst_nop;	break;
+		case inPushEbp:		code = inst_push;	pk[0] = PKRegister;	p[0] = (void*)RegEbp;	break;
+		case inMovEbpEsp:	code = inst_mov;	pk[0] = PKRegister;	p[0] = (void*)RegEbp;	pk[1] = PKRegister;	p[1] = (void*)RegEsp;	break;
+		case inMovEspM:		code = inst_mov;	pk[0] = PKRegister;	p[0] = (void*)RegEsp;	m = 1;	break;
+		case inMovEdxpi8Eax:code = inst_mov;	pk[0] = PKEdxRel;	p[0] = param;	pk[1] = PKRegister;	p[1] = (void*)RegEax;	break;
+		case inLeave:		code = inst_leave;	break;
+		case inRet:			code = inst_ret;	break;
+		case inRet4:		code = inst_ret;	pk[0] = PKConstant16;	p[0] = (void*)4;	break;
+		case inMovEaxM:		code = inst_mov;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inMovMEax:		code = inst_mov;	pk[1] = PKRegister;	p[1] = (void*)RegEax;	m = 0;	break;
+		case inMovEdxM:		code = inst_mov;	pk[0] = PKRegister;	p[0] = (void*)RegEdx;	m = 1;	break;
+		case inMovMEdx:		code = inst_mov;	pk[1] = PKRegister;	p[1] = (void*)RegEdx;	m = 0;	break;
+		case inMovAlM8:		code = inst_mov_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inMovAhM8:		code = inst_mov_b;	pk[0] = PKRegister;	p[0] = (void*)RegAh;	m = 1;	size = 8;	break;
+		case inMovBlM8:		code = inst_mov_b;	pk[0] = PKRegister;	p[0] = (void*)RegBl;	m = 1;	size = 8;	break;
+		case inMovBhM8:		code = inst_mov_b;	pk[0] = PKRegister;	p[0] = (void*)RegBh;	m = 1;	size = 8;	break;
+		case inMovClM8:		code = inst_mov_b;	pk[0] = PKRegister;	p[0] = (void*)RegCl;	m = 1;	size = 8;	break;
+		case inMovM8Al:		code = inst_mov_b;	pk[1] = PKRegister;	p[1] = (void*)RegAl;	m = 0;	size = 8;	break;
+		case inMovMEbp:		code = inst_mov;	pk[1] = PKRegister;	p[1] = (void*)RegEbp;	m = 0;	break;
+		case inMovMEsp:		code = inst_mov;	pk[1] = PKRegister;	p[1] = (void*)RegEsp;	m = 0;	break;
+		case inLeaEaxM:		code = inst_lea;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inLeaEdxM:		code = inst_lea;	pk[0] = PKRegister;	p[0] = (void*)RegEdx;	m = 1;	break;
+		case inPushM:		code = inst_push;	m = 0;	break;
+		case inPushEax:		code = inst_push;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	break;
+		case inPushEdx:		code = inst_push;	pk[0] = PKRegister;	p[0] = (void*)RegEdx;	break;
+		case inPopEax:		code = inst_pop;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	break;
+		case inPopEsp:		code = inst_pop;	pk[0] = PKRegister;	p[0] = (void*)RegEsp;	break;
+		case inAndEaxM:		code = inst_and;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inOrEaxM:		code = inst_or;		pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inXorEaxM:		code = inst_xor;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inAddEaxM:		code = inst_add;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inAddEdxM:		code = inst_add;	pk[0] = PKRegister;	p[0] = (void*)RegEdx;	m = 1;	break;
+		case inAddMEax:		code = inst_add;	pk[1] = PKRegister;	p[1] = (void*)RegEax;	m = 0;	break;
+		case inSubEaxM:		code = inst_sub;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inSubMEax:		code = inst_sub;	pk[1] = PKRegister;	p[1] = (void*)RegEax;	m = 0;	break;
+		case inMulEaxM:		code = inst_imul;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inDivEaxM:		code = inst_div;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inDivEaxEbx:	code = inst_div;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	pk[1] = PKRegister;	p[1] = (void*)RegEbx;	break;
+		case inCmpEaxM:		code = inst_cmp;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	m = 1;	break;
+		case inCmpAlM8:		code = inst_cmp_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inCmpM80:		code = inst_cmp_b;	pk[1] = PKConstant8;	p[1] = NULL;	m = 0;	size = 8;	break;
+		case inSetzAl:		code = inst_setz_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	break;
+		case inSetnzAl:		code = inst_setnz_b;pk[0] = PKRegister;	p[0] = (void*)RegAl;	break;
+		case inSetnleAl:	code = inst_setnle_b;pk[0] = PKRegister;	p[0] = (void*)RegAl;	break;
+		case inSetnlAl:		code = inst_setnl_b;pk[0] = PKRegister;	p[0] = (void*)RegAl;	break;
+		case inSetlAl:		code = inst_setl_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	break;
+		case inSetleAl:		code = inst_setle_b;pk[0] = PKRegister;	p[0] = (void*)RegAl;	break;
+		case inAndAlM8:		code = inst_and_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inOrAlM8:		code = inst_or_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inXorAlM8:		code = inst_xor_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inAddAlM8:		code = inst_add_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inAddM8Al:		code = inst_add_b;	pk[1] = PKRegister;	p[1] = (void*)RegAl;	m = 0;	size = 8;	break;
+		case inSubAlM8:		code = inst_sub_b;	pk[0] = PKRegister;	p[0] = (void*)RegAl;	m = 1;	size = 8;	break;
+		case inSubM8Al:		code = inst_sub_b;	pk[1] = PKRegister;	p[1] = (void*)RegAl;	m = 0;	size = 8;	break;
+		case inCallRel32:	code = inst_call;	m = 0;	break;
+		case inJmpEax:		code = inst_jmp;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	break;
+		case inJmpC32:		code = inst_jmp;	m = 0;	break;
+		case inJzC8:		code = inst_jz_b;	m = 0;	size = 8;	break;
+		case inJzC32:		code = inst_jz;		m = 0;	size = 8;	break;
+		case inLoadfM:		code = inst_fld;	m = 0;	break;
+		case inSavefM:		code = inst_fstp;	m = 0;	break;
+		case inLoadfiM:		code = inst_fild;	m = 0;	break;
+		case inAddfM:		code = inst_fadd;	m = 0;	break;
+		case inSubfM:		code = inst_fsub;	m = 0;	break;
+		case inMulfM:		code = inst_fmul;	m = 0;	break;
+		case inDivfM:		code = inst_fdiv;	m = 0;	break;
+		case inShrEaxCl:	code = inst_shr;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	pk[1] = PKRegister;	p[1] = (void*)RegCl;	break;
+		case inShlEaxCl:	code = inst_shl;	pk[0] = PKRegister;	p[0] = (void*)RegEax;	pk[1] = PKRegister;	p[1] = (void*)RegCl;	break;
+		default:
+			msg_todo(string2("unhandled instruction: %d", inst));
+			cur_script->DoError("internal asm error");
+			return;
 	}
 
-	p_oc=&AsmInstruction[inst].oc_p;
-	if (p_oc[0]>=0)	OCAddChar(oc,ocs,(char)p_oc[0]);
-	/*if (p_oc[0]>=0){	insert_oc[insert_length]=(char)p_oc[0];	insert_length++;	}
-	if (p_oc[1]>=0){	insert_oc[insert_length]=(char)p_oc[1];	insert_length++;	}
-	if (p_oc[2]>=0){	insert_oc[insert_length]=(char)p_oc[2];	insert_length++;	}
-	OCOParam=insert_at+insert_length;
-	if (kind==KindVarLocal){ // local
-		if (l==8)
-			insert_oc[insert_length]=(char)(int)param;
-//		else if (l==16)
-//			*(short*)&insert_oc[insert_length]=(short)param);
-		else if (l==32)
-			*(int*)&insert_oc[insert_length]=(int)param;
-		insert_length+=l/8;
-	}else if (kind==KindVarGlobal){ // global
-		*(int*)&insert_oc[insert_length]=(int)param;
-		insert_length+=4;
-	}else if (kind==KindConstant){
-		if (AsmInstruction[inst].const_size==8)
-			insert_oc[insert_length]=(char)(int)param;
-		else if (AsmInstruction[inst].const_size==16)
-			*(short*)&insert_oc[insert_length]=(short)(int)param;
-		else if (AsmInstruction[inst].const_size==32)
-			*(int*)&insert_oc[insert_length]=(int)param;
-		insert_length+=AsmInstruction[inst].const_size/8;
-	}else if (kind==KindRefToConst){
-		if (AsmInstruction[inst].const_size==8)
-			insert_oc[insert_length]=*(char*)param;
-		else if (AsmInstruction[inst].const_size==16)
-			*(short*)&insert_oc[insert_length]=*(short*)param;
-		else if (AsmInstruction[inst].const_size==32)
-			*(int*)&insert_oc[insert_length]=*(int*)param;
-		insert_length+=AsmInstruction[inst].const_size/8;
+	
+	// const as global var?
+	if (kind == KindRefToConst){
+		if (!AsmImmediateAllowed(code)){
+			//msg_write("evil");
+			kind = KindVarGlobal;
+		}
+
+		if (inst == inCmpM80){
+			kind = KindVarGlobal;
+		}
 	}
+	
 
-	p_oc=&AsmInstruction[inst].oc_p;
-	if (p_oc[0]>=0){	insert_oc[insert_length]=(char)p_oc[0];	insert_length++;	}
+	// parameters
+	if ((m >= 0) && (kind >= 0)){
+	
+		if (kind == KindVarLocal){
+			pk[m] = PKLocal;
+			p[m] = (void*)((long)param + offset);
+		}else if (kind == KindVarGlobal){
+			pk[m] = PKDerefConstant;
+			p[m] = (void*)((long)param + offset);
+		}else if (kind == KindConstant){
+			pk[m] = (size == 8) ? PKConstant8 : PKConstant32;
+			p[m] = param;
+		}else if (kind == KindRefToConst){
+			kind = KindConstant;
+			pk[m] = (size == 8) ? PKConstant8 : PKConstant32;
+			p[m] = *(void**)((long)param + offset);
+		}else if ((kind == KindRefToLocal) || (kind == KindRefToGlobal)){
+			if (kind == KindRefToLocal)
+				OCAddInstruction(oc, ocs, inMovEdxM, KindVarLocal, param);
+			else if (kind == KindRefToGlobal)
+				OCAddInstruction(oc, ocs, inMovEdxM, KindVarGlobal, param);
+			if (offset != 0)
+				OCAddInstruction(oc, ocs, inAddEdxM, KindConstant, (char*)offset);
+			pk[m] = PKDerefRegister;
+			p[m] = (void*)RegEdx;
+		}else{
+			msg_error("kind unhandled");
+			msg_write(kind);
+		}
+	}
+	
+	// compile
+	if (!AsmAddInstruction(oc, ocs, code, pk[0], p[0], pk[1], p[1]))
+		cur_script->DoError("internal asm error");
 
-	int i;
-	for (i=s->OpcodeSize-1;i>=insert_at;i--)
-		oc[i+insert_length]=oc[i];
-	for (i=0;i<insert_length;i++)
-		oc[insert_at+i]=insert_oc[i];
-	ocs+=insert_length;*/
+	OCOParam = AsmOCParam;
 }
+
+/*enum{
+	PKInvalid,
+	PKNone,
+	PKRegister,			// eAX
+	PKDerefRegister,	// [eAX]
+	PKLocal,			// [ebp + 0x0000]
+	PKStackRel,			// [esp + 0x0000]
+	PKConstant32,		// 0x00000000
+	PKConstant16,		// 0x0000
+	PKConstant8,		// 0x00
+	PKConstantDouble,   // 0x00:0x0000   ...
+	PKDerefConstant		// [0x0000]
+};*/
+//bool AsmAddInstruction(char *oc, int &ocs, int inst, int param1_type, void *param1, int param2_type, void *param2, int offset = 0, int insert_at = -1);
 
 void OCAddEspAdd(char *oc,int &ocs,int d)
 {
 	if (d>0){
-		if (d>120){
-			OCAddChar(oc,ocs,(char)0x81);
-			OCAddChar(oc,ocs,(char)0xc4);
-			OCAddInt(oc,ocs,d);
-		}else{
-			OCAddChar(oc,ocs,(char)0x83);
-			OCAddChar(oc,ocs,(char)0xc4);
-			OCAddChar(oc,ocs,(char)d);
-		}
+		if (d>120)
+			AsmAddInstruction(oc, ocs, inst_add, PKRegister, (void*)RegEsp, PKConstant32, (void*)d);
+		else
+			AsmAddInstruction(oc, ocs, inst_add_b, PKRegister, (void*)RegEsp, PKConstant8, (void*)d);
 	}else if (d<0){
-		if (d<-120){
-			OCAddChar(oc,ocs,(char)0x81);
-			OCAddChar(oc,ocs,(char)0xec);
-			OCAddInt(oc,ocs,-d);
-		}else{
-			OCAddChar(oc,ocs,(char)0x83);
-			OCAddChar(oc,ocs,(char)0xec);
-			OCAddChar(oc,ocs,(char)-d);
-		}
+		if (d<-120)
+			AsmAddInstruction(oc, ocs, inst_sub, PKRegister, (void*)RegEsp, PKConstant32, (void*)(-d));
+		else
+			AsmAddInstruction(oc, ocs, inst_sub_b, PKRegister, (void*)RegEsp, PKConstant8, (void*)(-d));
 	}
 }
 
+/*void OCAddCall(char *oc,int &ocs, sFunction *p_func, void *func)
+{
+	OCAddEspAdd(oc, ocs, - (p_func->VarSize + LocalOffset));
+	//OCAddInstruction(oc, ocs, inPushM,pk[1], param[1]);
+	//OCAddInstruction(oc, ocs, inPushM,pk[0], param[0]);
+	OCAddInstruction(oc, ocs, inCallRel32, KindConstant, (char*)((long)func-(long)&oc[ocs] - CallRel32OCSize));
+	OCAddEspAdd(oc, ocs, p_func->VarSize + LocalOffset + 8);
+}*/
+
 // create data for a (function) parameter
 //   and compile its command if the parameter is executable itself
-char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index, int &pk, bool allow_auto_ref)
+char *CScript::OCAddParameter(sCommand *link, int n_func, int level, int index, int &pk, bool allow_auto_ref)
 {
 	msg_db_r("OCAddParameter", 4);
 	pk = link->Kind;
@@ -603,25 +704,25 @@ char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index,
 	if (link->Kind == KindVarFunction){
 		so(" -var-func");
 		if (pre_script->FlagCompileOS)
-			ret = (char*)((long)func[link->Nr] - (long)&Opcode[0] + ((sAsmMetaInfo*)pre_script->AsmMetaInfo)->CodeOrigin);
+			ret = (char*)((long)func[link->LinkNr] - (long)&Opcode[0] + ((sAsmMetaInfo*)pre_script->AsmMetaInfo)->CodeOrigin);
 		else
-			ret = (char*)func[link->Nr];
+			ret = (char*)func[link->LinkNr];
 		pk = KindVarGlobal;
 	}else if (link->Kind == KindVarGlobal){
 		so(" -global");
 		if (link->script)
-			ret = link->script->g_var[link->Nr];
+			ret = link->script->g_var[link->LinkNr];
 		else
-			ret = g_var[link->Nr];
+			ret = g_var[link->LinkNr];
 	}else if (link->Kind == KindVarLocal){
 		so(" -local");
-		ret = (char*)(int)pre_script->Function[n_func].Var[link->Nr].Offset;
+		ret = (char*)(int)pre_script->Function[n_func].Var[link->LinkNr].Offset;
 	}else if (link->Kind == KindVarExternal){
 		so(" -external-var");
-		ret=(char*)PreExternalVar[link->Nr].Pointer;
+		ret=(char*)PreExternalVar[link->LinkNr].Pointer;
 		pk=KindVarGlobal;
 		if (!ret){
-			DoErrorLink(string("externe Variable nicht linkbar: ",PreExternalVar[link->Nr].Name));
+			DoErrorLink(string("external variable is not linkable: ",PreExternalVar[link->LinkNr].Name));
 			_return_(4, ret);
 			/*msg_write("OCAddParameter  nur ein Verweis auf eine externe Variable?");
 			ret=(char*)&PreExternalVar[link->Nr].Pointer;
@@ -633,18 +734,19 @@ char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index,
 			pk=KindVarGlobal;
 		else
 			pk=KindRefToConst;
-		ret=cnst[link->Nr];
-	}else if (link->Kind==KindCommand){
+		ret=cnst[link->LinkNr];
+	}else if ((link->Kind==KindOperator) || (link->Kind==KindFunction) || (link->Kind==KindCompilerFunction)){
 		pk=KindVarLocal;
-		ret=OCAddCommand(&pre_script->Command[link->Nr],n_func,level,index);
+		ret=OCAddCommand(link,n_func,level,index);
 		if (Error)	_return_(4, NULL);
-	}else if (link->Kind==KindPointerShift){
+	}else if (link->Kind==KindAddressShift){
 		so(" -p.shift");
-		char *param=OCAddParameter(link->Meta,n_func,level,index,pk);
+		char *param = OCAddParameter(link->Param[0],n_func,level,index,pk,false);
 		if (Error)	_return_(4, NULL);
-		if ((pk==KindVarLocal)||(pk==KindVarGlobal)){
+		//if ((pk==KindVarLocal)||(pk==KindVarGlobal)){
+		if ((pk==KindVarLocal)||(pk==KindVarGlobal)||(pk==KindRefToConst)){
 			so("  ->const");
-			ret=param+link->Nr;
+			ret=param+link->LinkNr;
 		}else{
 			so("  ->lea");
 			if (pk!=KindRefToLocal){
@@ -652,77 +754,68 @@ char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index,
 				_return_(4, NULL);
 			}
 			ret=param;
-			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,KindConstant,(char*)(int)link->Nr);
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,KindConstant,(char*)(int)link->LinkNr);
 			OCAddInstruction(Opcode,OpcodeSize,inAddMEax,KindVarLocal,ret);
 			if (Error)	_return_(4, NULL);
 			pk=KindRefToLocal;
 		}
-	}else if (link->Kind==KindDerefPointerShift){
+	}else if (link->Kind==KindDerefAddressShift){
 		so(" -deref-shift");
-		char *param=OCAddParameter(link->Meta,n_func,level,index,pk);
+		char *param=OCAddParameter(link->Param[0],n_func,level,index,pk);
 		if (Error)	_return_(4, NULL);
-		ret=(char*)(-LOffset-pre_script->Function[n_func].VarSize-4);
-		LOffset+=4;
-		if (LOffset>LOffsetMax)
-			LOffsetMax=LOffset;
+		ret=(char*)(-add_temp_var(4) - pre_script->Function[n_func].VarSize);
 		OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk,param);
-		OCAddInstruction(Opcode,OpcodeSize,inAddEaxM,KindConstant,(char*)(int)link->Nr);
+		OCAddInstruction(Opcode,OpcodeSize,inAddEaxM,KindConstant,(char*)(int)link->LinkNr);
 		OCAddInstruction(Opcode,OpcodeSize,inMovMEax,KindVarLocal,ret);
 		if (Error)	_return_(4, NULL);
 		pk=KindRefToLocal;
 	}else if (link->Kind==KindArray){
 		so(" -array");
-		char *param=OCAddParameter(link->Meta,n_func,level,index,pk,false);
+		char *param=OCAddParameter(link->Param[0],n_func,level,index,pk,false);
 		if (Error) _return_(4, NULL);
-		if ((link->ParamLink->Kind==KindConstant)&&( (pk==KindVarLocal)||(pk==KindVarGlobal) )){
+		if ((link->Param[1]->Kind==KindConstant)&&( (pk==KindVarLocal)||(pk==KindVarGlobal) )){
 			so("  ->const");
-			ret=param+(*(int*)pre_script->Constant[link->ParamLink->Nr].data)*link->type->Size;
+			ret=param+(*(int*)pre_script->Constant[link->Param[1]->LinkNr].data)*link->Type->Size;
 		}else{
 			so("  ->lea");
 			if (pk!=KindRefToLocal){
 				so("    ->neu");
 				OCAddInstruction(Opcode,OpcodeSize,inLeaEaxM,pk,param);
-				ret=(char*)(-LOffset-pre_script->Function[n_func].VarSize-4);
-				LOffset+=4;
-				if (LOffset>LOffsetMax)
-					LOffsetMax=LOffset;
+				ret=(char*)(-add_temp_var(4) - pre_script->Function[n_func].VarSize);
 				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,KindVarLocal,ret);
 			}else
 				ret=param;
-			param=OCAddParameter(link->ParamLink,n_func,level,index,pk,false);
+			param=OCAddParameter(link->Param[1],n_func,level,index,pk,false);
 			if (Error)	_return_(4, NULL);
 			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk,param);
-			OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,KindConstant,(char*)link->type->Size);
+			OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,KindConstant,(char*)link->Type->Size);
 			OCAddInstruction(Opcode,OpcodeSize,inAddMEax,KindVarLocal,ret);
 			if (Error)	_return_(4, NULL);
 			pk=KindRefToLocal;
 		}
 	}else if (link->Kind==KindPointerAsArray){
 		so(" -pointer-array");
-		char *param=OCAddParameter(link->Meta,n_func,level,index,pk,false);
+		char *param=OCAddParameter(link->Param[0],n_func,level,index,pk,false);
 		if (Error)	_return_(4, NULL);
 		//so("->lea");
 		//if (pk!=KindRefToLocal){
 			so("  ->neu");
 			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk,param);
-			ret=(char*)(-LOffset-pre_script->Function[n_func].VarSize-4);
-			LOffset+=4;
-			if (LOffset>LOffsetMax)
-				LOffsetMax=LOffset;
+			ret=(char*)(-add_temp_var(4) - pre_script->Function[n_func].VarSize);
 			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,KindVarLocal,ret);
 		//}else
 		//	ret=param;
-		param=OCAddParameter(link->ParamLink,n_func,level,index,pk,false);
+		param=OCAddParameter(link->Param[1],n_func,level,index,pk,false);
 		if (Error)	_return_(4, NULL);
 		OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk,param);
-		OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,KindConstant,(char*)link->type->Size);
+		OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,KindConstant,(char*)link->Type->Size);
 		OCAddInstruction(Opcode,OpcodeSize,inAddMEax,KindVarLocal,ret);
 		if (Error)	_return_(4, NULL);
 		pk=KindRefToLocal;
 	}else if (link->Kind==KindReference){
 		//msg_write(Kind2Str(link->Meta->Kind));
 		so(" -ref");
-		char *param=OCAddParameter(link->Meta,n_func,level,index,pk,false);
+		char *param=OCAddParameter(link->Param[0],n_func,level,index,pk,false);
 		if (Error)	_return_(4, NULL);
 		//printf("%d  -  %s\n",pk,Kind2Str(pk));
 		if ((pk==KindConstant)||(pk==KindVarGlobal)||(pk==KindRefToConst)){
@@ -730,10 +823,7 @@ char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index,
 			pk=KindConstant;
 			ret=param;
 		}else{
-			ret=(char*)(-LOffset-pre_script->Function[n_func].VarSize-4);
-			LOffset+=4;
-			if (LOffset>LOffsetMax)
-				LOffsetMax=LOffset;
+			ret=(char*)(-add_temp_var(4) - pre_script->Function[n_func].VarSize);
 			OCAddInstruction(Opcode,OpcodeSize,inLeaEaxM,pk,param);
 			pk=KindVarLocal;
 			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk,ret);
@@ -741,7 +831,7 @@ char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index,
 		}
 	}else if (link->Kind==KindDereference){
 		so(" -deref...");
-		char *param=OCAddParameter(link->Meta,n_func,level,index,pk);
+		char *param=OCAddParameter(link->Param[0],n_func,level,index,pk);
 		if (Error)	_return_(4, NULL);
 		if ((pk==KindVarLocal)||(pk==KindVarGlobal)){
 			if (pk==KindVarLocal)	pk=KindRefToLocal;
@@ -751,277 +841,224 @@ char *CScript::OCAddParameter(sLinkData *link, int n_func, int level, int index,
 	}else
 		_do_error_(string("unexpected type of parameter: ",Kind2Str(link->Kind)), 4, NULL);
 	//if ((!link->type->IsPointer)&&(link->type->SubType)){
-	if ((allow_auto_ref)&&(link->type->ArrayLength>0)){
+	if ((allow_auto_ref) && ((link->Type->IsArray) || (link->Type->IsSuperArray))){
 		so("Array: c referenziert automatisch!!");
 		char *param=ret;
-		ret=(char*)(-LOffset-pre_script->Function[n_func].VarSize-4);
-		LOffset+=4;
-		if (LOffset>LOffsetMax)
-			LOffsetMax=LOffset;
+		ret=(char*)(-add_temp_var(4) - pre_script->Function[n_func].VarSize);
 		OCAddInstruction(Opcode,OpcodeSize,inLeaEaxM,pk,param);
 		pk=KindVarLocal;
 		OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk,ret);
 		if (Error)	_return_(4, NULL);
-		link->type=TypePointer;
+		link->Type=TypePointer;
 	}
 	msg_db_l(4);
 	return ret;
 }
 
-static int while_level = 0;
-static int while_index = 0;
-
-char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
+void OCAddOperator(char *Opcode, int &OpcodeSize, CScript *s, sCommand *com, sFunction *p_func, char **param, char *&ret, int *pk, int &rk)
 {
-	msg_db_r("OCAddCommand", 4);
-	//msg_write(Kind2Str(com->Kind));
-	sFunction *p_func = &pre_script->Function[n_func];
-	char *param[SCRIPT_MAX_PARAMS];
-	int s = mem_align(com->ReturnType->Size);
-	char *ret = (char*)( -LOffset - p_func->VarSize - s);
-	//so(d2h((char*)&ret,4,false));
-	so(string2("return: %d/%d/%d", com->ReturnType->Size, LOffset, LOffset + s));
-	LOffset += s;
-	int pk[SCRIPT_MAX_PARAMS], rk = KindVarLocal; // param_kind, return_kind
-
-	// compile parameters
-	if (LOffset > LOffsetMax)
-		LOffsetMax = LOffset;
-	for (int p=0;p<com->NumParams;p++){
-		param[p] = OCAddParameter(&com->ParamLink[p],n_func,level,index,pk[p]);
-		if (Error) _return_(4, NULL);
-	}
-
-	// class function -> compile instance
-	char *instance_param = NULL;
-	int instance_kind;
-	if (com->Kind == KindCompilerFunction){
-		if (PreCommand[com->LinkNr].Instance == f_class){
-			so("member");
-			sLinkData link;
-			link.script = NULL;
-			link.Kind = pre_script->Command[com->SubLink1].Kind;
-			link.Nr = pre_script->Command[com->SubLink1].LinkNr;
-			link.type = pre_script->Command[com->SubLink1].ReturnType;
-			link.Meta = NULL;
-			instance_param = OCAddParameter(&link,n_func,level,index,instance_kind);
-		}
-	}
-
-	    
-	if (com->Kind == KindOperator){
-		//msg_write("---operator");
-		
-		switch(com->LinkNr){
-			case OperatorIntAssign:
-			case OperatorFloatAssign:
-			case OperatorPointerAssign:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
-				break;
-			case OperatorCharAssign:
-			case OperatorBoolAssign:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,pk[0],param[0]);
-				break;
-			case OperatorStructAssign:
-				for (int i=0;i<signed(com->ParamLink[0].type->Size)/4;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0],i*4);
-				}
-				for (int i=4*signed(com->ParamLink[0].type->Size/4);i<signed(com->ParamLink[0].type->Size);i++){
-					OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1],i);
-					OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,pk[0],param[0],i);
-				}
-				break;
-// string
-			case OperatorStringAssignAA:
-			case OperatorStringAssignAP:
-				OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LOffset);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcpy-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
-				OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LOffset+8);
-				break;
-			case OperatorStringAddAAS:
-			case OperatorStringAddAPS:
-				OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LOffset);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcat-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
-				OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LOffset+8);
-				break;
-			case OperatorStringAddAA:
-			case OperatorStringAddAP:
-			case OperatorStringAddPA:
-			case OperatorStringAddPP:
-				OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LOffset);
-				so(d2h((char*)&param[0],4,false));
-				so(d2h((char*)&ret,4,false));
-				OCAddInstruction(Opcode,OpcodeSize,inLeaEdxM,rk,ret);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inPushEdx,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcpy-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
-				OCAddEspAdd(Opcode,OpcodeSize,8);
-				OCAddInstruction(Opcode,OpcodeSize,inLeaEdxM,rk,ret);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inPushEdx,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcat-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
-				OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LOffset+8);
-				break;
-			case OperatorStringEqualAA:
-			case OperatorStringEqualAP:
-			case OperatorStringEqualPA:
-			case OperatorStringEqualPP:
-			case OperatorStringNotEqualAA:
-			case OperatorStringNotEqualAP:
-			case OperatorStringNotEqualPA:
-			case OperatorStringNotEqualPP:
-				OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LOffset);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inPush,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcmp-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
-				OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LOffset+8);
-				OCAddInstruction(Opcode,OpcodeSize,inCmpAlM8,KindConstant,NULL);
-				if ((com->LinkNr==OperatorStringEqualAA)||(com->LinkNr==OperatorStringEqualAP)||(com->LinkNr==OperatorStringEqualPA)||(com->LinkNr==OperatorStringEqualPP))
-					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
-				if ((com->LinkNr==OperatorStringNotEqualAA)||(com->LinkNr==OperatorStringNotEqualAP)||(com->LinkNr==OperatorStringNotEqualPA)||(com->LinkNr==OperatorStringNotEqualPP))
-					OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
+	msg_db_r("OCAddOperator", 4);
+	switch(com->LinkNr){
+		case OperatorIntAssign:
+		case OperatorFloatAssign:
+		case OperatorPointerAssign:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
+			break;
+		case OperatorCharAssign:
+		case OperatorBoolAssign:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,pk[0],param[0]);
+			break;
+		case OperatorClassAssign:
+			for (int i=0;i<signed(com->Param[0]->Type->Size)/4;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0],i*4);
+			}
+			for (int i=4*signed(com->Param[0]->Type->Size/4);i<signed(com->Param[0]->Type->Size);i++){
+				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1],i);
+				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,pk[0],param[0],i);
+			}
+			break;
+// string   TODO: create own code!
+		case OperatorStringAssignAA:
+	//	case OperatorStringAssignAP:
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcpy-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+8);
+			break;
+		case OperatorStringAddAAS:
+	//	case OperatorStringAddAPS:
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcat-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+8);
+			break;
+		case OperatorStringAddAA:
+	/*	case OperatorStringAddAP:
+		case OperatorStringAddPA:
+		case OperatorStringAddPP:*/
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset);
+			so(d2h((char*)&param[0],4,false));
+			so(d2h((char*)&ret,4,false));
+			OCAddInstruction(Opcode,OpcodeSize,inLeaEdxM,rk,ret);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushEdx,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcpy-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,8);
+			OCAddInstruction(Opcode,OpcodeSize,inLeaEdxM,rk,ret);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushEdx,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcat-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+8);
+			break;
+		case OperatorStringEqualAA:
+	/*	case OperatorStringEqualAP:
+		case OperatorStringEqualPA:
+		case OperatorStringEqualPP:*/
+		case OperatorStringNotEqualAA:
+	/*	case OperatorStringNotEqualAP:
+		case OperatorStringNotEqualPA:
+		case OperatorStringNotEqualPP:*/
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)((long)&strcmp-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+8);
+			OCAddInstruction(Opcode,OpcodeSize,inCmpAlM8,KindConstant,NULL);
+			if ((com->LinkNr==OperatorStringEqualAA)/*||(com->LinkNr==OperatorStringEqualAP)||(com->LinkNr==OperatorStringEqualPA)||(com->LinkNr==OperatorStringEqualPP)*/)
+				OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
+			if ((com->LinkNr==OperatorStringNotEqualAA)/*||(com->LinkNr==OperatorStringNotEqualAP)||(com->LinkNr==OperatorStringNotEqualPA)||(com->LinkNr==OperatorStringNotEqualPP)*/)
+				OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
 // int
-			case OperatorIntAddS:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inAddMEax,pk[0],param[0]);
-				break;
-			case OperatorIntSubtractS:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inSubMEax,pk[0],param[0]);
-				break;
-			case OperatorIntMultiplyS:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
-				break;
-			case OperatorIntDivideS:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEdxM,pk[0],param[0]);
-				OCAddChar(Opcode,OpcodeSize,(char)0x89);
-				OCAddChar(Opcode,OpcodeSize,(char)0xd0); // MOV eAX,eDX			// TODO
-				OCAddChar(Opcode,OpcodeSize,(char)0xc1);
-				OCAddChar(Opcode,OpcodeSize,(char)0xfa);
-				OCAddChar(Opcode,OpcodeSize,0x1f); // SAR eDX,<1f>
-				OCAddInstruction(Opcode,OpcodeSize,inDivEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
-				break;
-			case OperatorIntAdd:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inAddEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntSubtract:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inSubEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntMultiply:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntDivide:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEdxM,pk[0],param[0]);
-				OCAddChar(Opcode,OpcodeSize,(char)0x89);
-				OCAddChar(Opcode,OpcodeSize,(char)0xd0); // MOV eAX,eDX			// TODO
-				OCAddChar(Opcode,OpcodeSize,(char)0xc1);
-				OCAddChar(Opcode,OpcodeSize,(char)0xfa);
-				OCAddChar(Opcode,OpcodeSize,(char)0x1f); // SAR eDX,<1f>
-				OCAddInstruction(Opcode,OpcodeSize,inDivEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntModulo:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddChar(Opcode,OpcodeSize,(char)0x99);
-				if (pk[1]==KindConstant){
-					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
-					OCAddInstruction(Opcode,OpcodeSize,inDivEaxEbx,-1,NULL);
-				}else
-					OCAddInstruction(Opcode,OpcodeSize,inDivEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEdx,rk,ret);
-				break;
-			case OperatorIntEqual:
-			case OperatorIntNotEqual:
-			case OperatorIntGreater:
-			case OperatorIntGreaterEqual:
-			case OperatorIntSmaller:
-			case OperatorIntSmallerEqual:
-			case OperatorPointerEqual:
-			case OperatorPointerNotEqual:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inCmpEaxM,pk[1],param[1]);
-				if (com->LinkNr==OperatorIntEqual)			OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
-				if (com->LinkNr==OperatorIntNotEqual)		OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
-				if (com->LinkNr==OperatorIntGreater)		OCAddInstruction(Opcode,OpcodeSize,inSetnleAl,-1);
-				if (com->LinkNr==OperatorIntGreaterEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetnlAl,-1);
-				if (com->LinkNr==OperatorIntSmaller)		OCAddInstruction(Opcode,OpcodeSize,inSetlAl,-1);
-				if (com->LinkNr==OperatorIntSmallerEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetleAl,-1);
-				if (com->LinkNr==OperatorPointerEqual)		OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
-				if (com->LinkNr==OperatorPointerNotEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorIntBitAnd:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inAndEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntBitOr:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inOrEaxM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntShiftRight:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovClM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inShrEaxCl,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntShiftLeft:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovClM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inShlEaxCl,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntNegate:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,KindConstant,NULL);
-				OCAddInstruction(Opcode,OpcodeSize,inSubEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
-				break;
-			case OperatorIntIncrease:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inAddEaxM,KindConstant,(char*)0x00000001);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
-				break;
-			case OperatorIntDecrease:
-				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inSubEaxM,KindConstant,(char*)0x00000001);
-				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
-				break;
+		case OperatorIntAddS:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inAddMEax,pk[0],param[0]);
+			break;
+		case OperatorIntSubtractS:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inSubMEax,pk[0],param[0]);
+			break;
+		case OperatorIntMultiplyS:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
+			break;
+		case OperatorIntDivideS:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			AsmAddInstruction(Opcode, OpcodeSize, inst_mov, PKRegister, (void*)RegEdx, PKRegister, (void*)RegEax);
+			AsmAddInstruction(Opcode, OpcodeSize, inst_sar, PKRegister, (void*)RegEdx, PKConstant8, (void*)0x1f);
+			OCAddInstruction(Opcode,OpcodeSize,inDivEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
+			break;
+		case OperatorIntAdd:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inAddEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntSubtract:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inSubEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntMultiply:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inMulEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntDivide:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			AsmAddInstruction(Opcode, OpcodeSize, inst_mov, PKRegister, (void*)RegEdx, PKRegister, (void*)RegEax);
+			AsmAddInstruction(Opcode, OpcodeSize, inst_sar, PKRegister, (void*)RegEdx, PKConstant8, (void*)0x1f);
+			OCAddInstruction(Opcode,OpcodeSize,inDivEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntModulo:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			AsmAddInstruction(Opcode, OpcodeSize, inst_mov, PKRegister, (void*)RegEdx, PKRegister, (void*)RegEax);
+			AsmAddInstruction(Opcode, OpcodeSize, inst_sar, PKRegister, (void*)RegEdx, PKConstant8, (void*)0x1f);
+			OCAddInstruction(Opcode,OpcodeSize,inDivEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEdx,rk,ret);
+			break;
+		case OperatorIntEqual:
+		case OperatorIntNotEqual:
+		case OperatorIntGreater:
+		case OperatorIntGreaterEqual:
+		case OperatorIntSmaller:
+		case OperatorIntSmallerEqual:
+		case OperatorPointerEqual:
+		case OperatorPointerNotEqual:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inCmpEaxM,pk[1],param[1]);
+			if (com->LinkNr==OperatorIntEqual)			OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
+			if (com->LinkNr==OperatorIntNotEqual)		OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
+			if (com->LinkNr==OperatorIntGreater)		OCAddInstruction(Opcode,OpcodeSize,inSetnleAl,-1);
+			if (com->LinkNr==OperatorIntGreaterEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetnlAl,-1);
+			if (com->LinkNr==OperatorIntSmaller)		OCAddInstruction(Opcode,OpcodeSize,inSetlAl,-1);
+			if (com->LinkNr==OperatorIntSmallerEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetleAl,-1);
+			if (com->LinkNr==OperatorPointerEqual)		OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
+			if (com->LinkNr==OperatorPointerNotEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorIntBitAnd:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inAndEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntBitOr:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inOrEaxM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntShiftRight:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovClM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inShrEaxCl,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntShiftLeft:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovClM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inShlEaxCl,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntNegate:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,KindConstant,NULL);
+			OCAddInstruction(Opcode,OpcodeSize,inSubEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
+			break;
+		case OperatorIntIncrease:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inAddEaxM,KindConstant,(char*)0x00000001);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
+			break;
+		case OperatorIntDecrease:
+			OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inSubEaxM,KindConstant,(char*)0x00000001);
+			OCAddInstruction(Opcode,OpcodeSize,inMovMEax,pk[0],param[0]);
+			break;
 // float
-			case OperatorFloatAddS:
-			case OperatorFloatSubtractS:
-			case OperatorFloatMultiplyS:
-			case OperatorFloatDivideS:
-				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
-				if (com->LinkNr==OperatorFloatAddS)			OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1]);
-				if (com->LinkNr==OperatorFloatSubtractS)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1]);
-				if (com->LinkNr==OperatorFloatMultiplyS)	OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
-				if (com->LinkNr==OperatorFloatDivideS)		OCAddInstruction(Opcode,OpcodeSize,inDivfM,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0]);
-				break;
-			case OperatorFloatAdd:
-			case OperatorFloatSubtract:
-			case OperatorFloatMultiply:
-			case OperatorFloatDivide:
-				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+		case OperatorFloatAddS:
+		case OperatorFloatSubtractS:
+		case OperatorFloatMultiplyS:
+		case OperatorFloatDivideS:
+			OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+			if (com->LinkNr==OperatorFloatAddS)			OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1]);
+			if (com->LinkNr==OperatorFloatSubtractS)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1]);
+			if (com->LinkNr==OperatorFloatMultiplyS)	OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+			if (com->LinkNr==OperatorFloatDivideS)		OCAddInstruction(Opcode,OpcodeSize,inDivfM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0]);
+			break;
+		case OperatorFloatAdd:
+		case OperatorFloatSubtract:
+		case OperatorFloatMultiply:
+		case OperatorFloatDivide:
+			OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
 				if (com->LinkNr==OperatorFloatAdd)		OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1]);
 				if (com->LinkNr==OperatorFloatSubtract)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1]);
 				if (com->LinkNr==OperatorFloatMultiply)	OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
@@ -1047,37 +1084,42 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
 				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[1],param[1]);
 				if (com->LinkNr==OperatorFloatEqual){
-					OCAddChar(Opcode,OpcodeSize,0xd9);	OCAddChar(Opcode,OpcodeSize,0xc9);
-					OCAddChar(Opcode,OpcodeSize,0xda);	OCAddChar(Opcode,OpcodeSize,0xe9);
-					OCAddChar(Opcode,OpcodeSize,0xdf);	OCAddChar(Opcode,OpcodeSize,0xe0);
-					OCAddChar(Opcode,OpcodeSize,0x80);	OCAddChar(Opcode,OpcodeSize,0xe4);	OCAddChar(Opcode,OpcodeSize,0x45);
-					OCAddChar(Opcode,OpcodeSize,0x80);	OCAddChar(Opcode,OpcodeSize,0xfc);	OCAddChar(Opcode,OpcodeSize,0x40);
+			//		AsmAddInstruction(Opcode, OpcodeSize, inst_fxchg, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fucompp, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstsw, PKRegister, (void*)RegAx, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_and_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x45);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_cmp_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x40);
+					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
 				}else if (com->LinkNr==OperatorFloatNotEqual){
-					OCAddChar(Opcode,OpcodeSize,0xd9);	OCAddChar(Opcode,OpcodeSize,0xc9);
-					OCAddChar(Opcode,OpcodeSize,0xda);	OCAddChar(Opcode,OpcodeSize,0xe9);
-					OCAddChar(Opcode,OpcodeSize,0xdf);	OCAddChar(Opcode,OpcodeSize,0xe0);
-					OCAddChar(Opcode,OpcodeSize,0x80);	OCAddChar(Opcode,OpcodeSize,0xe4);	OCAddChar(Opcode,OpcodeSize,0x45);
-					OCAddChar(Opcode,OpcodeSize,0x80);	OCAddChar(Opcode,OpcodeSize,0xf4);	OCAddChar(Opcode,OpcodeSize,0x40);
+				//	AsmAddInstruction(Opcode, OpcodeSize, inst_fxchg, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fucompp, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstsw, PKRegister, (void*)RegAx, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_and_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x45);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_cmp_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x40);
+					OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
 				}else if (com->LinkNr==OperatorFloatSmaller){
-					OCAddChar(Opcode,OpcodeSize,0xda);	OCAddChar(Opcode,OpcodeSize,0xe9);
-					OCAddChar(Opcode,OpcodeSize,0xdf);	OCAddChar(Opcode,OpcodeSize,0xe0);
-					OCAddChar(Opcode,OpcodeSize,0xf6);	OCAddChar(Opcode,OpcodeSize,0xc4);	OCAddChar(Opcode,OpcodeSize,0x45);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fucompp, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstsw, PKRegister, (void*)RegAx, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_test_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x45);
+					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
 				}else if (com->LinkNr==OperatorFloatSmallerEqual){
-					OCAddChar(Opcode,OpcodeSize,0xda);	OCAddChar(Opcode,OpcodeSize,0xe9);
-					OCAddChar(Opcode,OpcodeSize,0xdf);	OCAddChar(Opcode,OpcodeSize,0xe0);
-					OCAddChar(Opcode,OpcodeSize,0xf6);	OCAddChar(Opcode,OpcodeSize,0xc4);	OCAddChar(Opcode,OpcodeSize,0x05);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fucompp, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstsw, PKRegister, (void*)RegAx, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_test_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x05);
+					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
 				}else if (com->LinkNr==OperatorFloatGreater){
-					OCAddChar(Opcode,OpcodeSize,0xd9);	OCAddChar(Opcode,OpcodeSize,0xc9);
-					OCAddChar(Opcode,OpcodeSize,0xda);	OCAddChar(Opcode,OpcodeSize,0xe9);
-					OCAddChar(Opcode,OpcodeSize,0xdf);	OCAddChar(Opcode,OpcodeSize,0xe0);
-					OCAddChar(Opcode,OpcodeSize,0xf6);	OCAddChar(Opcode,OpcodeSize,0xc4);	OCAddChar(Opcode,OpcodeSize,0x45);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fxchg, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fucompp, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstsw, PKRegister, (void*)RegAx, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_test_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x45);
+					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
 				}else if (com->LinkNr==OperatorFloatGreaterEqual){
-					OCAddChar(Opcode,OpcodeSize,0xd9);	OCAddChar(Opcode,OpcodeSize,0xc9);
-					OCAddChar(Opcode,OpcodeSize,0xda);	OCAddChar(Opcode,OpcodeSize,0xe9);
-					OCAddChar(Opcode,OpcodeSize,0xdf);	OCAddChar(Opcode,OpcodeSize,0xe0);
-					OCAddChar(Opcode,OpcodeSize,0xf6);	OCAddChar(Opcode,OpcodeSize,0xc4);	OCAddChar(Opcode,OpcodeSize,0x05);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fxchg, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fucompp, PKRegister, (void*)RegSt0, PKRegister, (void*)RegSt1);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstsw, PKRegister, (void*)RegAx, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_test_b, PKRegister, (void*)RegAh, PKConstant8, (void*)0x05);
+					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
 				}
-				OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
 				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
 				break;
 			case OperatorFloatNegate:
@@ -1085,211 +1127,426 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 				OCAddInstruction(Opcode,OpcodeSize,inXorEaxM,KindConstant,(char*)0x80000000);
 				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
 				break;
+// complex
+			case OperatorComplexAddS:
+			case OperatorComplexSubtractS:
+			//case OperatorComplexMultiplySCF:
+			//case OperatorComplexDivideS:
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				if (com->LinkNr==OperatorComplexAddS)		OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1]);
+				if (com->LinkNr==OperatorComplexSubtractS)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],4);
+				if (com->LinkNr==OperatorComplexAddS)		OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1],4);
+				if (com->LinkNr==OperatorComplexSubtractS)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1],4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],4);
+				break;
+			case OperatorComplexAdd:
+			case OperatorComplexSubtract:
+//			case OperatorFloatMultiply:
+//			case OperatorFloatDivide:
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				if (com->LinkNr==OperatorComplexAdd)		OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1]);
+				if (com->LinkNr==OperatorComplexSubtract)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],4);
+				if (com->LinkNr==OperatorComplexAdd)		OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1],4);
+				if (com->LinkNr==OperatorComplexSubtract)	OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1],4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,4);
+				break;
+			case OperatorComplexMultiply:
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],4);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1],4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSubfM,rk,ret);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],4);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,4);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1],4);
+				OCAddInstruction(Opcode,OpcodeSize,inAddfM,rk,ret,4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,4);
+				break;
+			case OperatorComplexMultiplyFC:
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1],4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,4);
+				break;
+			case OperatorComplexMultiplyCF:
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],4);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,4);
+				break;
 // bool/char
-			case OperatorCharEqual:
-			case OperatorCharNotEqual:
-			case OperatorBoolEqual:
-			case OperatorBoolNotEqual:
-			case OperatorBoolGreater:
-			case OperatorBoolGreaterEqual:
-			case OperatorBoolSmaller:
-			case OperatorBoolSmallerEqual:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inCmpAlM8,pk[0],param[0]);
-				if ((com->LinkNr==OperatorCharEqual)||(com->LinkNr==OperatorBoolEqual))
-					OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
-				if ((com->LinkNr==OperatorCharNotEqual)||(com->LinkNr==OperatorBoolNotEqual))
-					OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
-				if (com->LinkNr==OperatorBoolGreater)		OCAddInstruction(Opcode,OpcodeSize,inSetnleAl,-1);
-				if (com->LinkNr==OperatorBoolGreaterEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetnlAl,-1);
-				if (com->LinkNr==OperatorBoolSmaller)		OCAddInstruction(Opcode,OpcodeSize,inSetlAl,-1);
-				if (com->LinkNr==OperatorBoolSmallerEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetleAl,-1);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorBoolAnd:
-			case OperatorBoolOr:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				if (com->LinkNr==OperatorBoolAnd)	OCAddInstruction(Opcode,OpcodeSize,inAndAlM8,pk[1],param[1]);
-				if (com->LinkNr==OperatorBoolOr)	OCAddInstruction(Opcode,OpcodeSize,inOrAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorCharAddS:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inAddM8Al,pk[0],param[0]);
-				break;
-			case OperatorCharSubtractS:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inSubM8Al,pk[0],param[0]);
-				break;
-			case OperatorCharAdd:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inAddAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorCharSubtract:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inSubAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorCharBitAnd:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inAndAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorCharBitOr:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inOrAlM8,pk[1],param[1]);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorBoolNegate:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inXorAlM8,KindConstant,(char*)0x01);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
-			case OperatorCharNegate:
-				OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
-				OCAddInstruction(Opcode,OpcodeSize,inXorAlM8,KindConstant,(char*)0xff);
-				OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
-				break;
+		case OperatorCharEqual:
+		case OperatorCharNotEqual:
+		case OperatorBoolEqual:
+		case OperatorBoolNotEqual:
+		case OperatorBoolGreater:
+		case OperatorBoolGreaterEqual:
+		case OperatorBoolSmaller:
+		case OperatorBoolSmallerEqual:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inCmpAlM8,pk[0],param[0]);
+			if ((com->LinkNr==OperatorCharEqual)||(com->LinkNr==OperatorBoolEqual))
+				OCAddInstruction(Opcode,OpcodeSize,inSetzAl,-1);
+			if ((com->LinkNr==OperatorCharNotEqual)||(com->LinkNr==OperatorBoolNotEqual))
+				OCAddInstruction(Opcode,OpcodeSize,inSetnzAl,-1);
+			if (com->LinkNr==OperatorBoolGreater)		OCAddInstruction(Opcode,OpcodeSize,inSetnleAl,-1);
+			if (com->LinkNr==OperatorBoolGreaterEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetnlAl,-1);
+			if (com->LinkNr==OperatorBoolSmaller)		OCAddInstruction(Opcode,OpcodeSize,inSetlAl,-1);
+			if (com->LinkNr==OperatorBoolSmallerEqual)	OCAddInstruction(Opcode,OpcodeSize,inSetleAl,-1);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorBoolAnd:
+		case OperatorBoolOr:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			if (com->LinkNr==OperatorBoolAnd)	OCAddInstruction(Opcode,OpcodeSize,inAndAlM8,pk[1],param[1]);
+			if (com->LinkNr==OperatorBoolOr)	OCAddInstruction(Opcode,OpcodeSize,inOrAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorCharAddS:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inAddM8Al,pk[0],param[0]);
+			break;
+		case OperatorCharSubtractS:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inSubM8Al,pk[0],param[0]);
+			break;
+		case OperatorCharAdd:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inAddAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorCharSubtract:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inSubAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorCharBitAnd:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inAndAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorCharBitOr:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inOrAlM8,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorBoolNegate:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inXorAlM8,KindConstant,(char*)0x01);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
+		case OperatorCharNegate:
+			OCAddInstruction(Opcode,OpcodeSize,inMovAlM8,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inXorAlM8,KindConstant,(char*)0xff);
+			OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
+			break;
 // vector
-			case OperatorVectorAddS:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
-				}
-				break;
-			case OperatorVectorMultiplyS:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
-				}
-				break;
-			case OperatorVectorDivideS:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inDivfM,pk[1],param[1]);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
-				}
-				break;
-			case OperatorVectorSubtractS:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
-				}
-				break;
-			case OperatorVectorAdd:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
-				}
-				break;
-			case OperatorVectorSubtract:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret+i*4);
-				}
-				break;
-			case OperatorVectorMultiplyVF:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
-				}
-				break;
-			case OperatorVectorMultiplyFV:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
-					OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
-				}
-				break;
-			case OperatorVectorDivideVF:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inDivfM,pk[1],param[1]);
-					OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
-				}
-				break;
-			case OperatorVectorNegate:
-				for (int i=0;i<3;i++){
-					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0],i*4);
-					OCAddInstruction(Opcode,OpcodeSize,inXorEaxM,KindConstant,(char*)0x80000000);
-					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret,i*4);
-				}
-				break;
-			default:
-				_do_error_(string("unimplemented operator (call Michi!): ",Operator2Str(pre_script,com->LinkNr)), 4, NULL);
-		}
+		case OperatorVectorAddS:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
+			}
+			break;
+		case OperatorVectorMultiplyS:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
+			}
+			break;
+		case OperatorVectorDivideS:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inDivfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
+			}
+			break;
+		case OperatorVectorSubtractS:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,pk[0],param[0],i*4);
+			}
+			break;
+		case OperatorVectorAdd:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inAddfM,pk[1],param[1],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
+			}
+			break;
+		case OperatorVectorSubtract:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSubfM,pk[1],param[1],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret+i*4);
+			}
+			break;
+		case OperatorVectorMultiplyVF:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
+			}
+			break;
+		case OperatorVectorMultiplyFV:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
+				OCAddInstruction(Opcode,OpcodeSize,inMulfM,pk[1],param[1],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
+			}
+			break;
+		case OperatorVectorDivideVF:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inDivfM,pk[1],param[1]);
+				OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret,i*4);
+			}
+			break;
+		case OperatorVectorNegate:
+			for (int i=0;i<3;i++){
+				OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0],i*4);
+				OCAddInstruction(Opcode,OpcodeSize,inXorEaxM,KindConstant,(char*)0x80000000);
+				OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret,i*4);
+			}
+			break;
+// super arrays
+		case OperatorSuperArrayAssign:
+//		case OperatorIntListAssign:
+//		case OperatorFloatListAssign:
+		case OperatorIntListAssignInt:
+		case OperatorFloatListAssignFloat:
+		case OperatorIntListAddS:
+		case OperatorIntListSubtractS:
+		case OperatorIntListMultiplyS:
+		case OperatorIntListDivideS:
+		case OperatorFloatListAddS:
+		case OperatorFloatListSubtractS:
+		case OperatorFloatListMultiplyS:
+		case OperatorFloatListDivideS:
+		case OperatorComplexListAddS:
+		case OperatorComplexListSubtractS:
+		case OperatorComplexListMultiplyS:
+		case OperatorComplexListDivideS:{
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset-8);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			long func;
+			if (com->LinkNr == OperatorIntListAssignInt)	func = (long)&super_array_assign_4_single;
+			if (com->LinkNr == OperatorFloatListAssignFloat)func = (long)&super_array_assign_4_single;
+			if (com->LinkNr == OperatorSuperArrayAssign)	func = (long)&super_array_assign;
+			if (com->LinkNr == OperatorIntListAddS)			func = (long)&super_array_add_s_int;
+			if (com->LinkNr == OperatorIntListSubtractS)	func = (long)&super_array_sub_s_int;
+			if (com->LinkNr == OperatorIntListMultiplyS)	func = (long)&super_array_mul_s_int;
+			if (com->LinkNr == OperatorIntListDivideS)		func = (long)&super_array_div_s_int;
+			if (com->LinkNr == OperatorFloatListAddS)		func = (long)&super_array_add_s_float;
+			if (com->LinkNr == OperatorFloatListSubtractS)	func = (long)&super_array_sub_s_float;
+			if (com->LinkNr == OperatorFloatListMultiplyS)	func = (long)&super_array_mul_s_float;
+			if (com->LinkNr == OperatorFloatListDivideS)	func = (long)&super_array_div_s_float;
+			if (com->LinkNr == OperatorComplexListAddS)		func = (long)&super_array_add_s_com;
+			if (com->LinkNr == OperatorComplexListSubtractS)	func = (long)&super_array_sub_s_com;
+			if (com->LinkNr == OperatorComplexListMultiplyS)	func = (long)&super_array_mul_s_com;
+			if (com->LinkNr == OperatorComplexListDivideS)	func = (long)&super_array_div_s_com;
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)(func-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+16);
+			}break;
+		/*case OperatorIntListAdd:
+		case OperatorIntListSubtract:
+		case OperatorIntListMultiply:
+		case OperatorIntListDivide:{
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset-12);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,rk,ret);
+			long func;
+			if (com->LinkNr == OperatorIntListAdd)			func = (long)&super_array_add_int;
+			if (com->LinkNr == OperatorIntListSubtract)		func = (long)&super_array_sub_int;
+			if (com->LinkNr == OperatorIntListMultiply)		func = (long)&super_array_mul_int;
+			if (com->LinkNr == OperatorIntListDivide)		func = (long)&super_array_div_int;
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)(func-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+20);
+		}break;*/
+		case OperatorIntListAddSInt:
+		case OperatorIntListSubtractSInt:
+		case OperatorIntListMultiplySInt:
+		case OperatorIntListDivideSInt:
+		case OperatorFloatListAddSFloat:
+		case OperatorFloatListSubtractSFloat:
+		case OperatorFloatListMultiplySFloat:
+		case OperatorFloatListDivideSFloat:
+		case OperatorComplexListMultiplySFloat:{
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset-8);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			long func;
+			if (com->LinkNr == OperatorIntListAddSInt)			func = (long)&super_array_add_s_int_int;
+			if (com->LinkNr == OperatorIntListSubtractSInt)		func = (long)&super_array_sub_s_int_int;
+			if (com->LinkNr == OperatorIntListMultiplySInt)		func = (long)&super_array_mul_s_int_int;
+			if (com->LinkNr == OperatorIntListDivideSInt)		func = (long)&super_array_div_s_int_int;
+			if (com->LinkNr == OperatorFloatListAddSFloat)		func = (long)&super_array_add_s_float_float;
+			if (com->LinkNr == OperatorFloatListSubtractSFloat)	func = (long)&super_array_sub_s_float_float;
+			if (com->LinkNr == OperatorFloatListMultiplySFloat)	func = (long)&super_array_mul_s_float_float;
+			if (com->LinkNr == OperatorFloatListDivideSFloat)	func = (long)&super_array_div_s_float_float;
+			if (com->LinkNr == OperatorComplexListMultiplySFloat)	func = (long)&super_array_mul_s_com_float;
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)(func-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+16);
+			}break;
+		case OperatorComplexListAssignComplex:
+		case OperatorComplexListAddSComplex:
+		case OperatorComplexListSubtractSComplex:
+		case OperatorComplexListMultiplySComplex:
+		case OperatorComplexListDivideSComplex:{
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset-8);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1],4);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[1],param[1]);
+			OCAddInstruction(Opcode,OpcodeSize,inPushM,pk[0],param[0]);
+			long func;
+			if (com->LinkNr == OperatorComplexListAssignComplex)		func = (long)&super_array_assign_8_single;
+			if (com->LinkNr == OperatorComplexListAddSComplex)			func = (long)&super_array_add_s_com_com;
+			if (com->LinkNr == OperatorComplexListSubtractSComplex)		func = (long)&super_array_sub_s_com_com;
+			if (com->LinkNr == OperatorComplexListMultiplySComplex)		func = (long)&super_array_mul_s_com_com;
+			if (com->LinkNr == OperatorComplexListDivideSComplex)		func = (long)&super_array_div_s_com_com;
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)(func-(long)&Opcode[OpcodeSize]-CallRel32OCSize));
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+16);
+			}break;
+		default:
+			s->DoError(string("unimplemented operator (call Michi!): ",Operator2Str(s->pre_script, com->LinkNr)));
+	}
+
+	if (AsmError)
+			s->DoError("internal asm error");
+	msg_db_l(4);
+}
+
+static int while_level = 0;
+static int while_index = 0;
+
+char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
+{
+	msg_db_r("OCAddCommand", 4);
+	//msg_write(Kind2Str(com->Kind));
+	sFunction *p_func = &pre_script->Function[n_func];
+	char *param[SCRIPT_MAX_PARAMS];
+	int s = mem_align(com->Type->Size);
+	char *ret = (char*)( -add_temp_var(s) - p_func->VarSize);
+	//so(d2h((char*)&ret,4,false));
+	so(string2("return: %d/%d/%d", com->Type->Size, LocalOffset, LocalOffset));
+	int pk[SCRIPT_MAX_PARAMS], rk = KindVarLocal; // param_kind, return_kind
+
+	// compile parameters
+	for (int p=0;p<com->NumParams;p++){
+		param[p] = OCAddParameter(com->Param[p],n_func,level,index,pk[p]);
+		if (Error) _return_(4, NULL);
+	}
+
+	// class function -> compile instance
+	bool is_class_function = false;
+	if (com->Kind == KindCompilerFunction)
+		if (PreCommand[com->LinkNr].IsClassFunction)
+			is_class_function = true;
+	if (com->Kind == KindFunction)
+		if (strstr(pre_script->Function[com->LinkNr].Name, "."))
+			is_class_function = true;
+	char *instance_param = NULL;
+	int instance_kind;
+	if (is_class_function){
+		so("member");
+		instance_param = OCAddParameter(com->Sub1,n_func,level,index,instance_kind);
+		so(Kind2Str(instance_kind));
+		// super_array automatically referenced...
+	}
+
+	    
+	if (com->Kind == KindOperator){
+		//msg_write("---operator");
+		OCAddOperator(Opcode, OpcodeSize, this, com, p_func, param, ret, pk, rk);
+		if (Error)
+			_return_(4, NULL);
+		
 	}else if ((com->Kind == KindCompilerFunction) || (com->Kind == KindFunction)){
 		//msg_write("---func");
 		t_func *f = NULL;
-		void *instance = NULL;
+		bool class_function = false;
 		char name[128];
 		if (com->Kind == KindFunction){ // own script Function
 			so("Funktion!!!");
 			if (com->script){
+				//msg_write(com->LinkNr);
 				so("    extern!!!");
 				f = com->script->func[com->LinkNr];
 				so("   -ok");
-			}else
+			}else{
 				f = func[com->LinkNr];
+				if (strstr(pre_script->Function[com->LinkNr].Name, ".")){
+					msg_error("class   member--------");
+					class_function = true;
+				}
+			}
 		}else{ // compiler function
 			f = (t_func*)PreCommand[com->LinkNr].Func;
-			instance = PreCommand[com->LinkNr].Instance;
+			class_function = PreCommand[com->LinkNr].IsClassFunction;
 			strcpy(name, PreCommand[com->LinkNr].Name);
 		}
-		if ((unsigned long)f > (unsigned long)f_cp){ // a real function
-			if ((com->ReturnType->Size > 4) && (com->ReturnType->ArrayLength <= 0))
+		if (f){ // a real function
+			if ((com->Type->Size > 4) && (!com->Type->IsArray))
 				OCAddInstruction(Opcode,OpcodeSize,inLeaEaxM,rk,ret);
 
-			// Stack um die lokalen Variablen der bisherigen Funktion erniedrigen
-			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LOffset-8);
+			// grow stack (down) for local variables of the calling function
+			OCAddEspAdd(Opcode,OpcodeSize,-p_func->VarSize-LocalOffset-8);
 			int dp=0;
 
 			for (int p=com->NumParams-1;p>=0;p--){
-				int s = mem_align(com->ParamLink[p].type->Size);
+				int s = mem_align(com->Param[p]->Type->Size);
 				// push parameters onto stack
 				for (int j=0;j<s/4;j++)
-					OCAddInstruction(Opcode, OpcodeSize, inPush, pk[p], param[p], s - 4 - j * 4);
+					OCAddInstruction(Opcode, OpcodeSize, inPushM, pk[p], param[p], s - 4 - j * 4);
 				dp += s;
 			}
 
 #ifdef NIX_IDE_VCS
-			// muessen mehr als 4byte zurueckgegeben werden, muss die Rueckgabe-Adresse als allererster Parameter mitgegeben werden!
-			if ((com->ReturnType->Size>4)&&(com->ReturnType->ArrayLength<=0))
+			// more than 4 byte have to be returned -> give return address as very last parameter!
+			if ((com->Type->Size > 4) && (!com->Type->IsArray))
 				OCAddInstruction(Opcode,OpcodeSize,inPushEax,-1); // nachtraegliche eSP-Korrektur macht die Funktion
 #endif
 			// _cdecl: Klassen-Instanz als ersten Parameter push'en
-			if (instance){
-				if ((unsigned long)instance>100)	OCAddInstruction(Opcode, OpcodeSize, inPush, KindConstant,*(void**)instance);
-				else if (instance == f_class)		OCAddInstruction(Opcode, OpcodeSize, inPush, instance_kind, instance_param);
-				else								OCAddInstruction(Opcode, OpcodeSize, inPush, KindVarGlobal,instance);
+			if (class_function){
+				//if ((unsigned long)instance>100)	OCAddInstruction(Opcode, OpcodeSize, inPushM, KindConstant,*(void**)instance);
+				/*else if (instance == f_class)*/		OCAddInstruction(Opcode, OpcodeSize, inPushM, instance_kind, instance_param);
+				//else								OCAddInstruction(Opcode, OpcodeSize, inPushM, KindVarGlobal,instance);
 				dp+=4;
 			}
 #ifndef NIX_IDE_VCS
-			// muessen mehr als 4byte zurueckgegeben werden, muss die Rueckgabe-Adresse als allererster Parameter mitgegeben werden!
-			if ((com->ReturnType->Size>4)&&(com->ReturnType->ArrayLength<=0))
+			// more than 4 byte have to be returned -> give return address as very first parameter!
+			if ((com->Type->Size > 4) && (!com->Type->IsArray))
 				OCAddInstruction(Opcode,OpcodeSize,inPushEax,-1); // nachtraegliche eSP-Korrektur macht die Funktion
 #endif
-			long d=(long)f-(long)&Opcode[OpcodeSize]-5;
+			long d=(long)f-(long)&Opcode[OpcodeSize]-CallRel32OCSize;
 			//so(d);
-			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)d); // der eigentliche Aufruf
-			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LOffset+dp+8);
+			OCAddInstruction(Opcode,OpcodeSize,inCallRel32,KindConstant,(char*)d); // the actual call
+			OCAddEspAdd(Opcode,OpcodeSize,p_func->VarSize+LocalOffset+dp+8);
 
-			// Rueckgabewert > 4b ist schon von der Funktion nach [ret] kopiert worden!
-			if (com->ReturnType != TypeVoid)
-				if ((com->ReturnType->Size <= 4) || (com->ReturnType->ArrayLength > 0)){
-					if (com->ReturnType == TypeFloat)
+			// return > 4b already got copied to [ret] by the function!
+			if (com->Type != TypeVoid)
+				if ((com->Type->Size <= 4) || (com->Type->IsArray)){
+					if (com->Type == TypeFloat)
 						OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
 					else
 						OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
 				}
-		}else if ((unsigned long)f==(unsigned long)f_cp){
+		}else if (PreCommand[com->LinkNr].IsSpecial){
 			switch(com->LinkNr){
 				case CommandIf:
 					OCAddInstruction(Opcode,OpcodeSize,inCmpM80,pk[0],param[0]);
@@ -1322,15 +1579,15 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 					break;
 				case CommandReturn:
 					if (com->NumParams > 0){
-						if (com->ParamLink[0].type->Size > 4){ // Return in erhaltener Return-Adresse speichern (> 4 byte)
+						if (com->Param[0]->Type->Size > 4){ // Return in erhaltener Return-Adresse [ebp+0x08] speichern (> 4 byte)
 							OCAddInstruction(Opcode,OpcodeSize,inMovEdxM,KindVarLocal,(char*)8);
-							int s = mem_align(com->ParamLink[0].type->Size);
+							int s = mem_align(com->Param[0]->Type->Size);
 							for (int j=0;j<s/4;j++){
 								OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0],j*4);
 								OCAddInstruction(Opcode,OpcodeSize,inMovEdxpi8Eax,KindConstant,(char*)(j*4));
 							}
 						}else{ // Return direkt in eAX speichern (4 byte)
-							if (com->ParamLink[0].type == TypeFloat)
+							if (com->Param[0]->Type == TypeFloat)
 								OCAddInstruction(Opcode,OpcodeSize,inLoadfM,pk[0],param[0]);
 							else
 								OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
@@ -1375,30 +1632,49 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 					OCAddInstruction(Opcode,OpcodeSize,inLoadfiM,pk[0],param[0]);
 					OCAddInstruction(Opcode,OpcodeSize,inSavefM,rk,ret);
 					break;
-				/*case CommandFloatToInt:
-					// tut nicht... habe es vorerst lieber als echte Funktion implementiert...
-					/ *OCAddChar(0x89);	OCAddChar(0xe5);
-					OCAddChar(0x83);	OCAddChar(0xec);	OCAddChar(0x04);
-					OCAddChar(0xd9);	OCAddChar(0x05);	OCAddInt((int)param[0]);
-					OCAddChar(0xd9);	OCAddChar(0x7d);	OCAddChar(0xfe);
-					OCAddChar(0x66);	OCAddChar(0x8b);	OCAddChar(0x45);	OCAddChar(0xfe);
-					OCAddChar(0xb4);	OCAddChar(0x0c);
-					OCAddChar(0x66);	OCAddChar(0x89);	OCAddChar(0x45);	OCAddChar(0xfc);
-					OCAddChar(0xd9);	OCAddChar(0x6d);	OCAddChar(0xfc);
-					OCAddChar(0xdb);	OCAddChar(0x1d);	OCAddInt((int)ret);
-					OCAddChar(0xd9);	OCAddChar(0x6d);	OCAddChar(0xfe);
-					OCAddChar(0xc9);* /
-					/ *OCAddChar(0x51);
-					OCAddChar(0xd9);    OCAddChar(0x05);	OCAddInt((int)param[0]);
-					OCAddChar(0xd9);    OCAddChar(0x7d);    OCAddChar(0xfe);
-					OCAddChar(0x66);	OCAddChar(0x8b);	OCAddChar(0x45);	OCAddChar(0xfe);
-					OCAddChar(0xb4);	OCAddChar(0x0c);
-					OCAddChar(0x66);	OCAddChar(0x89);	OCAddChar(0x45);	OCAddChar(0xfc);
-					OCAddChar(0xd9);	OCAddChar(0x6d);	OCAddChar(0xfc);
-					OCAddChar(0xdb);	OCAddChar(0x1d);	OCAddInt((int)ret);
-					OCAddChar(0xd9);	OCAddChar(0x6d);	OCAddChar(0xfe);
-					OCAddChar(0x89);    OCAddChar(0xec);
-					break;*/
+				case CommandFloatToInt:
+				{
+					if (pk[0] == KindVarLocal){
+						AsmAddInstruction(Opcode, OpcodeSize, inst_fld, PKLocal, param[0], PKNone, NULL);
+					}else{
+						int t0 = - add_temp_var(4) - pre_script->Function[n_func].VarSize;
+						OCAddInstruction(Opcode, OpcodeSize, inMovEaxM, pk[0], param[0]);
+						OCAddInstruction(Opcode, OpcodeSize, inMovMEax, KindVarLocal, (void*)t0);
+						AsmAddInstruction(Opcode, OpcodeSize, inst_fld, PKLocal, (void*)t0, PKNone, NULL);
+					}
+					int t1 = - add_temp_var(2) - pre_script->Function[n_func].VarSize;
+					int t2 = - add_temp_var(2) - pre_script->Function[n_func].VarSize;
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fnstcw, PKLocal, (void*)t1, PKNone, NULL);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_movzx, PKRegister, (void*)RegEax, PKLocal, (void*)t1);
+					//AsmAddInstruction(Opcode, OpcodeSize, inst_and, PKRegister, (void*)RegEax, PKConstant32, (void*)0xffffff0c);
+					OCAddInstruction(Opcode, OpcodeSize, inMovAhM8, KindConstant, (void*)0x0c);
+					//AsmAddInstruction(Opcode, OpcodeSize, inst_mov, PKLocal, (void*)t2, PKRegister, (void*)RegAx);
+					OCAddChar(Opcode, OpcodeSize, 0x66); // my asm library is not powerful enough (T_T)
+					OCAddChar(Opcode, OpcodeSize, 0x89);
+					OCAddChar(Opcode, OpcodeSize, 0x45);
+					OCAddChar(Opcode, OpcodeSize, t2);
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fldcw, PKLocal, (void*)t2, PKNone, NULL);
+					if (rk == KindVarLocal){
+						AsmAddInstruction(Opcode, OpcodeSize, inst_fistp, PKLocal, ret, PKNone, NULL);
+					}else{
+						int t3 = - add_temp_var(4) - pre_script->Function[n_func].VarSize;
+						AsmAddInstruction(Opcode, OpcodeSize, inst_fistp, PKLocal, (void*)t3, PKNone, NULL);
+						OCAddInstruction(Opcode, OpcodeSize, inMovEaxM, KindVarLocal, (void*)t3);
+						OCAddInstruction(Opcode, OpcodeSize, inMovMEax, rk, ret);
+					}
+					AsmAddInstruction(Opcode, OpcodeSize, inst_fldcw, PKLocal, (void*)t1, PKNone, NULL);
+				}
+					
+				/*	fld [ebp + 0xfc]                                 // d9.45.fc		p
+					fnstcw [ebp + 0xee]                              // d9.7d.ee		t1
+					movzx eax, [ebp + 0xee]                          // 0f.b7.45.ee		t1
+					mov.b ah, 0x0c                                   // b4.0c
+					mov word [ebp + 0xec], ax                        // 66.89.45.ec		t2
+					fldcw [ebp + 0xec]                               // d9.6d.ec		t2
+					fistp [ebp + 0xf8]                               // db.5d.f8		r
+					fldcw [ebp + 0xee]                               // d9.6d.ee		t1	*/
+
+					break;
 				case CommandIntToChar:
 					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
 					OCAddInstruction(Opcode,OpcodeSize,inMovM8Al,rk,ret);
@@ -1428,11 +1704,11 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 						CurrentAsmMetaInfo=(sAsmMetaInfo*)pre_script->AsmMetaInfo;
 						so("e");
 				//		so("Asm------------------");
-						char *pac;
+						const char *pac;
 						
 						pac=Asm2Opcode(pre_script->AsmBlock[0].block);
 						so("f");
-						if (pac){
+						if (!AsmError){
 							so("g");
 							char *ac=new char[AsmCodeLength+20];
 							am("ac", AsmCodeLength+20, ac);
@@ -1447,7 +1723,9 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 							delete[](ac);
 							so("i");
 						}else{
-							_do_error_("error in assembler code...", 4, ret);
+							AsmErrorLine--; // (T_T)
+							DoError("error in assembler code...", AsmErrorLine);
+							_return_(4, ret);
 						}
 						so("j");
 						dm("AsmBlock",pre_script->AsmBlock[0].block);
@@ -1463,12 +1741,13 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
 					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[3],param[3]);
 					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret,12);
 				case CommandVectorSet:
+					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[2],param[2]);
+					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret,8);
+				case CommandComplexSet:
 					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
 					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret);
 					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[1],param[1]);
 					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret,4);
-					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[2],param[2]);
-					OCAddInstruction(Opcode,OpcodeSize,inMovMEax,rk,ret,8);
 					break;
 				case CommandColorSet:
 					OCAddInstruction(Opcode,OpcodeSize,inMovEaxM,pk[0],param[0]);
@@ -1484,16 +1763,19 @@ char *CScript::OCAddCommand(sCommand *com,int n_func,int level,int index)
  					_do_error_(string("compiler function unimplemented (call Michi!): ",PreCommand[com->LinkNr].Name), 4, ret);
 			}
 		}else{
- 			DoErrorLink(string("compiler function not linkable: ",PreCommand[com->LinkNr].Name));
+			if (PreCommand[com->LinkNr].IsSemiExternal)
+	 			DoErrorLink(string("external function not linkable: ",PreCommand[com->LinkNr].Name));
+			else
+	 			DoErrorLink(string("compiler function not linkable: ",PreCommand[com->LinkNr].Name));
 			_return_(4, ret);
 		}
 	}else if (com->Kind==KindBlock){
 		//msg_write("---block");
-		OCAddBlock(&pre_script->Block[com->LinkNr],n_func,level+1);
+		OCAddBlock(pre_script->Block[com->LinkNr],n_func,level+1);
 		if (Error)	_return_(4, NULL);
 	}else{
 		//msg_write("---???");
-		_do_error_(string("type of command is unimplemented (call Michi!): ",Kind2Str(com->Kind)), 4, NULL);
+		//_do_error_(string("type of command is unimplemented (call Michi!): ",Kind2Str(com->Kind)), 4, NULL);
 	}
 	//msg_write(Kind2Str(com->Kind));
 	//msg_ok();
@@ -1507,20 +1789,20 @@ void CScript::OCAddBlock(sBlock *block,int n_func,int level)
 	NumJumps[level]=0;
 	for (int i=0;i<block->Command.size();i++){
 		//msg_write(string2("%d - %d",i,block->NumCommands));
-		LOffset=0;
+		LocalOffset=0;
 		OCOffset[level][i] = OpcodeSize;
-		OCAddCommand(&pre_script->Command[block->Command[i]],n_func,level,i);
+		OCAddCommand(block->Command[i],n_func,level,i);
 		if (Error)	_return_(4,);
 		//int offset_after_cmd = OpcodeSize;
 
 		// create dummy code for jumps from this level (if, while,..)
-		for (int j=0;j<NumNewJumps;j++){
-			if ((NewJumpSourceLevel[j] == level) && (NewJumpSource[j] == i + 1)){ // put it here! (jump before the next command)
-				if (NewJumpCode[j]<0){
+		for (int j=0;j<NewJump.size();j++){
+			if ((NewJump[j].SourceLevel == level) && (NewJump[j].Source == i + 1)){ // put it here! (jump before the next command)
+				if (NewJump[j].Code < 0){
 					//int d=OCOffset[level][JumpDest[level][j]]-OpcodeSize-5;//-2;
 					//so(string("Jump....",i2s(d)));
-					//OCAddChar(Opcode,OpcodeSize,(char)0xeb);	OCAddChar(Opcode,OpcodeSize,char(0));	NewJumpCode[j]=OpcodeSize-1;
-					OCAddChar(Opcode,OpcodeSize,(char)0xe9);	OCAddInt(Opcode,OpcodeSize,0);        	NewJumpCode[j]=OpcodeSize-4;
+					//OCAddChar(Opcode,OpcodeSize,(char)0xeb);	OCAddChar(Opcode,OpcodeSize,char(0));	NewJump[j].Code=OpcodeSize-1;
+					OCAddChar(Opcode,OpcodeSize,(char)0xe9);	OCAddInt(Opcode,OpcodeSize,0);        	NewJump[j].Code=OpcodeSize-4;
 				}
 				insert_new_jump(j, OpcodeSize); // offet = after jump instruction
 				j --;
@@ -1538,6 +1820,30 @@ void CScript::OCAddBlock(sBlock *block,int n_func,int level)
 			so(string2("Jump.... %d -> %d : %d",JumpSourceOffset[level][i],JumpDest[level][i],d));
 	}
 	msg_db_l(4);
+}
+
+void init_sub_super_array(CPreScript *ps, sFunction *f, sType *t, char* g_var, int offset)
+{
+	// direct
+	if (t->IsSuperArray){
+		if (g_var)
+			((CSuperArray*)(g_var + offset))->init_by_type(t->SubType);
+		if (f){}
+	}
+
+	// indirect
+	if (t->IsArray)
+		for (int i=0;i<t->ArrayLength;i++)
+			init_sub_super_array(ps, f, t->SubType, g_var, offset + i * t->SubType->Size);
+	if (t->Class)
+		for (int i=0;i<t->Class->Element.size();i++)
+			init_sub_super_array(ps, f, t->Class->Element[i].Type, g_var, offset + t->Class->Element[i].Offset);
+}
+
+void find_all_super_arrays(CPreScript *ps, sFunction *f, std::vector<char*> g_var)
+{
+	for (int i=0;i<f->Var.size();i++)
+		init_sub_super_array(ps, f, f->Var[i].Type, g_var[i], 0);
 }
 
 // Opcode generieren
@@ -1559,20 +1865,23 @@ void CScript::Compiler()
 			s = strlen(c->data) + 1;
 		MemorySize += mem_align(s);
 	}
-	Memory = new char[MemorySize];
-	am("Memory",MemorySize,Memory);
+	if (MemorySize > 0){
+		Memory = new char[MemorySize];
+		am("Memory",MemorySize,Memory);
+	}
 
 	// use your own stack if needed
 	//   wait() used -> needs to switch stacks ("tasks")
 	Stack = NULL;
-	sCommand *cmd;
-	foreach(pre_script->Command, cmd, i)
+	for (int i=0;i<pre_script->Command.size();i++){
+		sCommand *cmd = pre_script->Command[i];
 		if (cmd->Kind == KindCompilerFunction)
 			if ((cmd->LinkNr == CommandWait) || (cmd->LinkNr == CommandWaitRT) || (cmd->LinkNr == CommandWaitOneFrame)){
 				Stack=new char[ScriptStackSize];
 				am("Stack",ScriptStackSize,Stack);
 				break;
 			}
+	}
 
 	MemorySize = 0;
 	// global variables -> into Memory
@@ -1587,6 +1896,8 @@ void CScript::Compiler()
 		MemorySize += mem_align(pre_script->RootOfAllEvil.Var[i].Type->Size);
 	}
 	memset(Memory, 0, MemorySize); // reset all global variables to 0
+	// initialize global super arrays
+	find_all_super_arrays(pre_script, &pre_script->RootOfAllEvil, g_var);
 
 	// constants -> Memory
 	so("Konstanten");
@@ -1658,18 +1969,18 @@ void CScript::Compiler()
 			so(ff->Var[i].Offset);
 		so(ff->Name);
 		func[f]=(t_func*)&Opcode[OpcodeSize];
-		LOffset=LOffsetMax=0;
+		LocalOffset=LocalOffsetMax=0;
 
 		// intro
 		OCAddInstruction(Opcode,OpcodeSize,inPushEbp,-1);
 		OCAddInstruction(Opcode,OpcodeSize,inMovEbpEsp,-1);
 
 		// function
-		NumNewJumps = 0;
+		NewJump.clear();
 		OCAddBlock(ff->Block,f,0);
 		if (Error)	_return_(2,);
 
-		if (NumNewJumps > 0)
+		if (NewJump.size() > 0)
 			_do_error_(string2("unlinked jump instructions in function %s, call Michi!", ff->Name), 2,);
 
 		// outro
@@ -1758,9 +2069,12 @@ void CScript::Compiler()
 
 	//_expand(Opcode,OpcodeSize);
 
-	WaitingMode=WaitingModeFirst;
-	msg_write("--------------------------------");
-	msg_write(string2("Opcode: %db, Memory: %db",OpcodeSize,MemorySize));
+	WaitingMode = WaitingModeFirst;
+	
+	if (ShowCompilerStats){
+		msg_write("--------------------------------");
+		msg_write(string2("Opcode: %db, Memory: %db",OpcodeSize,MemorySize));
+	}
 	om();
 	msg_db_l(2);
 }
@@ -1769,16 +2083,13 @@ CScript::CScript()
 {
 	so("creating empty script (for console)");
 	right();
-	memset(this,0, sizeof(CScript));
+	reset_script(this);
+	WaitingMode = WaitingModeFirst;
 
-	Error=false;
-
-	MemorySize=0;
-	Memory=new char[4096];
-		am("Memory",4096,Memory);
-
-	pre_script=new CPreScript();
+	pre_script = new CPreScript();
 		am("PreScript",sizeof(CPreScript),pre_script);
+	
+	strcpy(pre_script->Filename, "-console script-");
 
 	so("-ok");
 	left();
@@ -1787,7 +2098,7 @@ CScript::CScript()
 CScript::~CScript()
 {
 	msg_db_r("~CScript", 4);
-	if ((Memory)&&(!JustAnalyse)){
+	if ((Memory) && (!JustAnalyse)){
 		delete[](Memory);
 		dm("Memory",Memory);
 	}
@@ -1811,6 +2122,8 @@ CScript::~CScript()
 		delete[](Stack);
 		dm("Stack", Stack);
 	}
+	g_var.clear();
+	cnst.clear();
 	//msg_write(string2("-----------            Memory:         %p",Memory));
 	delete(pre_script);
 	dm("pre_script",pre_script);
@@ -1823,104 +2136,74 @@ static char single_command[1024];
 
 
 // bad:  should clean up in case of errors!
-void CScript::ExecuteSingleCommand(char *cmd)
+void ExecuteSingleScriptCommand(const char *cmd)
 {
-	if (strlen(cmd)<1)
+	if (strlen(cmd) < 1)
 		return;
-	strcpy(single_command,cmd);
-	msg_write(string("script command: ",single_command));
+	msg_db_r("ExecuteSingleScriptCmd", 2);
+	strcpy(single_command, cmd);
+	msg_write(string("script command: ", single_command));
 
-	pre_script->Error=Error=false;
+	// empty script
+	CScript *s = new CScript();
+	CPreScript *ps = s->pre_script;
+
 // find expressions
-	pre_script->Analyse(single_command, false);
-	if (pre_script->Exp.line[0].exp.size()<1){
-		clear_exp_buffer(&pre_script->Exp);
+	ps->Analyse(single_command, false);
+	if (ps->Exp.line[0].exp.size() < 1){
+		//clear_exp_buffer(&ps->Exp);
+		delete(s);
+		msg_db_l(2);
 		return;
 	}
 
-	// analyse syntax
-	//Error=false;
-	int nc=pre_script->Command.size();
-	int ocs=OpcodeSize;
-	int mms=MemorySize;
-	int ncs=pre_script->Constant.size();
-	shift_right=0;
-	pre_script->Exp.cur_line = &pre_script->Exp.line[0];
-	pre_script->Exp.cur_exp=0;
+// analyse syntax
 
-	sFunction f;
-	f.Var.clear();
-	pre_script->GetCommand(&f);
+	// create a main() function
+	int func = ps->AddFunction("main", TypeVoid);
+	sFunction *f = &ps->Function[func];
+	f->VarSize = 0; // set to -1...
+
+	// parse
+	ps->Exp.cur_line = &ps->Exp.line[0];
+	ps->Exp.cur_exp = 0;
+	ps->GetCompleteCommand(f->Block, f);
 	//pre_script->GetCompleteCommand((pre_script->Exp->ExpNr,0,0,&f);
-	Error|=pre_script->Error;
+	s->Error |= ps->Error;
 
-	// minimally compile
-	if ((!Error) && (nc != pre_script->Command.size())){
-		sConstant *c;
-		foreach(pre_script->Constant, c, i){
-			memcpy(&Memory[MemorySize], (void*)c->data, c->type->Size);
-			cnst[i] = &Memory[MemorySize];
-			MemorySize += mem_align(c->type->Size);
-		}
+	if (!s->Error)
+		ps->ConvertCallByReference();
 
-		if (!Opcode){
-			#ifdef FILE_OS_WINDOWS
-				Opcode=(char*)VirtualAlloc(0,SCRIPT_MAX_OPCODE,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE);
-			#else
-				Opcode=(char*)mmap(0,SCRIPT_MAX_OPCODE,PROT_READ|PROT_WRITE|PROT_EXEC,MAP_SHARED|MAP_ANON,0,0);
-			#endif
-			am("Opcode",sizeof(SCRIPT_MAX_OPCODE),Opcode);
-			if ((long)Opcode==-1){
-				Opcode=NULL;
-				DoError("CScript:  could not allocate executable memory (single command)");
-				// clean up!!!! (T_T)
-				return;
-			}
-		}
-		func[pre_script->Function.size()]=(t_func*)&Opcode[OpcodeSize];
-		LOffset=LOffsetMax=0;
+// compile
+	if (!s->Error)
+		s->Compiler();
 
-		// intro
-		OCAddInstruction(Opcode,OpcodeSize,inPushEbp,-1);
-		OCAddInstruction(Opcode,OpcodeSize,inMovEbpEsp,-1);
+	/*if (true){
+		printf("%s\n\n", Opcode2Asm(s->ThreadOpcode,s->ThreadOpcodeSize));
+		printf("%s\n\n", Opcode2Asm(s->Opcode,s->OpcodeSize));
+		//msg_write(Opcode2Asm(Opcode,OpcodeSize));
+	}*/
+// execute
+	if (!s->Error)
+		s->Execute();
 
-		// command
-		OCAddCommand(&pre_script->Command[nc],pre_script->Function.size(),0,0);
-
-		// outro
-		OCAddInstruction(Opcode,OpcodeSize,inLeave,-1);
-		OCAddInstruction(Opcode,OpcodeSize,inRet,-1);
-	}
-
-	// execute
-	if ((!Error)&&(nc!=pre_script->Command.size())){
-		t_func *_f_=(t_func*)&Opcode[ocs];
-		_f_();
-	}
-
-	// clean up
-	clear_exp_buffer(&pre_script->Exp);
-	pre_script->Command.resize(nc);
-	OpcodeSize=ocs;
-	MemorySize=mms;
-	for (int i=ncs;i<pre_script->Constant.size();i++)
-		delete[](pre_script->Constant[i].data);
-	pre_script->Constant.resize(nc);
+	delete(s);
+	msg_db_l(2);
 }
 
-bool CScript::ExecuteScriptFunction(char *name,...)
+bool CScript::ExecuteScriptFunction(const char*name,...)
 {
 	msg_db_m("-ExecuteScriptFunction",2);
 	msg_db_m(name,2);
-	//msg_db_m(FileName,2);
+	msg_db_m(pre_script->Filename,2);
 
 	if ((pre_script->GetExistence(name,&pre_script->RootOfAllEvil))&&(pre_script->GetExistenceLink.Kind==KindFunction)){
 
-		sFunction *f=&pre_script->Function[pre_script->GetExistenceLink.Nr];
+		sFunction *f=&pre_script->Function[pre_script->GetExistenceLink.LinkNr];
 
 		if (f->NumParams==0)
 			// no arguments -> directly execute function
-			func[pre_script->GetExistenceLink.Nr]();
+			func[pre_script->GetExistenceLink.LinkNr]();
 		else{
 
 			// compile a function (with no arguments) that calls the function we actually want
@@ -1966,12 +2249,12 @@ bool CScript::ExecuteScriptFunction(char *name,...)
 				int s = mem_align(f->Var[p].Type->Size);
 				// push parameters onto the stack
 				for (int j=0;j<s/4;j++)
-					OCAddInstruction(GlobalOpcode,GlobalOpcodeSize,inPush,pk[p],param[p],s-4-j*4);
+					OCAddInstruction(GlobalOpcode,GlobalOpcodeSize,inPushM,pk[p],param[p],s-4-j*4);
 				dp += s;
 			}
 
 			// the actual call
-			OCAddInstruction(GlobalOpcode,GlobalOpcodeSize,inCallRel32,KindConstant,(char*)((long)func[pre_script->GetExistenceLink.Nr]-(long)&GlobalOpcode[GlobalOpcodeSize]-5));
+			OCAddInstruction(GlobalOpcode,GlobalOpcodeSize,inCallRel32,KindConstant,(char*)((long)func[pre_script->GetExistenceLink.LinkNr]-(long)&GlobalOpcode[GlobalOpcodeSize]-5));
 			OCAddEspAdd(GlobalOpcode,GlobalOpcodeSize,dp+8);
 
 			OCAddInstruction(GlobalOpcode,GlobalOpcodeSize,inLeave,-1);
@@ -2032,7 +2315,9 @@ void CScript::Execute()
 		//so("\n\n\n################### fuehre aus ######################\n\n\n");
 	#endif
 	shift_right=0;
-	msg_db_r(string("Execute ",Filename),1);
+	//msg_db_r(string("Execute ",pre_script->Filename),1);
+	msg_db_r("Execute", 1);
+	msg_db_r(pre_script->Filename,1);
 
 	// handle wait-commands
 	if (WaitingMode==WaitingModeFirst){
@@ -2049,6 +2334,7 @@ void CScript::Execute()
 		else
 			TimeToWait-=Elapsed;
 		if (TimeToWait>0){
+			msg_db_l(1);
 			msg_db_l(1);
 			return;
 		}
@@ -2067,5 +2353,6 @@ void CScript::Execute()
 	WaitingMode=GlobalWaitingMode;
 	TimeToWait=GlobalTimeToWait;
 
+	msg_db_l(1);
 	msg_db_l(1);
 }

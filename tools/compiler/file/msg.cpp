@@ -6,9 +6,8 @@
 | vital properties:                                                            |
 |  - stores the latest messages in memory for direct access                    |
 |                                                                              |
-| last updated: 2009.11.28 (c) by MichiSoft TM                                 |
+| last updated: 2010.07.14 (c) by MichiSoft TM                                 |
 \*----------------------------------------------------------------------------*/
-#include "msg.h"
 #include "file.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -26,8 +25,9 @@
 //  >10 = cruel amount of messages
 #define MSG_DEBUG_OUTPUT_LEVEL		0
 
-#define MSG_LOG_TIMIGS				0
-#define MSG_LIKE_HTML				0
+//#define MSG_LOG_TIMIGS
+//#define MSG_LIKE_HTML
+#define MSG_TRACE_REF
 
 
 
@@ -35,37 +35,37 @@ static std::string log_buffer;
 static std::vector<int> log_pos;
 static std::vector<int> log_length;
 
-bool msg_inited=false;
+bool msg_inited = false;
 
-static CFile *file=NULL;
+static CFile *file = NULL;
 static int Shift;
 
 static bool Verbose=false;
 static bool ErrorOccured;
-static char ErrorMsg[256];
+static char ErrorMsg[4096];
 
 // for msg_get_str
 #define MSG_MAX_MESSAGE_LENGTH		512
-
-//static char MessageStr[MSG_NUM_MESSAGES_SAVED][MSG_MAX_MESSAGE_LENGTH];
-static int CurrentMessageStr=0;
 
 // tracing system
 #define MSG_NUM_TRACES_SAVED		256
 #define MSG_MAX_TRACE_LENGTH		96
 
-static char TraceStr[MSG_NUM_TRACES_SAVED][MSG_MAX_TRACE_LENGTH];
+#ifdef MSG_TRACE_REF
+	static const char *TraceStr[MSG_NUM_TRACES_SAVED];
+#else
+	static char TraceStr[MSG_NUM_TRACES_SAVED][MSG_MAX_TRACE_LENGTH];
+#endif
 static int CurrentTraceLevel=0;
 static char TraceBuffer[MSG_NUM_TRACES_SAVED*MSG_MAX_TRACE_LENGTH/2];
 
 
 
-void msg_init(bool verbose,char *force_filename)
+void msg_init(bool verbose,const char *force_filename)
 {
 	Verbose=false;
 	file=new CFile();
 	Shift=0;
-	CurrentMessageStr=0;
 	ErrorOccured=false;
 	msg_inited=true;
 	if (!verbose)
@@ -87,14 +87,13 @@ void msg_set_verbose(bool verbose)
 	if (verbose){
 		file->Create("message.txt");
 		Shift=0;
-		CurrentMessageStr=0;
 	}else{
 		msg_end(false);
 	}
 	Verbose=verbose;
 }
 
-static void _strcpy_save_(char *a, char *b,int max_length)
+static void _strcpy_save_(char *a, const char *b,int max_length)
 {
 	int l=strlen(b);
 	if (l>max_length-1)
@@ -103,7 +102,7 @@ static void _strcpy_save_(char *a, char *b,int max_length)
 	a[l]=0;
 }
 
-void msg_add_str(char *str)
+void msg_add_str(const char *str)
 {
 	if (!Verbose)	return;
 	int l = strlen(str);
@@ -141,7 +140,7 @@ void msg_write(int i)
 	msg_add_str(i2s(i));
 }
 
-void msg_write(char *str)
+void msg_write(const char *str)
 {
 	if (!Verbose)	return;
 	write_date();
@@ -151,17 +150,17 @@ void msg_write(char *str)
 	msg_add_str(str);
 }
 
-void msg_write(char *str,int l)
+void msg_write(const char *str,int l)
 {
 	if (!Verbose)	return;
 	write_date();
 	file->ShiftRight(Shift);
-	file->WriteStr(str,l);
+	file->WriteStrL(str,l);
 
 	msg_add_str(str);
 }
 
-void msg_write2(char *str,...)
+void msg_write2(const char *str,...)
 {
 #if 1
 	va_list arg;
@@ -225,7 +224,7 @@ msg_write>Error("Todo:  %v");
 #endif
 }
 
-void msg_error(char *str)
+void msg_error(const char *str)
 {
 	if (!Verbose)	return;
 	int s=Shift;
@@ -266,14 +265,19 @@ void msg_ok()
 	msg_write("-ok");
 }
 
-void msg_trace_r(char *str,int level)
+void msg_trace_r(const char *str,int level)
 {
-	if (CurrentTraceLevel>=MSG_NUM_TRACES_SAVED)	return;
+	if (CurrentTraceLevel >= MSG_NUM_TRACES_SAVED)
+		return;
+#ifdef MSG_TRACE_REF
+	TraceStr[CurrentTraceLevel ++] = str;
+#else
 	char *mstr=TraceStr[CurrentTraceLevel++];
 	_strcpy_save_(mstr,str,MSG_MAX_TRACE_LENGTH);
 	strcpy(TraceStr[CurrentTraceLevel],"");
+#endif
 	if (MSG_DEBUG_OUTPUT_LEVEL>=level){//CurrentTraceLevel){
-#if MSG_LIKE_HTML>0
+#ifdef MSG_LIKE_HTML
 		msg_write(string("<",str,">"));
 #else
 		msg_write(str);
@@ -282,22 +286,32 @@ void msg_trace_r(char *str,int level)
 	}
 }
 
-void msg_trace_m(char *str,int level)
+void msg_trace_m(const char *str,int level)
 {
+	if (CurrentTraceLevel >= MSG_NUM_TRACES_SAVED)
+		return;
+#ifdef MSG_TRACE_REF
+	TraceStr[CurrentTraceLevel] = str;
+#else
 	_strcpy_save_(TraceStr[CurrentTraceLevel],str,MSG_MAX_TRACE_LENGTH);
-	if (MSG_DEBUG_OUTPUT_LEVEL>=level)//CurrentTraceLevel)
+#endif
+	if (MSG_DEBUG_OUTPUT_LEVEL >= level)//CurrentTraceLevel)
 		msg_write(str);
 }
 
 void msg_trace_l(int level)
 {
+#ifdef MSG_TRACE_REF
+	TraceStr[CurrentTraceLevel--] = NULL;
+#else
 	strcpy(TraceStr[CurrentTraceLevel--],"");
+#endif
 	if (CurrentTraceLevel<0){
 		msg_error("msg_trace_l(): level below 0!");
 		CurrentTraceLevel=0;
 	}
 	if (MSG_DEBUG_OUTPUT_LEVEL>=level){//CurrentTraceLevel){
-#if MSG_LIKE_HTML>0
+#ifdef MSG_LIKE_HTML
 		msg_left();
 		msg_write(string("</",TraceStr[CurrentTraceLevel],">"));
 #else
@@ -307,7 +321,7 @@ void msg_trace_l(int level)
 	}
 }
 
-char *msg_get_trace()
+const char *msg_get_trace()
 {
 	strcpy(TraceBuffer,"");
 	for (int i=0;i<CurrentTraceLevel;i++){
@@ -315,8 +329,13 @@ char *msg_get_trace()
 		if (i<CurrentTraceLevel-1)
 			strcat(TraceBuffer,"  ->  ");
 	}
+#ifdef MSG_TRACE_REF
+	if (TraceStr[CurrentTraceLevel])
+		strcat(TraceBuffer,string(" ( ->  ",TraceStr[CurrentTraceLevel],")"));
+#else
 	if (strlen(TraceStr[CurrentTraceLevel])>0)
 		strcat(TraceBuffer,string(" ( ->  ",TraceStr[CurrentTraceLevel],")"));
+#endif
 	return TraceBuffer;
 }
 
@@ -342,7 +361,7 @@ void msg_end(bool del_file)
 	}
 }
 
-void msg_db_out(int dl,char *str)
+void msg_db_out(int dl,const char *str)
 {
 	if (!Verbose)	return;
 	if (dl<=MSG_DEBUG_OUTPUT_LEVEL)
@@ -351,7 +370,7 @@ void msg_db_out(int dl,char *str)
 
 static char MsgTempStr[MSG_MAX_MESSAGE_LENGTH + 1];
 // index = 0   -> latest log
-char *msg_get_str(int index)
+const char *msg_get_str(int index)
 {
 	if (!Verbose)
 		return "";
@@ -382,15 +401,18 @@ void msg_get_buffer(char *buffer, int &size, int max_size)
 	}
 }
 
-static int NumTodos=0;
-static char TodoStr[128][128];
-void msg_todo(char *str)
+int msg_get_buffer_size()
 {
-	for (int i=0;i<NumTodos;i++)
-		if (strcmp(str,TodoStr[i])==0)
+	return log_buffer.size();
+}
+
+std::vector<std::string> TodoStr;
+void msg_todo(const char *str)
+{
+	for (int i=0;i<TodoStr.size();i++)
+		if (TodoStr[i].compare(str) == 0)
 			return;
-	strcpy(TodoStr[NumTodos],str);
-	NumTodos++;
+	TodoStr.push_back(str);
 	msg_error(string("TODO (Engine): ",str));
 }
 

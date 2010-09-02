@@ -6,16 +6,15 @@
 |                                                                              |
 | vital properties:                                                            |
 |                                                                              |
-| last updated: 2010.01.31 (c) by MichiSoft TM                                 |
+| last updated: 2010.06.21 (c) by MichiSoft TM                                 |
 \*----------------------------------------------------------------------------*/
 
 
-char HuiVersion[32]="0.3.6.1";
+char HuiVersion[32]="0.3.9.0";
 
 #include <string>
 #include "hui.h"
 #include "../file/file.h"
-#include "../file/msg.h"
 #include <stdio.h>
 #include <signal.h>
 #ifdef HUI_OS_WINDOWS
@@ -56,7 +55,7 @@ char HuiVersion[32]="0.3.6.1";
 	void *_hui_x_display_;
 #endif
 
-void _so(char *str)
+void _so(const char *str)
 {
 	printf("%s\n",str);
 }
@@ -72,7 +71,6 @@ static int CurrentFileTempName=0;
 
 
 
-static void SaveConfigFile();
 
 void_function *HuiIdleFunction = NULL, *HuiErrorFunction = NULL;
 bool HuiHaveToExit;
@@ -105,6 +103,17 @@ sHuiLanguage *cur_lang = NULL;
 char HuiCurLanguageName[128];
 
 
+// additional application properties
+static std::string HuiPropName;
+static std::string HuiPropVersion;
+static std::string HuiPropComment;
+static std::string HuiPropLogo;
+static std::string HuiPropCopyright;
+static std::string HuiPropWebsite;
+static std::string HuiPropLicense;
+static std::vector<std::string> HuiPropAuthors;
+
+
 
 // resources
 std::vector<sHuiResource> _HuiResource_;
@@ -121,6 +130,7 @@ char HuiAppFilename[256],HuiAppDirectory[256], HuiInitialWorkingDirectory[256];
 char HuiSingleParam[512];
 
 
+std::vector<char*> HuiArgument;
 
 
 #ifdef HUI_API_WIN
@@ -132,8 +142,10 @@ char HuiSingleParam[512];
 	{
 		Argument=arg;
 		strcpy(HuiSingleParam,"");
-		if (arg)
+		if (arg){
 			strcpy(HuiSingleParam,arg);
+			HuiArgument.push_back(arg);
+		}
 	}
 #endif
 #ifdef HUI_API_GTK
@@ -141,17 +153,12 @@ char HuiSingleParam[512];
 	void *invisible_cursor;
 #endif
 #ifdef HUI_OS_LINUX
-	int HuiNumArguments=0;
-	char *HuiArgument[32];
 	void HuiSetArgs(int num_args,char *args[])
 	{
-		HuiNumArguments=num_args;
-		if (num_args>32)
-			HuiNumArguments=32;
-		for (int i=0;i<HuiNumArguments;i++)
-			HuiArgument[i]=args[i];
+		for (int i=0;i<num_args;i++)
+			HuiArgument.push_back(args[i]);
 		strcpy(HuiSingleParam,"");
-		if (HuiNumArguments>1)
+		if (num_args>1)
 			strcpy(HuiSingleParam,args[1]);
 	}
 #endif
@@ -190,7 +197,7 @@ std::vector<std::string> hui_image_file;
 	static TCHAR _tchar_str_[NUM_TCHAR_STRINGS][TCHAR_STRING_LENGTH];
 	#define _get_tchar_str_()		_tchar_str_[(cur_tchar_str++)%NUM_TCHAR_STRINGS]
 
-	TCHAR *hui_tchar_str(const char *str)
+	const TCHAR *hui_tchar_str(const char *str)
 	{
 		#ifdef _UNICODE
 			TCHAR *w=_get_tchar_str_();
@@ -201,7 +208,7 @@ std::vector<std::string> hui_image_file;
 		#endif
 	}
 
-	TCHAR *hui_tchar_str_f(const char *str)
+	const TCHAR *hui_tchar_str_f(const char *str)
 	{
 		char *t=_file_get_str_();
 		strcpy(t,str);
@@ -217,7 +224,7 @@ std::vector<std::string> hui_image_file;
 		#endif
 	}
 
-	char *hui_de_tchar_str(const TCHAR *str)
+	const char *hui_de_tchar_str(const TCHAR *str)
 	{
 		#ifdef _UNICODE
 			char *t=_file_get_str_();
@@ -228,7 +235,7 @@ std::vector<std::string> hui_image_file;
 		#endif
 	}
 
-	char *de_sys_str_f(const TCHAR *str)
+	const char *de_sys_str_f(const TCHAR *str)
 	{
 		#ifdef _UNICODE
 			char *t1=_file_get_str_();
@@ -253,10 +260,10 @@ std::vector<std::string> hui_image_file;
 
 #ifdef HUI_API_GTK
 
-	char *sys_str(const char *str)
+	const char *sys_str(const char *str)
 	{	return str_m2utf8(str);}
 
-	char *sys_str_f(const char *str)
+	const char *sys_str_f(const char *str)
 	{
 		char *t=_file_get_str_();
 		strcpy(t,str);
@@ -266,18 +273,18 @@ std::vector<std::string> hui_image_file;
 		return str_m2utf8(t);
 	}
 
-	char *de_sys_str(const char *str)
+	const char *de_sys_str(const char *str)
 	{	return str_utf82m(str);	}
 
-	char *de_sys_str_f(const char *str)
+	const char *de_sys_str_f(const char *str)
 	{	return (char*)str;	}
 
-	int _sys_str_size_(char *str)
+	int _sys_str_size_(const char *str)
 	{	return strlen(str);	}
 #endif
 
 
-	char *str_m2utf8(const char *str)
+	const char *str_m2utf8(const char *str)
 	{
 		int l=0,s=(int)strlen(str);
 		unsigned char *us=(unsigned char*)_file_get_str_();
@@ -305,7 +312,7 @@ std::vector<std::string> hui_image_file;
 	}
 
 	// Umlaute zu Vokalen mit & davor zerlegen
-	char *str_utf82m(const char *str)
+	const char *str_utf82m(const char *str)
 	{
 		unsigned char *us=(unsigned char *)str;
 		char *ss=_file_get_str_();
@@ -328,7 +335,7 @@ std::vector<std::string> hui_image_file;
 	}
 
 	// Umlaute zu Vokalen mit & davor zerlegen
-	char *str_ascii2m(const char *str)
+	const char *str_ascii2m(const char *str)
 	{
 		unsigned char *us=(unsigned char *)str;
 		char *ss=_file_get_str_();
@@ -350,7 +357,7 @@ std::vector<std::string> hui_image_file;
 		return ss;
 	}
 
-	char *str_m2ascii(const char *str)
+	const char *str_m2ascii(const char *str)
 	{
 		char *ss=_file_get_str_();
 		unsigned char *us=(unsigned char *)ss;
@@ -425,7 +432,7 @@ void HuiInit()
 		strcpy(HuiAppDirectory,dir_from_filename(HuiAppFilename));
 	#endif
 	#ifdef HUI_OS_LINUX
-		if (HuiNumArguments>0){
+		if (HuiArgument.size()>0){
 			if (HuiArgument[0][0]=='/'){
 				strcpy(HuiAppFilename,HuiArgument[0]);
 			}else{
@@ -676,14 +683,7 @@ void HuiInit()
 		HuiKeyID[KEY_WINDOWS_R]=GDK_Super_R;
 
 
-		GdkPixmap *pm=gdk_pixmap_new(NULL,1,1,1);
-		GdkColor ca;
-		ca.pixel=0;
-		ca.red=ca.green=ca.blue=0;
-		invisible_cursor=gdk_cursor_new_from_pixmap(pm,pm,&ca,&ca,0,0);
-		/*invisible_cursor=gdk_cursor_new_from_pixbuf(gdk_display_get_default(),
-                                          GdkPixbuf *pixbuf,
-                                          0,0);*/
+		invisible_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
 
 	#endif
 
@@ -713,13 +713,13 @@ void HuiInit()
 	msg_db_l(1);
 }
 
-void HuiInitExtended(char *program, char *version, void_function *error_cleanup_function, void *send_bug_report_function, bool load_res, char *def_lang)
+void HuiInitExtended(const char *program, const char *version, void_function *error_cleanup_function, void *send_bug_report_function, bool load_res, const char *def_lang)
 {
 	char *r = getcwd(HuiInitialWorkingDirectory, sizeof(HuiInitialWorkingDirectory));
 	dir_ensure_ending(HuiInitialWorkingDirectory, true);
 
 	#ifdef HUI_OS_LINUX
-		if (HuiNumArguments>0){
+		if (HuiArgument.size()>0){
 			if (HuiArgument[0][0]=='/'){
 				if (HuiArgument[0][1]=='u'){ // /usr/...
 					strcpy(HuiAppFilename,HuiArgument[0]);
@@ -750,6 +750,7 @@ void HuiInitExtended(char *program, char *version, void_function *error_cleanup_
 		msg_init(true, string(HuiAppDirectory, "message.txt"));
 
 	//msg_write(string("HuiAppDirectory", HuiAppDirectory));
+		
 
 	HuiInit();
 #ifdef HUI_OS_LINUX
@@ -776,6 +777,20 @@ void HuiInitExtended(char *program, char *version, void_function *error_cleanup_
 	//   HuiAppFilename -> binary file (no dir)
 	//   HuiInitialWorkingDirectory -> working dir before running this program
 	//   working dir -> ?
+
+	
+
+	if (version)
+		HuiPropVersion.assign(version);
+	if (file_test_existence(string(HuiAppDirectory, "Data/icon.ico")))
+		HuiPropLogo.assign(string(HuiAppDirectory, "Data/icon.ico"));
+	if (file_test_existence(string(HuiAppDirectory, "Data/license_small.txt"))){
+		CFile *f = FileOpen(string(HuiAppDirectory, "Data/license_small.txt"));
+		int size;
+		f->ReadComplete(temp, size);
+		FileClose(f);
+		HuiPropLicense.assign(temp);
+	}
 }
 
 
@@ -868,12 +883,21 @@ void HuiEnd()
 	PostQuitMessage(0);
 #endif
 #ifdef HUI_API_GTK
+	/*for (int i=0;i<_HuiWindow_.size();i++)
+		delete(_HuiWindow_[i]);*/
 	gtk_main_quit();
+#ifdef HUI_OS_LINUX
+	if (_hui_x_display_)
+		XCloseDisplay(hui_x_display);
 #endif
-	SaveConfigFile();
+
+	gdk_cursor_unref((GdkCursor*)invisible_cursor);
+#endif
+	HuiSaveConfigFile();
 	msg_db_l(1);
 	if ((msg_inited)&&(!HuiEndKeepMsgAlive))
 		msg_end();
+	//exit(0);
 }
 
 void HuiSleep(int duration_ms)
@@ -889,7 +913,7 @@ void HuiSleep(int duration_ms)
 }
 
 // set the default directory
-void HuiSetDirectory(char *dir)
+void HuiSetDirectory(const char *dir)
 {
 #ifdef HUI_OS_WINDOWS
 	_chdir(SysFileName(dir));
@@ -898,6 +922,19 @@ void HuiSetDirectory(char *dir)
 	int r=chdir(SysFileName(dir));
 #endif
 }
+
+int HuiGetCpuCount()
+{
+#ifdef HUI_OS_WINDOWS
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	return sysinfo.dwNumberOfProcessors;
+#endif
+#ifdef HUI_OS_LINUX
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#endif
+}
+
 
 // apply a function to be executed when a critical error occures
 void HuiSetErrorFunction(void_function *error_function)
@@ -915,10 +952,10 @@ void HuiSetErrorFunction(void_function *error_function)
 
 
 
-static char *_eh_program_,*_eh_version_;
+static const char *_eh_program_,*_eh_version_;
 static CHuiWindow *ErrorDialog,*ReportDialog;
 static void_function *_eh_cleanup_function_;
-typedef void bug_report_function(char*,char*,char*,char*);
+typedef void bug_report_function(const char*,const char*,const char*,const char*);
 static bug_report_function *_eh_bug_report_function_;
 
 // IDs
@@ -940,8 +977,8 @@ void ReportDialogFunction(int message)
 	switch (message){
 		case HMM_OK:
 			if (_eh_bug_report_function_){
-				strcpy(sender, ReportDialog->GetControlText(HMM_REPORT_SENDER));
-				strcpy(comment, ReportDialog->GetControlText(HMM_COMMENT));
+				strcpy(sender, ReportDialog->GetString(HMM_REPORT_SENDER));
+				strcpy(comment, ReportDialog->GetString(HMM_COMMENT));
 				_eh_bug_report_function_(sender, _eh_program_,_eh_version_, comment);
 			}
 		case HMM_CANCEL:
@@ -953,22 +990,22 @@ void ReportDialogFunction(int message)
 
 void HuiSendBugReport()
 {
-	HuiMultiline=true;
-
 	// dialog
 	ReportDialog=HuiCreateDialog(_("Fehlerbericht"),400,295,ErrorDialog,false,&ReportDialogFunction);
-	ReportDialog->AddText(_("Name:"),5,5,100,25,-1);
+	ReportDialog->AddText(_("!bold\\Name:"),5,5,360,25,-1);
 	ReportDialog->AddEdit("",5,35,385,25,HMM_REPORT_SENDER);
-	ReportDialog->AddButton(_("OK"),140,255,120,25,HMM_OK);
-	ReportDialog->SetControlImage(HMM_OK,HuiImageOk);
-	ReportDialog->AddButton(_("Abbrechen"),265,255,120,25,HMM_CANCEL);
-	ReportDialog->SetControlImage(HMM_CANCEL,HuiImageCancel);
-	ReportDialog->AddText(_("Kommentar/Geschehnisse:"),5,65,200,25,-1);
+	ReportDialog->AddDefButton(_("OK"),265,255,120,25,HMM_OK);
+	ReportDialog->SetImage(HMM_OK,HuiImageOk);
+	ReportDialog->AddButton(_("Abbrechen"),140,255,120,25,HMM_CANCEL);
+	ReportDialog->SetImage(HMM_CANCEL,HuiImageCancel);
+	ReportDialog->AddText(_("!bold\\Kommentar/Geschehnisse:"),5,65,360,25,-1);
+	HuiMultiline=true;
 	ReportDialog->AddEdit("",5,95,385,110,HMM_COMMENT);
+	HuiMultiline=false;
 	ReportDialog->AddText(_("Neben diesen Angaben wird noch der Inhalt der Datei message.txt geschickt"),5,210,390,35,-1);
 
-	ReportDialog->SetControlText(HMM_REPORT_SENDER,_("(anonym)"));
-	ReportDialog->SetControlText(HMM_COMMENT,_("Ist halt irgendwie passiert..."));
+	ReportDialog->SetString(HMM_REPORT_SENDER,_("(anonym)"));
+	ReportDialog->SetString(HMM_COMMENT,_("Ist halt irgendwie passiert..."));
 
 	ReportDialog->Update();
 
@@ -1020,7 +1057,7 @@ void hui_default_error_handler()
 	ErrorDialog->AddListView(_("Nachrichten"),5,30,590,420,HMM_MESSAGE_LIST);
 	//ErrorDialog->AddEdit("",5,30,590,420,HMM_MESSAGE_LIST);
 	ErrorDialog->AddButton(_("OK"),5,460,100,25,HMM_OK);
-	ErrorDialog->SetControlImage(HMM_OK,HuiImageOk);
+	ErrorDialog->SetImage(HMM_OK,HuiImageOk);
 	ErrorDialog->AddButton(_("message.txt &offnen"),115,460,200,25,HMM_OPEN_MESSAGE_TXT);
 	if (_eh_bug_report_function_)
 		ErrorDialog->AddButton(_("Fehlerbericht an Michi senden"),325,460,265,25,HMM_SEND_REPORT);
@@ -1028,7 +1065,7 @@ void hui_default_error_handler()
 		char temp[256];
 		strcpy(temp,msg_get_str(i));
 		if (strlen(temp)>0)
-			ErrorDialog->AddControlText(HMM_MESSAGE_LIST,msg_get_str(i));
+			ErrorDialog->AddString(HMM_MESSAGE_LIST,msg_get_str(i));
 	}
 	ErrorDialog->Update();
 
@@ -1039,7 +1076,7 @@ void hui_default_error_handler()
 	exit(0);
 }
 
-void HuiSetDefaultErrorHandler(char *program,char *version,void_function *error_cleanup_function,void *send_bug_report_function)
+void HuiSetDefaultErrorHandler(const char *program,const char *version,void_function *error_cleanup_function,void *send_bug_report_function)
 {
 	_eh_bug_report_function_=(bug_report_function*)send_bug_report_function;
 	_eh_cleanup_function_=error_cleanup_function;
@@ -1048,7 +1085,7 @@ void HuiSetDefaultErrorHandler(char *program,char *version,void_function *error_
 	HuiSetErrorFunction(&hui_default_error_handler);
 }
 
-void HuiRaiseError(char *message)
+void HuiRaiseError(const char *message)
 {
 	msg_error(string(message," (HuiRaiseError)"));
 	/*int *p_i=NULL;
@@ -1137,7 +1174,7 @@ static int CALLBACK FileDialogDirCallBack(HWND hWnd, UINT uMsg,LPARAM lParam,LPA
 #endif
 
 // Dialog zur Wahl eines Verzeichnisses (<dir> ist das anfangs ausgewaehlte)
-bool HuiFileDialogDir(CHuiWindow *win,char *title,char *dir/*,char *root_dir*/)
+bool HuiFileDialogDir(CHuiWindow *win,const char *title,const char *dir/*,const char *root_dir*/)
 {
 #ifdef HUI_API_WIN
 
@@ -1191,7 +1228,7 @@ bool HuiFileDialogDir(CHuiWindow *win,char *title,char *dir/*,char *root_dir*/)
 }
 
 // Datei-Auswahl zum Oeffnen (filter in der Form "*.txt")
-bool HuiFileDialogOpen(CHuiWindow *win,char *title,char *dir,char *show_filter,char *filter)
+bool HuiFileDialogOpen(CHuiWindow *win,const char *title,const char *dir,const char *show_filter,const char *filter)
 {
 	msg_db_r("HuiFileDialogOpen",1);
 #ifdef HUI_API_WIN
@@ -1230,7 +1267,8 @@ bool HuiFileDialogOpen(CHuiWindow *win,char *title,char *dir,char *show_filter,c
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dlg),SysFileName(dir));
 	GtkFileFilter *gtk_filter=gtk_file_filter_new();
 	gtk_file_filter_set_name(gtk_filter,sys_str(show_filter));
-	char *ff=filter,_ff[128];
+	const char *ff=filter;
+	char _ff[128];
 	while(strstr(ff,";")){
 		strcpy(_ff,ff);
 		strstr(_ff,";")[0]=0;
@@ -1257,7 +1295,7 @@ bool HuiFileDialogOpen(CHuiWindow *win,char *title,char *dir,char *show_filter,c
 	return false;
 }
 
-static void try_to_ensure_extension(char *filename, char *filter)
+static void try_to_ensure_extension(char *filename, const char *filter)
 {
 	// multiple choices -> ignore
 	if (strstr(filter, ";"))
@@ -1270,7 +1308,7 @@ static void try_to_ensure_extension(char *filename, char *filter)
 }
 
 // Datei-Auswahl zum Speichern
-bool HuiFileDialogSave(CHuiWindow *win,char *title,char *dir,char *show_filter,char *filter)
+bool HuiFileDialogSave(CHuiWindow *win,const char *title,const char *dir,const char *show_filter,const char *filter)
 {
 #ifdef HUI_API_WIN
 	HWND hWnd = win ? win->hWnd : NULL;
@@ -1307,7 +1345,8 @@ bool HuiFileDialogSave(CHuiWindow *win,char *title,char *dir,char *show_filter,c
 	gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dlg),SysFileName(dir));
 	GtkFileFilter *gtk_filter=gtk_file_filter_new();
 	gtk_file_filter_set_name(gtk_filter,sys_str(show_filter));
-	char *ff=filter,_ff[128];
+	const char *ff=filter;
+	char _ff[128];
 	while(strstr(ff,";")){
 		strcpy(_ff,ff);
 		strstr(_ff,";")[0]=0;
@@ -1319,10 +1358,10 @@ bool HuiFileDialogSave(CHuiWindow *win,char *title,char *dir,char *show_filter,c
 	int r=gtk_dialog_run(GTK_DIALOG(dlg));
 	if (r==GTK_RESPONSE_ACCEPT){
 		strcpy(HuiFileDialogCompleteName,gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dlg)));
+		try_to_ensure_extension(HuiFileDialogCompleteName, filter);
 		strcpy(HuiFileDialogPath,gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dlg)));
 		strcpy(HuiFileDialogFile,HuiFileDialogCompleteName+strlen(HuiFileDialogPath)+1);
 		dir_ensure_ending(HuiFileDialogPath,true);
-		try_to_ensure_extension(HuiFileDialogCompleteName, filter);
 	}
 	gtk_widget_destroy (dlg);
 	return (r==GTK_RESPONSE_ACCEPT);
@@ -1356,7 +1395,7 @@ bool HuiSelectColor(CHuiWindow *win,int r,int g,int b)
 	return false;
 }
 
-int HuiQuestionBox(CHuiWindow *win,char *title,char *text,bool allow_cancel)
+int HuiQuestionBox(CHuiWindow *win,const char *title,const char *text,bool allow_cancel)
 {
 #ifdef HUI_API_WIN
 	HWND hWnd = win ? win->hWnd : NULL;
@@ -1386,7 +1425,7 @@ int HuiQuestionBox(CHuiWindow *win,char *title,char *text,bool allow_cancel)
 	return HUI_CANCEL;
 }
 
-void HuiInfoBox(CHuiWindow *win,char *title,char *text)
+void HuiInfoBox(CHuiWindow *win,const char *title,const char *text)
 {
 #ifdef HUI_API_WIN
 	HWND hWnd = win ? win->hWnd : NULL;
@@ -1407,7 +1446,7 @@ void HuiInfoBox(CHuiWindow *win,char *title,char *text)
 #endif
 }
 
-void HuiErrorBox(CHuiWindow *win,char *title,char *text)
+void HuiErrorBox(CHuiWindow *win,const char *title,const char *text)
 {
 #ifdef HUI_API_WIN
 	HWND hWnd = win ? win->hWnd : NULL;
@@ -1428,7 +1467,53 @@ void HuiErrorBox(CHuiWindow *win,char *title,char *text)
 #endif
 }
 
-int HuiLoadImage(char *filename)
+void HuiSetProperty(const char *name, const char *value)
+{
+	if (strcmp(name, "name") == 0)
+		HuiPropName.assign(value);
+	else if (strcmp(name, "version") == 0)
+		HuiPropVersion.assign(value);
+	else if (strcmp(name, "comment") == 0)
+		HuiPropComment.assign(value);
+	else if (strcmp(name, "logo") == 0)
+		HuiPropLogo.assign(value);
+	else if (strcmp(name, "copyright") == 0)
+		HuiPropCopyright.assign(value);
+	else if (strcmp(name, "website") == 0)
+		HuiPropWebsite.assign(value);
+	else if (strcmp(name, "license") == 0)
+		HuiPropLicense.assign(value);
+	else if (strcmp(name, "author") == 0)
+		HuiPropAuthors.push_back(value);
+}
+
+void HuiAboutBox(CHuiWindow *win)
+{
+#ifdef HUI_API_WIN
+	msg_todo("HuiAboutBox (Win)");
+	HuiInfoBox(win,_("Beschreibung"), string2("%s %s %s", HuiPropName.c_str(), HuiPropVersion.c_str(), HuiPropCopyright.c_str()));
+#endif
+#ifdef HUI_API_GTK
+	char *_a_[128];
+	for (int i=0;i<HuiPropAuthors.size();i++)
+		_a_[i] = &HuiPropAuthors[i][0];
+	_a_[HuiPropAuthors.size()] = NULL;
+	GError *error = NULL;
+	GdkPixbuf *_logo = gdk_pixbuf_new_from_file(HuiPropLogo.c_str(), &error);
+	gtk_show_about_dialog(NULL,
+		"program-name", HuiPropName.c_str(),
+		"website", HuiPropWebsite.c_str(),
+		"version", HuiPropVersion.c_str(),
+		"license", HuiPropLicense.c_str(),
+		"comments", sys_str(HuiPropComment.c_str()),
+		"authors", _a_,
+		"logo", _logo,
+		"copyright", HuiPropCopyright.c_str(),
+		NULL);
+#endif
+}
+
+int HuiLoadImage(const char *filename)
 {
 	for (int i=0;i<hui_image_file.size();i++)
 		if (strcmp(hui_image_file[i].c_str(), filename) == 0)
@@ -1460,7 +1545,7 @@ static void LoadConfigFile()
 	ConfigLoaded = true;
 }
 
-static void SaveConfigFile()
+void HuiSaveConfigFile()
 {
 	dir_create(string(HuiAppDirectory, "Data"));
 	CFile *f = FileCreate(string(HuiAppDirectory,"Data/config.txt"));
@@ -1475,17 +1560,22 @@ static void SaveConfigFile()
 	ConfigLoaded = true;
 }
 
-void HuiConfigWriteInt(char *name,int val)
+void HuiConfigWriteInt(const char *name, int val)
 {
-	HuiConfigWriteStr(name,i2s(val));
+	HuiConfigWriteStr(name, i2s(val));
 }
 
-void HuiConfigWriteBool(char *name,bool val)
+void HuiConfigWriteFloat(const char *name, float val)
+{
+	HuiConfigWriteStr(name, f2s(val, 6));
+}
+
+void HuiConfigWriteBool(const char *name,bool val)
 {
 	HuiConfigWriteStr(name,(val?(char*)"1":(char*)"0"));
 }
 
-void HuiConfigWriteStr(char *name,char *str)
+void HuiConfigWriteStr(const char *name,const char *str)
 {
 	for (int i=0;i<NumConfigs;i++)
 		if (strcmp(ConfigName[i],name)==0){
@@ -1499,37 +1589,28 @@ void HuiConfigWriteStr(char *name,char *str)
 	//SaveConfigFile();
 }
 
-void HuiConfigReadInt(char *name,int &val,int default_val)
+void HuiConfigReadInt(const char *name, int &val, int default_val)
 {
-	/*if (!ConfigLoaded)
-		LoadConfigFile();
-	for (int i=0;i<NumConfigs;i++)
-		if (strcmp(ConfigName[i],name)==0){
-			val=s2i(ConfigStr[i]);
-			return;
-		}
-	val=default_val;*/
-	char *temp=_file_get_str_();
-	HuiConfigReadStr(name,temp,i2s(default_val));
+	char *temp = _file_get_str_();
+	HuiConfigReadStr(name, temp, i2s(default_val));
 	val=s2i(temp);
 }
 
-void HuiConfigReadBool(char *name,bool &val,bool default_val)
+void HuiConfigReadFloat(const char *name, float &val, float default_val)
 {
-	/*if (!ConfigLoaded)
-		LoadConfigFile();
-	for (int i=0;i<NumConfigs;i++)
-		if (strcmp(ConfigName[i],name)==0){
-			val=(strcmp(ConfigStr[i],"1")==0);
-			return;
-		}
-	val=default_val;*/
-	int ttt;
-	HuiConfigReadInt(name,ttt,(default_val?1:0));
-	val=(ttt==1);
+	char *temp = _file_get_str_();
+	HuiConfigReadStr(name, temp, f2s(default_val, 6));
+	val = s2f(temp);
 }
 
-void HuiConfigReadStr(char *name,char *str,char *default_str)
+void HuiConfigReadBool(const char *name, bool &val, bool default_val)
+{
+	int ttt;
+	HuiConfigReadInt(name, ttt, (default_val ? 1 : 0));
+	val = (ttt == 1);
+}
+
+void HuiConfigReadStr(const char *name,char *str,const char *default_str)
 {
 	if (!ConfigLoaded)
 		LoadConfigFile();
@@ -1548,7 +1629,7 @@ void HuiConfigReadStr(char *name,char *str,char *default_str)
 	TCHAR t_dot_end[256],t_desc[256],t_dot_end_desc[256],t_desc_shell[256],t_cmd[256],t_desc_shell_cmd[256],t_desc_shell_cmd_cmd[256],t_cmd_line[256],t_desc_icon[256],t_icon_0[256];
 #endif
 
-void HuiRegisterFileType(char *ending,char *description,char *icon_path,char *open_with,char *command_name,bool set_default)
+void HuiRegisterFileType(const char *ending,const char *description,const char *icon_path,const char *open_with,const char *command_name,bool set_default)
 {
 #ifdef HUI_OS_WINDOWS
 	_tcscpy(t_dot_end,hui_tchar_str(string(".",ending)));
@@ -1595,7 +1676,7 @@ void HuiRegisterFileType(char *ending,char *description,char *icon_path,char *op
 #endif
 }
 
-void HuiCopyToClipBoard(char *buffer,int length)
+void HuiCopyToClipBoard(const char *buffer,int length)
 {
 #ifdef HUI_API_WIN
 	if ((!buffer)||(length<1))	return;
@@ -1694,13 +1775,13 @@ void HuiPasteFromClipBoard(char **buffer,int &length)
 #endif
 }
 
-void HuiOpenDocument(char *filename)
+void HuiOpenDocument(const char *filename)
 {
 #ifdef HUI_OS_WINDOWS
 	ShellExecute(NULL,_T(""),hui_tchar_str(filename),_T(""),_T(""),SW_SHOW);
 #endif
 #ifdef HUI_OS_LINUX
-	int r=system(string("gnome-open ",filename));
+	int r=system(string2("gnome-open '%s'", filename));
 #endif
 }
 
@@ -1716,11 +1797,15 @@ static void UpdateMenuLanguage(CHuiMenu *m)
 			continue;
 		bool enabled = it->Enabled;
 		#ifdef HUI_API_WIN
+			if (strlen(get_lang(it->ID, "", true)) > 0){
 			strcpy(it->Name, HuiGetLanguage(it->ID));
 			ModifyMenu(m->hMenu, i, MF_STRING | MF_BYPOSITION, it->ID, get_lang_sys(it->ID, "", true));
+			}
 		#endif
 		#ifdef HUI_API_GTK
-			msg_todo("HuiUpdateMenuLanguage (Linux)");
+			if (strlen(get_lang(it->ID, "", true)) > 0)
+				m->SetText(it->ID, get_lang(it->ID, "", false));
+			msg_todo("HuiUpdateMenuLanguage (GTK) (menu bar)");
 			//gtk_menu_item_set_label(GTK_MENU_ITEM(it->g_item), get_lang_sys(it->ID, "", true));
 		#endif
 		m->EnableItem(it->ID, enabled);
@@ -1736,7 +1821,7 @@ void HuiUpdateAll()
 		for (int j=0;j<_HuiWindow_[i]->Control.size();j++){
 			int id=_HuiWindow_[i]->Control[j].ID;
 			if (!cur_lang->Text[id].empty())
-				_HuiWindow_[i]->SetControlText(id,HuiGetLanguage(id));
+				_HuiWindow_[i]->SetString(id,HuiGetLanguage(id));
 		}
 
 		// update menu
@@ -1746,9 +1831,9 @@ void HuiUpdateAll()
 	msg_db_l(1);
 }
 
-char *ConvertReturns(char *str);
+const char *ConvertReturns(const char *str);
 
-void HuiLoadResource(char *filename)
+void HuiLoadResource(const char *filename)
 {
 	msg_db_r("HuiLoadResource", 1);
 	// dirty...
@@ -1831,7 +1916,7 @@ void HuiLoadResource(char *filename)
 
 char ReturnStr[2048];
 
-char *ConvertReturns(char *str)
+const char *ConvertReturns(const char *str)
 {
 	int l=0;
 	int sl=(int)strlen(str);
@@ -1858,44 +1943,46 @@ char *ConvertReturns(char *str)
 	return ReturnStr;
 }
 
-void HuiSetLanguage(char *language)
+void HuiSetLanguage(const char *language)
 {
 	msg_db_r("HuiSetLang", 1);
 	cur_lang = NULL;
-	HuiLanguaged=false;
+	HuiLanguaged = false;
 	for (int i=0;i<HuiLanguage.size();i++)
 		if (strcmp(HuiLanguage[i].Name, language) == 0){
 			cur_lang = &HuiLanguage[i];
 			HuiLanguaged = true;
 			strcpy(HuiCurLanguageName, language);
 		}
+	if (!HuiLanguaged)
+		msg_error(string("HuiSetLanguage: language not found: ", language));
 
 	HuiUpdateAll();
 	msg_db_l(1);
 }
 
-char *HuiGetLanguage(int id)
+const char *HuiGetLanguage(int id)
 {
 	if ((!HuiLanguaged)||(id<0)||(id>=cur_lang->Text.size()))
 		return "";
 	if (cur_lang->Text[id].empty())
 		return "";//"???";
-	return (char*)cur_lang->Text[id].c_str();
+	return cur_lang->Text[id].c_str();
 }
 
 // pre-translated...translations
-char *HuiGetLanguageS(char *str)
+const char *HuiGetLanguageS(const char *str)
 {
 	if (!HuiLanguaged)
 		return str;
 	for (int i=0;i<cur_lang->Translation.size();i++)
 		if (strcmp(str, cur_lang->Translation[i].Orig.c_str()) == 0)
-			return (char*)cur_lang->Translation[i].Lang.c_str();
+			return cur_lang->Translation[i].Lang.c_str();
 	return str;
 }
 
 
-char *get_lang(int id,char *text,bool allow_keys)
+const char *get_lang(int id,const char *text,bool allow_keys)
 {
 	if (strlen(text)>0)
 		return text;
@@ -1909,13 +1996,13 @@ char *get_lang(int id,char *text,bool allow_keys)
 			if (id==HuiKeyCode[i].ID)
 				return string(cur_lang->Text[id].c_str(), "\t", HuiGetKeyCodeName(HuiKeyCode[i].Code));
 #endif
-	return (char*)cur_lang->Text[id].c_str();
+	return cur_lang->Text[id].c_str();
 }
 
 #ifdef HUI_API_WIN
-	TCHAR *get_lang_sys(int id,char *text,bool allow_keys)
+	const TCHAR *get_lang_sys(int id,const char *text,bool allow_keys)
 #else
-	char *get_lang_sys(int id,char *text,bool allow_keys)
+	const char *get_lang_sys(int id,const char *text,bool allow_keys)
 #endif
 {
 	return sys_str(get_lang(id,text,allow_keys));
@@ -1929,7 +2016,7 @@ void HuiAddKeyCode(int id, int key_code)
 	HuiKeyCode.push_back(k);
 }
 
-char *HuiGetKeyName(int k)
+const char *HuiGetKeyName(int k)
 {
 	if (k==KEY_LCONTROL)	return "ControlL";
 	if (k==KEY_RCONTROL)	return "ControlR";
@@ -2063,7 +2150,7 @@ float HuiGetTime(int index)
 }
 
 char KeyCodeName[128];
-char *HuiGetKeyCodeName(int k)
+const char *HuiGetKeyCodeName(int k)
 {
 	if (k<0)
 		strcpy(KeyCodeName,"");
@@ -2118,9 +2205,9 @@ CHuiWindow *HuiCreateResourceDialog(int id,CHuiWindow *root,message_function *mf
 								cmd->i_param[2],cmd->i_param[3],
 								cmd->id);
 					if (!cmd->b_param[0])
-						dlg->EnableControl(cmd->id,false);
+						dlg->Enable(cmd->id,false);
 					if (cmd->i_param[4]>=0)
-						dlg->SetControlImage(cmd->id,cmd->i_param[4]);
+						dlg->SetImage(cmd->id,cmd->i_param[4]);
 				}
 			}
 			msg_db_m("  \\(^_^)/",1);
@@ -2143,11 +2230,11 @@ CHuiMenu *_create_res_menu_(sHuiResource *res, int &index, int num)
 		//msg_db_out(2,i2s(j));
 		sHuiResourceCommand *cmd = &res->cmd[index];
 		if (cmd->type == HuiCmdMenuAddItem)
-			menu->AddEntry(get_lang(cmd->id, "", true), cmd->id);
+			menu->AddItem(get_lang(cmd->id, "", true), cmd->id);
 		if (cmd->type == HuiCmdMenuAddItemImage)
-			menu->AddEntryImage(get_lang(cmd->id, "", true), cmd->i_param[1], cmd->id);
+			menu->AddItemImage(get_lang(cmd->id, "", true), cmd->i_param[1], cmd->id);
 		if (cmd->type == HuiCmdMenuAddItemCheckable)
-			menu->AddEntryCheckable(get_lang(cmd->id, "", true), cmd->id);
+			menu->AddItemCheckable(get_lang(cmd->id, "", true), cmd->id);
 		if (cmd->type == HuiCmdMenuAddItemSeparator)
 			menu->AddSeparator();
 		if (cmd->type == HuiCmdMenuAddItemPopup){

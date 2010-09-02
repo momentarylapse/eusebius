@@ -10,7 +10,6 @@
 
 
 #include "../file/file.h"
-#include "../file/msg.h"
 #include <stdio.h>
 #include <signal.h>
 #ifdef HUI_API_WIN
@@ -100,7 +99,7 @@ void CHuiMenu::SetID(int id)
 {
 }
 
-void CHuiMenu::AddEntry(char *name, int id)
+void CHuiMenu::AddItem(const char *name, int id)
 {
 	sHuiMenuItem i;
 #ifdef HUI_API_WIN
@@ -175,6 +174,7 @@ const char *get_stock_id(int image)
 	if (image==HuiImageUndo)	return GTK_STOCK_UNDO;
 	if (image==HuiImageRefresh)	return GTK_STOCK_REFRESH;
 	if (image==HuiImagePreferences)	return GTK_STOCK_PREFERENCES;
+	if (image==HuiImageProperties)return GTK_STOCK_PROPERTIES;
 
 	if (image==HuiImageClear)	return GTK_STOCK_CLEAR;
 	if (image==HuiImageAdd)		return GTK_STOCK_ADD;
@@ -189,6 +189,7 @@ const char *get_stock_id(int image)
 
 	if (image==HuiImageHelp)	return GTK_STOCK_HELP;
 	if (image==HuiImageInfo)	return GTK_STOCK_INFO;
+	if (image==HuiImageAbout)	return GTK_STOCK_ABOUT;
 	if (image==HuiImagePrint)	return GTK_STOCK_PRINT;
 	if (image==HuiImageFont)	return GTK_STOCK_SELECT_FONT;
 	if (image==HuiImageSelectAll)	return "gtk-select-all";//GTK_STOCK_SELECT_ALL;
@@ -196,6 +197,14 @@ const char *get_stock_id(int image)
 	if (image==HuiImageZoomIn)	return GTK_STOCK_ZOOM_IN;
 	if (image==HuiImageZoomOut)	return GTK_STOCK_ZOOM_OUT;
 	if (image==HuiImageFullscreen)	return GTK_STOCK_FULLSCREEN;
+	if (image==HuiImageZoomOne)	return GTK_STOCK_ZOOM_100;
+	if (image==HuiImageZoomFit)	return GTK_STOCK_ZOOM_FIT;
+
+	
+	if (image==HuiImageMediaPlay)return GTK_STOCK_MEDIA_PLAY;
+	if (image==HuiImageMediaStop)return GTK_STOCK_MEDIA_STOP;
+	if (image==HuiImageMediaPause)return GTK_STOCK_MEDIA_PAUSE;
+	if (image==HuiImageMediaRecord)return GTK_STOCK_MEDIA_RECORD;
 	return "";
 }
 
@@ -211,7 +220,7 @@ void *get_gtk_image(int image,bool large)
 }
 #endif
 
-void CHuiMenu::AddEntryImage(char *name,int image,int id)
+void CHuiMenu::AddItemImage(const char *name,int image,int id)
 {
 	sHuiMenuItem i;
 #ifdef HUI_API_WIN
@@ -243,7 +252,7 @@ void CHuiMenu::AddEntryImage(char *name,int image,int id)
 	Item.push_back(i);
 }
 
-void CHuiMenu::AddEntryCheckable(char *name,int id)
+void CHuiMenu::AddItemCheckable(const char *name,int id)
 {
 	sHuiMenuItem i;
 #ifdef HUI_API_WIN
@@ -285,7 +294,7 @@ void CHuiMenu::AddSeparator()
 	Item.push_back(i);
 }
 
-void CHuiMenu::AddSubMenu(char *name,int id,CHuiMenu *menu)
+void CHuiMenu::AddSubMenu(const char *name,int id,CHuiMenu *menu)
 {
 	sHuiMenuItem i;
 #ifdef HUI_API_WIN
@@ -365,18 +374,19 @@ void CHuiMenu::EnableItem(int id,bool enabled)
 	}
 }
 
-void CHuiMenu::SetText(int id,char *text)
+void CHuiMenu::SetText(int id,const char *text)
 {
 	for (int i=0;i<Item.size();i++){
 		if (Item[i].SubMenu)
 			Item[i].SubMenu->SetText(id,text);
-		else if (Item[i].ID==id){
+		if (Item[i].ID==id){
 			strcpy(Item[i].Name,text);
 #ifdef HUI_API_WIN
 			ModifyMenu(hMenu,i,MF_STRING | MF_BYPOSITION,id,sys_str(text));
 #endif
 #ifdef HUI_API_GTK
-			msg_todo("CHuiMenu::SetText (Linux)");
+			gtk_menu_item_set_label(GTK_MENU_ITEM(Item[i].g_item), sys_str(text));
+			try_add_accel(Item[i].g_item, Item[i].ID);
 #endif
 		}
 	}

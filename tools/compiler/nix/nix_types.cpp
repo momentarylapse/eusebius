@@ -113,7 +113,7 @@ float randf(float m)
 // real length of the vector
 float VecLength(const vector &v)
 {
-	return (float)sqrt( v*v );
+	return sqrtf( v*v );
 }
 
 // gibt die laengste Seite zurueck (="unendlich-Norm")
@@ -180,7 +180,7 @@ bool VecBoundingBox(const vector &a,const vector &b,float d)
 // auf die Laenge 1 bringen
 void VecNormalize(vector &vo,const vector &vi)
 {
-	float l=(float)sqrt(vi*vi);
+	float l=sqrtf(vi*vi);
 	if (l>0)
 		vo=vi/l;
 	else
@@ -240,17 +240,17 @@ void VecTransform3(vector &vo,const matrix3 &m,const vector &vi)
 // ZXY, da nur im Spiel-Koordinaten-System
 vector VecAng2Dir(const vector &ang)
 {
-	return vector(		(float)sin(ang.y)*(float)cos(ang.x),
-					-	(float)sin(ang.x),
-						(float)cos(ang.y)*(float)cos(ang.x));
+	return vector(		sinf(ang.y)*cos(ang.x),
+					-	sinf(ang.x),
+						cosf(ang.y)*cos(ang.x));
 }
 
 // um welche Winkel wurde vector(0,0,1) rotiert?
 vector VecDir2Ang(const vector &dir)
 {
-	return vector(	-	(float)atan2(dir.y,sqrt(dir.x*dir.x+dir.z*dir.z)),
-						(float)atan2(dir.x,dir.z),
-						(float)0); // too few information to get z!
+	return vector(	-	atan2f(dir.y,sqrt(dir.x*dir.x+dir.z*dir.z)),
+						atan2f(dir.x,dir.z),
+						0); // too few information to get z!
 }
 
 // um welche Winkel wurde vector(0,0,1) rotiert?
@@ -258,9 +258,9 @@ vector VecDir2Ang(const vector &dir)
 vector VecDir2Ang2(const vector &dir,const vector &up)
 {
 	vector right=VecCrossProduct(up,dir);
-	return vector(	-	(float)atan2(dir.y,sqrt(dir.x*dir.x+dir.z*dir.z)),
-						(float)atan2(dir.x,dir.z),
-						(float)atan2(right.y,up.y)); // atan2( < up, (0,1,0) >, < right, (0,1,0) > )    where: right = up x dir
+	return vector(	-	atan2f(dir.y,sqrt(dir.x*dir.x+dir.z*dir.z)),
+						atan2f(dir.x,dir.z),
+						atan2f(right.y,up.y)); // atan2( < up, (0,1,0) >, < right, (0,1,0) > )    where: right = up x dir
 /*	// aus den 3 Basis-Vektoren eine Basis-Wechsel-Matrix erzeugen
 	matrix m;
 	m._00=right.x;	m._01=up.x;	m._02=dir.x;	m._03=0;
@@ -274,7 +274,7 @@ vector VecDir2Ang2(const vector &dir,const vector &up)
 	return QuaternionToAngle(q);*/
 }
 
-// addiert 2 Winkelangaben
+// adds two angles (juxtaposition of rotations)
 vector VecAngAdd(const vector &ang1,const vector &ang2)
 {
 	quaternion q,q1,q2;
@@ -291,6 +291,17 @@ vector VecAngInterpolate(const vector &ang1,const vector &ang2,float t)
 	QuaternionRotationV(q2,ang2);
 	QuaternionInterpolate(r,q1,q2,t);
 	return QuaternionToAngle(r);
+}
+
+// rotate a vector by an angle
+vector VecRotate(const vector &v, const vector &ang)
+{
+	// slow...indirect
+	matrix m;
+	MatrixRotation(m, ang);
+	vector r;
+	VecNormalTransform(r, m, v);
+	return r;
 }
 
 // kuerzeste Entfernung von p zur Geraden(l1,l2)
@@ -347,7 +358,8 @@ static const float _IdentityMatrix[16]={	1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	};
 // identity (no transformation: m*v=v)
 void MatrixIdentity(matrix &m)
 {
-	memcpy(&m,&_IdentityMatrix,sizeof(matrix));
+	m = _IdentityMatrix;
+	//memcpy(&m,&_IdentityMatrix,sizeof(matrix));
 	/*
 	m._00=1;	m._01=0;	m._02=0;	m._03=0;
 	m._10=0;	m._11=1;	m._12=0;	m._13=0;
@@ -442,8 +454,8 @@ void MatrixTranslation(matrix &m,const vector &t)
 // Rotation um die X-Achse (nach unten)
 void MatrixRotationX(matrix &m,float w)
 {
-	float sw=(float)sin(w);
-	float cw=(float)cos(w);
+	float sw=sinf(w);
+	float cw=cosf(w);
 	m._00=1;	m._01=0;	m._02=0;	m._03=0;
 	m._10=0;	m._11=cw;	m._12=-sw;	m._13=0;
 	m._20=0;	m._21=sw;	m._22=cw;	m._23=0;
@@ -453,8 +465,8 @@ void MatrixRotationX(matrix &m,float w)
 // Rotation um die Y-Achse (nach rechts)
 void MatrixRotationY(matrix &m,float w)
 {
-	float sw=(float)sin(w);
-	float cw=(float)cos(w);
+	float sw=sinf(w);
+	float cw=cosf(w);
 	m._00=cw;	m._01=0;	m._02=sw;	m._03=0;
 	m._10=0;	m._11=1;	m._12=0;	m._13=0;
 	m._20=-sw;	m._21=0;	m._22=cw;	m._23=0;
@@ -464,8 +476,8 @@ void MatrixRotationY(matrix &m,float w)
 // Rotation um die Z-Achse (gegen den Uhrzeigersinn)
 void MatrixRotationZ(matrix &m,float w)
 {
-	float sw=(float)sin(w);
-	float cw=(float)cos(w);
+	float sw=sinf(w);
+	float cw=cosf(w);
 	m._00=cw;	m._01=-sw;	m._02=0;	m._03=0;
 	m._10=sw;	m._11=cw;	m._12=0;	m._13=0;
 	m._20=0;	m._21=0;	m._22=1;	m._23=0;
@@ -482,12 +494,12 @@ void MatrixRotation(matrix &m,const vector &ang)
 	// m=y*x*z
 	MatrixMultiply(m,y,x);
 	MatrixMultiply(m,m,z);*/
-	float sx=(float)sin(ang.x);
-	float cx=(float)cos(ang.x);
-	float sy=(float)sin(ang.y);
-	float cy=(float)cos(ang.y);
-	float sz=(float)sin(ang.z);
-	float cz=(float)cos(ang.z);
+	float sx=sinf(ang.x);
+	float cx=cosf(ang.x);
+	float sy=sinf(ang.y);
+	float cy=cosf(ang.y);
+	float sz=sinf(ang.z);
+	float cz=cosf(ang.z);
 	m._00= sx*sy*sz + cy*cz;	m._01= sx*sy*cz - cy*sz;	m._02= cx*sy;	m._03=0;
 	m._10= cx*sz;				m._11= cx*cz;				m._12=-sx;		m._13=0;
 	m._20= sx*cy*sz - sy*cz;	m._21= sx*cy*cz + sy*sz;	m._22= cx*cy;	m._23=0;
@@ -505,12 +517,12 @@ void MatrixRotationView(matrix &m,const vector &ang)
 	// z*x*y
 	MatrixMultiply(m,z,x);
 	MatrixMultiply(m,m,y);*/
-	float sx=(float)sin(ang.x);
-	float cx=(float)cos(ang.x);
-	float sy=(float)sin(ang.y);
-	float cy=(float)cos(ang.y);
-	float sz=(float)sin(ang.z);
-	float cz=(float)cos(ang.z);
+	float sx=sinf(ang.x);
+	float cx=cosf(ang.x);
+	float sy=sinf(ang.y);
+	float cy=cosf(ang.y);
+	float sz=sinf(ang.z);
+	float cz=cosf(ang.z);
 	// the transposed (=inverted) of MatrixView
 	m._00= sx*sy*sz + cy*cz;	m._01= cx*sz;	m._02= sx*cy*sz - sy*cz;	m._03=0;
 	m._10= sx*sy*cz - cy*sz;	m._11= cx*cz;	m._12= sx*cy*cz + sy*sz;	m._13=0;
@@ -606,12 +618,12 @@ void Matrix3Transpose(matrix3 &mo,const matrix3 &mi)
 
 void Matrix3Rotation(matrix3 &m,const vector &ang)
 {
-	float sx=(float)sin(ang.x);
-	float cx=(float)cos(ang.x);
-	float sy=(float)sin(ang.y);
-	float cy=(float)cos(ang.y);
-	float sz=(float)sin(ang.z);
-	float cz=(float)cos(ang.z);
+	float sx=sinf(ang.x);
+	float cx=cosf(ang.x);
+	float sy=sinf(ang.y);
+	float cy=cosf(ang.y);
+	float sz=sinf(ang.z);
+	float cz=cosf(ang.z);
 	m._00= sx*sy*sz + cy*cz;	m._01= sx*sy*cz - cy*sz;	m._02= cx*sy;
 	m._10= cx*sz;				m._11= cx*cz;				m._12=-sx;
 	m._20= sx*cy*sz - sy*cz;	m._21= sx*cy*cz + sy*sz;	m._22= cx*cy;
@@ -638,8 +650,8 @@ void QuaternionIdentity(quaternion &q)
 void QuaternionRotationA(quaternion &q,const vector &axis,float w)
 {
 	float w_half=w*0.5f;
-	float s=(float)sin(w_half);
-	q.w=(float)cos(w_half);
+	float s=sinf(w_half);
+	q.w=cosf(w_half);
 	q.x=axis.x*s;
 	q.y=axis.y*s;
 	q.z=axis.z*s;
@@ -651,12 +663,12 @@ void QuaternionRotationV(quaternion &q,const vector &ang)
 	float wx_2=ang.x*0.5f;
 	float wy_2=ang.y*0.5f;
 	float wz_2=ang.z*0.5f;
-	float cx=(float)cos(wx_2);
-	float cy=(float)cos(wy_2);
-	float cz=(float)cos(wz_2);
-	float sx=(float)sin(wx_2);
-	float sy=(float)sin(wy_2);
-	float sz=(float)sin(wz_2);
+	float cx=cosf(wx_2);
+	float cy=cosf(wy_2);
+	float cz=cosf(wz_2);
+	float sx=sinf(wx_2);
+	float sy=sinf(wy_2);
+	float sz=sinf(wz_2);
 	q.w=(cy*cx*cz) + (sy*sx*sz);
 	q.x=(cy*sx*cz) + (sy*cx*sz);
 	q.y=(sy*cx*cz) - (cy*sx*sz);
@@ -675,11 +687,11 @@ void QuaternionRotationV(quaternion &q,const vector &ang)
 void QuaternionRotationM(quaternion &q,const matrix &m)
 {
 	float tr=m._00+m._11+m._22;
-	float w=(float)acos((tr-1)/2);
+	float w=acosf((tr-1)/2);
 	if ((w<0.00000001f)&&(w>-0.00000001f))
 		QuaternionIdentity(q);
 	else{
-		float s=0.5f/(float)sin(w);
+		float s=0.5f/sinf(w);
 		vector n;
 		n.x=(m._21-m._12)*s;
 		n.y=(m._02-m._20)*s;
@@ -732,11 +744,11 @@ void QuaternionInterpolate(quaternion &q,const quaternion &q1,const quaternion &
 	if (c>0.9999f)
 		t2=1.0f-t;
 	else{
-		float theta=(float)acos(c);
+		float theta=acosf(c);
 		float phi=theta;//+spin*pi; // spin for additional circulations...
-		float s=(float)sin(theta);
-		t2=(float)sin(theta-t*phi)/s;
-		t=(float)sin(t*phi)/s;
+		float s=sinf(theta);
+		t2=sinf(theta-t*phi)/s;
+		t=sinf(t*phi)/s;
 	}
 	if (flip)
 		t=-t;
@@ -767,15 +779,15 @@ vector QuaternionToAngle(const quaternion &q)
 	matrix m,x,y;
 	MatrixRotationQ(m,q);
 	VecTransform(v,m,v);
-	ang.y= float(atan2(v.x,v.z));
-	ang.x=-float(atan2(v.y,sqrt(v.x*v.x+v.z*v.z)));
+	ang.y= atan2f(v.x,v.z);
+	ang.x=-atan2f(v.y,sqrt(v.x*v.x+v.z*v.z));
 	MatrixRotationX(x,-ang.x);
 	MatrixRotationY(y,-ang.y);
 	MatrixMultiply(m,y,m);
 	MatrixMultiply(m,x,m);
 	v=vector(1000.0f,0,0);
 	VecTransform(v,m,v);
-	ang.z=float(atan2(v.y,v.x));
+	ang.z=atan2f(v.y,v.x);
 	return ang;
 }
 
@@ -785,8 +797,8 @@ void QuaternionScale(quaternion &q,float f)
 	float w=GetAngle(q);
 	if (w==0)	return;
 
-	q.w=(float)cos(w*f/2);
-	float factor=(float)sin(w*f/2)/(float)sin(w/2);
+	q.w=cosf(w*f/2);
+	float factor=sinf(w*f/2)/sinf(w/2);
 	q.x=q.x*factor;
 	q.y=q.y*factor;
 	q.z=q.z*factor;
@@ -795,7 +807,7 @@ void QuaternionScale(quaternion &q,float f)
 // quaternion correction
 void QuaternionNormalize(quaternion &qo,const quaternion &qi)
 {
-	float l=(float)sqrt((qi.x*qi.x)+(qi.y*qi.y)+(qi.z*qi.z)+(qi.w*qi.w));
+	float l=sqrtf((qi.x*qi.x)+(qi.y*qi.y)+(qi.z*qi.z)+(qi.w*qi.w));
 	l=1.0f/l;
 	qo.x=qi.x*l;
 	qo.y=qi.y*l;
@@ -814,7 +826,7 @@ vector GetAxis(const quaternion &q)
 // angle value of the quaternion
 float GetAngle(const quaternion &q)
 {
-	return (float)acos(q.w)*2;
+	return acosf(q.w)*2;
 }
 
 //------------------------------------------------------------------------------------------------//

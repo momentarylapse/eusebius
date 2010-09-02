@@ -123,7 +123,7 @@ void NixSoundInit()
 #endif
 }
 
-int NixSoundLoad(char *filename)
+int NixSoundLoad(const char *filename)
 {
 	#ifdef NIX_SOUND_DIRECTX9
 		msg_write(string("loading Sound: ",SysFileName(filename)));
@@ -330,7 +330,7 @@ void NixSoundTestRepeat()
 vector ListenerVel;
 matrix ListenerInvMatrix;
 
-void NixSoundSetData(int index,vector &pos,vector &vel,float min_dist,float max_dist,float speed,float volume,bool set_now)
+void NixSoundSetData(int index,const vector &pos,const vector &vel,float min_dist,float max_dist,float speed,float volume,bool set_now)
 {
 	#ifdef NIX_SOUND_DIRECTX9
 		if (!SoundUsable(index))
@@ -369,7 +369,7 @@ void NixSoundSetData(int index,vector &pos,vector &vel,float min_dist,float max_
 }
 
 // setzt auch alle anderen Aenderungen der Sounds erst in Kraft
-void NixSoundSetListener(vector &pos,vector &ang,vector &vel,float meters_per_unit)
+void NixSoundSetListener(const vector &pos,const vector &ang,const vector &vel,float meters_per_unit)
 {
 	#ifdef NIX_SOUND_DIRECTX9
 		int i;
@@ -443,7 +443,7 @@ void NixSoundSetListener(vector &pos,vector &ang,vector &vel,float meters_per_un
 	#endif
 }
 
-int NixMusicLoad(char *filename)
+int NixMusicLoad(const char *filename)
 {
 #ifdef NIX_IDE_VCS
 #ifdef NIX_API_DIRECTX9

@@ -3,13 +3,12 @@
 |                                                                              |
 | vital properties:                                                            |
 |                                                                              |
-| last update: 2009.12.20 (c) by MichiSoft TM                                  |
+| last update: 2010.07.14 (c) by MichiSoft TM                                  |
 \*----------------------------------------------------------------------------*/
 
 #include "hui.h"
 
 #include "../file/file.h"
-#include "../file/msg.h"
 #include <stdio.h>
 #include <signal.h>
 #ifdef HUI_API_WIN
@@ -918,8 +917,29 @@ gboolean key_release_event(GtkWidget *widget, GdkEventKey *event, gpointer user_
 	return false;
 }
 
+int xpi = 0;
+
 gboolean expose_event(GtkWidget *widget, GdkEventExpose *event, gpointer user_data)
 {
+	//msg_write(string2("expose %d", xpi++));
+	win_send_message(widget, HUI_WIN_RENDER);
+	return false;
+}
+
+gboolean expose_event_gl(GtkWidget *widget, GdkEventExpose *event, gpointer user_data)
+{
+	//msg_write(string2("expose gl %d", xpi++));
+	for (int i=0;i<_HuiWindow_.size();i++)
+		if (_HuiWindow_[i]->gl_widget == widget)
+			if (_HuiWindow_[i]->MessageFunction)
+				_HuiWindow_[i]->MessageFunction(HUI_WIN_RENDER);
+	//return false;
+	return true; // stop handler...
+}
+
+gboolean visnot_event(GtkWidget *widget, GdkEventVisibility *event, gpointer user_data)
+{
+	//msg_write("visible");
 	win_send_message(widget, HUI_WIN_RENDER);
 	return false;
 }
@@ -930,7 +950,7 @@ bool set_button_state(GtkWidget *widget, GdkEventButton *event)
 	if (win){
 		if (event->type == GDK_BUTTON_PRESS){
 			irect r = win->GetInterior();
-			if ((win->InputData.x < r.x1) || (win->InputData.x >= r.x2) || (win->InputData.y < r.y1) || (win->InputData.y >= r.y2))
+			if ((win->InputData.x < 0) || (win->InputData.x >= r.x2 - r.x1) || (win->InputData.y < 0) || (win->InputData.y >= r.y2 - r.y1))
 				return false;
 		}
 		// don't listen to "event", it lacks behind
@@ -980,7 +1000,7 @@ gboolean focus_in_event(GtkWidget *widget, GdkEventFocus *event, gpointer user_d
 
 
 // general window
-CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWindow *root, bool allow_root, int mode, bool show, message_function *mf)
+CHuiWindow::CHuiWindow(const char *title, int x, int y, int width, int height, CHuiWindow *root, bool allow_root, int mode, bool show, message_function *mf)
 {
 	msg_db_r("CHuiWindow()",1);
 	_HuiWindow_.push_back(this);
@@ -1016,6 +1036,7 @@ CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWin
 	IsHidden=false;
 	Menu=NULL;
 	ID=-1;
+	NumFloatDecimals = 3;
 	uid=current_uid++;
 	AllowInput=false; // allow only if ->Update() was called
 
@@ -1195,7 +1216,8 @@ CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWin
 
 	// catch signals
 	g_signal_connect(G_OBJECT(window), "delete-event", G_CALLBACK(&delete_event), NULL);
-	g_signal_connect(G_OBJECT(window), "expose-event", G_CALLBACK(&expose_event), NULL);
+	//g_signal_connect(G_OBJECT(window), "expose-event", G_CALLBACK(&expose_event), NULL);
+	g_signal_connect(G_OBJECT(window), "visibility-notify-event", G_CALLBACK(&visnot_event), NULL);
 	g_signal_connect(G_OBJECT(window), "scroll-event", G_CALLBACK(&scroll_event), NULL);
 	g_signal_connect(G_OBJECT(window), "key-press-event", G_CALLBACK(&key_press_event), NULL);
 	g_signal_connect(G_OBJECT(window), "key-release-event", G_CALLBACK(&key_release_event), NULL);
@@ -1206,7 +1228,7 @@ CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWin
 	g_signal_connect(G_OBJECT(window), "focus-in-event", G_CALLBACK(&focus_in_event), NULL);
 	int mask;
 	g_object_get(G_OBJECT(window), "events", &mask, NULL);
-	mask |= GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK; // GDK_POINTER_MOTION_HINT_MASK = "fewer motions"
+	mask |= GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_VISIBILITY_NOTIFY_MASK; // GDK_POINTER_MOTION_HINT_MASK = "fewer motions"
 	//mask = GDK_ALL_EVENTS_MASK;
 	g_object_set(G_OBJECT(window), "events", mask, NULL);
 
@@ -1251,6 +1273,7 @@ CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWin
 		fixed = NULL;
 		// "drawable" (for opengl)
 		gl_widget = gtk_drawing_area_new();
+		g_signal_connect(G_OBJECT(gl_widget), "expose-event", G_CALLBACK(&expose_event_gl), NULL);
 		gtk_container_add(GTK_CONTAINER(hbox), gl_widget);
 		gtk_widget_show(gl_widget);
 		gtk_widget_realize(gl_widget);
@@ -1261,6 +1284,10 @@ CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWin
 		r.height = height;
 		gdk_window_invalidate_region(gl_widget->window, gdk_region_rectangle(&r), false);
 		gdk_window_process_all_updates();
+
+		// prevent the toolbar from using keys...
+		gtk_widget_set_can_focus(gl_widget, true);
+		gtk_widget_grab_focus(gl_widget);
 	}else{
 		// "fixed" (for buttons etc)
 		fixed = gtk_fixed_new();
@@ -1302,7 +1329,7 @@ CHuiWindow::CHuiWindow(char *title, int x, int y, int width, int height, CHuiWin
 
 
 // dummy window
-CHuiWindow::CHuiWindow(char *title,int x,int y,int width,int height,message_function *mf)
+CHuiWindow::CHuiWindow(const char *title,int x,int y,int width,int height,message_function *mf)
 {
 	msg_db_r("CHuiWindow()",1);
 	_HuiWindow_.push_back(this);
@@ -1441,7 +1468,12 @@ CHuiWindow::~CHuiWindow()
 	// unregister window
 	//msg_write("unregistriere Fenster");
 	for (int i=0;i<_HuiWindow_.size();i++)
-		if (_HuiWindow_[i]==this){
+		if (_HuiWindow_[i] == this){
+			if (_HuiWindow_[i]->Root)
+				if (_HuiWindow_[i]->Root->MessageFunction){
+					HuiDoSingleMainLoop();
+					_HuiWindow_[i]->Root->MessageFunction(HUI_WIN_RENDER);
+				}
 			_HuiWindow_.erase(_HuiWindow_.begin() + i);
 			break;
 		}
@@ -1545,7 +1577,7 @@ void CHuiWindow::Hide(bool hide)
 }
 
 // set the string in the title bar
-void CHuiWindow::SetTitle(char *title)
+void CHuiWindow::SetTitle(const char *title)
 {
 #ifdef HUI_API_WIN
 	SetWindowText(hWnd,sys_str(title));
@@ -1900,7 +1932,7 @@ void CHuiWindow::EnableStatusBar(bool enabled)
 	StatusBarEnabled=enabled;
 }
 
-void CHuiWindow::SetStatusText(char *str)
+void CHuiWindow::SetStatusText(const char *str)
 {
 #ifdef HUI_API_WIN
 	SendMessage(status_bar,SB_SETTEXT,0,(LPARAM)sys_str(str));
@@ -2047,7 +2079,7 @@ void AddToolBarItem(sHuiToolBar *tb,int id,int type,CHuiMenu *menu)
 }
 
 // add a default button
-void CHuiWindow::ToolBarAddItem(char *title,char *tool_tip,int image,int id)
+void CHuiWindow::ToolBarAddItem(const char *title,const char *tool_tip,int image,int id)
 {
 #ifdef HUI_API_WIN
 	if (tb!=&tool_bar[HuiToolBarTop])
@@ -2079,7 +2111,7 @@ void CHuiWindow::ToolBarAddItem(char *title,char *tool_tip,int image,int id)
 }
 
 // add a checkable button
-void CHuiWindow::ToolBarAddItemCheckable(char *title,char *tool_tip,int image,int id)
+void CHuiWindow::ToolBarAddItemCheckable(const char *title,const char *tool_tip,int image,int id)
 {
 #ifdef HUI_API_WIN
 	if (tb!=&tool_bar[HuiToolBarTop])
@@ -2112,7 +2144,7 @@ void CHuiWindow::ToolBarAddItemCheckable(char *title,char *tool_tip,int image,in
 #endif
 }
 
-void CHuiWindow::ToolBarAddItemMenu(char *title,char *tool_tip,int image,CHuiMenu *menu,int id)
+void CHuiWindow::ToolBarAddItemMenu(const char *title,const char *tool_tip,int image,CHuiMenu *menu,int id)
 {
 	if (!menu)
 		return;
@@ -2141,7 +2173,7 @@ void CHuiWindow::ToolBarAddItemMenu(char *title,char *tool_tip,int image,CHuiMen
 }
 
 // add a menu to the toolbar by resource id
-void CHuiWindow::ToolBarAddItemMenuByID(char *title,char *tool_tip,int image,int menu_id,int id)
+void CHuiWindow::ToolBarAddItemMenuByID(const char *title,const char *tool_tip,int image,int menu_id,int id)
 {
 	CHuiMenu *menu=HuiCreateResourceMenu(menu_id);
 	ToolBarAddItemMenu(title,tool_tip,image,menu,id);
@@ -2388,6 +2420,74 @@ int CHuiWindow::GetKeyRhythmDown()
 
 
 
+
+static bool hui_option_tree;
+static bool hui_option_icons;
+static bool hui_option_extended;
+static bool hui_option_multiline;
+static bool hui_option_alpha;
+static bool hui_option_bold;
+static bool hui_option_italic;
+static bool hui_option_nobar;
+
+static int NumPartStrings;
+static char PartString[64][512], OptionString[512];
+
+const char *ScanOptions(int id, const char *title)
+{
+	const char *title2 = get_lang(id, title);
+	if (title2[0] == '!'){
+		for (unsigned int i=0;i<strlen(title2);i++){
+			if (title2[i] == HuiComboBoxSeparator){
+				OptionString[i]=0;
+				break;
+			}
+			OptionString[i] = title2[i];
+		}
+		hui_option_tree = strstr(OptionString, "tree");
+		hui_option_icons = strstr(OptionString, "icons");
+		hui_option_extended = strstr(OptionString, "extended");
+		hui_option_multiline = strstr(OptionString, "multiline");
+		hui_option_alpha = strstr(OptionString, "alpha");
+		hui_option_bold = strstr(OptionString, "bold");
+		hui_option_italic = strstr(OptionString, "italic");
+		hui_option_nobar = strstr(OptionString, "nobar");
+		return &title2[strlen(OptionString) + 1];
+	}else{
+		hui_option_tree = false;
+		hui_option_icons = false;
+		hui_option_extended = false;
+		hui_option_multiline = false;
+		hui_option_alpha = false;
+		hui_option_bold = false;
+		hui_option_italic = false;
+		hui_option_nobar = false;
+		return title2;
+	}
+}
+
+void GetPartStrings(int id,const char *title)
+{
+	char str[2048];
+	const char *title2 = ScanOptions(id,title);
+	int l=0;
+	NumPartStrings=0;
+	for (unsigned int i=0;i<strlen(title2);i++){
+		str[l]=title2[i];
+		str[l+1]=0;
+		if ((title2[i]==HuiComboBoxSeparator)||(i==strlen(title2)-1)){
+			if (title2[i]==HuiComboBoxSeparator)
+				str[l]=0;
+			l=-1;
+			strcpy(PartString[NumPartStrings++],str);
+		}
+		l++;
+	}
+}
+
+
+
+
 // general control...just a helper function, don't use!!!
 void AddControl(CHuiWindow *win,sHuiControl *c,int id,int kind)
 {
@@ -2409,7 +2509,7 @@ void AddControl(CHuiWindow *win,sHuiControl *c,int id,int kind)
 	win->Control.push_back(*c);
 }
 
-void CHuiWindow::AddButton(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddButton(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2428,12 +2528,13 @@ void CHuiWindow::AddButton(char *title,int x,int y,int width,int height,int id)
 	AddControl(this,&c,id,HuiKindButton);
 }
 
-void CHuiWindow::AddColorButton(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddColorButton(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
+	ScanOptions(id, title);
 #ifdef HUI_API_WIN
 	int bw=(width>25)?25:width;
-	if (strstr(title,"!alpha")){
+	if (hui_option_alpha){
 		bw=(width>50)?50:width;
 		c.hWnd=CreateWindow(_T("BUTTON"),_T("rgb"),
 							WS_VISIBLE | WS_CHILD | (HuiUseFlatButtons?BS_FLAT:0),
@@ -2461,7 +2562,7 @@ void CHuiWindow::AddColorButton(char *title,int x,int y,int width,int height,int
 #endif
 #ifdef HUI_API_GTK
 	c.win=gtk_color_button_new();
-	if (strstr(title,"!alpha"))
+	if (hui_option_alpha)
 		gtk_color_button_set_use_alpha(GTK_COLOR_BUTTON(c.win),true);
 	gtk_widget_set_size_request(c.win,width+2,height+2);
 	gtk_fixed_put(GTK_FIXED(cur_cnt),c.win,x-1,y-1);
@@ -2471,7 +2572,7 @@ void CHuiWindow::AddColorButton(char *title,int x,int y,int width,int height,int
 	AddControl(this,&c,id,HuiKindColorButton);
 }
 
-void CHuiWindow::AddDefButton(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddDefButton(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2486,11 +2587,14 @@ void CHuiWindow::AddDefButton(char *title,int x,int y,int width,int height,int i
 	gtk_fixed_put(GTK_FIXED(cur_cnt),c.win,x-1,y-1);
 	gtk_widget_show(c.win);
 	g_signal_connect(G_OBJECT(c.win),"clicked",G_CALLBACK(CallbackControl),this);
+	gtk_widget_set_can_default(c.win, true);
+	//gtk_widget_set_receives_default(c.win, true);
+	gtk_widget_grab_default(c.win);
 #endif
 	AddControl(this,&c,id,HuiKindButton);
 }
 
-void CHuiWindow::AddCheckBox(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddCheckBox(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2509,17 +2613,27 @@ void CHuiWindow::AddCheckBox(char *title,int x,int y,int width,int height,int id
 	AddControl(this,&c,id,HuiKindCheckBox);
 }
 
-void CHuiWindow::AddText(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddText(const char *title,int x,int y,int width,int height,int id)
 {
+	const char *title2 = ScanOptions(id, title);
 	sHuiControl c;
 #ifdef HUI_API_WIN
-	c.hWnd=CreateWindow(_T("STATIC"),get_lang_sys(id,title),
+	c.hWnd=CreateWindow(_T("STATIC"),sys_str(title2),
 						WS_CHILD | WS_VISIBLE,
 						x+cdx,y+cdy,width,height,
 						hWnd,NULL,hui_win_instance,NULL);
 #endif
 #ifdef HUI_API_GTK
-	c.win=gtk_label_new(get_lang_sys(id,title));
+	c.win=gtk_label_new(sys_str(title2));
+	if (hui_option_bold){
+		char *markup = g_markup_printf_escaped ("<b>%s</b>", sys_str(title2));
+		gtk_label_set_markup (GTK_LABEL(c.win), markup);
+		g_free (markup);
+	}else if (hui_option_italic){
+		char *markup = g_markup_printf_escaped ("<i>%s</i>", sys_str(title2));
+		gtk_label_set_markup (GTK_LABEL(c.win), markup);
+		g_free (markup);
+	}
 	gtk_label_set_line_wrap(GTK_LABEL(c.win),true);
 	gtk_widget_set_size_request(c.win,width,height+8);
 	gtk_fixed_put(GTK_FIXED(cur_cnt),c.win,x,y-4);
@@ -2528,7 +2642,7 @@ void CHuiWindow::AddText(char *title,int x,int y,int width,int height,int id)
 	AddControl(this,&c,id,HuiKindText);
 }
 
-void CHuiWindow::AddEdit(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddEdit(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2549,11 +2663,15 @@ void CHuiWindow::AddEdit(char *title,int x,int y,int width,int height,int id)
 	if (HuiMultiline){
 		GtkTextBuffer *tb=gtk_text_buffer_new(NULL);
 		c.win=gtk_text_view_new_with_buffer(tb);
+		GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
+		gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+		gtk_widget_show(scroll);
+		gtk_container_add(GTK_CONTAINER(scroll), c.win);
 		GtkWidget *frame=gtk_frame_new(NULL);
 		gtk_widget_set_size_request(frame,width,height);
 		gtk_fixed_put(GTK_FIXED(cur_cnt),frame,x,y);
 		gtk_widget_show(frame);
-		gtk_container_add(GTK_CONTAINER(frame),c.win);
+		gtk_container_add(GTK_CONTAINER(frame),scroll);
 		gtk_widget_show(c.win);
 	}else{
 		c.win=gtk_entry_new();
@@ -2561,16 +2679,17 @@ void CHuiWindow::AddEdit(char *title,int x,int y,int width,int height,int id)
 		gtk_widget_set_size_request(c.win,width,height);
 		gtk_fixed_put(GTK_FIXED(cur_cnt),c.win,x,y);
 		gtk_widget_show(c.win);
-		g_signal_connect(G_OBJECT(c.win),"changed",G_CALLBACK(CallbackControl),this);
+		gtk_entry_set_activates_default(GTK_ENTRY(c.win), true);
 
 		// dumb but usefull test
 		if (height>30){
 			GtkStyle* style=gtk_widget_get_style(c.win);
 			PangoFontDescription *font_desc=pango_font_description_copy(style->font_desc);
-			pango_font_description_set_size(font_desc,height*PANGO_SCALE*2/3);
+			pango_font_description_set_absolute_size(font_desc,height*PANGO_SCALE*0.95);
 			gtk_widget_modify_font(c.win,font_desc);
 		}
 	}
+	g_signal_connect(G_OBJECT(c.win),"changed",G_CALLBACK(CallbackControl),this);
 #endif
 	AddControl(this,&c,id,HuiKindEdit);
 
@@ -2584,7 +2703,7 @@ void CHuiWindow::AddEdit(char *title,int x,int y,int width,int height,int id)
 #endif
 }
 
-void CHuiWindow::AddGroup(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddGroup(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2602,28 +2721,7 @@ void CHuiWindow::AddGroup(char *title,int x,int y,int width,int height,int id)
 	AddControl(this,&c,id,HuiKindGroup);
 }
 
-static int NumPartStrings;
-static char PartString[64][512];
-
-void GetPartStrings(int id,char *title)
-{
-	char str[2048],*title2=get_lang(id,title);
-	int l=0;
-	NumPartStrings=0;
-	for (unsigned int i=0;i<strlen(title2);i++){
-		str[l]=title2[i];
-		str[l+1]=0;
-		if ((title2[i]==HuiComboBoxSeparator)||(i==strlen(title2)-1)){
-			if (title2[i]==HuiComboBoxSeparator)
-				str[l]=0;
-			l=-1;
-			strcpy(PartString[NumPartStrings++],str);
-		}
-		l++;
-	}
-}
-
-void CHuiWindow::AddComboBox(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddComboBox(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2645,17 +2743,18 @@ void CHuiWindow::AddComboBox(char *title,int x,int y,int width,int height,int id
 	AddControl(this,&c,id,HuiKindComboBox);
 	GetPartStrings(id,title);
 	for (int i=0;i<NumPartStrings;i++)
-		AddControlText(id,PartString[i]);
-	SetControlSelection(id,0);
+		AddString(id, PartString[i]);
+	SetInt(id, 0);
 }
 
-void CHuiWindow::AddTabControl(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddTabControl(const char *title,int x,int y,int width,int height,int id)
 {
+	//const char *title2 = ScanOptions(id, title);
 	sHuiControl c;
 #ifdef HUI_API_WIN
 	if (HuiUseFlatButtons){
 		// tabcontrol itself
-		c.hWnd=CreateWindow(_T("SysTabControl32"),get_lang_sys(id,title),
+		c.hWnd=CreateWindow(_T("SysTabControl32"),_T(""),
 							WS_CHILD | WS_VISIBLE,// | TCS_BUTTONS | TCS_FLATBUTTONS,
 							x+cdx,y+cdy,width,height,
 							hWnd,NULL,hui_win_instance,NULL);
@@ -2669,7 +2768,7 @@ void CHuiWindow::AddTabControl(char *title,int x,int y,int width,int height,int 
 												x+cdx,y+cdy+24,width,height-24,
 												hWnd,NULL,hui_win_instance,NULL);*/
 	}else{
-		c.hWnd=CreateWindow(	_T("SysTabControl32"),get_lang_sys(id,title),
+		c.hWnd=CreateWindow(	_T("SysTabControl32"),_T(""),
 												WS_CHILD | WS_VISIBLE,
 												x+cdx,y+cdy,width,height,
 												hWnd,NULL,hui_win_instance,NULL);
@@ -2678,7 +2777,7 @@ void CHuiWindow::AddTabControl(char *title,int x,int y,int width,int height,int 
 	for (int i=0;i<NumPartStrings;i++){
 		TCITEM item;
 		item.mask=TCIF_TEXT;
-		item.pszText=sys_str(PartString[i]);//const_cast<LPSTR>(PartString[i]);
+		item.pszText=(win_str)sys_str(PartString[i]);//const_cast<LPSTR>(PartString[i]);
 		//msg_write(PartString[i]);
 		TabCtrl_InsertItem(c.hWnd,i,&item);
 	}
@@ -2699,6 +2798,9 @@ void CHuiWindow::AddTabControl(char *title,int x,int y,int width,int height,int 
     }
 	c.Selected=0;
 	g_signal_connect(G_OBJECT(c.win),"switch-page",G_CALLBACK(CallbackTabControl),this);
+	gtk_notebook_set_scrollable(GTK_NOTEBOOK(c.win), true);
+	if (hui_option_nobar)
+		gtk_notebook_set_show_tabs(GTK_NOTEBOOK(c.win), false);
 #endif
 #ifdef HUI_API_WIN
 	c.x=x+cdx;
@@ -2752,7 +2854,7 @@ enum
 
 #if 0
 // debug!!!!
-void CHuiWindow::AddListView_Test(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddListView_Test(const char *title,int x,int y,int width,int height,int id)
 {
 #ifdef HUI_API_WIN
 #endif
@@ -2842,23 +2944,14 @@ void CHuiWindow::AddListView_Test(char *title,int x,int y,int width,int height,i
 }
 #endif
 
-void CHuiWindow::AddListView(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddListView(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 	GetPartStrings(id,title);
-	bool lv_tree=false,lv_icons=false,lv_extended=false;
-	if (PartString[0][0]=='!'){
-		lv_tree=strstr(PartString[0],"tree")!=NULL;
-		lv_icons=strstr(PartString[0],"icons")!=NULL;
-		lv_extended=strstr(PartString[0],"extended")!=NULL;
-		for (int i=0;i<NumPartStrings-1;i++)
-			strcpy(PartString[i],PartString[i+1]);
-		NumPartStrings--;
-	}
 #ifdef HUI_API_WIN
 
-	if (lv_icons){
-	}else if (lv_tree){
+	if (hui_option_icons){
+	}else if (hui_option_tree){
 		DWORD style=WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS;
 		c.hWnd=CreateWindowEx((HuiUseFlatButtons?0:WS_EX_CLIENTEDGE),WC_TREEVIEW,_T(""),
 												style | (HuiUseFlatButtons?( BS_FLAT ):0),
@@ -2876,7 +2969,7 @@ void CHuiWindow::AddListView(char *title,int x,int y,int width,int height,int id
 			lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
 			lvc.fmt = LVCFMT_LEFT;
 			lvc.iSubItem = i;//num_cols;
-			lvc.pszText = sys_str(PartString[i]);
+			lvc.pszText = (win_str)sys_str(PartString[i]);
 			lvc.cx = 100;
 			ListView_InsertColumn(c.hWnd,i,&lvc);
 		}
@@ -2891,7 +2984,7 @@ void CHuiWindow::AddListView(char *title,int x,int y,int width,int height,int id
 	GtkWidget *sw=gtk_scrolled_window_new(NULL,NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),GTK_POLICY_AUTOMATIC,GTK_POLICY_AUTOMATIC);
 
-	if (lv_icons){
+	if (hui_option_icons){
 		GtkListStore *model;
 		model = gtk_list_store_new (2, G_TYPE_STRING,GDK_TYPE_PIXBUF);
 		GtkWidget *iv=gtk_icon_view_new_with_model(GTK_TREE_MODEL(model));
@@ -2902,7 +2995,7 @@ void CHuiWindow::AddListView(char *title,int x,int y,int width,int height,int id
 		c.win=iv;
 		// react on double click
 		g_signal_connect(G_OBJECT(c.win),"item-activated",G_CALLBACK(CallbackControl2),this);
-	}else if (lv_tree){
+	}else if (hui_option_tree){
 		GtkTreeStore *store;
 		GtkWidget *tree;
 		GtkTreeViewColumn *column;
@@ -2945,6 +3038,8 @@ void CHuiWindow::AddListView(char *title,int x,int y,int width,int height,int id
 		c.win=tree;
 		g_signal_connect(G_OBJECT(c.win),"row-activated",G_CALLBACK(CallbackControl3),this);
 	}
+	if (hui_option_nobar)
+		gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(c.win), false);
 
 	GtkWidget *frame=gtk_frame_new(NULL);
 	gtk_widget_set_size_request(frame,width-4,height-4);
@@ -2956,10 +3051,10 @@ void CHuiWindow::AddListView(char *title,int x,int y,int width,int height,int id
 	gtk_widget_show(sw);
 	gtk_widget_show(c.win);
 #endif
-	AddControl(this,&c,id,lv_icons?HuiKindListViewIcons:(lv_tree?HuiKindListViewTree:HuiKindListView));
+	AddControl(this, &c, id, hui_option_icons ? HuiKindListViewIcons : (hui_option_tree ? HuiKindListViewTree : HuiKindListView));
 }
 
-void CHuiWindow::AddProgressBar(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddProgressBar(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -2983,7 +3078,7 @@ void CHuiWindow::AddProgressBar(char *title,int x,int y,int width,int height,int
 	AddControl(this,&c,id,HuiKindProgressBar);
 }
 
-void CHuiWindow::AddSlider(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddSlider(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -3012,7 +3107,7 @@ void CHuiWindow::AddSlider(char *title,int x,int y,int width,int height,int id)
 	AddControl(this,&c,id,HuiKindSlider);
 }
 
-void CHuiWindow::AddImage(char *title,int x,int y,int width,int height,int id)
+void CHuiWindow::AddImage(const char *title,int x,int y,int width,int height,int id)
 {
 	sHuiControl c;
 #ifdef HUI_API_WIN
@@ -3045,7 +3140,7 @@ void CHuiWindow::AddImage(char *title,int x,int y,int width,int height,int id)
 
 // replace all the text
 //    for all
-void CHuiWindow::SetControlText(int id,char *str)
+void CHuiWindow::SetString(int id, const char *str)
 {
 	allow_signal_level++;
 	//char *str2=sys_str(str);
@@ -3057,7 +3152,7 @@ void CHuiWindow::SetControlText(int id,char *str)
 			else if (Control[i].Kind==HuiKindComboBox)
 				SendMessage(Control[i].hWnd,CB_ADDSTRING,(WPARAM)0,(LPARAM)sys_str(str));
 			else if ((Control[i].Kind==HuiKindListView)||(Control[i].Kind==HuiKindListViewTree)){
-				AddControlText(id,str);
+				AddString(id,str);
 			}
 		}
 #endif
@@ -3069,12 +3164,12 @@ void CHuiWindow::SetControlText(int id,char *str)
 			else if (Control[i].Kind==HuiKindEdit){
 				if (GTK_CHECK_TYPE(Control[i].win,GTK_TYPE_TEXT_VIEW)){
 					GtkTextBuffer *tb=gtk_text_view_get_buffer(GTK_TEXT_VIEW(Control[i].win));
-					char *str2=sys_str(str);
+					const char *str2=sys_str(str);
 					gtk_text_buffer_set_text(tb,str2,strlen(str2));
 				}else
 					gtk_entry_set_text(GTK_ENTRY(Control[i].win),sys_str(str));
 			}else if ((Control[i].Kind==HuiKindListView)||(Control[i].Kind==HuiKindListViewTree)){
-				AddControlText(id,str);
+				AddString(id, str);
 			}else if (Control[i].Kind==HuiKindComboBox){
 				gtk_combo_box_append_text(GTK_COMBO_BOX(Control[i].win),sys_str(str));
 				Control[i]._item_.push_back(dummy_iter);
@@ -3091,14 +3186,48 @@ void CHuiWindow::SetControlText(int id,char *str)
 
 // replace all the text with a numerical value (int)
 //    for all
-void CHuiWindow::SetControlInt(int id,int i)
+// select an item
+//    for ComboBox, TabControl, ListView?
+void CHuiWindow::SetInt(int id, int n)
 {
-	SetControlText(id,i2s(i));
+	allow_signal_level++;
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID){
+			if ((Control[i].Kind==HuiKindEdit) || (Control[i].Kind==HuiKindText))
+				SetString(id, i2s(n));
+#ifdef HUI_API_WIN
+			if (Control[i].Kind==HuiKindTabControl){
+				TabCtrl_SetCurSel(Control[i].hWnd,n);
+				UpdateTabPages(this);
+			}else if (Control[i].Kind==HuiKindListView)
+				SendMessage(Control[i].hWnd,(UINT)LVM_SETSELECTIONMARK,(WPARAM)n,(LPARAM)0);
+			else if (Control[i].Kind==HuiKindComboBox)
+				SendMessage(Control[i].hWnd,(UINT)CB_SETCURSEL,(WPARAM)n,(LPARAM)0);
+#endif
+#ifdef HUI_API_GTK
+			if (Control[i].Kind==HuiKindTabControl){
+				gtk_notebook_set_current_page(GTK_NOTEBOOK(Control[i].win),n);
+				Control[i].Selected=n;
+			}else if ((Control[i].Kind==HuiKindListView) || (Control[i].Kind==HuiKindListViewTree)){
+				GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(Control[i].win));
+				if (n >= 0){
+					gtk_tree_selection_select_iter(sel, &Control[i]._item_[n]);
+					GtkTreePath *path = gtk_tree_path_new_from_indices(n, -1);
+					gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(Control[i].win), path, NULL, false, 0, 0);
+					gtk_tree_path_free(path);
+				}else
+					gtk_tree_selection_unselect_all(sel);
+			}else if (Control[i].Kind==HuiKindComboBox){
+				gtk_combo_box_set_active(GTK_COMBO_BOX(Control[i].win), n);
+			}
+#endif
+		}
+	allow_signal_level--;
 }
 
 // replace all the text with a float
 //    for all
-void CHuiWindow::SetControlFloat(int id,float f,int dec)
+void CHuiWindow::SetFloat(int id, float f)
 {
 	allow_signal_level++;
 	for (int i=0;i<Control.size();i++)
@@ -3107,7 +3236,7 @@ void CHuiWindow::SetControlFloat(int id,float f,int dec)
 			if (Control[i].Kind==HuiKindProgressBar)
 				SendMessage(Control[i].hWnd, PBM_SETPOS, int(100.0f*f), 0);
 			else
-				SetControlText(id,f2s(f,dec));
+				SetString(id, f2s(f, NumFloatDecimals));
 #endif
 #ifdef HUI_API_GTK
 			if (Control[i].Kind==HuiKindProgressBar)
@@ -3115,13 +3244,13 @@ void CHuiWindow::SetControlFloat(int id,float f,int dec)
 			else if (Control[i].Kind==HuiKindSlider)
 				gtk_range_set_value(GTK_RANGE(Control[i].win),f);
 			else
-				SetControlText(id,f2s(f,dec));
+				SetString(id, f2s(f, NumFloatDecimals));
 #endif
 		}
 	allow_signal_level--;
 }
 
-void CHuiWindow::SetControlImage(int id,int image)
+void CHuiWindow::SetImage(int id,int image)
 {
 	allow_signal_level++;
 	for (int i=0;i<Control.size();i++)
@@ -3144,7 +3273,7 @@ void CHuiWindow::SetControlImage(int id,int image)
 
 // add a single line/string
 //    for ComboBox, ListView, ListViewTree, ListViewIcons
-void CHuiWindow::AddControlText(int id,char *str)
+void CHuiWindow::AddString(int id, const char *str)
 {
 	allow_signal_level++;
 	//char *str2=sys_str(str);
@@ -3165,10 +3294,10 @@ void CHuiWindow::AddControlText(int id,char *str)
 						_lvI_.mask = LVIF_TEXT | LVIF_PARAM | LVIF_STATE;
 						_lvI_.state = 0;
 						_lvI_.stateMask = 0;
-						_lvI_.pszText=sys_str(PartString[j]);
+						_lvI_.pszText = (win_str)sys_str(PartString[j]);
 						ListView_InsertItem(Control[i].hWnd, &_lvI_);
 					}else
-						ListView_SetItemText(Control[i].hWnd,line,j,sys_str(PartString[j]));
+						ListView_SetItemText(Control[i].hWnd,line,j,(win_str)sys_str(PartString[j]));
 				}
 				if ((line<5)||(NumPartStrings==0)){
 					for (j=0;j<128;j++)
@@ -3187,7 +3316,7 @@ void CHuiWindow::AddControlText(int id,char *str)
 				for (int j=1;j<NumPartStrings;j++)
 					strcat(tt, string(" - ", PartString[j]));
 				_tvi_.mask = TVIF_TEXT;
-				_tvi_.pszText = sys_str(tt);
+				_tvi_.pszText = (win_str)sys_str(tt);
 				_tvi_.cchTextMax = sizeof(_tvi_.pszText)/sizeof(_tvi_.pszText[0]);
 
 				TVINSERTSTRUCT tvins;
@@ -3236,7 +3365,7 @@ void CHuiWindow::AddControlText(int id,char *str)
 
 // add a single line as a child in the tree of a ListViewTree
 //    for ListViewTree
-void CHuiWindow::AddControlChildText(int id,int parent_row,char *str)
+void CHuiWindow::AddChildString(int id, int parent_row, const char *str)
 {
 	allow_signal_level++;
 	for (int i=0;i<Control.size();i++)
@@ -3250,7 +3379,7 @@ void CHuiWindow::AddControlChildText(int id,int parent_row,char *str)
 					strcat(tt, string(" - ", PartString[j]));
 				TVITEM tvi;
 				tvi.mask = TVIF_TEXT;
-				tvi.pszText = sys_str(tt);
+				tvi.pszText = (win_str)sys_str(tt);
 				tvi.cchTextMax = sizeof(tvi.pszText)/sizeof(tvi.pszText[0]);
 
 				TVINSERTSTRUCT tvins;
@@ -3274,26 +3403,32 @@ void CHuiWindow::AddControlChildText(int id,int parent_row,char *str)
 
 // change a single line in the tree of a ListViewTree
 //    for ListViewTree
-void CHuiWindow::ChangeControlText(int id,int row,char *str)
+void CHuiWindow::ChangeString(int id,int row,const char *str)
 {
 	allow_signal_level++;
 #ifdef HUI_API_WIN
 #endif
 #ifdef HUI_API_GTK
 	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID){
-			if (Control[i].Kind==HuiKindListViewTree){
-				GetPartStrings(-1,str);
-				GtkTreeStore *store=GTK_TREE_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(Control[i].win)));
+		if (id == Control[i].ID){
+			if (Control[i].Kind == HuiKindListViewTree){
+				GetPartStrings(-1, str);
+				GtkTreeStore *store = GTK_TREE_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(Control[i].win)));
 				for (int j=0;j<NumPartStrings;j++)
-					gtk_tree_store_set(store, &Control[i]._item_[row], j,sys_str(PartString[j]),-1);
+					gtk_tree_store_set(store, &Control[i]._item_[row], j, sys_str(PartString[j]), -1);
+			}else if (Control[i].Kind == HuiKindListView){
+				GetPartStrings(-1, str);
+				GtkListStore *store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(Control[i].win)));
+				for (int j=0;j<NumPartStrings;j++)
+					if (gtk_list_store_iter_is_valid(store, &Control[i]._item_[row]))
+						gtk_list_store_set(store, &Control[i]._item_[row], j, sys_str(PartString[j]), -1);
 			}
 		}
 #endif
 	allow_signal_level--;
 }
 
-void CHuiWindow::SetControlColor(int id,int *c,bool use_alpha)
+void CHuiWindow::SetColor(int id,int *c,bool use_alpha)
 {
 	allow_signal_level++;
 	for (int i=0;i<Control.size();i++)
@@ -3323,7 +3458,7 @@ static char ControlText[2048];//,ControlLine[2048];
 
 // retrieve the text
 //    for edit
-char *CHuiWindow::GetControlText(int id)
+const char *CHuiWindow::GetString(int id)
 {
 	for (int i=0;i<Control.size();i++)
 		if (id==Control[i].ID)
@@ -3362,164 +3497,14 @@ char *CHuiWindow::GetControlText(int id)
 
 // retrieve the text as a numerical value (int)
 //    for edit
-int CHuiWindow::GetControlInt(int id)
-{
-	return s2i(GetControlText(id));
-}
-
-// retrieve the text as a numerical value (float)
-//    for edit
-float CHuiWindow::GetControlFloat(int id)
-{
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID)
-			if (Control[i].Kind==HuiKindSlider){
-#ifdef HUI_API_GTK
-				return gtk_range_get_value(GTK_RANGE(Control[i].win));
-#endif
-			}
-	return s2f(GetControlText(id));
-}
-
-void CHuiWindow::GetControlColor(int id,int *c,bool use_alpha)
-{
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID)
-			if (Control[i].Kind==HuiKindColorButton){
-#ifdef HUI_API_WIN
-				for (int j=0;j<(use_alpha?4:3);j++)
-					c[j]=Control[i].Color[j];
-#endif
-#ifdef HUI_API_GTK
-				GdkColor col;
-				gtk_color_button_get_color(GTK_COLOR_BUTTON(Control[i].win),&col);
-				c[0]=col.red>>8;
-				c[1]=col.green>>8;
-				c[2]=col.blue>>8;
-				if (use_alpha)
-					c[3]=gtk_color_button_get_alpha(GTK_COLOR_BUTTON(Control[i].win))>>8;
-#endif
-			}
-}
-
-// switch control to usable/unusable
-//    for all
-void CHuiWindow::EnableControl(int id,bool enabled)
-{
-	if (id<0)
-		return;
-	allow_signal_level++;
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID){
-		    Control[i].Enabled=enabled;
-#ifdef HUI_API_WIN
-			EnableWindow(Control[i].hWnd,enabled);
-			if (Control[i].Kind==HuiKindColorButton){
-				if (Control[i].hWnd3)
-					EnableWindow(Control[i].hWnd3,enabled);
-				ShowWindow(Control[i].hWnd2,SW_HIDE);
-				ShowWindow(Control[i].hWnd2,SW_SHOW);
-			}
-#endif
-#ifdef HUI_API_GTK
-			gtk_widget_set_sensitive(Control[i].win,enabled);
-#endif
-		}
-	for (int t=0;t<4;t++)
-		for (int i=0;i<tool_bar[t].Item.size();i++)
-			if (id==tool_bar[t].Item[i].ID){
-			    tool_bar[t].Item[i].Enabled=enabled;
-#ifdef HUI_API_WIN
-				if (t==HuiToolBarTop)
-					SendMessage(tool_bar[t].hWnd,TB_ENABLEBUTTON,(WPARAM)id,(LPARAM)(enabled?TRUE:FALSE));
-#endif
-#ifdef HUI_API_GTK
-				gtk_widget_set_sensitive(GTK_WIDGET(tool_bar[t].Item[i].item),enabled);
-#endif
-			}
-	allow_signal_level--;
-}
-
-//    for all
-bool CHuiWindow::IsControlEnabled(int id)
-{
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID)
-			return Control[i].Enabled;
-	for (int t=0;t<4;t++)
-		for (int i=0;i<tool_bar[t].Item.size();i++)
-			if (id==tool_bar[t].Item[i].ID)
-				return tool_bar[t].Item[i].Enabled;
-	return false;
-}
-
-// mark as "checked"
-//    for CheckBox, ToolBarItemCheckable
-void CHuiWindow::CheckControl(int id,bool checked)
-{
-	allow_signal_level++;
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID)
-			if (Control[i].Kind==HuiKindCheckBox)
-#ifdef HUI_API_WIN
-				SendMessage(Control[i].hWnd,BM_SETCHECK,(WPARAM)(checked?BST_CHECKED:BST_UNCHECKED),(LPARAM)0);
-	// BST_INDETERMINATE
-#endif
-#ifdef HUI_API_GTK
-				gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(Control[i].win),checked);
-#endif
-	for (int t=0;t<4;t++)
-		for (int i=0;i<tool_bar[t].Item.size();i++)
-			if (id==tool_bar[t].Item[i].ID)
-				if (tool_bar[t].Item[i].Kind==HuiToolCheckable){
-#ifdef HUI_API_WIN
-					if (t==HuiToolBarTop)
-						SendMessage(tool_bar[t].hWnd,TB_CHECKBUTTON,(WPARAM)id,(LPARAM)(checked?TRUE:FALSE));
-#endif
-#ifdef HUI_API_GTK
-					gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(tool_bar[t].Item[i].item),checked);
-#endif
-				}
-	allow_signal_level--;
-}
-
-// is marked as "checked"?
-//    for CheckBox
-bool CHuiWindow::IsControlChecked(int id)
-{
-#ifdef HUI_API_WIN
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID)
-			if (Control[i].Kind==HuiKindCheckBox)
-				return SendMessage(Control[i].hWnd,BM_GETCHECK,(WPARAM)0,(LPARAM)0)==BST_CHECKED;
-#endif
-#ifdef HUI_API_GTK
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID)
-			if (Control[i].Kind==HuiKindCheckBox)
-				return gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(Control[i].win));
-#endif
-	for (int t=0;t<4;t++)
-		for (int i=0;i<tool_bar[t].Item.size();i++)
-			if (id==tool_bar[t].Item[i].ID)
-				if (tool_bar[t].Item[i].Kind==HuiToolCheckable){
-#ifdef HUI_API_WIN
-					if (t==HuiToolBarTop)
-						return (SendMessage(tool_bar[t].hWnd,TB_ISBUTTONCHECKED,(WPARAM)i,(LPARAM)0)!=0);
-#endif
-#ifdef HUI_API_GTK
-					return gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(tool_bar[t].Item[i].item));
-#endif
-				}
-	return false;
-}
-
 // which item/line is selected?
 //    for ComboBox, TabControl, ListView
-int CHuiWindow::GetControlSelection(int id)
+int CHuiWindow::GetInt(int id)
 {
 	for (int i=0;i<Control.size();i++)
 		if (id==Control[i].ID){
+			if ((Control[i].Kind==HuiKindEdit) || (Control[i].Kind==HuiKindText))
+				return s2i(GetString(id));
 #ifdef HUI_API_WIN
 			if (Control[i].Kind==HuiKindTabControl)
 				return TabCtrl_GetCurSel(Control[i].hWnd);
@@ -3559,9 +3544,156 @@ int CHuiWindow::GetControlSelection(int id)
 	return -1;
 }
 
+// retrieve the text as a numerical value (float)
+//    for edit
+float CHuiWindow::GetFloat(int id)
+{
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID)
+			if (Control[i].Kind==HuiKindSlider){
+#ifdef HUI_API_GTK
+				return gtk_range_get_value(GTK_RANGE(Control[i].win));
+#endif
+			}
+	return s2f(GetString(id));
+}
+
+void CHuiWindow::GetColor(int id,int *c,bool use_alpha)
+{
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID)
+			if (Control[i].Kind==HuiKindColorButton){
+#ifdef HUI_API_WIN
+				for (int j=0;j<(use_alpha?4:3);j++)
+					c[j]=Control[i].Color[j];
+#endif
+#ifdef HUI_API_GTK
+				GdkColor col;
+				gtk_color_button_get_color(GTK_COLOR_BUTTON(Control[i].win),&col);
+				c[0]=col.red>>8;
+				c[1]=col.green>>8;
+				c[2]=col.blue>>8;
+				if (use_alpha)
+					c[3]=gtk_color_button_get_alpha(GTK_COLOR_BUTTON(Control[i].win))>>8;
+#endif
+			}
+}
+
+// switch control to usable/unusable
+//    for all
+void CHuiWindow::Enable(int id,bool enabled)
+{
+	if (id<0)
+		return;
+	allow_signal_level++;
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID){
+		    Control[i].Enabled=enabled;
+#ifdef HUI_API_WIN
+			EnableWindow(Control[i].hWnd,enabled);
+			if (Control[i].Kind==HuiKindColorButton){
+				if (Control[i].hWnd3)
+					EnableWindow(Control[i].hWnd3,enabled);
+				ShowWindow(Control[i].hWnd2,SW_HIDE);
+				ShowWindow(Control[i].hWnd2,SW_SHOW);
+			}
+#endif
+#ifdef HUI_API_GTK
+			gtk_widget_set_sensitive(Control[i].win,enabled);
+#endif
+		}
+	for (int t=0;t<4;t++)
+		for (int i=0;i<tool_bar[t].Item.size();i++)
+			if (id==tool_bar[t].Item[i].ID){
+			    tool_bar[t].Item[i].Enabled=enabled;
+#ifdef HUI_API_WIN
+				if (t==HuiToolBarTop)
+					SendMessage(tool_bar[t].hWnd,TB_ENABLEBUTTON,(WPARAM)id,(LPARAM)(enabled?TRUE:FALSE));
+#endif
+#ifdef HUI_API_GTK
+				gtk_widget_set_sensitive(GTK_WIDGET(tool_bar[t].Item[i].item),enabled);
+#endif
+			}
+	allow_signal_level--;
+}
+
+//    for all
+bool CHuiWindow::IsEnabled(int id)
+{
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID)
+			return Control[i].Enabled;
+	for (int t=0;t<4;t++)
+		for (int i=0;i<tool_bar[t].Item.size();i++)
+			if (id==tool_bar[t].Item[i].ID)
+				return tool_bar[t].Item[i].Enabled;
+	return false;
+}
+
+// mark as "checked"
+//    for CheckBox, ToolBarItemCheckable
+void CHuiWindow::Check(int id,bool checked)
+{
+	allow_signal_level++;
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID)
+			if (Control[i].Kind==HuiKindCheckBox)
+#ifdef HUI_API_WIN
+				SendMessage(Control[i].hWnd,BM_SETCHECK,(WPARAM)(checked?BST_CHECKED:BST_UNCHECKED),(LPARAM)0);
+	// BST_INDETERMINATE
+#endif
+#ifdef HUI_API_GTK
+				gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(Control[i].win),checked);
+#endif
+	for (int t=0;t<4;t++)
+		for (int i=0;i<tool_bar[t].Item.size();i++)
+			if (id==tool_bar[t].Item[i].ID)
+				if (tool_bar[t].Item[i].Kind==HuiToolCheckable){
+#ifdef HUI_API_WIN
+					if (t==HuiToolBarTop)
+						SendMessage(tool_bar[t].hWnd,TB_CHECKBUTTON,(WPARAM)id,(LPARAM)(checked?TRUE:FALSE));
+#endif
+#ifdef HUI_API_GTK
+					gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(tool_bar[t].Item[i].item),checked);
+#endif
+				}
+	allow_signal_level--;
+}
+
+// is marked as "checked"?
+//    for CheckBox
+bool CHuiWindow::IsChecked(int id)
+{
+#ifdef HUI_API_WIN
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID)
+			if (Control[i].Kind==HuiKindCheckBox)
+				return SendMessage(Control[i].hWnd,BM_GETCHECK,(WPARAM)0,(LPARAM)0)==BST_CHECKED;
+#endif
+#ifdef HUI_API_GTK
+	for (int i=0;i<Control.size();i++)
+		if (id==Control[i].ID)
+			if (Control[i].Kind==HuiKindCheckBox)
+				return gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(Control[i].win));
+#endif
+	for (int t=0;t<4;t++)
+		for (int i=0;i<tool_bar[t].Item.size();i++)
+			if (id==tool_bar[t].Item[i].ID)
+				if (tool_bar[t].Item[i].Kind==HuiToolCheckable){
+#ifdef HUI_API_WIN
+					if (t==HuiToolBarTop)
+						return (SendMessage(tool_bar[t].hWnd,TB_ISBUTTONCHECKED,(WPARAM)i,(LPARAM)0)!=0);
+#endif
+#ifdef HUI_API_GTK
+					return gtk_toggle_tool_button_get_active(GTK_TOGGLE_TOOL_BUTTON(tool_bar[t].Item[i].item));
+#endif
+				}
+	return false;
+}
+
 // which lines are selected?
 //    for ListView
-int CHuiWindow::GetControlSelectionM(int id,int *indices)
+int CHuiWindow::GetMultiSelection(int id,int *indices)
 {
 	int num_marked=0;
 #ifdef HUI_API_WIN
@@ -3586,45 +3718,16 @@ int CHuiWindow::GetControlSelectionM(int id,int *indices)
 			}
 #endif
 #ifdef HUI_API_GTK
-	indices[0]=GetControlSelection(id);
-	num_marked=(indices[0]>=0)?1:0;
+	indices[0] = GetInt(id);
+	num_marked = (indices[0] >= 0) ? 1 : 0;
 		//msg_write>Write("Todo:  CHuiWindow::GetControlSelectionM (Linux)");
 #endif
 	return num_marked;
 }
 
-// select an item
-//    for ComboBox, TabControl, ListView?
-void CHuiWindow::SetControlSelection(int id,int index)
-{
-	allow_signal_level++;
-	for (int i=0;i<Control.size();i++)
-		if (id==Control[i].ID){
-#ifdef HUI_API_WIN
-			if (Control[i].Kind==HuiKindTabControl){
-				TabCtrl_SetCurSel(Control[i].hWnd,index);
-				UpdateTabPages(this);
-			}else if (Control[i].Kind==HuiKindListView)
-				SendMessage(Control[i].hWnd,(UINT)LVM_SETSELECTIONMARK,(WPARAM)index,(LPARAM)0);
-			else if (Control[i].Kind==HuiKindComboBox)
-				SendMessage(Control[i].hWnd,(UINT)CB_SETCURSEL,(WPARAM)index,(LPARAM)0);
-#endif
-#ifdef HUI_API_GTK
-			if (Control[i].Kind==HuiKindTabControl){
-				gtk_notebook_set_current_page(GTK_NOTEBOOK(Control[i].win),index);
-				Control[i].Selected=index;
-			}else if (Control[i].Kind==HuiKindListView){
-			}else if (Control[i].Kind==HuiKindComboBox){
-				gtk_combo_box_set_active(GTK_COMBO_BOX(Control[i].win),index);
-			}
-#endif
-		}
-	allow_signal_level--;
-}
-
 // delete all the content
 //    for ComboBox, ListView
-void CHuiWindow::ResetControl(int id)
+void CHuiWindow::Reset(int id)
 {
 	allow_signal_level++;
 	for (int i=0;i<Control.size();i++)
@@ -3661,7 +3764,7 @@ void CHuiWindow::ResetControl(int id)
 // easy window creation functions
 
 
-void HuiWindowAddControl(CHuiWindow *win,int control_type,char *title,int x,int y,int width,int height,int id)
+void HuiWindowAddControl(CHuiWindow *win,int control_type,const char *title,int x,int y,int width,int height,int id)
 {
 	msg_db_m(string2("HuiWindowAddControl %d  %s  %d  %d  %d  %d  %d",control_type,title,x,y,width,height,id),2);
 	if (control_type==HuiKindButton)		win->AddButton(title,x,y,width,height,id);
@@ -3679,26 +3782,26 @@ void HuiWindowAddControl(CHuiWindow *win,int control_type,char *title,int x,int 
 	if (control_type==HuiKindImage)			win->AddImage(title,x,y,width,height,id);
 }
 
-CHuiWindow *HuiCreateWindow(char *title,int x,int y,int width,int height,message_function *mf)
+CHuiWindow *HuiCreateWindow(const char *title,int x,int y,int width,int height,message_function *mf)
 {
 	return new CHuiWindow(	title,x,y,width,height,NULL,true,
 							HuiWinModeWindow,
 							true,mf);
 }
 
-CHuiWindow *HuiCreateNixWindow(char *title,int x,int y,int width,int height,message_function *mf)
+CHuiWindow *HuiCreateNixWindow(const char *title,int x,int y,int width,int height,message_function *mf)
 {
 	return new CHuiWindow(	title,x,y,width,height,NULL,true,
 							HuiWinModeWindow | HuiWinModeNix,
 							true,mf);
 }
 
-CHuiWindow *HuiCreateDummyWindow(char *title,int x,int y,int width,int height,message_function *mf)
+CHuiWindow *HuiCreateDummyWindow(const char *title,int x,int y,int width,int height,message_function *mf)
 {
 	return new CHuiWindow(	title, x, y, width, height, mf);
 }
 
-CHuiWindow *HuiCreateDialog(char *title,int width,int height,CHuiWindow *root,bool allow_root,message_function *mf)
+CHuiWindow *HuiCreateDialog(const char *title,int width,int height,CHuiWindow *root,bool allow_root,message_function *mf)
 {
 	return new CHuiWindow(	title,-1,-1,width,height,root,allow_root,
 							HuiWinModeDialog,

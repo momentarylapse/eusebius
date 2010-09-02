@@ -13,11 +13,9 @@
 | vital properties:                                                            |
 |  - a single instance per file                                                |
 |                                                                              |
-| last update: 2009.11.2 (c) by MichiSoft TM                                  |
+| last update: 2010.06.01 (c) by MichiSoft TM                                  |
 \*----------------------------------------------------------------------------*/
 #include "file.h"
-
-#include "msg.h"
 
 
 
@@ -29,6 +27,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <time.h>
+#include <vector>
 
 #ifdef FILE_OS_WINDOWS
 	#include <stdio.h>
@@ -58,24 +57,6 @@
 		return (pos>=stat.st_size);
 	}
 	#define _close	close
-	inline unsigned char to_low(unsigned char c)
-	{
-		if ((c>='A')&&(c<='Z'))
-			return c-'A'+'a';
-		return c;
-	}
-	int _stricmp(const char*a,const char*b)
-	{
-		unsigned char a_low=to_low(*a);
-		unsigned char b_low=to_low(*b);
-		while((*a!=0)&&(*b!=0)){
-			if (a_low!=b_low)	break;
-			a++,++b;
-			a_low=to_low(*a);
-			b_low=to_low(*b);
-		}
-		return a_low-b_low;
-	}
 	#define _rmdir	rmdir
 	#define _unlink	unlink
 #endif
@@ -137,10 +118,6 @@ sDate get_current_date()
 #endif
 }
 
-
-
-int _file_current_stack_pos_=0;
-char _file_stack_str_[FILE_STR_STACK_DEPTH][2048];
 
 t_file_try_again_func *FileTryAgainFunc;
 
@@ -403,115 +380,6 @@ void FileClose(CFile *f)
 	delete(f);
 }
 
-char FileTempName[8][1024];
-int CurrentFileTempName=0;
-
-inline char *get_temp_name()
-{
-	CurrentFileTempName ++;
-	if (CurrentFileTempName >= 8)
-		CurrentFileTempName = 0;
-	return FileTempName[CurrentFileTempName];
-}
-
-// transposes path-strings to the current operating system
-// accepts windows and linux paths ("/" and "\\")
-char *SysFileName(const char *filename)
-{
-	char *str = get_temp_name();
-	strcpy(str,filename);
-#ifdef FILE_OS_WINDOWS
-	for (unsigned int i=0;i<strlen(str);i++)
-		if (str[i]=='/')
-			str[i]='\\';
-#endif
-#ifdef FILE_OS_LINUX
-	for (int i=0;i<strlen(str);i++)
-		if (str[i]=='\\')
-			str[i]='/';
-#endif
-	return str;
-}
-
-// ends with '/' or '\'
-char *dir_from_filename(const char *filename)
-{
-	char *str = get_temp_name();
-	strcpy(str,filename);
-	for (int i=strlen(str)-1;i>=0;i--){
-		if ((str[i]=='/')||(str[i]=='\\')){
-			str[i+1]=0;
-			break;
-		}
-		if (i==0)
-			str[i]=0;
-	}
-	return str;
-}
-
-char *file_from_filename(const char *filename)
-{
-	char *str = get_temp_name();
-	strcpy(str, filename);
-	for (int i=strlen(str)-1;i>=0;i--){
-		if ((str[i]=='/')||(str[i]=='\\')){
-			strcpy(str, &filename[i+1]);
-			str[i+1]=0;
-			break;
-		}
-	}
-	return str;
-}
-
-// make sure the name ends with (or without) a shlash
-void dir_ensure_ending(char *dir,bool slash)
-{
-	char lc=dir[strlen(dir)-1];
-	if ((slash)&&(lc!='/')&&(lc!='\\'))
-		strcat(dir,"/");
-	if ((!slash)&&((lc=='/')||(lc=='\\')))
-		dir[strlen(dir)-1]=0;
-}
-
-// remove "/../"
-char *filename_no_recursion(const char *filename)
-{
-	char *str = get_temp_name();
-	strcpy(str,filename);
-	int l1,l2,l3;
-	for (l1=strlen(str)-2;l1>=0;l1--)
-		if ((str[l1]=='.')&&(str[l1+1]=='.')){
-			for (l2=l1-2;l2>=0;l2--)
-				if ((str[l2]=='/')||(str[l2]=='\\')){
-					int ss=strlen(str)+l2-l1-2;
-					for (l3=l2;l3<ss;l3++)
-						str[l3]=str[l3+l1-l2+2];
-					str[ss]=0;
-					l1=l2;
-					break;
-				}
-		}
-	return str;
-}
-
-char *file_extension(const char *filename)
-{
-	char *str = get_temp_name();
-	strcpy(str,"");
-	int pie=-1;
-	int length = strlen(filename);
-	for (int i=0;i<length;i++){
-		if (pie >= 0){
-			str[pie] = filename[i];
-			str[pie+1] = 0;
-			pie ++;
-		}
-		if (str[i] == '.')
-			pie=0;
-	}
-	return str;
-}
-
 
 // open a file
 bool CFile::Open(const char *filename)
@@ -521,6 +389,7 @@ bool CFile::Open(const char *filename)
 		msg_right();
 	}
 	Error=Eof=false;
+	Reading = true;
 	handle=_open(SysFileName(filename),O_RDONLY);
 	if (handle<=0){
 		if (file_get_from_archive(filename)){
@@ -556,6 +425,7 @@ bool CFile::Create(const char *filename)
 		msg_right();
 	}
 	Error=false;
+	Reading = false;
 	FloatDecimals=3;
 #ifdef FILE_OS_WINDOWS
 	handle=_creat(SysFileName(filename),_S_IREAD | _S_IWRITE);
@@ -584,6 +454,7 @@ bool CFile::Append(const char *filename)
 		msg_right();
 	}
 	Error=false;
+	Reading = false;
 	FloatDecimals=3;
 #ifdef FILE_OS_WINDOWS
 	handle=_open(SysFileName(filename),O_WRONLY | O_APPEND | O_CREAT,_S_IREAD | _S_IWRITE);
@@ -1131,7 +1002,7 @@ void CFile::WriteStr(const char *str)
 }
 
 // write a string with a given length
-void CFile::WriteStr(const char *str,int l)
+void CFile::WriteStrL(const char *str,int l)
 {
 	int r;
 	r=_write(handle,str,l);
@@ -1156,6 +1027,174 @@ void CFile::WriteVector(const void *v)
 	WriteFloat(((float*)v)[2]);
 }
 
+
+void CFile::Int(int &i)
+{
+	if (Reading)
+		i = ReadInt();
+	else
+		WriteInt(i);
+}
+
+void CFile::Float(float &f)
+{
+	if (Reading)
+		f = ReadFloat();
+	else
+		WriteFloat(f);
+}
+
+void CFile::Bool(bool &b)
+{
+	if (Reading)
+		b = ReadBool();
+	else
+		WriteBool(b);
+}
+
+void CFile::String(char *str)
+{
+	if (Reading)
+		strcpy(str, ReadStr());
+	else
+		WriteStr(str);
+}
+
+void CFile::Vector(float *v)
+{
+	if (Reading)
+		ReadVector(v);
+	else
+		WriteVector(v);
+}
+
+struct sStructFormatItem
+{
+	int offset, size, type, num, total_size;
+};
+
+struct sStructFormat
+{
+	const char *format;
+	std::vector<sStructFormatItem> item_t;
+	std::vector<sStructFormatItem> item_b;
+	int size;
+};
+
+std::vector<sStructFormat> StructFormat;
+
+void add_sfi(std::vector<sStructFormatItem> &it, int offset, int size, int type, int num, int total_size)
+{
+	sStructFormatItem ii = {offset, size, type, num, total_size};
+	it.push_back(ii);
+}
+
+int get_sfi_num(const char *str)
+{
+	if ((*str >= '1') && (*str <= '9')){
+		int n = 0;
+		for (int i=0;i<7;i++){
+			if ((str[i] >= '1') && (str[i] <= '9'))
+				n = n*10 + (str[i] - 48);
+			else
+				return n;
+		}
+	}else
+		return 1;
+}
+
+sStructFormat *get_format(const char *format)
+{
+	for (int i=0;i<StructFormat.size();i++)
+		if (StructFormat[i].format == format)
+			return &StructFormat[i];
+	sStructFormat f;
+	f.format = format;
+	f.size = 0;
+	int l = strlen(format);
+	int offset = 0;
+	for (int i=0;i<l;i++){
+		if (format[i] == 'C'){
+			//add_sfi(f.item_t, );
+		}else if (format[i] == 'i'){
+			int num = get_sfi_num(&format[i + 1]);
+			add_sfi(f.item_t, offset, 4, 1, num, 4 * num);
+			//add_sfi(f.item_b, offset, 4, 1, num, 4 * num);
+			offset += 4 * num;
+		}else if (format[i] == 'f'){
+			int num = get_sfi_num(&format[i + 1]);
+			add_sfi(f.item_t, offset, 4, 2, num, 4 * num);
+			//add_sfi(f.item_b, offset, 4, 2, num, 4 * num);
+			offset += 4 * num;
+		}else if (format[i] == 'b'){
+			int num = get_sfi_num(&format[i + 1]);
+			add_sfi(f.item_t, offset, 1, 3, num, 1 * num);
+			//add_sfi(f.item_b, offset, 1, 3, num, 1 * num);
+			offset += 1 * num;
+		}
+	}
+	f.size = offset;
+	StructFormat.push_back(f);
+	return &StructFormat[StructFormat.size() - 1];
+}
+
+void CFile::Struct(const char *format, void *data)
+{
+	sStructFormat *f = get_format(format);
+	if (Reading){
+		if (Binary){
+			ReadBuffer(data, f->size);
+		}else{
+			char *cdata = (char*)data;
+			for (int i=0;i<f->item_t.size();i++){
+				int n = f->item_t[i].num;
+				if (f->item_t[i].type == 0)
+					ReadComment();
+				else if (f->item_t[i].type == 1)
+					for (int j=0;j<n;j++)
+						*(int*)&cdata[f->item_t[i].offset + j * 4] = ReadInt();
+				else if (f->item_t[i].type == 2)
+					for (int j=0;j<n;j++)
+						*(float*)&cdata[f->item_t[i].offset + j * 4] = ReadFloat();
+				else if (f->item_t[i].type == 3)
+					for (int j=0;j<n;j++)
+						*(bool*)&cdata[f->item_t[i].offset + j] = ReadBool();
+			}
+		}
+	}else{
+		if (Binary){
+			WriteBuffer(data, f->size);
+		}else{
+			char *cdata = (char*)data;
+			for (int i=0;i<f->item_t.size();i++){
+				int n = f->item_t[i].num;
+				if (f->item_t[i].type == 0)
+					msg_todo("CFile::Struct can't write comments");
+				else if (f->item_t[i].type == 1)
+					for (int j=0;j<n;j++)
+						WriteInt(*(int*)&cdata[f->item_t[i].offset + j * 4]);
+				else if (f->item_t[i].type == 2)
+					for (int j=0;j<n;j++)
+						WriteFloat(*(float*)&cdata[f->item_t[i].offset + j * 4]);
+				else if (f->item_t[i].type == 3)
+					for (int j=0;j<n;j++)
+						WriteBool(*(bool*)&cdata[f->item_t[i].offset + j]);
+			}
+		}
+		//msg_todo("CFile::Struct writing mode");
+	}
+}
+
+void CFile::StructN(const char *format, int &num, void *data, int shift)
+{
+	if (Reading)
+		num = ReadInt();
+	else
+		WriteInt(num);
+	for (int i=0;i<num;i++)
+		Struct(format, &((char*)data)[shift * i]);
+}
+
 // insert some white spaces
 void CFile::ShiftRight(int s)
 {
@@ -1170,515 +1209,4 @@ void CFile::ShiftRight(int s)
 		r=_write(handle,"\t",1);
 #endif
 }
-
-static CFile *test_file=NULL;
-
-// just test the existence of a file
-bool file_test_existence(const char *filename)
-{
-	if (!test_file)
-		test_file=new CFile();
-	test_file->SilentFileAccess=test_file->DontReportErrors=true;
-	if (!test_file->Open(filename)){
-		//delete(test_file);
-		return false;
-	}
-	test_file->Close();
-	return true;
-}
-
-
-
-// connecting strings
-/*char *string(char *str,...)
-{
-	char *tmp=_file_get_str_();
-	char *t_str;
-	//msg_write>Write("-erster String:");
-	//msg_write>Write(str);
-	strcpy(tmp,str);
-	va_list marker;
-	va_start(marker,str);
-	t_str=va_arg(marker,char*);
-	//msg_write>Write("-naechster String:");
-	msg_write>Write((unsigned int)t_str);
-	while ((int)t_str>100000)
-	{
-		msg_write>Write(t_str);
-		strcat(tmp,t_str);
-		t_str=va_arg(marker,char*);
-		//msg_write>Write("-naechster String:");
-		msg_write>Write((unsigned int)t_str);
-	}
-	msg_write>Write("Ende");
-	va_end(marker);
-
-	return tmp;
-}*/
-
-char *string(const char *str,const char *str2)
-{
-	char *tmp=_file_get_str_();
-	strcpy(tmp,str);
-	strcat(tmp,str2);
-	return tmp;
-}
-
-char *string(const char *str,const char *str2,const char *str3)
-{
-	char *tmp=_file_get_str_();
-	strcpy(tmp,str);
-	strcat(tmp,str2);
-	strcat(tmp,str3);
-	return tmp;
-}
-
-char *string(const char *str,const char *str2,const char *str3,const char *str4)
-{
-	char *tmp=_file_get_str_();
-	strcpy(tmp,str);
-	strcat(tmp,str2);
-	strcat(tmp,str3);
-	strcat(tmp,str4);
-	return tmp;
-}
-
-char *string(const char *str,const char *str2,const char *str3,const char *str4,const char *str5)
-{
-	char *tmp=_file_get_str_();
-	strcpy(tmp,str);
-	strcat(tmp,str2);
-	strcat(tmp,str3);
-	strcat(tmp,str4);
-	strcat(tmp,str5);
-	return tmp;
-}
-
-char *string(const char *str,const char *str2,const char *str3,const char *str4,const char *str5,const char *str6)
-{
-	char *tmp=_file_get_str_();
-	strcpy(tmp,str);
-	strcat(tmp,str2);
-	strcat(tmp,str3);
-	strcat(tmp,str4);
-	strcat(tmp,str5);
-	strcat(tmp,str6);
-	return tmp;
-}
-
-// connecting strings
-char *string2(const char *str,...)
-{
-	char *tmp=_file_get_str_();
-	va_list args;
-
-    // retrieve the variable arguments
-    va_start( args, str );
- 
-    vsprintf( tmp, str, args ); // C4996
-    // Note: vsprintf is deprecated; consider using vsprintf_s instead
-	return tmp;
-#if 0
-	char *tmp=_file_get_str_();
-	tmp[0]=0;
-
-	va_list marker;
-	va_start(marker,str);
-
-	int l=0,s=strlen(str);
-	for (int i=0;i<s;i++){
-		if ((str[i]=='%')&&(str[i+1]=='s')){
-			strcat(tmp,va_arg(marker,char*));
-			i++;
-			l=strlen(tmp);
-		}else if ((str[i]=='%')&&(str[i+1]=='d')){
-			strcat(tmp,i2s(va_arg(marker,int)));
-			i++;
-			l=strlen(tmp);
-		}else if ((str[i]=='%')&&(str[i+1]=='f')){
-			int fl=3;
-			if (str[i+2]==':'){
-				fl=str[i+3]-'0';
-				i+=3;
-			}else
-				i++;
-			strcat(tmp,f2s((float)va_arg(marker,double),fl));
-			l=strlen(tmp);
-		}else if ((str[i]=='%')&&(str[i+1]=='v')){
-			int fl=3;
-			if (str[i+2]==':'){
-				fl=str[i+3]-'0';
-				i+=3;
-			}else
-				i++;
-			/*float *v=(float*)&va_arg(marker,double);
-			va_arg(marker,float);
-			va_arg(marker,float);
-			strcat(tmp,"( ");
-			strcat(tmp,f2s(v[0],fl));
-			strcat(tmp," , ");
-			strcat(tmp,f2s(v[1],fl));
-			strcat(tmp," , ");
-			strcat(tmp,f2s(v[2],fl));
-			strcat(tmp," )");
-			l=strlen(tmp);*/
-msg_write>Error("Todo:  %v");
-		}else{
-			tmp[l]=str[i];
-			tmp[l+1]=0;
-			l++;
-		}
-	}
-	va_end(marker);
-
-	return tmp;
-#endif
-}
-
-// cut the string at the position of a substring
-void strcut(char *str,const char *dstr)
-{
-	if (strstr(str,dstr))
-		strstr(str,dstr)[0]=0;
-}
-
-// convert an integer to a string (with a given number of decimals)
-char *i2s2(int i,int l)
-{
-	char *str=_file_get_str_();
-	for (int n=l-1;n>=0;n--){
-		str[n]=i%10+48;
-		i/=10;
-	}
-	str[l]=0;
-	return str;
-}
-
-// convert an integer to a string
-char *i2s(int i)
-{
-	char *str=_file_get_str_();
-	int l=0;
-	bool m=false;
-	if (i<0){
-		i=-i;
-		m=true;
-	}
-	char a[128];
-	while (1){
-		a[l]=(i%10)+48;
-		l++;
-		i=(int)(i/10);
-		if (i==0)
-			break;
-	}
-	if (m){
-		a[l]='-';
-		l++;
-	}
-	for (int j=0;j<l;j++)
-		str[l-j-1]=a[j];
-	str[l]=0;
-	return str;
-}
-
-// convert a float to a string
-char *f2s(float f,int dez)
-{
-	char *str=_file_get_str_();
-	/*strcpy(str,"");
-	if (f<0){
-		strcat(str,"-");
-		f=-f;
-	}
-	strcat(str,i2s(int(f)));
-	if (dez>0){
-		strcat(str,",");
-		int e=1;
-		for (int i=0;i<dez;i++)
-			e*=10;
-		strcat(str,i2sl(int(f*(float)e)%e,dez));
-	}*/
-	sprintf(str,string("%.",i2s(dez),"f"),f);
-	return str;
-}
-
-// convert binary data to a hex-code-string
-// inverted:
-//    false:   12.34.56.78
-//    true:    0x78.56.34.12
-char *d2h(const void *data,int bytes,bool inverted)
-{
-	char *str=_file_get_str_();
-	int pos;
-	if (inverted)	strcpy(str,"0x");
-	unsigned char *c_data=(unsigned char *)data;
-	for (int i=0;i<bytes;i++){
-		if (inverted)	pos=(bytes-i-1)*3+2;
-		else			pos=i*3;
-		int c=c_data[0]%16;
-		if (c<10)	str[pos+1]=48+c;
-		else		str[pos+1]='a'-10+c;
-		c=c_data[0]/16;
-		if (c<10)	str[pos]=48+c;
-		else		str[pos]='a'-10+c;
-		str[pos+2]='.';
-		c_data++;
-	}
-	if (inverted)
-		str[bytes*3+1]=0;
-	else
-		str[bytes*3-1]=0;
-	return str;
-}
-
-// convert a string to an integer
-int s2i(const char *str)
-{
-	bool minus=false;
-	int res=0;
-	for (unsigned int i=0;i<strlen(str);i++){
-		if (str[i]=='-')
-			minus=true;
-		else res=res*10+(str[i]-48);		
-	}
-	if (minus)
-		res=-res;
-	return res;
-}
-
-// convert a string to a float
-float s2f(const char *str)
-{
-	bool minus=false;
-	int e=-1;
-	float res=0;
-	for (unsigned int i=0;i<strlen(str);i++){
-		if (e>0)
-			e*=10;
-		if (str[i]=='-')
-			minus=true;
-		else{
-			if ((str[i]==',')||(str[i]=='.'))
-			e=1;
-			else{
-				if(str[i]!='\n')
-					if (e<0)
-						res=res*10+(str[i]-48);
-					else
-						res+=float(str[i]-48)/(float)e;
-			}
-		}
-	}
-	if (minus)
-		res=-res;
-	return res;
-}
-
-bool dir_create(const char *dir)
-{
-#ifdef FILE_OS_WINDOWS
-	return (_mkdir(SysFileName(dir))==0);
-#endif
-#ifdef FILE_OS_LINUX
-	return (mkdir(SysFileName(dir),S_IRWXU | S_IRWXG | S_IRWXO)==0);
-#endif
-	return false;
-}
-
-bool dir_delete(const char *dir)
-{
-	return (_rmdir(SysFileName(dir))==0);
-}
-
-char *get_current_dir()
-{
-	char *str=_file_get_str_();
-#ifdef FILE_OS_WINDOWS
-	char *r=_getcwd(str,sizeof(_file_stack_str_[0]));
-	strcat(str,"\\");
-#endif
-#ifdef FILE_OS_LINUX
-	char *r=getcwd(str,sizeof(_file_stack_str_[0]));
-	strcat(str,"/");
-#endif
-	return str;
-}
-
-bool file_rename(const char *source,const char *target)
-{
-	char dir[512];
-	for (unsigned int i=0;i<strlen(target);i++){
-		dir[i]=target[i];
-		dir[i+1]=0;
-		if (i>3)
-			if ((target[i]=='/')||(target[i]=='\\'))
-				dir_create(dir);
-	}
-	return (rename(source,target)==0);
-}
-
-bool file_copy(const char *source,const char *target)
-{
-	char dir[512];
-	for (unsigned int i=0;i<strlen(target);i++){
-		dir[i]=target[i];
-		dir[i+1]=0;
-		if (i>3)
-			if ((target[i]=='/')||(target[i]=='\\'))
-				dir_create(dir);
-	}
-	int hs=_open(SysFileName(source),O_RDONLY);
-	if (hs<0)
-		return false;
-#ifdef FILE_OS_WINDOWS
-	int ht=_creat(SysFileName(target),_S_IREAD | _S_IWRITE);
-	_setmode(hs,_O_BINARY);
-	_setmode(ht,_O_BINARY);
-#endif
-#ifdef FILE_OS_LINUX
-	int ht=creat(SysFileName(target),S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-#endif
-	if (ht<0){
-		_close(hs);
-		return false;
-	}
-	char buf[10240];
-	int r=10;
-	while(r>0){
-		r=_read(hs,buf,sizeof(buf));
-		int rr=_write(ht,buf,r);
-	}
-	_close(hs);
-	_close(ht);
-	return true;
-}
-
-bool file_delete(const char *filename)
-{
-	return (_unlink(SysFileName(filename))==0);
-}
-
-
-
-int dir_search_num;
-char dir_search_name[DIR_SEARCH_MAX_ITEMS][128],*dir_search_name_p[DIR_SEARCH_MAX_ITEMS];
-bool dir_search_is_dir[DIR_SEARCH_MAX_ITEMS];
-
-// seach an directory for files matching a filter
-int dir_search(const char *dir,const char *filter,bool show_directories)
-{
-	dir_search_num=0;
-	const char *filter2=filter+1;
-	char dir2[256];
-	if ((dir[strlen(dir)-1]!='/')&&(dir[strlen(dir)-1]!='\\')){
-		strcpy(dir2,string(dir,"/"));
-		dir=dir2;
-	}
-#ifdef FILE_OS_WINDOWS
-	static _finddata_t t;
-	int handle=_findfirst(string(SysFileName(dir),"*"),&t);
-	int e=handle;
-	while(e>=0){
-		//if ((strcmp(t.name,".")!=0)&&(strcmp(t.name,"..")!=0)&&(strstr(t.name,"~")==NULL)){
-		if ((t.name[0]!='.')&&(!strstr(t.name,"~"))){
-			if ((strstr(t.name,filter2))|| ((show_directories)&&(t.attrib==_A_SUBDIR)) ){
-				strcpy(dir_search_name[dir_search_num],t.name);
-				dir_search_is_dir[dir_search_num]=(t.attrib==_A_SUBDIR);
-				dir_search_num++;
-			}
-		}
-		e=_findnext(handle,&t);
-	}
-#endif
-#ifdef FILE_OS_LINUX
-	DIR *_dir;
-	_dir=opendir(SysFileName(dir));
-	if (!_dir)
-		return 0;
-	struct dirent *dn;
-	dn=readdir(_dir);
-	struct stat s;
-	while(dn){
-		//if ((strcmp(dn->d_name,".")!=0)&&(strcmp(dn->d_name,"..")!=0)&&(!strstr(dn->d_name,"~"))){
-			if ((dn->d_name[0]!='.')&&(!strstr(dn->d_name,"~"))){
-			stat(string(SysFileName(dir),dn->d_name),&s);
-			bool is_reg=(s.st_mode & S_IFREG)>0;
-			bool is_dir=(s.st_mode & S_IFDIR)>0;
-			int sss=strlen(dn->d_name)-strlen(filter2);
-			if (sss<0)	sss=0;
-			if ( ((is_reg)&&(strcmp(&dn->d_name[sss],filter2)==0)) || ((show_directories)&&(is_dir)) ){
-				strcpy(dir_search_name[dir_search_num],dn->d_name);
-				dir_search_is_dir[dir_search_num]=(is_dir);
-				dir_search_num++;
-			}
-		}
-		dn=readdir(_dir);
-	}
-#endif
-	// sorting...
-	for (int i=0;i<dir_search_num-1;i++)
-		for (int j=i+1;j<dir_search_num;j++){
-			bool ok=true;
-			if (dir_search_is_dir[i]==dir_search_is_dir[j]){
-				if (_stricmp(dir_search_name[i],dir_search_name[j])>0)
-					ok=false;
-			}else
-				if ((!dir_search_is_dir[i])&&(dir_search_is_dir[j]))
-					ok=false;
-			if (!ok){
-				char temp[256];
-				strcpy(temp,dir_search_name[i]);
-				strcpy(dir_search_name[i],dir_search_name[j]);
-				strcpy(dir_search_name[j],temp);
-				bool temp2;
-				temp2=dir_search_is_dir[i];
-				dir_search_is_dir[i]=dir_search_is_dir[j];
-				dir_search_is_dir[j]=temp2;
-			}
-		}
-	for (int i=0;i<dir_search_num;i++)
-		dir_search_name_p[i]=&dir_search_name[i][0];
-	return dir_search_num;
-}
-
-
-
-
-char *regex_out_match[REGEX_MAX_MATCHES];
-int regex_out_pos[REGEX_MAX_MATCHES],regex_out_length[REGEX_MAX_MATCHES];
-
-int regex_match(char *rex,char *str,int max_matches)
-{
-	int ss=strlen(str);
-	int rs=strlen(rex);
-
-	if ((max_matches<=0)||(max_matches>REGEX_MAX_MATCHES))
-		max_matches=REGEX_MAX_MATCHES;
-
-	int n_matches=0;
-
-	for (int i=0;i<ss;i++){
-		bool match=true;
-		for (int j=0;j<rs;j++){
-			if (i+j>=ss)
-				match=false;
-			else if (str[i+j]!=rex[j])
-				match=false;
-		}
-		if (match){
-			regex_out_pos[n_matches]=i;
-			regex_out_length[n_matches]=rs;
-			regex_out_match[n_matches]=&str[i];
-			n_matches++;
-			if (n_matches>=max_matches)
-				return n_matches;
-		}
-	}
-	return n_matches;
-}
-
-/*char *regex_replace(char *rex,char *str,int max_matches)
-{
-}*/
 

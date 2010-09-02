@@ -66,7 +66,6 @@
 
 
 #ifndef NIX_OS_WINDOWS
-	//#undef NIX_ALLOW_DYNAMIC_TEXTURE
 	#undef NIX_ALLOW_VIDEO_TEXTURE
 	#undef NIX_ALLOW_API_DIRECTX9
 	#undef NIX_ALLOW_TYPES_BY_DIRECTX9
@@ -76,19 +75,14 @@
 
 #include <math.h>
 #include "../hui/hui.h"
-#include "../file/msg.h"
+#include "../file/file.h"
 
-
-#define NIX_MAX_VBS				4096
-#define NIX_MAX_TEXTURES		128
-#define NIX_MAX_CUBEMAPS		16
-#define NIX_MAX_LIGHTS			128
-#define NIX_MAX_SHADERFILES		32
-#define NIX_MAX_SOUNDS			128
 
 typedef void callback_function();
 
 
+
+#define NIX_MAX_TEXTURELEVELS	4
 
 enum{
 	FatalErrorNone,
@@ -192,7 +186,7 @@ extern float NixMouseMappingWidth,NixMouseMappingHeight;		// fullscreen mouse te
 extern int NixFatalError;
 extern int NixNumTrias;
 
-extern int NixTextureWidth[NIX_MAX_TEXTURES],NixTextureHeight[NIX_MAX_TEXTURES];
+extern char NixTextureDir[];
 extern int NixTextureMaxFramesToLive,NixMaxVideoTextureSize;
 extern float NixMaxDepth,NixMinDepth;
 

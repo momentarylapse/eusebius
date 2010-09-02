@@ -2,7 +2,7 @@
 
 HUI_BIN  = temp/hui.a
 HUI_OBJ  = temp/hui.o temp/hui_menu.o temp/hui_window.o
-HUI_CXXFLAGS =  `pkg-config --cflags gtk+-2.0` -Wno-write-strings -O2
+HUI_CXXFLAGS =  `pkg-config --cflags gtk+-2.0` $(GLOBALFLAGS)
 
 
 $(HUI_BIN) : $(HUI_OBJ)
@@ -18,9 +18,9 @@ temp/hui_menu.o : hui/hui_menu.cpp
 temp/hui_window.o : hui/hui_window.cpp
 	$(CPP) -c hui/hui_window.cpp -o $@ $(HUI_CXXFLAGS)
 
-hui/hui.cpp : hui/hui.h file/file.h file/msg.h
-hui/hui_menu.cpp : hui/hui.h file/file.h file/msg.h
-hui/hui_window.cpp : hui/hui.h file/file.h file/msg.h
+hui/hui.cpp : hui/hui.h file/file.h
+hui/hui_menu.cpp : hui/hui.h file/file.h
+hui/hui_window.cpp : hui/hui.h file/file.h
 hui/hui.h : hui/hui_config.h hui/hui_menu.h hui/hui_window.h
 hui/hui_window.h : hui/hui_config.h
 

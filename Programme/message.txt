@@ -1,86 +1,9 @@
-loading file: hello.txt
+loading script: /home/michi/Projekte/Eusebius/Programme/hello.kaba
+	loading file: /home/michi/Projekte/Eusebius/Programme/hello.kaba
+		-ok
 	-ok
-----------------------------
-Opcode: 240b, Mem: 48b
-call 0x00.00.00.ad                               // e8.ad.00.00.00
-add.b al, [eax]                                  // 02.00
-add.b [eax], al                                  // 00.00
-push eax                                         // 50
-add.b [eax], al                                  // 00.00
-add.b [edx], cl                                  // 00.0a
-add.b [eax], al                                  // 00.00
-add.b [edx], al                                  // 00.02
-add.b [eax], al                                  // 00.00
-add.b [eax + 0x61], cl                           // 00.48.61
-????? -                          unbekannt       6c
-????? -                          unbekannt       6c
-????? -                          unbekannt       6f
-sub.b al, 0x20                                   // 2c.20
-push edi                                         // 57
-????? -                          unbekannt       65.6c
-jz.b 0x21                                        // 74.21
-add.b [ecx], al                                  // 00.01
-push ebp                                         // 55
-mov ebp, esp                                     // 89.e5
-mov eax, 0x00.0b.80.00                           // b8.00.80.0b.00
-    _clear_loop:
-mov.b [eax], 0x20                                // c6.00.20
-add eax, 0x00.00.00.01                           // 05.01.00.00.00
-mov.b [eax], 0x00                                // c6.00.00
-add eax, 0x00.00.00.01                           // 05.01.00.00.00
-cmp eax, 0x00.0b.90.00                           // 3d.00.90.0b.00
-js.b 0xe9                                        // 78.e9
-leave                                            // c9
-ret                                              // c3
-push ebp                                         // 55
-mov ebp, esp                                     // 89.e5
-mov eax, [ebp + 0x10]                            // 8b.45.10
-mov [0x00.30.00.08], eax                         // a3.08.00.30.00
-mov eax, [0x00.20.00.1d]                         // a1.1d.00.20.00
-imul eax, [ebp + 0x0c]                           // 0f.af.45.0c
-mov [ebp + 0xf4], eax                            // 89.45.f4
-mov eax, [ebp + 0x08]                            // 8b.45.08
-add eax, [ebp + 0xf4]                            // 03.45.f4
-mov [ebp + 0xf8], eax                            // 89.45.f8
-mov eax, [0x00.20.00.19]                         // a1.19.00.20.00
-imul eax, [ebp + 0xf8]                           // 0f.af.45.f8
-mov [ebp + 0xfc], eax                            // 89.45.fc
-mov eax, [ebp + 0xfc]                            // 8b.45.fc
-mov [0x00.30.00.04], eax                         // a3.04.00.30.00
-mov edx, 0x00.00.00.00                           // ba.00.00.00.00
-    _write_loop:
-mov eax, edx                                     // 89.d0
-shl eax, 0x01                                    // c1.e0.01
-add eax, 0x00.0b.80.00                           // 05.00.80.0b.00
-add eax, [0x00.30.00.04]                         // 03.05.04.00.30.00
-add edx, [0x00.30.00.08]                         // 03.15.08.00.30.00
-mov.b bl, [edx]                                  // 8a.1a
-sub edx, [0x00.30.00.08]                         // 2b.15.08.00.30.00
-mov.b [eax], bl                                  // 88.18
-add eax, 0x00.00.00.01                           // 05.01.00.00.00
-mov.b [eax], 0x09                                // c6.00.09
-add edx, 0x00.00.00.01                           // 81.c2.01.00.00.00
-cmp.b bl, 0x00                                   // 80.fb.00
-jnz.b 0xcd                                       // 75.cd
-leave                                            // c9
-ret                                              // c3
-push ebp                                         // 55
-mov ebp, esp                                     // 89.e5
-sub.b esp, 0x08                                  // 83.ec.08
-call 0xff.ff.ff.66                               // e8.66.ff.ff.ff
-add.b esp, 0x08                                  // 83.c4.08
-sub.b esp, 0x08                                  // 83.ec.08
-push 0x00.20.00.29                               // 68.29.00.20.00
-push [0x00.20.00.25]                             // ff.35.25.00.20.00
-push [0x00.20.00.21]                             // ff.35.21.00.20.00
-call 0xff.ff.ff.6b                               // e8.6b.ff.ff.ff
-add.b esp, 0x14                                  // 83.c4.14
-cmp.b [0x00.20.00.36], 0x00                      // 80.3d.36.00.20.00.00
-jz 0x00.00.00.05                                 // 0f.84.05.00.00.00
-jmp 0xff.ff.ff.ee                                // e9.ee.ff.ff.ff
-leave                                            // c9
-ret                                              // c3
-
+RemoveScript
+	-ok
 
 
 
@@ -92,3 +15,4 @@ ret                                              // c3
  #        _              # 
        * / b   *^| _       
 ______ |/ ______ |/ * _____
+

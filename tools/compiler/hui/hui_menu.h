@@ -32,15 +32,15 @@ public:
 	CHuiMenu();
 	~CHuiMenu();
 	void _cdecl OpenPopup(CHuiWindow *win,int x,int y);
-	void _cdecl AddEntry(char *name,int id);
-	void _cdecl AddEntryImage(char *name,int image,int id);
-	void _cdecl AddEntryCheckable(char *name,int id);
+	void _cdecl AddItem(const char *name,int id);
+	void _cdecl AddItemImage(const char *name,int image,int id);
+	void _cdecl AddItemCheckable(const char *name,int id);
 	void _cdecl AddSeparator();
-	void _cdecl AddSubMenu(char *name,int id,CHuiMenu *menu);
+	void _cdecl AddSubMenu(const char *name,int id,CHuiMenu *menu);
 	void _cdecl CheckItem(int id,bool checked);
 	bool _cdecl IsItemChecked(int id);
 	void _cdecl EnableItem(int id,bool enabled);
-	void _cdecl SetText(int id,char *text);
+	void _cdecl SetText(int id,const char *text);
 	void _cdecl SetID(int id);
 	CHuiMenu *GetSubMenuByID(int id);
 	

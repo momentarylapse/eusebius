@@ -259,6 +259,50 @@ public:
 };
 
 
+struct complex
+{
+	float x, y;
+	complex(){};
+	complex(float x, float y)
+	{	this->x = x;	this->y = y;	}
+	// assignment operators
+	complex& operator += (const complex& v)
+	{	x+=v.x;	y+=v.y;	return *this;	}
+	complex& operator -= (const complex& v)
+	{	x-=v.x;	y-=v.y;	return *this;	}
+	complex& operator *= (float f)
+	{	x*=f;	y*=f;	return *this;	}
+	complex& operator /= (float f)
+	{	x/=f;	y/=f;	return *this;	}
+	complex& operator *= (const complex &v)
+	{	*this = complex( x*v.x - y*v.y , y*v.x + x *v.y );	return *this;	}
+	complex& operator /= (const complex &v)
+	{	*this = complex( x*v.x + y*v.y , y*v.x - x *v.y ) / (v.x * v.x + v.y * v.y);	return *this;	}
+	// unitary operator(s)
+	complex operator - ()
+	{	return complex(-x,-y);	}
+	// binary operators
+	complex operator + (const complex &v) const
+	{	return complex( x+v.x , y+v.y );	}
+	complex operator - (const complex &v) const
+	{	return complex( x-v.x , y-v.y );	}
+	complex operator * (float f) const
+	{	return complex( x*f , y*f );	}
+	complex operator / (float f) const
+	{	return complex( x/f , y/f );	}
+	complex operator * (const complex &v) const
+	{	return complex( x*v.x - y*v.y , y*v.x + x *v.y );	}
+	complex operator / (const complex &v) const
+	{	return complex( x*v.x + y*v.y , y*v.x - x *v.y ) / (v.x * v.x + v.y * v.y);	}
+	friend complex operator * (float f,const complex &v)
+	{	return v*f;	}
+	bool operator == (const complex &v) const
+	{	return ((x==v.x)&&(y==v.y));	}
+	bool operator != (const complex &v) const
+	{	return !((x==v.x)&&(y==v.y));	}
+};
+
+
 //--------------------------------------------------------------------//
 //                         all about types                            //
 //--------------------------------------------------------------------//
@@ -274,11 +318,13 @@ void _cdecl clampf(float &f,float min,float max);
 void _cdecl loopf(float &f,float min,float max);
 float _cdecl randf(float m);
 
-const float pi=3.141592654f;
+const float pi = 3.141592654f;
+
+// complex
+const complex ci = complex(0, 1);
 
 // rects
-
-const rect r01=rect(0,1,0,1);
+const rect r01 = rect(0, 1, 0, 1);
 
 // vectors
 float _cdecl VecLength(const vector &v);
@@ -295,6 +341,7 @@ vector _cdecl VecDir2Ang(const vector &dir);
 vector _cdecl VecDir2Ang2(const vector &dir,const vector &up);
 vector _cdecl VecAngAdd(const vector &ang1,const vector &ang2);
 vector _cdecl VecAngInterpolate(const vector &ang1,const vector &ang2,float t);
+vector _cdecl VecRotate(const vector &v, const vector &ang);
 float VecLineDistance(const vector &p,const vector &l1,const vector &l2);
 vector VecLineNearestPoint(vector &p,vector &l1,vector &l2);
 void _cdecl VecTransform(vector &vo,const matrix &m,const vector &vi);
@@ -418,7 +465,7 @@ inline float _vec_length_fuzzy_(const vector &v)
 }
 
 inline void _vec_normalize_(vector &vo,const vector &vi)
-{	vo=vi/sqrt(vi*vi);	}
+{	float inv_norm = 1.0f / sqrtf(vi*vi); vo = vi * inv_norm;	}
 
 inline bool _vec_between_(const vector &v,const vector &a,const vector &b)
 {

@@ -111,6 +111,14 @@ enum{
 	HuiImageStop,
 	HuiImageZoomIn,
 	HuiImageZoomOut,
+	HuiImageZoomOne,
+	HuiImageZoomFit,
+	HuiImageProperties,
+	HuiImageMediaPlay,
+	HuiImageMediaStop,
+	HuiImageMediaPause,
+	HuiImageMediaRecord,
+	HuiImageAbout,
 };
 
 

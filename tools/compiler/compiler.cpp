@@ -64,7 +64,7 @@ int main(int narg,char *arg[])
 		if (ParamBinary){
 			CFile *f = FileCreate(arg[3]);
 			f->SetBinaryMode(true);
-			f->WriteStr(script->Opcode,script->OpcodeSize);
+			f->WriteStrL(script->Opcode,script->OpcodeSize);
 			FileClose(f);
 		}
 		if (ParamExecute)

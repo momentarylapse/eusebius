@@ -84,8 +84,8 @@ struct sHuiToolBar{
 class CHuiWindow
 {
 public:
-	CHuiWindow(char *title,int x,int y,int width,int height,CHuiWindow *root,bool allow_root,int mode,bool show,message_function *mf);
-	CHuiWindow(char *title,int x,int y,int width,int height,message_function *mf);
+	CHuiWindow(const char *title,int x,int y,int width,int height,CHuiWindow *root,bool allow_root,int mode,bool show,message_function *mf);
+	CHuiWindow(const char *title,int x,int y,int width,int height,message_function *mf);
 	~CHuiWindow();
 
 	// the window
@@ -96,7 +96,7 @@ public:
 	bool _cdecl IsMinimized();
 	void _cdecl SetID(int id);
 	void _cdecl SetFullscreen(bool fullscreen);
-	void _cdecl SetTitle(char *title);
+	void _cdecl SetTitle(const char *title);
 	void _cdecl SetPosition(int x,int y);
 	void _cdecl SetPositionSpecial(CHuiWindow *win,int mode);
 	void _cdecl SetOuterior(irect rect);
@@ -113,57 +113,61 @@ public:
 
 	// tool bars
 	void _cdecl EnableStatusBar(bool enabled);
-	void _cdecl SetStatusText(char *str);
+	void _cdecl SetStatusText(const char *str);
 	void _cdecl EnableToolBar(bool enabled);
 	void _cdecl ToolBarSetCurrent(int index);
 	void _cdecl ToolBarConfigure(bool text_enabled,bool large_icons);
-	void _cdecl ToolBarAddItem(char *title,char *tool_tip,int image,int id);
-	void _cdecl ToolBarAddItemCheckable(char *title,char *tool_tip,int image,int id);
-	void _cdecl ToolBarAddItemMenu(char *title,char *tool_tip,int image,CHuiMenu *menu,int id);
-	void _cdecl ToolBarAddItemMenuByID(char *title,char *tool_tip,int image,int menu_id,int id);
+	void _cdecl ToolBarAddItem(const char *title,const char *tool_tip,int image,int id);
+	void _cdecl ToolBarAddItemCheckable(const char *title,const char *tool_tip,int image,int id);
+	void _cdecl ToolBarAddItemMenu(const char *title,const char *tool_tip,int image,CHuiMenu *menu,int id);
+	void _cdecl ToolBarAddItemMenuByID(const char *title,const char *tool_tip,int image,int menu_id,int id);
 	void _cdecl ToolBarAddSeparator();
 	void _cdecl ToolBarReset();
 	void _cdecl ToolBarSetByID(int id);
 
 	// creating controls
-	void _cdecl AddButton(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddDefButton(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddColorButton(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddCheckBox(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddText(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddEdit(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddGroup(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddComboBox(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddTabControl(char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddButton(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddDefButton(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddColorButton(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddCheckBox(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddText(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddEdit(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddGroup(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddComboBox(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddTabControl(const char *title,int x,int y,int width,int height,int id);
 	void _cdecl SetTabCreationPage(int id,int page);
-	void _cdecl AddListView(char *title,int x,int y,int width,int height,int id);
-//	void _cdecl AddIconList(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddListView_Test(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddProgressBar(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddSlider(char *title,int x,int y,int width,int height,int id);
-	void _cdecl AddImage(char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddListView(const char *title,int x,int y,int width,int height,int id);
+//	void _cdecl AddIconList(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddListView_Test(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddProgressBar(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddSlider(const char *title,int x,int y,int width,int height,int id);
+	void _cdecl AddImage(const char *title,int x,int y,int width,int height,int id);
 
-	// using controls
-	void _cdecl SetControlText(int id,char *str);
-	void _cdecl SetControlInt(int id,int i);
-	void _cdecl SetControlFloat(int id,float f,int dec);
-	void _cdecl AddControlText(int id,char *str);
-	void _cdecl AddControlChildText(int id,int parent_row,char *str);
-	void _cdecl ChangeControlText(int id,int row,char *str);
-	void _cdecl SetControlImage(int id,int image);
-	void _cdecl SetControlColor(int id,int *c,bool use_alpha);
-	char *_cdecl GetControlText(int id);
-	int _cdecl GetControlInt(int id);
-	float _cdecl GetControlFloat(int id);
-	void _cdecl EnableControl(int id,bool enabled);
-	bool _cdecl IsControlEnabled(int id);
-	void _cdecl CheckControl(int id,bool checked);
-	bool _cdecl IsControlChecked(int id);
-	int _cdecl GetControlSelection(int id);
-	int _cdecl GetControlSelectionM(int id,int *indices);
-	void _cdecl SetControlSelection(int id,int index);
-	void _cdecl GetControlColor(int id,int *c,bool use_alpha);
-	void _cdecl ResetControl(int id);
+// using controls
+	// string
+	void _cdecl SetString(int id, const char *str);
+	void _cdecl AddString(int id, const char *str);
+	void _cdecl AddChildString(int id, int parent_row, const char *str);
+	void _cdecl ChangeString(int id, int row, const char *str);
+	const char *_cdecl GetString(int id);
+	// int
+	void _cdecl SetInt(int id, int i);
+	int _cdecl GetInt(int id);
+	// float
+	int NumFloatDecimals;
+	void _cdecl SetFloat(int id, float f);
+	float _cdecl GetFloat(int id);
+	// color
+	void _cdecl SetColor(int id, int *c, bool use_alpha);
+	void _cdecl GetColor(int id, int *c, bool use_alpha);
+	// stuff
+	void _cdecl Enable(int id, bool enabled);
+	bool _cdecl IsEnabled(int id);
+	void _cdecl Check(int id, bool checked);
+	bool _cdecl IsChecked(int id);
+	void _cdecl SetImage(int id, int image);
+	int _cdecl GetMultiSelection(int id, int *indices);
+	void _cdecl Reset(int id);
 
 	// input
 	bool GetKey(int key);
@@ -211,12 +215,12 @@ public:
 	sCompleteWindowMessage CompleteWindowMessage;
 };
 
-void _cdecl HuiWindowAddControl(CHuiWindow *win,int control_type,char *title,int x,int y,int width,int height,int id);
+void _cdecl HuiWindowAddControl(CHuiWindow *win,int control_type,const char *title,int x,int y,int width,int height,int id);
 
-CHuiWindow *_cdecl HuiCreateWindow(char *title,int x,int y,int width,int height,message_function *mf);
-CHuiWindow *_cdecl HuiCreateNixWindow(char *title,int x,int y,int width,int height,message_function *mf);
-CHuiWindow *_cdecl HuiCreateDummyWindow(char *title,int x,int y,int width,int height,message_function *mf);
-CHuiWindow *_cdecl HuiCreateDialog(char *title,int width,int height,CHuiWindow *root,bool allow_root,message_function *mf);
+CHuiWindow *_cdecl HuiCreateWindow(const char *title,int x,int y,int width,int height,message_function *mf);
+CHuiWindow *_cdecl HuiCreateNixWindow(const char *title,int x,int y,int width,int height,message_function *mf);
+CHuiWindow *_cdecl HuiCreateDummyWindow(const char *title,int x,int y,int width,int height,message_function *mf);
+CHuiWindow *_cdecl HuiCreateDialog(const char *title,int width,int height,CHuiWindow *root,bool allow_root,message_function *mf);
 void _cdecl HuiCloseWindow(CHuiWindow *win);
 
 // use this as message_function for a window, that should not respond to any message
@@ -374,7 +378,10 @@ enum{
 
 	HUI_NUM_KEYS,
 
-	KEY_ANY
+	KEY_ANY,
+	KEY_CONTROL,
+	KEY_SHIFT,
+	KEY_ALT
 };
 
 #endif

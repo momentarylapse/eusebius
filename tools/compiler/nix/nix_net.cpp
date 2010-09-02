@@ -63,13 +63,13 @@ static sNetConnection con[NIXNET_MAX_CONNECTIONS];
 
 
 
-void so(int dbg,char *str)
+void so(int dbg,const char *str)
 {
 	if (dbg<=NIXNET_DEBUG)
 		msg_write(str);
 }
 
-void so(int dbg,char *str,int l)
+void so(int dbg,const char *str,int l)
 {
 	if (dbg<=NIXNET_DEBUG)
 		msg_write(str,l);
@@ -230,7 +230,7 @@ int NixNetAccept(int sh)
 }
 
 // client
-int NixNetConnect(char *addr,int port)
+int NixNetConnect(const char *addr,int port)
 {
 	int s=-1;
 	struct sockaddr_in host_addr;
@@ -331,16 +331,16 @@ bool NixNetConnectionLost(int s)
 	return true;
 }
 
-int NixNetRead(int s,char *buf,int max_size)
+int NixNetRead(int s,void *buf,int max_size)
 {
-	int r=recv(con[s].s,buf,max_size,0);
+	int r=recv(con[s].s,(char*)buf,max_size,0);
 	//msg_write(string("recv: ",i2s(r)));
 	return r;
 }
 
-int NixNetWrite(int s,char *buf,int size)
+int NixNetWrite(int s,const void *buf,int size)
 {
-	int r=send(con[s].s,buf,size,0);
+	int r=send(con[s].s,(char*)buf,size,0);
 	return r;
 }
 
@@ -624,7 +624,7 @@ void NixNetWriteChar(char c)
 	BufferUsed+=sizeof(c);
 }
 
-void NixNetWriteStr(char *str)
+void NixNetWriteStr(const char *str)
 {
 	int l=strlen(str);
 	NixNetWriteInt(l);
@@ -634,7 +634,7 @@ void NixNetWriteStr(char *str)
 	so(2,str);
 }
 
-void NixNetWriteStrL(char *str,int length)
+void NixNetWriteStrL(const char *str,int length)
 {
 	so(2,"write string l");
 	NixNetWriteInt(length);
@@ -704,7 +704,7 @@ bool NixNetReadyToRead(int s)
 
 #define MAX_REPORT		16384
 
-void _cdecl NixNetSendBugReport(char *sender,char *program,char *version,char *comment)
+void _cdecl NixNetSendBugReport(const char *sender,const char *program,const char *version,const char *comment)
 {
 	NixNetInit();
 
