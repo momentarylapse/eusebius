@@ -1,0 +1,12 @@
+init
+kernel
+loader_br
+br_empty
+hd_image
+image.mfs
+message.txt
+mfs
+temp
+tools/compiler/compiler
+tools/compiler/temp
+
