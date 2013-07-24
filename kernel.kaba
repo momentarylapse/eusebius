@@ -36,7 +36,7 @@ char temp_c
 
 
 int NumMemAllocs
-struct mem_alloc_t
+class mem_alloc_t
 	int Offset,End
 mem_alloc_t MemAlloc[MAX_MEM_ALLOCS]
 
@@ -46,11 +46,11 @@ enum
 
 
 int NumTasks,CurPid
-struct task_t
+class task_t
 	int tss[0]*,stack[0]*
 	int desc // Index in GDT
 	int pid,status
-	string name
+	cstring name
 task_t Task[MAX_TASKS],*CurTask,*TimerTask
 int TaskCallData[2]
 
@@ -83,11 +83,11 @@ char KeyCode[0]*
 // Ata-Geraete
 int nAta,AtaStatus
 
-struct ata_disk_info_t
+class ata_disk_info_t
 	bool Available
 	bool isAtapi
 	int Size
-	string Name
+	cstring Name
 ata_disk_info_t DiskInfo[4]
 
 int AtaIOBase,AtaIOCtrl,ide_no,ide_ms
@@ -99,7 +99,7 @@ int AtaSize
 
 char atapi_buffer[16]
 
-struct partition_t
+class partition_t
 	int offset,size
 	char type
 partition_t Partition[4]
@@ -107,10 +107,10 @@ int CurrentPartition
 
 
 // Datei-Zugriffe
-struct file_t
+class file_t
 	int size
 	bool is_dir
-	string name
+	cstring name
 	int offset,num_clusters
 int NumFiles
 file_t File[MAX_FILES]
@@ -119,7 +119,7 @@ char FSBuffer[2048],*pFSBuffer
 int FSBufferUsed,FSIntRead
 
 int NumOpenFiles
-struct open_file_t
+class open_file_t
 	file_t *file
 	int cluster_no,pos_in_cluster
 	char buffer[0]*
@@ -165,7 +165,7 @@ int p2i(char *p)
 	}
 	return temp_i
 
-object i2p(int i)
+void *i2p(int i)
 	temp_i=i
 	asm{
 		mov eax, temp_i
@@ -235,8 +235,8 @@ void memcpy(char *dest,char *source,int size)
 //--------------------------------------------------------------
 // Text Modus
 
-void DrawString(int x,int y,string str)
-	temp_p=&str
+void DrawString(int x, int y, cstring str)
+	temp_p = &str
 	temp_i=2*(x+80*y)
 	asm{
 		mov edx, 0x00
@@ -258,7 +258,7 @@ void DrawString(int x,int y,string str)
 	}
 
 int DrawHex(int x,int y,char data[1]*,int size)
-	string ttt
+	cstring ttt
 	int i
 	for i, 0, size
 		int d=c2i(data[i])
@@ -325,7 +325,7 @@ void etm_shift()
 	DrawString(0,etm_ny,"                                                                                ")
 	TextColor2=a
 
-void print(string str)
+void print(cstring str)
 	int i=0
 	while str[i]!=0
 		if str[i]!=0x0a
@@ -361,15 +361,15 @@ void printi(int i)
 		s--
 		if i == 0
 			break
-	string *p
+	cstring *p
 	p = &ttt[s+1]
 	print(*p)
 
-int printh(string *data,int size)
-	string ttt
+int printh(cstring *data,int size)
+	cstring ttt
 	int i
 	for i, 0, size
-		int d=c2i(data[i])
+		int d=c2i((*data)[i])
 		int d1=(d>>4)
 		int d2=(d&15)
 		if d1<10
@@ -402,7 +402,7 @@ void WasteTime()
 // Speicher-"Verwaltung"
 
 // Speicherbloecke bleiben immer so sortiert, dass der Offset monoton mit dem Index steigt!
-object malloc(int size)
+void *malloc(int size)
 	// Anfang
 	int offset=MEM_ALLOC_OFFSET
 	int a=0
@@ -463,7 +463,7 @@ void free(void *mem)
 	}
 }*/
 
-bool str_equ(string a,string b)
+bool str_equ(cstring a, cstring b)
 	int n=0
 	bool equ=false
 	while true
@@ -954,7 +954,7 @@ int FSReadInt()
 	FSBufferUsed+=4
 	return *p
 
-void FSReadStr(string str)
+void FSReadStr(cstring str)
 	int l=FSReadInt()
 	int n=0
 	while n<l
@@ -1016,7 +1016,7 @@ void FSRead(int disk_no,int sector_offset,char buffer[0]*)
 	AtaRead(disk_no,sector_offset+2,1,&buffer[1024])
 	AtaRead(disk_no,sector_offset+3,1,&buffer[1536])
 
-int open(string filename)
+int open(cstring filename)
 	print("        oeffne ")
 	print(filename)
 	print("\n")
@@ -1107,7 +1107,7 @@ int GetIntFromBuffer(char buffer[0]*,int offset,int length)
 		n--
 	return r
 
-void LoadTga(string filename)
+void LoadTga(cstring filename)
 	print("  Lade TGA-Datei....\n")
 
 	int h=open(filename)
@@ -1130,7 +1130,7 @@ void LoadTga(string filename)
 	read(h,TGATemp,n_p*3)
 	print("TGA fertig geladen!\n")
 
-void DrawFont(string s)
+void DrawFont(cstring s)
 	int i,j,x,y
 	print("\n\n\n\n\n\n\n\n\n\n\n\n\n")
 
@@ -1178,7 +1178,7 @@ void LoadTgaFont()
 	DrawFont("hallo")
 	print("ok\n")
 
-void Execute(string filename)
+void Execute(cstring filename)
 	//clrscr()
 	print("fuehre aus: ")
 	print(filename)
@@ -1234,7 +1234,7 @@ void SetTaskStateSegment(int pos,int stack_pos,int cs,int ds,void *task)
 	tss[24]=0 // ldt
 	tss[25]=0
 
-object AddTask(string name,void *func)
+void *AddTask(cstring name,void *func)
 	asm{
 		cli
 	}
@@ -1391,7 +1391,7 @@ void SetInterrupt(int ir,void *func)
 		idt[ir*2  ]= 0x00080000 + (addr&0xffff) // desc[1],addr[15..0]
 		idt[ir*2+1]= ((addr<<16)&0xffff) + 0x00008e00 // addr[31..16],typ
 
-object SetInterruptTask(int ir,void *func)
+void *SetInterruptTask(int ir,void *func)
 	int idt[0]*
 	idt=i2p(0x00006800)
 	if !func
@@ -1568,7 +1568,7 @@ void TaskTest()
 void DoConsole()
 	print("Konsole....\n")
 	print("Eusebius: ")
-	string ips
+	cstring ips
 	ips[0]=0
 	int len=0
 	while true
@@ -1701,10 +1701,10 @@ void main()
 			print(File[n].name)
 			print("\n")
 			FSBufferUsed+=1 // IsDir
-			File[n].size=FSReadInt()
+			(File)[n].size = FSReadInt()
 			FSReadInt() // NumParts = 1
-			File[n].offset=FSReadInt()
-			File[n].num_clusters=FSReadInt()
+			(File)[n].offset=FSReadInt()
+			(File)[n].num_clusters=FSReadInt()
 		WaitReturn()
 		LoadTgaFont()
 		//LoadTga("b.tga")

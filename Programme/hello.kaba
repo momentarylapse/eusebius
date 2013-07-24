@@ -3,7 +3,7 @@
 #variables_offset 0x300000
 
 int DrawOffset
-string *StringToDraw
+cstring *StringToDraw
 
 //--------------------------------------------------------------
 // Text Modus
@@ -19,9 +19,9 @@ void ClearScreen()
 			js.b _clear_loop
 	}
 
-void DrawString(int x,int y,string str)
-	StringToDraw=&str
-	DrawOffset=2*(x+80*y)
+void DrawString(int x, int y, cstring str)
+	StringToDraw = &str
+	DrawOffset = 2 * (x+80*y)
 	asm{
 		mov edx, 0x00
 		_write_loop:
@@ -42,7 +42,7 @@ void DrawString(int x,int y,string str)
 
 void main()
 	ClearScreen()
-	DrawString(10,2,"Hallo, Welt!")
+	DrawString(10, 2, "Hallo, Welt!")
 	
-	while(true)
+	while true
 		nil
