@@ -167,7 +167,7 @@ void main()	//-------------------------------------------------------------	// R
 		dd 0x00008900  // not busy
 
 		_gdtr:
-		dw 0x47 // 5 descriptors
+		dw 0x47 // 9 descriptors
 		dd _gdt
 	}
 

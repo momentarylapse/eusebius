@@ -1,38 +1,20 @@
-KABA  = ./tools/compiler/compiler
-#KABA  = ./compiler
+KABA  = kaba
+#KABA  = ~/Projekte/Kaba/Debug/Kaba
 MAKEMFS = ./tools/makemfs/makemfs
 
-all : loader_br init kernel image.mfs hd_image _bochs_
+all : bochs/c.img
 
-loader_mbr : loader_mbr.kaba
-	$(KABA) -o loader_mbr.kaba loader_mbr
+test.o : test.kaba
+	$(KABA) --x86 -o test.o test.kaba
+ 
+loader_fake.o : loader_fake.kaba
+	$(KABA) --x86 -o loader_fake.o loader_fake.kaba 
 
-loader_br : loader_br.kaba
-	$(KABA) -o loader_br.kaba loader_br
+bochs/c.img: loader_fake.o test.o
+	#dd if=test.o of=bochs/c.img conv=notrunc
+	dd if=loader_fake.o of=bochs/c.img conv=notrunc
+	dd if=test.o of=bochs/c.img bs=512 seek=1 conv=notrunc
 
-init : init.kaba
-	$(KABA) -o init.kaba init
+clean:
+	rm -f *.o
 
-kernel : kernel.kaba
-	$(KABA) -o kernel.kaba kernel
-
-image.mfs : init kernel
-	cp init mfs/000_init
-	cp kernel mfs/001_kernel
-	$(MAKEMFS) image.mfs mfs
-
-hd_image : image.mfs loader_br
-	dd if=br_empty of=hd_image
-	dd if=loader_br of=hd_image bs=512 conv=notrunc
-	dd if=image.mfs of=hd_image bs=512 seek=1
-
-_bochs_ : bochs/hd10meg.img
-
-bochs/hd10meg.img : hd_image
-	dd if=hd_image of=bochs/hd10meg.img bs=512 seek=17 conv=notrunc
-
-_real_ : hd_image
-	dd if=hd_image of=/dev/sda4
-
-clean :
-	rm -f loader_br loader_mbr init kernel image.mfs hd_image

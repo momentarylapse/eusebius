@@ -4,9 +4,12 @@ loader_br
 br_empty
 hd_image
 image.mfs
+*.img
+bochs/bochsout.txt
 message.txt
 mfs
 temp
 tools/compiler/compiler
 tools/compiler/temp
-
+*~
+*.o
