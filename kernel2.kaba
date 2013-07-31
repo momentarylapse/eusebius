@@ -1,0 +1,28 @@
+#define __OS__
+#define __CODE_ORIGIN__ 0x9000
+#define __VARIABLE_OFFSET__ 0x200010 // > 2mb, wegen Stack!
+//#define __NO_FUNCTION_FRAME__
+#define __ADD_ENTRY_POINT__
+#disasm
+
+void f()
+	asm{
+		mov eax, 0x000b8006
+		mov [eax], 'Y'
+		add eax, 0x00000001
+		mov [eax], 0x20
+		
+		jmp $
+	}
+
+void main()
+	asm{
+		
+		mov eax, 0x000b8004
+		mov [eax], 'X'
+		add eax, 0x00000001
+		mov [eax], 0x20
+		
+		//jmp $
+	}
+	f()

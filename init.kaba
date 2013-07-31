@@ -44,21 +44,24 @@ void main()	//-------------------------------------------------------------	// R
 
 		// Kernel-Image laden
 //		_reset_drive:
-	//		mov dl, 0x00
-	//		mov ah, 0x00
-	//		int 0x13
-	//		or ah, ah
+			mov dl, 0x00
+			mov ah, 0x00
+			int 0x13
+			or ah, ah
 		//jnz _reset_drive
-	//	xor ax, ax
-	//	mov es, ax
+		xor ax, ax
+		mov es, ax
 		// Ziel des Images
-	//	mov ebx, 0x00009000
-	//	mov ah, 0x02 // "ReadSector"
+		mov ebx, 0x00009000
+		mov ah, 0x02 // "ReadSector"
+		mov al, 0x10
+		mov cx, 0x0003
+		mov dx, 0x0080
 	//	mov al, [0x5008] // Größe: 1Sektor = 512b
 	//	mov cx, [0x5004]
 	//	mov dx, [0x5006]
-	//	int 0x13
-	//	or ah, ah
+		int 0x13
+		or ah, ah
 		//jnz _reset_drive
 		
 		// Speicher-Segmente laden
@@ -125,8 +128,8 @@ void main()	//-------------------------------------------------------------	// R
 		xor eax, eax
 
 		// -> Kernel starten
-//		mov eax, 0x00009000
-//		jmp eax
+		mov eax, 0x00009000
+		jmp eax
 
 
 
