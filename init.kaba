@@ -9,73 +9,78 @@
 | zuletzt geaendert: 2008.09.16 (c) by MichiSoft TM                            |
 \*----------------------------------------------------------------------------*/
 
-#os
-#initial_realmode
-#code_origin 0x7e00
+#define __OS__
+#define __NO_FUNCTION_FRAME__
+#define __CODE_ORIGIN__ 0x7e00
+#disasm
 
 void main()	//-------------------------------------------------------------	// RealMode!!!
 	asm{
 		bits_16
-		org 0x7e00				// Debug
-		mov.b al, 'k'
-		mov.b ah, 0x0e
+		
+		// Debug
+		mov al, 'k'
+		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 
 
-	// mehr als 1mb Ram erlauben (Gate 20A... :~~[  )
+		// mehr als 1mb Ram erlauben (Gate 20A... :~~[  )
 		mov ax, 0x2401
 		int 0x15
-		in.b al, 0x92
-		or.b al, 0x02
-		out.b 0x92, al
+		in al, 0x92
+		or al, 0x02
+		out 0x92, al
 
 
-	// Speicher-Menge (RAM) feststellen
+		// Speicher-Menge (RAM) feststellen
 		mov ax, 0xe801
 		int 0x15
 		mov [_var_mem_size], bx
 		shr ax, 0x06
 		add [_var_mem_size], ax
+		
 
 
-	// Kernel-Image laden
+		// Kernel-Image laden
 //		_reset_drive:
-			mov.b dl, 0x00
-			mov.b ah, 0x00
-			int 0x13
-			or.b ah, ah
-		//jnz.b _reset_drive
-		xor ax, ax
-		mov es, ax
+	//		mov dl, 0x00
+	//		mov ah, 0x00
+	//		int 0x13
+	//		or ah, ah
+		//jnz _reset_drive
+	//	xor ax, ax
+	//	mov es, ax
 		// Ziel des Images
-		mov dword ebx, 0x00009000
-		mov.b ah, 0x02 // "ReadSector"
-		mov.b al, [0x5008] // Groesse: 1Sektor = 512b
-		mov cx, [0x5004]
-		mov dx, [0x5006]
-		int 0x13
-		or.b ah, ah
-		//jnz.b _reset_drive
-	}
-
-	asm{
-	// Speicher-Segmente laden
+	//	mov ebx, 0x00009000
+	//	mov ah, 0x02 // "ReadSector"
+	//	mov al, [0x5008] // Größe: 1Sektor = 512b
+	//	mov cx, [0x5004]
+	//	mov dx, [0x5006]
+	//	int 0x13
+	//	or ah, ah
+		//jnz _reset_drive
+		
+		// Speicher-Segmente laden
 		lgdt [_gdtr]
 
 		// Debug
-		mov.b al, '3'
-		mov.b ah, 0x0e
+		mov al, '3'
+		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 
-	// 32bit Protected-Mode aktivieren
+		// 32bit Protected-Mode aktivieren
 		cli
 		mov eax, cr0
-		or.b al, 0x01
+		or al, 0x01
 		mov cr0, eax
+		
+		// flush cpu prefetch
+		jmp _flush
+		_flush:
 
-	// die Segment-Register vorbereiten
+		// die Segment-Register vorbereiten
 		mov ax, 0x0010 // Descriptor[2]
 		mov ds, ax
 		mov es, ax
@@ -83,52 +88,53 @@ void main()	//-------------------------------------------------------------	// R
 		mov gs, ax
 		mov ss, ax
 
-	// Stack initialisieren
-		mov dword esp, 0x200000
+		// Stack initialisieren
+		mov esp, 0x00200000
 
-	// in den 32bit ProtectedMode springen
-		jmp dword 0x0008:_pmode // Descriptor[1] : ...
+		// in den 32bit ProtectedMode springen
+		//jmp_far [_pmode_ptr]
+		db 0x66
+		db 0xea
+		dd _pmode
+		dw 0x0008
 
 	//-------------------------------------------------------------
 	// ProtectedMode!!!
 		_pmode:
 		bits_32
 		
+		//jmp $
 		
-		mov eax, 0xb8000
-		mov.b [eax], 'M'
-		add eax,0x01
-		mov.b [eax], 0x20
+		mov eax, 0x000b8000
+		mov [eax], 'M'
+		add eax, 0x00000001
+		mov [eax], 0x20
 		
-		// fuer den Stack nach einem C-Aufruf!
+		// für den Stack nach einem C-Aufruf!
 		mov ebp, esp
 		
-		mov eax, 0xb8002
-		mov.b [eax], '1'
-		add eax,0x01
-		mov.b [eax], 0x20
+		mov eax, 0x000b8002
+		mov [eax], '1'
+		add eax, 0x00000001
+		mov [eax], 0x20
 
 		// Variablen speichern
 		mov eax, [_var_mem_size]
-		mov [0x5100], eax
+		mov [0x00005100], eax
 		mov eax, _gdt
-		mov [0x5110], eax
+		mov [0x00005110], eax
 		mov eax, _gdtr
-		mov [0x5114], eax
+		mov [0x00005114], eax
 		xor eax, eax
-	}
 
-
-	asm{
-
-	// -> Kernel starten
-		mov eax, 0x9000
-		jmp eax
+		// -> Kernel starten
+//		mov eax, 0x00009000
+//		jmp eax
 
 
 
-	// zur Sicherheit....
-		jmp.b $
+		// zur Sicherheit....
+		jmp $
 
 	//-------------------------------------------------------------
 	// Daten
@@ -147,27 +153,31 @@ void main()	//-------------------------------------------------------------	// R
 		// [2] 0x10 data descriptor
 		dd 0x0000ffff
 		dd 0x00cf9200
-		// [3] 0x28 ldt base=0x6700 limit=0x17 ----nicht benutzt!----
+		// [3] 0x18 ldt base=0x6700 limit=0x17 ----nicht benutzt!----
 		dd 0x67000017
 		dd 0x00009200
-		// [4] 0x30 realmode descriptor...?
+		// [4] 0x20 realmode descriptor...?
 		dd 0x0000ffff
 		dd 0x00409200
-		// [5] 0x18 task 0 (kernel) base=0x6000 limit=103 pl=0
+		// [5] 0x28 task 0 (kernel) base=0x6000 limit=103 pl=0
 		dd 0x600000ff
 		dd 0x00008900  // not busy
-		// [6] 0x20 task 1 (irq timer) base=0x6080 limit=103 pl=0
+		// [6] 0x30 task 1 (irq timer) base=0x6080 limit=103 pl=0
 		dd 0x60800067
 		dd 0x00008900  // not busy
-		// [7] 0x20 task 2 (irq keys) base=0x6100 limit=103 pl=0
+		// [7] 0x38 task 2 (irq keys) base=0x6100 limit=103 pl=0
 		dd 0x61000067
 		dd 0x00008900  // not busy
-		// [8] 0x20 task 3 (test) base=0x6180 limit=103 pl=0
+		// [8] 0x40 task 3 (test) base=0x6180 limit=103 pl=0
 		dd 0x61800067
 		dd 0x00008900  // not busy
 
 		_gdtr:
-		dw 0x47 // 9 descriptors
+		dw 0x0047 // 9 descriptors
 		dd _gdt
+		
+		_pmode_ptr:
+		dw 0x0008 // Descriptor[1] : ...
+		dd _pmode
 	}
 
