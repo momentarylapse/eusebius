@@ -11,7 +11,7 @@
 #define __OS__
 #define __NO_FUNCTION_FRAME__
 #define __CODE_ORIGIN__ 0x7c00
-#disasm
+//#disasm
 
 void main()
 	asm{
@@ -45,8 +45,6 @@ void main()
 		or ah, ah
 		//jnz _reset_drive
 
-		
-		//mov ax, [0x7e00]
 		
 		// Debug
 		mov al, 'z'

@@ -12,7 +12,7 @@
 //#define __ADD_ENTRY_POINT__
 #define __CODE_ORIGIN__ 0x7e00
 
-#disasm
+//#disasm
 
 void main()
 	asm{

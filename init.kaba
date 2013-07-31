@@ -12,7 +12,7 @@
 #define __OS__
 #define __NO_FUNCTION_FRAME__
 #define __CODE_ORIGIN__ 0x7e00
-#disasm
+//#disasm
 
 void main()	//-------------------------------------------------------------	// RealMode!!!
 	asm{
@@ -92,11 +92,8 @@ void main()	//-------------------------------------------------------------	// R
 		mov esp, 0x00200000
 
 		// in den 32bit ProtectedMode springen
-		//jmp_far [_pmode_ptr]
-		db 0x66
-		db 0xea
-		dd _pmode
-		dw 0x0008
+		db 0x66 // weil im 16:32 Format...
+		jmp_far [_pmode_ptr] // 0x0008:_pmode
 
 	//-------------------------------------------------------------
 	// ProtectedMode!!!
@@ -177,7 +174,7 @@ void main()	//-------------------------------------------------------------	// R
 		dd _gdt
 		
 		_pmode_ptr:
-		dw 0x0008 // Descriptor[1] : ...
 		dd _pmode
+		dw 0x0008 // Descriptor[1] : ...
 	}
 
