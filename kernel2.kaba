@@ -52,6 +52,12 @@ int inportd(int port)
 
 
 
+void read_data_from_init()
+	asm{
+		mov eax, [0x00005100]
+		mov MemorySize, eax
+	}
+
 
 void memcpy(cstring *dest, cstring *source, int size)
 	for int n, 0, size
@@ -71,6 +77,22 @@ void memcpy(cstring *dest, cstring *source, int size)
 				inc ebx
 				loop _mem_cpy_loop
 		}*/
+
+void strcpy(cstring *a, cstring *b)
+	for int i, 0, 256
+		a[i] = b[i]
+		if b[i] == 0
+			break
+
+int strcmp(cstring *a, cstring *b)
+	for int i, 0, 256
+		if a[i] > b[i]
+			return 1
+		else if a[i] > b[i]
+			return -1
+		if a[i] == 0
+			break
+	return 0
 
 //--------------------------------------------------------------
 // Text Modus
@@ -370,7 +392,7 @@ class AtaData
 		prints("\n")
 
 	void Init()
-		prints("init ATA Geraete\n")
+		prints("ATA Geraete:\n")
 	
 		// set up Device Control register
 		outportb(0x3f6, 0x0a)
@@ -513,62 +535,156 @@ AtaData Ata
 class PartitionData
 	int offset, size
 	char type
+	bool active
 	
 PartitionData Partition[4]
 int CurrentPartition
 
-void GetPartitions(int disk_no)
+void ReadPartitions(int disk_no)
 	// mbr lesen
 	Ata.Read(disk_no,0,1,&Ata.Buffer)
-	prints("Primaere Partitionen:     Offset   Groesse\n")
 	//MountPartition=false
 	for int n, 0, 4
-		int *offset=&Ata.Buffer[454+n*16]
-		Partition[n].offset=*offset
-		int *size=&Ata.Buffer[458+n*16]
-		Partition[n].size=*size
-		char fs=Ata.Buffer[450+n*16]
-		Partition[n].type=fs
-		prints("/dev/hda")
-		printi(n+1)
-		if (fs!=0x00) and (*size>0)
-			TextPos=60
-			if Ata.Buffer[446+n*16]==0x80
-				prints("(aktiv)")
-			TextPos=27
-			printi(*offset)
-			TextPos=36
-			printi(*size)
-			TextPos=50
-			if fs==0x83
-				prints("Linux")
-			else if fs==0x20
-				prints("MichiFS")
-				//MountPartition=true
-				//PartitionMountOffset=*offset
-			else if fs==0x0c
-				prints("Fat 32")
-			else if fs==0x0e
-				prints("Fat 16")
-			else if fs==0x07
-				prints("NTFS")
-			else if fs==0x0f
-				prints("Erweitert...")
-			else
-				printh(&fs,1)
-		else
-			TextPos=50
-			prints("---")
-		prints("\n")
+		PartitionData *p = &Partition[n]
+		int *offset = &Ata.Buffer[454+n*16]
+		p.offset = *offset
+		int *size = &Ata.Buffer[458+n*16]
+		p.size = *size
+		p.type = Ata.Buffer[450+n*16]
+		p.active = (Ata.Buffer[446+n*16] == 0x80)
 	/*for n, 0, 512
 		DrawHex(n*3,2,&AtaBuffer[n],1)*/
+		
+void ShowPartitions()
+	prints("Primaere Partitionen:     Offset   Groesse\n")
+	for int n, 0, 4
+		PartitionData *p = &Partition[n]
+		prints("/dev/hda")
+		printi(n + 1)
+		if (p.type != 0x00) and (p.size > 0)
+			TextPos = 60
+			if p.active
+				prints("(aktiv)")
+			TextPos = 27
+			printi(p.offset)
+			TextPos = 36
+			printi(p.size)
+			TextPos = 50
+			if p.type == 0x83
+				prints("Linux")
+			else if p.type == 0x20
+				prints("MichiFS")
+			else if p.type == 0x0c
+				prints("Fat 32")
+			else if p.type == 0x0e
+				prints("Fat 16")
+			else if p.type == 0x07
+				prints("NTFS")
+			else if p.type == 0x0f
+				prints("Erweitert...")
+			else
+				printh(&p.type, 1)
+		else
+			TextPos = 50
+			prints("---")
+		prints("\n")
 
+//--------------------------------------------------------------
+// Dateisystem
 
-void read_data_from_init()
-	asm{
-		mov eax, [0x00005100]
-		mov MemorySize, eax
-	}
+const int FILE_TYPE_FILE = 0
+const int FILE_TYPE_DIR = 1
+const int FILE_TYPE_DEVICE = 8
+
+class FileEntry
+	cstring name
+	int type
+	int size
+	int offset
+	FileEntry *next
+	FileEntry *first_sub
+	
+	void add(FileEntry *e)
+		if first_sub
+			prints("add nx ")
+			prints(e.name)
+			prints("-")
+			prints(name)
+			FileEntry *i = first_sub
+			while i.next
+				i = i.next
+			prints("-")
+			prints(i.name)
+			prints("\n")
+			i.next = e
+		else
+			prints("add fs ")
+			prints(e.name)
+			prints("-")
+			prints(name)
+			prints("\n")
+			first_sub = e
+	
+	void show()
+		printi(type)
+		prints(" ")
+		prints(name)
+		prints("\n")
+		FileEntry *e = first_sub
+		while e
+			prints("    ")
+			printi(e.type)
+			prints(" ")
+			prints(e.name)
+			prints("\n")
+			e = e.next
+	FileEntry *get_sub(cstring sname)
+		FileEntry *e = first_sub
+		while e
+			if strcmp(&sname, &e.name) == 0
+				return e
+			e = e.next
+		return nil
+
+class FileSystemData
+	FileEntry list[256] // TODO: dynamic memory
+	int list_size
+	FileEntry *root
+	
+	FileEntry *add(cstring name, int type, FileEntry *parent)
+		FileEntry *e = &list[list_size]
+		list_size ++
+		strcpy(&e.name, &name)
+		e.type = type
+		e.next = nil
+		e.first_sub = nil
+		if parent
+			parent.add(e)
+		return e
+	
+	void Init()
+		list_size = 0
+		root = add("-root-", FILE_TYPE_DIR, nil)
+		FileEntry *dev = add("dev", FILE_TYPE_DIR, root)
+		add("a", FILE_TYPE_FILE, root)
+		add("b", FILE_TYPE_DEVICE, dev)
+	
+	FileEntry *get(cstring path)
+		if path[0] != '/'
+			return nil
+		if path[1] == 0
+			return root
+		strcpy(&path, &path[1])
+		cstring name
+		for int i, 0, 256
+			if (path[i] == '/') or (path[i] == 0)
+				name[i] = 0
+				break
+			name[i] = path[i]
+		FileEntry *e = root
+		return e
+
+FileSystemData FileSystem
 
 void main()
 	read_data_from_init()
@@ -580,7 +696,15 @@ void main()
 	prints("k\n")
 	
 	Ata.Init()
-	GetPartitions(0)
+	ReadPartitions(0)
+	ShowPartitions()
+	
+	FileSystem.Init()
+	FileEntry *e = FileSystem.root.get_sub("a")//("/a")
+	printh(&e, 4)
+	if e
+		e.show()
+	//FileSystem.root.show()
 	
 	while true
 		nil
