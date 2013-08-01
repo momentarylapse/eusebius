@@ -36,9 +36,9 @@ void main()	//-------------------------------------------------------------	// R
 		// Speicher-Menge (RAM) feststellen
 		mov ax, 0xe801
 		int 0x15
-		mov [_var_mem_size], bx
+		mov [_var_mem_size], bx // #64kb
 		shr ax, 0x06
-		add [_var_mem_size], ax
+		add [_var_mem_size], ax // #1kb
 		
 
 
@@ -120,6 +120,7 @@ void main()	//-------------------------------------------------------------	// R
 
 		// Variablen speichern
 		mov eax, [_var_mem_size]
+		shl eax, 0x06
 		mov [0x00005100], eax
 		mov eax, _gdt
 		mov [0x00005110], eax

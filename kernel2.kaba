@@ -5,24 +5,28 @@
 #define __ADD_ENTRY_POINT__
 //#disasm
 
+int MemorySize
+
 //--------------------------------------------------------------
 // Text Modus
 
 void *VideoMemory
 char TextColor, TextColor2
 int TextPos, TextLine
+const int SCREEN_WIDTH = 80
+const int SCREEN_HEIGHT = 25
 
-void DrawString(int x, int y, cstring str)
+/*void DrawString(int x, int y, cstring str)
 	cstring *d = VideoMemory
-	d = &d[2*(80*y+x)]
+	d = &d[2*(SCREEN_WIDTH * y+x)]
 	int i = 0
 	while str[i] != 0
-		(*d)[0] = str[i]
-		(*d)[1] = TextColor
+		d[0] = str[i]
+		d[1] = TextColor
 		d = &d[2]
 		i ++
 
-/*int DrawHex(int x,int y,char data[1]*,int size)
+int DrawHex(int x,int y,char data[1]*,int size)
 	cstring ttt
 	int i
 	for i, 0, size
@@ -40,72 +44,56 @@ void DrawString(int x, int y, cstring str)
 		ttt[i*3+2]=0x20 // ' '
 	ttt[size*3-1]=0
 	DrawString(x,y,ttt)
+*/
 
 //--------------------------------------------------------------
 // verwalteter Textmodus
 
 void clrscr()
+	cstring *d = VideoMemory
+	for int i, 0, SCREEN_WIDTH * SCREEN_HEIGHT
+		d[i * 2] = ' '
+		d[1 * 2 + 1] = 0
+	TextLine = 0
+	TextPos = 0
+
+void etm_init()
 	asm{
-		//mov eax, 0xb8000
-		mov eax, 0xb80a0
-		_clear_loop2:
-			mov.b [eax], ' '
-			add eax, 0x01
-			mov.b [eax], 0x00
-			add eax, 0x01
-			cmp eax, 0xb8f00
-			js.b _clear_loop2
+		mov eax, 0x000b8000
+		mov VideoMemory, eax
 	}
-	TextLine=0
-	TextPos=0
-
-void clrstatus()
-	asm{
-		//mov eax, 0xb8000
-		mov eax, 0xb8f00
-		_clear_loop3:
-			mov.b [eax], ' '
-			add eax,0x01
-			mov.b cl, TextColor2
-			mov.b [eax], cl
-			add eax, 0x01
-			cmp eax, 0xb8fa0
-			js.b _clear_loop3
-	}*/
-
-/*void etm_init()
-	TextColor=def_col_text
 	clrscr()
-	TextColor2=def_col_greet
-	DrawString(0, 0,"                 Eusebius 0.2.0   (c) by MichiSoft TM   2013                    ")
-	TextColor2=def_col_status
-	clrstatus()
+	TextColor = 7
 
 void etm_shift()
-	int *p1=i2p(0xb8140)
-	int *p2=i2p(0xb80a0)
-	memcpy(p2,p1,etm_nx*(etm_ny-1)*2)
-	char a=TextColor2
-	TextColor2=TextColor
-	DrawString(0,etm_ny,"                                                                                ")
-	TextColor2=a*/
+	cstring *d = VideoMemory
+	cstring *d2 = &d[SCREEN_WIDTH * 2]
+	for int i, 0, SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
+		d[i] = d2[i]
+	d2 = &d[SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2]
+	for int i, 0, SCREEN_WIDTH
+		d2[i * 2] = ' '
+		d2[i * 2 + 1] = 0
 
-/*void prints(cstring str)
-	int i=0
-	while str[i]!=0
-		if str[i]!=0x0a
-			char p[1]*
-			p=i2p( (TextPos+etm_nx*(TextLine+1))*2 + 0xb8000 )
-			p[0]=str[i]
-			p[1]=TextColor
-			TextPos++
-		if (TextPos>=etm_nx) or (str[i]==0x0a)
-			TextPos=0
-			TextLine++
-			if TextLine>=etm_ny
+void prints(cstring str)
+	cstring *d = VideoMemory
+	d = &d[2*(SCREEN_WIDTH * TextLine + TextPos)]
+	int i = 0
+	while str[i] != 0
+		if str[i] != 0x0a
+			d[0] = str[i]
+			d[1] = TextColor
+			d = &d[2]
+			TextPos ++
+		if (TextPos >= SCREEN_WIDTH) or (str[i] == 0x0a)
+			TextPos = 0
+			TextLine ++
+			if TextLine >= SCREEN_HEIGHT
 				etm_shift()
-				TextLine=etm_ny-1
-		i++
+				TextLine --
+			d = VideoMemory
+			d = &d[2*(SCREEN_WIDTH * TextLine)]
+		i ++
 
 void printi(int i)
 	char ttt[16]
@@ -121,7 +109,7 @@ void printi(int i)
 	p = &ttt[s+1]
 	prints(*p)
 
-int printh(cstring *data,int size)
+/*int printh(cstring *data,int size)
 	cstring ttt
 	int i
 	for i, 0, size
@@ -153,14 +141,19 @@ void WasteTime()
 	for x, 0, 100000
 		nil*/
 
-
+void read_data_from_init()
+	asm{
+		mov eax, [0x00005100]
+		mov MemorySize, eax
+	}
 
 void main()
-	asm{
-		mov eax, 0x000b8000
-		mov VideoMemory, eax
-	}
-	TextColor = 7//32
-	DrawString(0, 0, "hallo, ein kleiner Test")
+	read_data_from_init()
+	etm_init()
+	
+	prints("Willkommen zu Eusebius 0.2.0   (c) by MichiSoft TM 2013\n")
+	printi(MemorySize)
+	prints(" kb\n")
+	
 	while true
 		nil
