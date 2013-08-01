@@ -172,7 +172,10 @@ int printh(cstring *data,int size)
 // Ata Treiber
 
 
-// Ata-Geräte
+
+#define AtaMaskBusy		0x80
+#define AtaMaskReady		0x40
+#define AtaMaskData		0x08
 
 class AtaDiskInfo
 	bool isAvailable
@@ -201,196 +204,184 @@ class AtaData
 
 	PartitionData Partition[4]
 	int CurrentPartition
-AtaData Ata
 
+	void wait_400_ns()
+		for int i, 0, 100
+			inportb(IOBase + 7)
 
+	bool wait_status(char mask, char value)
+		char AtaStatusChar = inportb(IOBase + 7)
+		int n = 1000000000
+		while ((AtaStatusChar & mask)!=value) and (n >= 0)
+			AtaStatusChar = inportb(IOCtrl)//+7)
+			n--
+		return n >= 0
 
-void wait_400_ns()
-	int i
-	for i, 0, 100
-		inportb(Ata.IOBase+7)
+	void SetDiskAdd(int disk_no)
+		ide_no = (disk_no/2)
+		ide_ms = (disk_no%2)
+		// Adressierungs-Daten
+		IOBase = 0x1f0
+		if ide_no == 1
+			IOBase = 0x170
+		IOCtrl = IOBase + 0x206
+		//IOCtrl = 0x3f6
+		MSMask = 0x00
+		if ide_ms == 1
+			MSMask = 0x10
 
-#define AtaMaskBusy		0x80
-#define AtaMaskReady		0x40
-#define AtaMaskData		0x08
+	bool TestDisk(int disk_no)
+		SetDiskAdd(disk_no)
+		DiskInfo[disk_no].isAvailable = false
 
-bool ata_wait_status(char mask,char value)
-	char AtaStatusChar=inportb(Ata.IOBase+7)
-	int n=1000000000
-	while ((AtaStatusChar & mask)!=value) and (n>=0)
-		AtaStatusChar=inportb(Ata.IOCtrl)//+7)
-		n--
-	return n>=0
+		// generell ansprechbar?
+		prints("IDE ")
+		printi(ide_no)
+		prints(":")
+		printi(ide_ms)
+		TextPos = 20
+		outportb(0x1f6, MSMask)
+		wait_400_ns()
+		outportb(IOBase + 2, 0x55)
+		outportb(IOBase + 3, 0xaa)
+		outportb(IOBase + 2, 0xaa)
+		outportb(IOBase + 3, 0x55)
+		outportb(IOBase + 2, 0x55)
+		outportb(IOBase + 3, 0xaa)
+		char sc = inportb(IOBase + 2)
+		char sn = inportb(IOBase + 3)
+		if (sc != 0x55) or (sn != 0xaa)
+			prints("---\n")
+			return false
 
-void SetDiskAdd(int disk_no)
-	Ata.ide_no=(disk_no/2)
-	Ata.ide_ms=(disk_no%2)
-	// Adressierungs-Daten
-	Ata.IOBase=0x1f0
-	if Ata.ide_no==1
-		Ata.IOBase=0x170
-	Ata.IOCtrl=Ata.IOBase+0x206
-	//AtaIOCtrl=0x3f6
-	Ata.MSMask=0x00
-	if Ata.ide_ms==1
-		Ata.MSMask=0x10
+		// now we think we know which devices, if any are there,
+		// so lets try a soft reset (ignoring any errors).
 
-bool AtaTestDisk(int disk_no)
-	SetDiskAdd(disk_no)
-	Ata.DiskInfo[disk_no].isAvailable = false
+		outportb(IOBase + 6, MSMask)
+		wait_400_ns()
+		outportb(IOCtrl, 0x0e) // soft reset
+		wait_400_ns()
+		outportb(IOCtrl, 0x0a)
+		wait_400_ns()
 
-	// generell ansprechbar?
-	prints("IDE ")
-	printi(Ata.ide_no)
-	prints(":")
-	printi(Ata.ide_ms)
-	TextPos = 20
-	outportb( 0x1f6, Ata.MSMask )
-	wait_400_ns()
-	outportb( Ata.IOBase+2, 0x55 )
-	outportb( Ata.IOBase+3, 0xaa )
-	outportb( Ata.IOBase+2, 0xaa )
-	outportb( Ata.IOBase+3, 0x55 )
-	outportb( Ata.IOBase+2, 0x55 )
-	outportb( Ata.IOBase+3, 0xaa )
-	char sc = inportb( Ata.IOBase+2 )
-	char sn = inportb( Ata.IOBase+3 )
-	if ( sc != 0x55 ) or ( sn != 0xaa )
-		prints("---\n")
-		return false
+		//sub_atapi_delay( 0 )
+		wait_status(AtaMaskBusy, 0)
+		outportb(IOBase + 6, MSMask)
+		wait_400_ns()
 
-	// now we think we know which devices, if any are there,
-	// so lets try a soft reset (ignoring any errors).
-
-	outportb( Ata.IOBase+6, Ata.MSMask )
-	wait_400_ns()
-	outportb( Ata.IOCtrl, 0x0e ) // soft reset
-	wait_400_ns()
-	outportb( Ata.IOCtrl, 0x0a )
-	wait_400_ns()
-
-	//sub_atapi_delay( 0 )
-	ata_wait_status(AtaMaskBusy,0)
-	outportb( Ata.IOBase+6, Ata.MSMask )
-	wait_400_ns()
-
-	// lets check device 0 again, is device 0 really there?
-	// is it ATA or ATAPI?
-	sc = inportb( Ata.IOBase+2 )
-	sn = inportb( Ata.IOBase+3 )
-	bool fail=true
-	if ( sc == 0x01 ) and ( sn == 0x01 )
-		Ata.DiskInfo[disk_no].isAtapi=false
-		fail=false
-		char cl = inportb( Ata.IOBase+4 )
-		char ch = inportb( Ata.IOBase+5 )
-		char st = inportb( Ata.IOBase+7 )
-		if ( cl == 0x14 ) and ( ch == 0xeb )
-			prints("ATAPI (CD-Rom)")
-			Ata.DiskInfo[disk_no].isAtapi=true
-		else
-			if ( cl == 0x00 ) and ( ch == 0x00 ) and ( st != 0x00 )
-				prints("ATA")
+		// lets check device 0 again, is device 0 really there?
+		// is it ATA or ATAPI?
+		sc = inportb(IOBase + 2)
+		sn = inportb(IOBase + 3)
+		bool fail = true
+		if (sc == 0x01) and (sn == 0x01)
+			DiskInfo[disk_no].isAtapi = false
+			fail = false
+			char cl = inportb(IOBase + 4)
+			char ch = inportb(IOBase + 5)
+			char st = inportb(IOBase + 7)
+			if ( cl == 0x14 ) and (ch == 0xeb)
+				prints("ATAPI (CD-Rom)")
+				DiskInfo[disk_no].isAtapi = true
 			else
-				fail=true
-	if fail
-		prints("---\n")
-		return false
+				if (cl == 0x00) and (ch == 0x00) and (st != 0x00)
+					prints("ATA")
+				else
+					fail = true
+		if fail
+			prints("---\n")
+			return false
 
-	/*outportb( 0x1f6, 0xe0 ) // Master+LBA
-	wait_400_ns()
-	outportb( 0x3f6, 0x0e ) // ?+SoftReset+NoInt
-	wait_400_ns()
-	outportb( 0x3f6, 0x0a ) // ?+NoInt
-	wait_400_ns()
-	ata_wait_busy()*/
+		/*outportb( 0x1f6, 0xe0 ) // Master+LBA
+		wait_400_ns()
+		outportb( 0x3f6, 0x0e ) // ?+SoftReset+NoInt
+		wait_400_ns()
+		outportb( 0x3f6, 0x0a ) // ?+NoInt
+		wait_400_ns()
+		ata_wait_busy()*/
 
+		DiskInfo[disk_no].isAvailable = true
 
-	Ata.DiskInfo[disk_no].isAvailable=true
+		outportb(IOCtrl, 0x0a) // ?+NoInt
+		wait_400_ns()
+		wait_status(AtaMaskBusy, 0)
+		outportb(IOBase+1, 0) //?
+		outportb(IOBase+2, 0) // NumSectors
+ 		outportb(IOBase+3, 0) // S0
+ 		outportb(IOBase+4, 0) // C0
+		outportb(IOBase+5, 0)
+		char ata_lba3 = MSMask | 0x60 // ...+LBA
+		outportb(IOBase+6, ata_lba3) // H0
+		if DiskInfo[disk_no].isAtapi
+			outportb(IOBase+7, 0xa1) // IdentifyDrive (ATAPI)
+		else
+			outportb(IOBase+7, 0xec) // IdentifyDrive
+		wait_400_ns()
 
-	outportb( Ata.IOCtrl, 0x0a ) // ?+NoInt
-	wait_400_ns()
-	ata_wait_status(AtaMaskBusy,0)
-	outportb( Ata.IOBase+1, 0 ) //?
-	outportb( Ata.IOBase+2, 0 ) // NumSectors
- 	outportb( Ata.IOBase+3, 0 ) // S0
- 	outportb( Ata.IOBase+4, 0 ) // C0
-	outportb( Ata.IOBase+5, 0 )
-	char ata_lba3=Ata.MSMask | 0x60 // ...+LBA
-	outportb( Ata.IOBase+6, ata_lba3 ) // H0
-	if Ata.DiskInfo[disk_no].isAtapi
-		outportb( Ata.IOBase+7, 0xa1 ) // IdentifyDrive (ATAPI)
-	else
-		outportb( Ata.IOBase+7, 0xec ) // IdentifyDrive
-	wait_400_ns()
+		wait_status(0x88, AtaMaskData)
+		wait_400_ns()
 
-	ata_wait_status(0x88,AtaMaskData)
-	wait_400_ns()
+		BufferDW = &Buffer
+		int n
+		for n, 0, 128
+			BufferDW[n] = inportd(IOBase)
+		// die Bytes des Namens korregieren
+		//for n, 0, 40, 2
+		n=0
+		while n<40
+			DiskInfo[disk_no].name[n  ] = Buffer[55+n]
+			DiskInfo[disk_no].name[n+1] = Buffer[54+n]
+			n+=2
+		DiskInfo[disk_no].name[40] = 0
+		prints(DiskInfo[disk_no].name)
+		memcpy(&DiskInfo[disk_no].size, &Buffer[120], 4)
+		/*temp_i = Ata.DiskInfo[disk_no].size >> 11
+		asm{
+			mov eax, temp_i
+			shr eax, 0xb
+			mov temp_i, eax
+		}*/
+		TextPos = 60
+		printi(DiskInfo[disk_no].size >> 11)
+	//	TextPos=60
+	//	printi(DiskInfo[disk_no].Size)
+		prints("mb\n")
 
-	Ata.BufferDW=&Ata.Buffer
-	int n
-	for n, 0, 128
-		Ata.BufferDW[n]=inportd(Ata.IOBase)
-	// die Bytes des Namens korregieren
-	//for n, 0, 40, 2
-	n=0
-	while n<40
-		Ata.DiskInfo[disk_no].name[n  ] = Ata.Buffer[55+n]
-		Ata.DiskInfo[disk_no].name[n+1] = Ata.Buffer[54+n]
-		n+=2
-	Ata.DiskInfo[disk_no].name[40]=0
-	prints(Ata.DiskInfo[disk_no].name)
-	memcpy(&Ata.DiskInfo[disk_no].size, &Ata.Buffer[120], 4)
-	/*temp_i = Ata.DiskInfo[disk_no].size >> 11
-	asm{
-		mov eax, temp_i
-		shr eax, 0xb
-		mov temp_i, eax
-	}*/
-	TextPos = 60
-	printi(Ata.DiskInfo[disk_no].size >> 11)
-//	TextPos=60
-//	printi(DiskInfo[disk_no].Size)
-	prints("mb\n")
+		return true
 
-	return true
-
-bool AtaReset(int disk_no)
-	if !Ata.DiskInfo[disk_no].isAvailable
-		return false
-	//clrstatus()
-	prints("AtaReset ")
-	SetDiskAdd(disk_no)
+	bool Reset(int disk_no)
+		if !DiskInfo[disk_no].isAvailable
+			return false
+		prints("AtaReset ")
+		SetDiskAdd(disk_no)
 	
+		char status
+		status=inportb(IOBase+7)
+		printh(&status,1)
+		status=inportb(IOBase+1)
+		printh(&status,1)
+		status=inportb(IOCtrl)
+		printh(&status,1)
 	
-	char status
-	status=inportb(Ata.IOBase+7)
-	printh(&status,1)
-	status=inportb(Ata.IOBase+1)
-	printh(&status,1)
-	status=inportb(Ata.IOCtrl)
-	printh(&status,1)
-	
-	//WaitReturn()
-	status=inportb(Ata.IOBase+7)
-	printh(&status,1)
-	status=inportb(Ata.IOBase+1)
-	printh(&status,1)
-	status=inportb(Ata.IOCtrl)
-	printh(&status,1)
-	
-	//WaitReturn()
+		status=inportb(IOBase+7)
+		printh(&status,1)
+		status=inportb(IOBase+1)
+		printh(&status,1)
+		status=inportb(IOCtrl)
+		printh(&status,1)
+		prints("\n")
 
-void InitAta()
-	prints("init ATA Geraete\n")
+	void Init()
+		prints("init ATA Geraete\n")
 	
-	// set up Device Control register
-	outportb(0x3f6, 0x0a)
-	outportb(0x376, 0x0a)
+		// set up Device Control register
+		outportb(0x3f6, 0x0a)
+		outportb(0x376, 0x0a)
 
-	for int n, 0, 4
-		AtaTestDisk(n)
+		for int n, 0, 4
+			TestDisk(n)
 
+AtaData Ata
 
 
 
@@ -409,7 +400,7 @@ void main()
 	printi(MemorySize)
 	prints("k\n")
 	
-	InitAta()
+	Ata.Init()
 	
 	while true
 		nil
