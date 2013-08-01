@@ -17,9 +17,14 @@ loader_fake.o : loader_fake.kaba
 	$(KABA) --x86 -o loader_fake.o loader_fake.kaba
  
 loader_br.o : loader_br.kaba
-	$(KABA) --x86 -o loader_br.o loader_br.kaba  
+	$(KABA) --x86 -o loader_br.o loader_br.kaba
 
-bochs/c.img: loader_fake.o init.o kernel2.o
+bochs/c0.img:
+	dd if=/dev/zero of=bochs/c0.img bs=1024 count=10080
+
+bochs/c.img: bochs/c0.img loader_fake.o init.o kernel2.o
+	cp bochs/c0.img bochs/c.img
+	dd if=bochs/mbr0 of=bochs/c.img conv=notrunc
 	#dd if=test.o of=bochs/c.img conv=notrunc
 	dd if=loader_fake.o of=bochs/c.img conv=notrunc
 	dd if=init.o of=bochs/c.img bs=512 seek=1 conv=notrunc

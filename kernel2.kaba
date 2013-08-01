@@ -126,6 +126,13 @@ void prints(cstring str)
 			d = VideoMemory
 			d = &d[2*(SCREEN_WIDTH * TextLine)]
 		i ++
+	int position = (TextLine * SCREEN_WIDTH) + TextPos
+	// cursor LOW port to vga INDEX register
+	outportb(0x3d4, 0x0f)
+	outportb(0x3d5, position)
+	// cursor HIGH port to vga INDEX register
+	outportb(0x3d4, 0x0e)
+	outportb(0x3d5, position >> 8)
 
 void printi(int i)
 	char ttt[16]
@@ -183,10 +190,6 @@ class AtaDiskInfo
 	int size
 	cstring name
 
-class PartitionData
-	int offset, size
-	char type
-
 class AtaData
 
 	int nAta
@@ -201,9 +204,6 @@ class AtaData
 	char atapi_buffer[16]
 	
 	AtaDiskInfo DiskInfo[4]
-
-	PartitionData Partition[4]
-	int CurrentPartition
 
 	void wait_400_ns()
 		for int i, 0, 100
@@ -512,6 +512,59 @@ class AtaData
 AtaData Ata
 
 
+class PartitionData
+	int offset, size
+	char type
+	
+PartitionData Partition[4]
+int CurrentPartition
+
+void GetPartitions(int disk_no)
+	// mbr lesen
+	Ata.Read(disk_no,0,1,&Ata.Buffer)
+	prints("Primaere Partitionen:     Offset   Groesse\n")
+	//MountPartition=false
+	for int n, 0, 4
+		int *offset=&Ata.Buffer[454+n*16]
+		Partition[n].offset=*offset
+		int *size=&Ata.Buffer[458+n*16]
+		Partition[n].size=*size
+		char fs=Ata.Buffer[450+n*16]
+		Partition[n].type=fs
+		prints("/dev/hda")
+		printi(n+1)
+		if (fs!=0x00) and (*size>0)
+			TextPos=60
+			if Ata.Buffer[446+n*16]==0x80
+				prints("(aktiv)")
+			TextPos=27
+			printi(*offset)
+			TextPos=36
+			printi(*size)
+			TextPos=50
+			if fs==0x83
+				prints("Linux")
+			else if fs==0x20
+				prints("MichiFS")
+				//MountPartition=true
+				//PartitionMountOffset=*offset
+			else if fs==0x0c
+				prints("Fat 32")
+			else if fs==0x0e
+				prints("Fat 16")
+			else if fs==0x07
+				prints("NTFS")
+			else if fs==0x0f
+				prints("Erweitert...")
+			else
+				printh(&fs,1)
+		else
+			TextPos=50
+			prints("---")
+		prints("\n")
+	/*for n, 0, 512
+		DrawHex(n*3,2,&AtaBuffer[n],1)*/
+
 
 void read_data_from_init()
 	asm{
@@ -529,10 +582,7 @@ void main()
 	prints("k\n")
 	
 	Ata.Init()
-	
-	char bb[512]
-	Ata.Read(0, 1, 1, &bb)
-	printh(&bb, 512)
+	GetPartitions(0)
 	
 	while true
 		nil
