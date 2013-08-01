@@ -380,6 +380,134 @@ class AtaData
 
 		for int n, 0, 4
 			TestDisk(n)
+			
+	
+	bool Read(int disk_no, int sector_offset, int num_sectors, char *buf)
+		if !DiskInfo[disk_no].isAvailable
+			return false
+		//DrawString(0,24,"MAtaRead")
+		SetDiskAdd(disk_no)
+		//printh(&IOBase,2)
+		// num_sectors=1...
+		outportb(IOBase + 0x206, 0x0a)
+	
+		char status
+
+
+		if DiskInfo[disk_no].isAtapi
+			nil
+			/*
+			/*status=inportb(AtaIOBase+7)
+			DrawHex(20,24,&status,1)
+			status=inportb(AtaIOBase+1)
+			DrawHex(23,24,&status,1)
+			status=inportb(AtaIOCtrl)
+			DrawHex(26,24,&status,1)
+			WaitReturn()*/
+			
+			wait_status(0x88, 0)
+			outportb(IOBase + 7, 0x08) // Soft Reset
+			wait_400_ns()
+
+			// CommandPacket
+			atapi_buffer[0]=0xa8 // Read
+			atapi_buffer[1]=0x00
+			atapi_buffer[2]=i2c(sector_offset>>24) // LBA 24..31
+			atapi_buffer[3]=i2c(sector_offset>>16) // 16..23
+			atapi_buffer[4]=i2c(sector_offset>>8) // 8..15
+			atapi_buffer[5]=i2c(sector_offset) // 0..7
+			atapi_buffer[6]=0x00
+			atapi_buffer[7]=0x00
+			atapi_buffer[8]=0x00
+			atapi_buffer[9]=i2c(num_sectors) // NumSectors
+			atapi_buffer[10]=0x00
+			atapi_buffer[11]=0x00
+		
+			//wait_status(AtaMaskBusy | AtaMaskData,0)
+			wait_status(0x88,0)
+
+			// dem ATA-Controller sagen, wir wollen ein ATAPI-Paket senden
+			outportb(IOBase+1, 0 ) // Features
+			outportb(IOBase+2, 0 )
+			outportb(IOBase+3, 0 )
+			outportb(IOBase+4, 0 )
+			outportb(IOBase+5, 0 )
+			outportb(IOBase+6, MSMask | 0x40 ) // H0 ...+LBA
+			outportb(IOBase+7, 0xa0 ) // Packet
+			wait_400_ns()
+
+			//ata_wait_status(AtaMaskBusy,0)
+
+			//ata_wait_status(0x88,AtaMaskData)
+			wait_status(MaskData,AtaMaskData)
+
+			/*status=inportb(AtaIOBase+7)
+			DrawHex(50,15,&status,1)
+			status=inportb(AtaIOBase+1)
+			DrawHex(50,16,&status,1)
+			status=inportb(AtaIOCtrl)
+			DrawHex(50,17,&status,1)*/
+		
+		
+			int abdw[0]*
+			abdw=&atapi_buffer
+			outportd(AtaIOBase,abdw[0])
+			outportd(AtaIOBase,abdw[1])
+			outportd(AtaIOBase,abdw[2])*/
+		else
+			outportb(IOCtrl, 0x0a) // ?+NoInt
+			wait_400_ns()
+			wait_status(AtaMaskBusy, 0)
+
+			outportb(IOBase+1, 0) // Features
+			outportb(IOBase+2, num_sectors) // NumSectors
+ 			outportb(IOBase+3, sector_offset) // S0
+ 			outportb(IOBase+4, sector_offset >> 8) // C0
+			outportb(IOBase+5, sector_offset >> 16)
+			outportb(IOBase+6, sector_offset >> 24 | MSMask | 0x40 ) // H0 ...+LBA
+			outportb(IOBase+7, 0x20 ) // ReadSector
+		wait_400_ns()
+
+		wait_status(0x88, AtaMaskData)
+		//wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
+		wait_400_ns()
+
+		BufferDW = buf
+	
+		if DiskInfo[disk_no].isAtapi
+			//prints("Lese...")
+			status=inportb(IOBase+7)
+			//printh(&status,1)
+			status=inportb(IOBase+1)
+			//printh(&status,1)
+			status=inportb(IOCtrl)
+			//printh(&status,1)
+		
+			int read=0
+			while read<512 // 2048b
+		
+				int byte_cnt = inportb(IOBase + 5) * 256 + inportb(IOBase + 4)
+				printi(byte_cnt)
+				byte_cnt=20
+		
+				int dw_cnt=byte_cnt/4
+				int n
+				for n, 0, dw_cnt
+					BufferDW[n]=inportd(IOBase)
+				printh(buf,20)
+				read+=dw_cnt
+		else
+			for n, 0, 128 // 512b
+				BufferDW[n] = inportd(IOBase)
+
+		status=inportb(IOBase+7)
+		//printh(&status,1)
+		status=inportb(IOBase+1)
+		//printh(&status,1)
+		status=inportb(IOCtrl)
+		//printh(&status,1)
+
+		return true
 
 AtaData Ata
 
@@ -401,6 +529,10 @@ void main()
 	prints("k\n")
 	
 	Ata.Init()
+	
+	char bb[512]
+	Ata.Read(0, 1, 1, &bb)
+	printh(&bb, 512)
 	
 	while true
 		nil
