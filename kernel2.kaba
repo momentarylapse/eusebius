@@ -16,39 +16,6 @@ int TextPos, TextLine
 const int SCREEN_WIDTH = 80
 const int SCREEN_HEIGHT = 25
 
-/*void DrawString(int x, int y, cstring str)
-	cstring *d = VideoMemory
-	d = &d[2*(SCREEN_WIDTH * y+x)]
-	int i = 0
-	while str[i] != 0
-		d[0] = str[i]
-		d[1] = TextColor
-		d = &d[2]
-		i ++
-
-int DrawHex(int x,int y,char data[1]*,int size)
-	cstring ttt
-	int i
-	for i, 0, size
-		int d=c2i(data[i])
-		int d1=(d>>4)
-		int d2=(d&15)
-		if d1<10
-			ttt[i*3]=i2c(d1+48)
-		else
-			ttt[i*3]=i2c(d1+97)
-		if d2<10
-			ttt[i*3+1]=i2c(d2+48)
-		else
-			ttt[i*3+1]=i2c(d2+97)
-		ttt[i*3+2]=0x20 // ' '
-	ttt[size*3-1]=0
-	DrawString(x,y,ttt)
-*/
-
-//--------------------------------------------------------------
-// verwalteter Textmodus
-
 void clrscr()
 	cstring *d = VideoMemory
 	for int i, 0, SCREEN_WIDTH * SCREEN_HEIGHT
@@ -109,34 +76,28 @@ void printi(int i)
 	p = &ttt[s+1]
 	prints(*p)
 
-/*int printh(cstring *data,int size)
+int printh(cstring *data,int size)
 	cstring ttt
-	int i
-	for i, 0, size
-		int d=c2i((*data)[i])
-		int d1=(d>>4)
-		int d2=(d&15)
-		if d1<10
-			ttt[i*3]=i2c(d1+48)
+	for int i, 0, size
+		int d = data[i]
+		int d1 = (d>>4)
+		int d2 = (d&15)
+		if d1 < 10
+			ttt[0] = d1+48
 		else
-			ttt[i*3]=i2c(d1+87)
+			ttt[0] = d1+87
 		if d2<10
-			ttt[i*3+1]=i2c(d2+48)
+			ttt[1] = d2+48
 		else
-			ttt[i*3+1]=i2c(d2+87)
-		ttt[i*3+2]=0x20 // ' '
-	ttt[size*3-1]=0
-	print(ttt)
+			ttt[1] = d2+87
+		if i == size-1
+			ttt[2] = 0
+		else
+			ttt[2] = '.'
+			ttt[3] = 0
+		prints(ttt)
 
-void print_ok()
-	char tc=TextColor
-	TextColor=0x02
-	//TextPos=60
-	TextPos+=2
-	prints("ok\n")
-	TextColor=tc
-
-void WasteTime()
+/*void WasteTime()
 	int x
 	for x, 0, 100000
 		nil*/
@@ -154,6 +115,7 @@ void main()
 	prints("Willkommen zu Eusebius 0.2.0   (c) by MichiSoft TM 2013\n")
 	printi(MemorySize)
 	prints(" kb\n")
+	printh(&"hallo", 5)
 	
 	while true
 		nil
