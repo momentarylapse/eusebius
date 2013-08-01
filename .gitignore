@@ -8,6 +8,7 @@ image.mfs
 bochs/bochsout.txt
 message.txt
 mfs
+*.mfs
 temp
 tools/compiler/compiler
 tools/compiler/temp

@@ -178,8 +178,6 @@ int printh(cstring *data,int size)
 //--------------------------------------------------------------
 // Ata Treiber
 
-
-
 #define AtaMaskBusy		0x80
 #define AtaMaskReady		0x40
 #define AtaMaskData		0x08

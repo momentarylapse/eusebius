@@ -1,0 +1,42 @@
+const int ClusterSize = 2048
+
+void main(string arg[])
+	if arg.num < 2
+		print "usage: kaba makemfs.kaba <out-file> <in-dir>"
+		return
+	DirEntry list[] = DirSearch(arg[1], "*", false)
+	print list.str()
+	file f = FileCreate(arg[0])
+	f.SetBinaryMode(true)
+
+	// root directory
+	int cluster = 1
+	f.WriteInt(list.num)
+	int offset = 4
+	forall e in list
+		f.WriteStr(e.name)
+		if e.is_dir
+			f.WriteInt(1) // flags
+		else
+			f.WriteInt(0)
+		f.WriteInt(e.size)
+		f.WriteInt(1) // number of file parts
+		f.WriteInt(cluster)
+		int num_clusters = (e.size - 1) / ClusterSize + 1
+		f.WriteInt(num_clusters)
+		cluster += num_clusters
+		offset += e.name.num + 22
+	f.SetPos(ClusterSize, true)
+		
+	// files
+	forall e in list
+		string t = FileRead(arg[1] + e.name)
+		t += "        "
+		int ti[0]* = &t[0]
+		for int n, 0, e.size / 4 + 1
+			f.WriteInt(ti[n])
+		//f.WriteBuffer(t)
+		for int n, e.size/4 + 1, (((e.size - 1) / ClusterSize + 1) * ClusterSize) / 4
+			f.WriteInt(0)
+	
+	FileClose(f)

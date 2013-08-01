@@ -36,7 +36,7 @@ void main()
 		mov ebx, 0x00007e00
 		mov ah, 0x02 // "ReadSector"
 		mov al, 0x02
-		mov cx, 0x0002
+		mov cx, 0x0015
 		mov dx, 0x0080
 		//mov al, 0x04 // 4 Sektoren = 2kb
 		//mov cx, 0x0006 // Cylinder 0, Sector 6
