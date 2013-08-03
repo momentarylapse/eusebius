@@ -612,19 +612,20 @@ class FileEntry
 			i.next = e
 		else
 			first_sub = e
-	
-	void show()
+	void _show()
 		printi(type)
+		prints(" ")
+		printi(size)
 		prints(" ")
 		prints(name)
 		prints("\n")
+	
+	void show()
+		_show()
 		FileEntry *e = first_sub
 		while e
 			prints("    ")
-			printi(e.type)
-			prints(" ")
-			prints(e.name)
-			prints("\n")
+			e._show()
 			e = e.next
 	FileEntry *get_sub(cstring sname)
 		FileEntry *e = first_sub
@@ -638,6 +639,9 @@ class FileSystemData
 	FileEntry list[256] // TODO: dynamic memory
 	int list_size
 	FileEntry *root
+	
+	char buf[2048]
+	int buf_used
 	
 	FileEntry *add(cstring name, int type, FileEntry *parent)
 		FileEntry *e = &list[list_size]
@@ -655,6 +659,7 @@ class FileSystemData
 		root = add("-root-", FILE_TYPE_DIR, nil)
 		FileEntry *dev = add("dev", FILE_TYPE_DIR, root)
 		add("a", FILE_TYPE_FILE, root)
+		add("screen", FILE_TYPE_DEVICE, dev)
 		add("b", FILE_TYPE_DEVICE, dev)
 	
 	FileEntry *get(cstring path)
@@ -680,8 +685,62 @@ class FileSystemData
 			if !e
 				return nil
 		return e
+		
+	void Read(int disk_no, int sector_offset, char buffer[0]*)
+		Ata.Read(disk_no,sector_offset  ,1,&buffer[0])
+		Ata.Read(disk_no,sector_offset+1,1,&buffer[512])
+		Ata.Read(disk_no,sector_offset+2,1,&buffer[1024])
+		Ata.Read(disk_no,sector_offset+3,1,&buffer[1536])
+	
+	int read_int()
+		int *p = &buf[buf_used]
+		buf_used += 4
+		return *p
+	void read_str(cstring s)
+		int l = buf[buf_used] + buf[buf_used+1]*256
+		buf_used += 2
+		for int i, 0, l
+			s[i] = buf[buf_used + i]
+		buf_used += l
+		s[l] = 0
+		
+	void Mount(PartitionData p, FileEntry *dir)
+		prints("mounte...")
+		Read(0, p.offset/* + 1*/, &buf)
+		buf_used = 0
+		int NumFiles = read_int()
+		for int n, 0, NumFiles
+			cstring name
+			read_str(name)
+			FileEntry *e = add(name, FILE_TYPE_FILE, dir)
+			//e.type =
+			read_int()
+			e.size = read_int()
+			read_int() // NumParts = 1
+			e.offset = read_int()
+			//e.num_clusters = 
+			read_int()
+		prints(" ok\n")
 
 FileSystemData FileSystem
+
+
+//--------------------------------------------------------------
+// Dateizugriff
+
+class OpenFileData
+	FileEntry *entry
+	int pos
+
+OpenFileData OpenFile[128]
+int num_open_files
+
+int open(cstring path)
+	return -1
+
+void close(int h)
+	nil
+
 
 void main()
 	read_data_from_init()
@@ -697,10 +756,11 @@ void main()
 	ShowPartitions()
 	
 	FileSystem.Init()
+	FileSystem.Mount(Partition[0], FileSystem.root)
 	FileEntry *e = FileSystem.get("/dev/b")
 	if e
 		e.show()
-	//FileSystem.root.show()
+	FileSystem.root.show()
 	
 	while true
 		nil

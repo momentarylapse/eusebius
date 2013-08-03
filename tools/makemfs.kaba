@@ -27,16 +27,25 @@ void main(string arg[])
 		cluster += num_clusters
 		offset += e.name.num + 22
 	f.SetPos(ClusterSize, true)
+	f.SetPos(ClusterSize * cluster, true)
+	FileClose(f)
 		
 	// files
+	cluster = 1
 	forall e in list
-		string t = FileRead(arg[1] + e.name)
+		string s="dd if='"+arg[1] + e.name
+		s+="' of='"+arg[0]
+		s+="' bs=2048 seek="+cluster
+		_exec_(s)
+		int num_clusters = (e.size - 1) / ClusterSize + 1
+		cluster += num_clusters
+		/*string t = FileRead(arg[1] + e.name)
 		t += "        "
 		int ti[0]* = &t[0]
 		for int n, 0, e.size / 4 + 1
 			f.WriteInt(ti[n])
 		//f.WriteBuffer(t)
 		for int n, e.size/4 + 1, (((e.size - 1) / ClusterSize + 1) * ClusterSize) / 4
-			f.WriteInt(0)
+			f.WriteInt(0)*/
 	
-	FileClose(f)
+	//FileClose(f)

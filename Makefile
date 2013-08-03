@@ -32,10 +32,11 @@ bochs/c.img: bochs/c0.img loader_fake.o init.o kernel2.o img.mfs
 	dd if=bochs/mbr0 of=bochs/c.img conv=notrunc
 	#dd if=test.o of=bochs/c.img conv=notrunc
 	dd if=loader_fake.o of=bochs/c.img conv=notrunc
-	dd if=init.o of=bochs/c.img bs=512 seek=20 conv=notrunc
-	#dd if=test.o of=bochs/c.img bs=512 seek=1 conv=notrunc
-	#dd if=x of=bochs/c.img bs=512 seek=24 conv=notrunc
-	dd if=kernel2.o of=bochs/c.img bs=512 seek=24 conv=notrunc
+	#dd if=init.o of=bochs/c.img bs=512 seek=20 conv=notrunc
+	##dd if=test.o of=bochs/c.img bs=512 seek=1 conv=notrunc
+	##dd if=x of=bochs/c.img bs=512 seek=24 conv=notrunc
+	#dd if=kernel2.o of=bochs/c.img bs=512 seek=24 conv=notrunc
+	dd if=img.mfs of=bochs/c.img bs=512 seek=16 conv=notrunc
 
 clean:
 	rm -f *.o bochs/c.img img.mfs
