@@ -56,6 +56,8 @@ void read_data_from_init()
 	asm{
 		mov eax, [0x00005100]
 		mov MemorySize, eax
+		mov eax, [0x00005110]
+		mov GDT, eax
 	}
 
 
@@ -97,12 +99,62 @@ int strcmp(cstring *a, cstring *b)
 int __temp_i__
 void *__temp_p__
 int _p2i(void *p)
-	__temp_p__ = p
-	asm{
-		mov eax, __temp_p__
-		mov __temp_i__, eax
-	}
-	return __temp_i__
+	int *i = &p
+	return *i
+	
+void *_i2p(int i)
+	model *p = &i
+	return *p
+
+
+//--------------------------------------------------------------
+// Speicher-"Verwaltung"	
+
+#define MEM_ALLOC_OFFSET	0x300000 // (3-2)=1mb Kernel-Variablen
+#define MAX_MEM_ALLOCS		4096
+
+int NumMemAllocs
+class mem_alloc_t
+	int Offset,End
+mem_alloc_t MemAlloc[MAX_MEM_ALLOCS]
+
+
+// Speicherbloecke bleiben immer so sortiert, dass der Offset monoton mit dem Index steigt!
+void *malloc(int size)
+	// Anfang
+	int offset=MEM_ALLOC_OFFSET
+	int a=0
+	// suchen
+	while a<NumMemAllocs
+		if offset+size<MemAlloc[a].Offset
+			break
+		offset=MemAlloc[a].End
+		a ++
+	// hintere Allocs verschieben
+	int a2=NumMemAllocs-1
+	while a2>=a
+		MemAlloc[a2+1]=MemAlloc[a2]
+		a2--
+	// neuen Alloc einfuegen
+	MemAlloc[a].Offset=offset
+	MemAlloc[a].End=offset+size
+	NumMemAllocs++
+	return _i2p(offset)
+
+void free(void *mem)
+	int mem_i=_p2i(mem)
+	int a=0
+	int ae=-1
+	while (ae<0) or (a<NumMemAllocs)
+		if MemAlloc[a].Offset==mem_i
+			ae=a
+		a++
+	if ae>=0
+		a=ae
+		NumMemAllocs--
+		while a<NumMemAllocs
+			MemAlloc[a]=MemAlloc[a+1]
+			a++
 	
 
 //--------------------------------------------------------------
@@ -206,6 +258,151 @@ int printh(cstring *data,int size)
 	int x
 	for x, 0, 100000
 		nil*/
+
+//--------------------------------------------------------------
+// Tasks
+
+const int MAX_TASKS = 256
+const int TASK_STACK_SIZE = 4096
+const int NUM_PRE_GDT_ENTRIES = 5
+
+enum
+	TASK_STATUS_DEAD
+	TASK_STATUS_ALIVE
+
+class TaskStateSegment
+	int prev
+	void *esp0
+	int ss0
+	void *esp1
+	int ss1
+	void *esp2
+	int ss2
+	int cr3 // =PDPR
+	void *eip
+	int eflags // Iterrupt Flag
+	int eax
+	int ecx
+	int edx
+	int ebx
+	void *esp
+	void *ebp
+	int esi
+	int edi
+	int es, cs, ss, ds, fs, gs
+	int x, y
+	
+	
+	void set(void *stack_pos, int _cs, int _ds, void *task)
+		int _ss = _ds
+		prev = 0 // previous TSS (dynamisch)
+		esp0 = stack_pos
+		ss0 = _ss
+		esp1 = stack_pos
+		ss1 = _ss
+		esp2 = stack_pos
+		ss2 = _ss
+		cr3 = 0 // (=PDPR)
+		eip = task
+		eflags = 0x200 // eflags (Iterrupt Flag)
+		eax = 0
+		ecx = 0
+		edx = 0
+		ebx = 0
+		esp = stack_pos
+		ebp = stack_pos
+		esi = 0
+		edi = 0
+		es = _ds
+		cs = _cs
+		ss = _ss
+		ds = _ds
+		fs = _ds
+		gs = _ds
+		x = 0
+		y = 0
+
+
+class TaskData
+	TaskStateSegment tss
+	int stack[0]*
+	int desc // Index in GDT
+	int pid, status
+	cstring name
+TaskData Task[MAX_TASKS], *CurTask, *TimerTask
+int NumTasks,CurPid
+int TaskCallData[2]
+
+
+int GDT[0]*
+
+void *AddTask(cstring name, void *func)
+	asm{
+		cli
+	}
+	TaskData *t = &Task[NumTasks]
+	t.pid = CurPid
+	CurPid ++
+
+	strcpy(&t.name, &name)
+	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
+	//t.tss=malloc(128)
+	t.stack = malloc(TASK_STACK_SIZE)
+	t.status = TASK_STATUS_DEAD
+	t.tss.set(t.stack, 8, 16, func)
+	NumTasks ++
+
+	// Global Descriptor Table
+	for int i, 0, NumTasks
+		int base=_p2i(&Task[i].tss)
+		prints("XX")
+		printh(&GDT[(i+NUM_PRE_GDT_ENTRIES)*2  ],8)
+		prints("-")
+		int d=(base<<16)+0x007f // base[15..0] limit=103 pl=0
+		GDT[(i+NUM_PRE_GDT_ENTRIES)*2  +0]=d
+		d=(base&0xff000000)+0x008900+((base>>16)&0xff)  // base[31..24], not busy, base[23..16]
+		if CurTask == &Task[i]
+			d += 0x200
+		GDT[(i+NUM_PRE_GDT_ENTRIES)*2+1+0]=d
+		printh(&GDT[(i+NUM_PRE_GDT_ENTRIES)*2+0],8)
+	asm{
+		//lgdt [_gdtr]
+		//sti
+	}
+	return t
+
+void RunTask(TaskData *t)
+	// "Task Gate Descriptor"
+	TaskCallData[0] = 0
+	TaskCallData[1] = 8 * t.desc
+	__temp_p__ = &TaskCallData[0]
+
+	// in Task springen
+	CurTask = t
+	t.status = TASK_STATUS_ALIVE
+	asm{
+		mov eax, __temp_p__
+		call_far [eax]
+		//jmp 0x0040:0x00000000
+	}
+
+void InitTasks()
+	prints("init Tasks")
+
+
+	CurPid = 1
+	NumTasks = 0
+
+	CurTask = AddTask("kernel", nil)
+
+	//print("\n  setze Kernel-Task-Register")
+	__temp_i__ = CurTask.desc * 8
+	asm{
+		mov eax, __temp_i__ // Descriptor[5]
+		ltr ax
+	}
+
+	prints("   ok\n")
 
 //--------------------------------------------------------------
 // Interrupts
@@ -985,6 +1182,8 @@ void main()
 	if e
 		e.show()
 	FileSystem.root.show()
+	
+	InitTasks()
 	
 	InitInterrupts()
 	prints("------\n")
