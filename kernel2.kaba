@@ -94,6 +94,17 @@ int strcmp(cstring *a, cstring *b)
 			break
 	return 0
 
+int __temp_i__
+void *__temp_p__
+int _p2i(void *p)
+	__temp_p__ = p
+	asm{
+		mov eax, __temp_p__
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+	
+
 //--------------------------------------------------------------
 // Text Modus
 
@@ -195,6 +206,219 @@ int printh(cstring *data,int size)
 	int x
 	for x, 0, 100000
 		nil*/
+
+//--------------------------------------------------------------
+// Interrupts
+
+
+void int_handler(int i)
+	TextColor=0x04
+	prints("\nInt ")
+	printi(i)
+	if i==0
+		prints(": Division durch Null")
+	if i==1
+		prints(": Debug")
+	if i==3
+		prints(": Breakpoint")
+	if i==4
+		prints(": Overflow")
+	if i==5
+		prints(": Bounds Check")
+	if i==6
+		prints(": Invalider Opcode")
+	if i==7
+		prints(": kein Ko-Prozessor")
+	if i==8
+		prints(": System-Fehler")
+	if i==9
+		prints(": Ko-Prozessor-Segment overrun")
+	if i==10
+		prints(": Invalides TSS")
+	if i==11
+		prints(": Segment fehlt")
+	if i==12
+		prints(": Stack-Fehler")
+	if i==13
+		prints(": General Protection Fault")
+	if i==14
+		prints(": Page-Fault")
+	if i==16
+		prints(": Koprozessor-Fehler")
+	prints("  8-P")
+	while true
+		nil
+
+void int_00()
+	int_handler(0)
+void int_01()
+	int_handler(1)
+void int_02()
+	int_handler(2)
+void int_03()
+	int_handler(3)
+void int_04()
+	int_handler(4)
+void int_05()
+	int_handler(5)
+void int_06()
+	int_handler(6)
+void int_07()
+	int_handler(7)
+void int_08()
+	int_handler(8)
+void int_09()
+	int_handler(9)
+void int_10()
+	int_handler(10)
+void int_11()
+	int_handler(11)
+void int_12()
+	int_handler(12)
+void int_13()
+	int_handler(13)
+void int_14()
+	int_handler(14)
+void int_15()
+	int_handler(15)
+void int_16()
+	int_handler(16)
+void int_XX()
+	int_handler(2004)
+
+class InterruptDescriptor
+	int a, b
+
+InterruptDescriptor InterruptDescriptorTable[256]
+
+void SetInterrupt(int ir, void *func)
+	InterruptDescriptor *i = &InterruptDescriptorTable[ir]
+	if !func
+		i.a = 0
+		i.b = 0
+	else
+		int addr = _p2i(func)
+		// Interrupt Gate
+		i.a = 0x00080000 + (addr&0xffff) // desc[1],addr[15..0]
+		i.b = ((addr<<16)&0xffff) + 0x00008e00 // addr[31..16],typ
+
+/*void *SetInterruptTask(int ir,void *func)
+	int idt[0]*
+	idt=i2p(0x00006800)
+	if !func
+		idt[ir*2  ]=0
+		idt[ir*2+1]=0
+	else
+		task_t *t=AddTask("IRQ",func)
+
+		// Interrupt Task Gate
+		idt[ir*2  ]= 0x00080000*t.desc // desc,0[15..0]
+		idt[ir*2+1]= 0x00008500 // 0[31..16],typ
+		return t
+	return nil
+
+void irq_1()
+	while true
+		asm{
+			cli
+		}
+
+		prints(" IRQ ")
+		outportb(0x20,0x20)
+		//int k=c2i(inportb(0x60))
+		//printi(k)
+		asm{
+			iret
+		}
+
+void int_timer()
+	while true
+		asm{
+			cli
+		}
+
+		//prints(" Timer!\n")
+		prints("-")
+		int last=(TimerTask.tss[0]>>3)-NUM_PRE_GDT_ENTRIES
+		printi(last)
+
+		// weitere Aufrufe erlauben
+		outportb(0x20,0x20)
+
+		// zurueck
+		asm{
+			iret
+		}*/
+
+void InitInterrupts()
+	prints("lade Iterrupt-Tabelle")
+
+	for int i, 0, 256
+		SetInterrupt(i,&int_XX)
+
+	SetInterrupt( 0,&int_00)
+	SetInterrupt( 1,&int_01)
+	SetInterrupt( 2,&int_02)
+	SetInterrupt( 3,&int_03)
+	SetInterrupt( 4,&int_04)
+	SetInterrupt( 5,&int_05)
+	SetInterrupt( 6,&int_06)
+	SetInterrupt( 7,&int_07)
+	SetInterrupt( 8,&int_08)
+	SetInterrupt( 9,&int_09)
+	SetInterrupt(10,&int_10)
+	SetInterrupt(11,&int_11)
+	SetInterrupt(12,&int_12)
+	SetInterrupt(13,&int_13)
+	SetInterrupt(14,&int_14)
+	SetInterrupt(15,&int_15)
+	SetInterrupt(16,&int_16)
+/*	TimerTask=SetInterruptTask(32,&int_timer)
+	SetInterruptTask(33,&irq_1)*/
+
+	// IRQs auf höhere Interrupts legen
+	outportb(0x20,0x11)
+	outportb(0xa0,0x11)
+	outportb(0x21,0x20)
+	outportb(0xa1,0x28)
+	outportb(0x21,0x04)
+	outportb(0xa1,0x02)
+	outportb(0x21,0x01)
+	outportb(0xa1,0x01)
+	outportb(0x21,0x00)
+	outportb(0xa1,0x00)
+	
+	__temp_p__ = &InterruptDescriptorTable
+
+	asm{
+		jmp _after_idt_data
+		_idtr:
+		//dw  0x07ff
+		dw 0x0047
+		//dw 0x003f
+		_idtr_base:
+		dd 0x00000000
+		_after_idt_data:
+		mov eax, __temp_p__
+		mov [_idtr_base], eax
+		cli
+		lidt [_idtr]
+		sti
+	}
+
+	/*outportb(0x70,0x08)
+	char c=inportb(0x71)
+	outportb(0x71,c|0x40)*/
+
+	/*prints("versuche boese Speicher-Operation...")
+
+	int i = 0
+	1/i
+	asm{
+		mov [0x00000000], eax
+	}*/
+
+	prints("   ok\n")
 
 
 //--------------------------------------------------------------
@@ -761,6 +985,14 @@ void main()
 	if e
 		e.show()
 	FileSystem.root.show()
+	
+	InitInterrupts()
+	prints("------\n")
+	asm{
+		_loop:
+		nop
+		jmp _loop
+	}
 	
 	while true
 		nil
