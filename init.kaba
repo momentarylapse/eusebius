@@ -49,37 +49,27 @@ void main()	//-------------------------------------------------------------	// R
 		xor ax, ax
 		mov es, ax
 		// Ziel des Images
-		mov ebx, 0x00009000
+		mov ax, 0x1000
+		mov es, ax
+		mov bx, 0x0000 // 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
 		mov ah, 0x02 // "ReadSector"
-		mov al, 0x10
+		mov al, 0x80
 		mov cx, 0x0019
 		mov dx, 0x0080
 		int 0x13
-		mov ebx, 0x0000b000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x10
-		mov cx, 0x0029
-		mov dx, 0x0080
-		int 0x13
-		mov ebx, 0x0000d000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x10
-		mov cx, 0x0039
-		mov dx, 0x0080
-		int 0x13
-		//mov ebx, 0x0000f000
-		//mov ah, 0x02 // "ReadSector"
-		//mov al, 0x10
-		//mov cx, 0x000a
-		//mov dx, 0x0180
-		//int 0x13
 	//	mov al, [0x5008] // Größe: 1Sektor = 512b
 	//	mov cx, [0x5004]
 	//	mov dx, [0x5006]
 	//	int 0x13
 		or ah, ah
 		//jnz _reset_drive
-		
+
+
+		// Debug
+		mov al, '2'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10		
 		// Speicher-Segmente laden
 		lgdt [_gdtr]
 
@@ -145,7 +135,7 @@ void main()	//-------------------------------------------------------------	// R
 		xor eax, eax
 
 		// -> Kernel starten
-		mov eax, 0x00009000
+		mov eax, 0x00010000
 		jmp eax
 
 

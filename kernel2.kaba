@@ -1,5 +1,5 @@
 #define __OS__
-#define __CODE_ORIGIN__ 0x9000
+#define __CODE_ORIGIN__ 0x10000
 #define __VARIABLE_OFFSET__ 0x200010 // > 2mb, wegen Stack!
 #define __ADD_ENTRY_POINT__
 //#disasm
@@ -110,8 +110,8 @@ void *_i2p(int i)
 //--------------------------------------------------------------
 // Speicher-"Verwaltung"	
 
-#define MEM_ALLOC_OFFSET	0x300000 // (3-2)=1mb Kernel-Variablen
-#define MAX_MEM_ALLOCS		4096
+const int MEM_ALLOC_OFFSET = 0x400000 // (4-2)=2mb Kernel-Variablen
+const int MAX_MEM_ALLOCS = 4096
 
 int NumMemAllocs
 class mem_alloc_t
@@ -211,13 +211,13 @@ void prints(cstring str)
 			d = VideoMemory
 			d = &d[2*(SCREEN_WIDTH * TextLine)]
 		i ++
-	int position = (TextLine * SCREEN_WIDTH) + TextPos
+	/*int position = (TextLine * SCREEN_WIDTH) + TextPos
 	// cursor LOW port to vga INDEX register
 	outportb(0x3d4, 0x0f)
 	outportb(0x3d5, position)
 	// cursor HIGH port to vga INDEX register
 	outportb(0x3d4, 0x0e)
-	outportb(0x3d5, position >> 8)
+	outportb(0x3d5, position >> 8)*/
 
 void printi(int i)
 	char ttt[16]
@@ -263,8 +263,9 @@ int printh(cstring *data,int size)
 // Tasks
 
 const int MAX_TASKS = 256
-const int TASK_STACK_SIZE = 4096
+const int TASK_STACK_SIZE = 40960
 const int NUM_PRE_GDT_ENTRIES = 5
+const int TASK_SWITCH_DT = 100 // ms
 
 enum
 	TASK_STATUS_DEAD
@@ -324,7 +325,7 @@ class TaskStateSegment
 
 
 class TaskData
-	TaskStateSegment tss
+	TaskStateSegment *tss
 	int stack[0]*
 	int desc // Index in GDT
 	int pid, status
@@ -347,6 +348,7 @@ void *AddTask(cstring name, void *func)
 	strcpy(&t.name, &name)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
 	//t.tss=malloc(128)
+	t.tss=_i2p(0x6000+0x80*NumTasks)
 	t.stack = malloc(TASK_STACK_SIZE)
 	t.status = TASK_STATUS_DEAD
 	t.tss.set(t.stack, 8, 16, func)
@@ -354,7 +356,7 @@ void *AddTask(cstring name, void *func)
 
 	// Global Descriptor Table
 	for int i, 0, NumTasks
-		int base=_p2i(&Task[i].tss)
+		int base=_p2i(Task[i].tss)
 		prints("XX")
 		printh(&GDT[(i+NUM_PRE_GDT_ENTRIES)*2  ],8)
 		prints("-")
@@ -499,18 +501,17 @@ void SetInterrupt(int ir, void *func)
 		i.a = 0x00080000 + (addr&0xffff) // desc[1],addr[15..0]
 		i.b = ((addr<<16)&0xffff) + 0x00008e00 // addr[31..16],typ
 
-/*void *SetInterruptTask(int ir,void *func)
-	int idt[0]*
-	idt=i2p(0x00006800)
+void *SetInterruptTask(int ir, void *func)
+	InterruptDescriptor *i = &InterruptDescriptorTable[ir]
 	if !func
-		idt[ir*2  ]=0
-		idt[ir*2+1]=0
+		i.a = 0
+		i.b = 0
 	else
-		task_t *t=AddTask("IRQ",func)
+		TaskData *t = AddTask("IRQ", func)
 
 		// Interrupt Task Gate
-		idt[ir*2  ]= 0x00080000*t.desc // desc,0[15..0]
-		idt[ir*2+1]= 0x00008500 // 0[31..16],typ
+		i.a = 0x00080000*t.desc // desc,0[15..0]
+		i.b = 0x00008500 // 0[31..16],typ
 		return t
 	return nil
 
@@ -536,16 +537,16 @@ void int_timer()
 
 		//prints(" Timer!\n")
 		prints("-")
-		int last=(TimerTask.tss[0]>>3)-NUM_PRE_GDT_ENTRIES
+		int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		printi(last)
 
 		// weitere Aufrufe erlauben
 		outportb(0x20,0x20)
 
-		// zurueck
+		// zurück
 		asm{
 			iret
-		}*/
+		}
 
 void InitInterrupts()
 	prints("lade Iterrupt-Tabelle")
@@ -570,8 +571,8 @@ void InitInterrupts()
 	SetInterrupt(14,&int_14)
 	SetInterrupt(15,&int_15)
 	SetInterrupt(16,&int_16)
-/*	TimerTask=SetInterruptTask(32,&int_timer)
-	SetInterruptTask(33,&irq_1)*/
+	TimerTask = SetInterruptTask(32, &int_timer)
+	SetInterruptTask(33, &irq_1)
 
 	// IRQs auf höhere Interrupts legen
 	outportb(0x20,0x11)
@@ -590,9 +591,7 @@ void InitInterrupts()
 	asm{
 		jmp _after_idt_data
 		_idtr:
-		//dw  0x07ff
-		dw 0x0047
-		//dw 0x003f
+		dw 0x07ff
 		_idtr_base:
 		dd 0x00000000
 		_after_idt_data:
@@ -617,6 +616,66 @@ void InitInterrupts()
 
 	prints("   ok\n")
 
+
+void second_task()
+	int counter_j=1
+	while true
+		prints(" ")
+		printi(counter_j)
+		TextPos++
+
+		for int i, 0, 20000
+			nil
+
+		if (counter_j % 50)==0
+			prints("\nversuche, zurueck zu springen...\n")
+			asm{
+				iret
+			}
+		counter_j++
+
+void InitTimer()
+	prints("setze Timer-Daten")
+	// ticks/s: 1193180
+	// 100Hz:   11932 = 0x2e9c
+	int ticks_per_sec = 1193180
+	int ticks_till_irq = (ticks_per_sec >> 10) * TASK_SWITCH_DT
+	if ticks_till_irq > 0xffff
+		ticks_till_irq = 0xffff
+	//1/0
+	outportb(0x43, 0x34)
+	outportb(0x40, ticks_till_irq) //0x9c)
+	outportb(0x40, ticks_till_irq >> 8) //0x2e)
+
+	prints("  ok\n")
+
+void TaskTest()
+	prints("teste Task-Faehigkeit:\n")
+	prints("  erstelle neue Task")
+
+	TaskData *t = AddTask("test", &second_task)
+	prints("  ok\n")
+	prints("starte zweite Task...\n")
+
+	RunTask(t)
+
+	prints("\nfahre fort...\n")
+	for int i, 0, 400000
+		nil
+
+	RunTask(t)
+
+	asm{
+		cli
+	}
+
+	prints("   ok\n")
+	char tc=TextColor
+	TextColor=0x04
+	prints("fertig")
+	TextColor=tc
+	//while true
+	//	NULL
 
 //--------------------------------------------------------------
 // Ata Treiber
@@ -1166,6 +1225,7 @@ void close(int h)
 void main()
 	read_data_from_init()
 	etm_init()
+	NumMemAllocs=0
 	
 	prints("Willkommen zu Eusebius 0.2.0   (c) by MichiSoft TM 2013\n")
 	prints("Speicher: ")
@@ -1186,6 +1246,10 @@ void main()
 	InitTasks()
 	
 	InitInterrupts()
+
+	InitTimer()
+
+//	TaskTest()
 	prints("------\n")
 	asm{
 		_loop:
