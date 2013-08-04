@@ -265,7 +265,7 @@ int printh(cstring *data,int size)
 
 const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
-const int NUM_PRE_GDT_ENTRIES = 4
+const int NUM_PRE_GDT_ENTRIES = 5
 const int TASK_SWITCH_DT = 20 // ms
 
 enum
@@ -295,18 +295,18 @@ class TaskStateSegment
 	int x, y
 	
 	
-	void set(void *stack_pos, int _cs, int _ds, void *task)
+	void set(void *stack_pos, int _cs, int _ds, int pvl, void *task)
 		int _ss = _ds
 		prev = 0 // previous TSS (dynamisch)
 		esp0 = stack_pos
-		ss0 = _ss
+		ss0 = _ss * 8
 		esp1 = stack_pos
-		ss1 = _ss
+		ss1 = _ss * 8
 		esp2 = stack_pos
-		ss2 = _ss
+		ss2 = _ss * 8
 		cr3 = 0 // (=PDPR)
 		eip = task
-		eflags = 0x200 // eflags (Iterrupt Flag)
+		eflags = 0x200 + pvl * 0x1000 // IterruptFlag + PVL
 		eax = 0
 		ecx = 0
 		edx = 0
@@ -315,12 +315,12 @@ class TaskStateSegment
 		ebp = stack_pos
 		esi = 0
 		edi = 0
-		es = _ds
-		cs = _cs
-		ss = _ss
-		ds = _ds
-		fs = _ds
-		gs = _ds
+		es = _ds * 8
+		cs = _cs * 8
+		ss = _ss * 8
+		ds = _ds * 8
+		fs = _ds * 8
+		gs = _ds * 8
 		x = 0
 		y = 0
 
@@ -344,18 +344,19 @@ class GlobalDescriptorData
 		b += 0x00008000 // present
 		if gran
 			b += 0x00800000
-	void set_data(int base, int limit, bool executable)
+	void set_data(int base, int limit, bool executable, int pvl)
 		set_base(base, limit >> 12, true)
 		b += 0x00401200
 		if executable
 			b += 0x00000800
+		b += 0x00002000 * pvl
 	void set_task(TaskData *t)
 		set_base(_p2i(&t.tss), 103, false)
 		b += 0x00000900 // not busy
 
 GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
-void *AddTask(cstring name, void *func)
+void *AddTask(cstring name, void *func, int pvl)
 	asm{
 		cli
 	}
@@ -367,7 +368,10 @@ void *AddTask(cstring name, void *func)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
 	t.stack = malloc(TASK_STACK_SIZE)
 	t.status = TASK_STATUS_DEAD
-	t.tss.set(t.stack, 8, 16, func)
+	if pvl == 0
+		t.tss.set(t.stack, 1, 2, pvl, func)
+	else
+		t.tss.set(t.stack, 3, 4, pvl, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	NumTasks ++
 
@@ -408,16 +412,20 @@ void InitTasks()
 	for int i, 0, NUM_PRE_GDT_ENTRIES + MAX_TASKS
 		GlobalDescriptorTable[i].a = 0x00000000
 		GlobalDescriptorTable[i].b = 0x00000000
-	// code descriptor
-	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true)
-	// data descriptor
-	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false)
+	// kernel code
+	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true, 0)
+	// kernel data
+	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false, 0)
+	// user code
+	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 3)
+	// user data
+	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 3)
 
 
 	CurPid = 1
 	NumTasks = 0
 
-	CurTask = AddTask("kernel", nil)
+	CurTask = AddTask("kernel", nil, 0)
 	
 	// GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
@@ -543,7 +551,7 @@ class InterruptDescriptor
 			a = 0
 			b = 0
 		else
-			TaskData *t = AddTask("IRQ", func)
+			TaskData *t = AddTask("IRQ", func, 0)
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 			// Interrupt Task Gate
@@ -583,7 +591,18 @@ void int_timer()
 			iret
 		}
 
-
+void show_pvl()
+	asm{
+		db 0x9c // pushf
+		pop eax
+		mov __temp_i__, eax
+	}
+	int eflags = __temp_i__
+	int pvl = (eflags >> 12) & 3
+	prints("[PVL:")
+	printi(pvl)
+	prints("]")
+	
 void int_syscall()
 	asm{
 		mov __temp_i__, eax
@@ -592,15 +611,20 @@ void int_syscall()
 	int index = __temp_i__
 	int param = __temp_i2__
 	while true
-
-		prints("<<")
-		printi(index)
-		prints(",")
-		printi(param)
-		//prints(" ")
-		//int last = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		//printi(last)
-		prints(">>")
+		//show_pvl()
+	
+		if index == 19
+			cstring *p = _i2p(param)
+			prints(*p)
+		else
+			prints("<<")
+			printi(index)
+			prints(",")
+			printi(param)
+			//prints(" ")
+			//int last = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+			//printi(last)
+			prints(">>")
 
 		// weitere Aufrufe erlauben
 		//outportb(0x20,0x20)
@@ -611,9 +635,13 @@ void int_syscall()
 			//pop eax
 			//pop eax
 			iret
-			//mov __temp_i__, eax
+			mov __temp_i__, eax
+			mov __temp_i2__, edx
+			push ebp
+			mov ebp, esp
 		}
-		//index = __temp_i__
+		index = __temp_i__
+		param = __temp_i2__
 
 void InitInterrupts()
 	prints("lade Iterrupt-Tabelle")
@@ -695,22 +723,23 @@ void user_prints(cstring s)
 	}
 
 void second_task()
-	prints(" == Task2!!! ==\n")
+	user_prints(" == Task2!!! ==\n")
+	show_pvl()
 	//int ii = 0
 	//4 / ii
-	user_prints(" TEST XXX ")
 	int counter_j=1
 	while true
-		prints(" ")
-		printi(counter_j)
-		prints(" ")
-		user_prints(" TEST XXX ")
+		user_prints(" ")
+		cstring s
+		_i2s(counter_j, &s)
+		user_prints(s)
+		user_prints(" ")
 
 		for int i, 0, 20000
 			nil
 
 		if (counter_j % 50)==0
-			prints("\nversuche, zurueck zu springen...\n")
+			user_prints("\nversuche, zurueck zu springen...\n")
 			asm{
 				iret
 			}
@@ -735,7 +764,7 @@ void TaskTest()
 	prints("teste Task-Faehigkeit:\n")
 	prints("  erstelle neue Task")
 
-	TaskData *t = AddTask("test", &second_task)
+	TaskData *t = AddTask("test", &second_task, 0)//3)
 	prints("  ok\n")
 	prints("starte zweite Task...\n")
 
