@@ -128,10 +128,6 @@ void main()	//-------------------------------------------------------------	// R
 		mov eax, [_var_mem_size]
 		shl eax, 0x06
 		mov [0x00005100], eax
-		mov eax, _gdt
-		mov [0x00005110], eax
-		mov eax, _gdtr
-		mov [0x00005114], eax
 		xor eax, eax
 
 		// -> Kernel starten
@@ -160,27 +156,9 @@ void main()	//-------------------------------------------------------------	// R
 		// [2] 0x10 data descriptor
 		dd 0x0000ffff
 		dd 0x00cf9200
-		// [3] 0x18 ldt base=0x6700 limit=0x17 ----nicht benutzt!----
-		dd 0x67000017
-		dd 0x00009200
-		// [4] 0x20 realmode descriptor...?
-		dd 0x0000ffff
-		dd 0x00409200
-		// [5] 0x28 task 0 (kernel) base=0x6000 limit=103 pl=0
-		dd 0x600000ff
-		dd 0x00008900  // not busy
-		// [6] 0x30 task 1 (irq timer) base=0x6080 limit=103 pl=0
-		dd 0x60800067
-		dd 0x00008900  // not busy
-		// [7] 0x38 task 2 (irq keys) base=0x6100 limit=103 pl=0
-		dd 0x61000067
-		dd 0x00008900  // not busy
-		// [8] 0x40 task 3 (test) base=0x6180 limit=103 pl=0
-		dd 0x61800067
-		dd 0x00008900  // not busy
 
 		_gdtr:
-		dw 0x0047 // 9 descriptors
+		dw 0x0017 // 3 descriptors
 		dd _gdt
 		
 		_pmode_ptr:
