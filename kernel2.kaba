@@ -323,7 +323,7 @@ class TaskStateSegment
 
 
 class TaskData
-	TaskStateSegment *tss
+	TaskStateSegment tss
 	int stack[0]*
 	int desc // Index in GDT
 	int pid, status
@@ -346,7 +346,7 @@ class GlobalDescriptorData
 		if executable
 			b += 0x00000800
 	void set_task(TaskData *t)
-		set_base(_p2i(t.tss), 103, false)
+		set_base(_p2i(&t.tss), 103, false)
 		b += 0x00000900 // not busy
 		//if CurTask == &t
 		//	b += 0x200 // busy
@@ -363,8 +363,6 @@ void *AddTask(cstring name, void *func)
 
 	strcpy(&t.name, &name)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
-	//t.tss=malloc(128)
-	t.tss=_i2p(0x6000+0x80*NumTasks)
 	t.stack = malloc(TASK_STACK_SIZE)
 	t.status = TASK_STATUS_DEAD
 	t.tss.set(t.stack, 8, 16, func)
@@ -411,44 +409,34 @@ void InitTasks()
 	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true)
 	// data descriptor
 	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false)
-	// [3] 0x18 ldt base=0x6700 limit=0x17 ----nicht benutzt!----
-	/*GlobalDescriptorTable[3].a = 0x67000017
-	GlobalDescriptorTable[3].b = 0x00009200
-	// [4] 0x20 realmode descriptor...?
-	GlobalDescriptorTable[4].a = 0x0000ffff
-	GlobalDescriptorTable[4].b = 0x00409200*/
 
 
 	CurPid = 1
 	NumTasks = 0
 
 	CurTask = AddTask("kernel", nil)
-	//GlobalDescriptorTable[5].set_task(CurTask)
-	/*prints("\n")
-	printh(&GlobalDescriptorTable[5], 8)
-	while true
-		nil*/
 	
 	// GDT laden
-	
+	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
 	__temp_p__ = &GlobalDescriptorTable
-
 	asm{
 		jmp _after_gdt_data
 		_gdtr:
-		dw 0x07ff
+		dw 0x0000
 		_gdtr_base:
 		dd 0x00000000
 		_after_gdt_data:
+		mov eax, __temp_i__
+		mov [_gdtr], eax
 		mov eax, __temp_p__
 		mov [_gdtr_base], eax
 		lgdt [_gdtr]
 	}
 
-	prints("\n  setze Kernel-Task-Register")
+	//prints("\n  setze Kernel-Task-Register")
 	__temp_i__ = CurTask.desc * 8
 	asm{
-		mov eax, __temp_i__ // Descriptor[5]
+		mov eax, __temp_i__ // Descriptor[n]
 		ltr ax
 	}
 
