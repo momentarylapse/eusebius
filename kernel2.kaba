@@ -382,12 +382,12 @@ void *AddTask(cstring name, void *func, int pvl)
 	return t
 
 void RunTask(TaskData *t)
-	prints("RunTask ")
+	//prints("RunTask ")
 	// "Task Gate Descriptor" ---- falsch, kein gate!
 	TaskCallData[0] = 0
 	TaskCallData[1] = 8 * t.desc
-	printi(t.desc)
-	prints(":\n")
+	//printi(t.desc)
+	//prints(":\n")
 	__temp_p__ = &TaskCallData[0]
 
 	// in Task springen
@@ -729,17 +729,16 @@ void second_task()
 	//4 / ii
 	int counter_j=1
 	while true
-		user_prints(" ")
 		cstring s
 		_i2s(counter_j, &s)
 		user_prints(s)
 		user_prints(" ")
 
-		for int i, 0, 20000
+		for int i, 0, 2000
 			nil
 
 		if (counter_j % 50)==0
-			user_prints("\nversuche, zurueck zu springen...\n")
+			user_prints("versuche, zurueck zu springen...\n")
 			asm{
 				iret
 			}
@@ -762,16 +761,13 @@ void InitTimer()
 
 void TaskTest()
 	prints("teste Task-Faehigkeit:\n")
-	prints("  erstelle neue Task")
 
 	TaskData *t = AddTask("test", &second_task, 0)//3)
-	prints("  ok\n")
-	prints("starte zweite Task...\n")
 
 	RunTask(t)
 
-	prints("\nfahre fort...\n")
-	for int i, 0, 400000
+	prints("fahre fort...\n")
+	for int i, 0, 40000
 		nil
 
 	RunTask(t)
