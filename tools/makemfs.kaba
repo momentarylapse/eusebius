@@ -8,9 +8,10 @@ void main(string arg[])
 	print list.str()
 	file f = FileCreate(arg[0])
 	f.SetBinaryMode(true)
+	f.SetPos(ClusterSize, true)
 
 	// root directory
-	int cluster = 1
+	int cluster = 2
 	f.WriteInt(list.num)
 	int offset = 4
 	forall e in list
@@ -26,12 +27,11 @@ void main(string arg[])
 		f.WriteInt(num_clusters)
 		cluster += num_clusters
 		offset += e.name.num + 22
-	f.SetPos(ClusterSize, true)
 	f.SetPos(ClusterSize * cluster, true)
 	FileClose(f)
 		
 	// files
-	cluster = 1
+	cluster = 2
 	forall e in list
 		string s="dd if='"+arg[1] + e.name
 		s+="' of='"+arg[0]

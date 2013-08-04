@@ -1188,6 +1188,7 @@ class FileEntry
 	int type
 	int size
 	int offset
+	int num_clusters
 	FileEntry *next
 	FileEntry *first_sub
 	
@@ -1293,7 +1294,7 @@ class FileSystemData
 		
 	void Mount(PartitionData p, FileEntry *dir)
 		prints("mounte...")
-		Read(0, p.offset/* + 1*/, &buf)
+		Read(0, p.offset + 4, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
 		for int n, 0, NumFiles
@@ -1305,8 +1306,7 @@ class FileSystemData
 			e.size = read_int()
 			read_int() // NumParts = 1
 			e.offset = read_int()
-			//e.num_clusters = 
-			read_int()
+			e.num_clusters = read_int()
 		prints(" ok\n")
 
 FileSystemData FileSystem
@@ -1316,17 +1316,104 @@ FileSystemData FileSystem
 // Dateizugriff
 
 class OpenFileData
+	bool used
 	FileEntry *entry
-	int pos
+	int pos_in_cluster
+	int cluster_no
+	char buffer[0]*
 
 OpenFileData OpenFile[128]
 int num_open_files
 
-int open(cstring path)
-	return -1
+int get_handle()
+	for int i, 0, num_open_files
+		if !OpenFile[i].used
+			OpenFile[i].used = true
+			return i
+	OpenFile[num_open_files].used = true
+	num_open_files ++
+	return num_open_files - 1
+			
 
-void close(int h)
-	nil
+int open(cstring filename)
+	int index = get_handle()
+	OpenFileData *of = &OpenFile[index]
+	of.entry = FileSystem.get(filename)
+	if !of.entry
+		of.used = false
+		return -1
+	of.buffer = malloc(2048)
+	of.cluster_no = 0
+	of.pos_in_cluster = 0
+	int p_offset = Partition[CurrentPartition].offset
+	FileSystem.Read(0, p_offset + 4 * of.entry.offset, of.buffer)
+	of.pos_in_cluster = 0
+	return index
+
+int read(int handle, char buffer[0]*, int size)
+	if (handle < 0) or (handle >= num_open_files)
+		return -1
+	int r=0
+
+	OpenFileData *of = &OpenFile[handle]
+	if !of.used
+		return -1
+
+	// Datei zu Ende?
+	int f_rest = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
+	if size > f_rest
+		size = f_rest
+
+	bool done = false
+	while !done
+		int post_read = 0
+
+		// Cluster zu Ende?
+		int c_rest = 2048 - of.pos_in_cluster
+		if size > c_rest
+			post_read = size - c_rest // später lesen
+			size = c_rest // jetzt lesen
+
+
+		// direkt lesen (aus dem Lese-Puffer kopieren)
+		memcpy(buffer, &of.buffer[of.pos_in_cluster], size)
+		r += size
+
+
+		if post_read > 0
+			// nächsten Cluster einlesen
+			of.pos_in_cluster = 0
+			of.cluster_no ++
+			//print(of.cluster_no,0,"X")
+			//printi(of.cluster_no)
+			int cl = of.entry.offset + of.cluster_no
+			int p_offset = Partition[CurrentPartition].offset
+			FileSystem.Read(0, p_offset + 4*cl, of.buffer)
+			buffer = &buffer[size]
+			size = post_read // noch zu lesender Rest
+		else
+			done = true
+	return r
+
+void close(int handle)
+	if (handle < 0) or (handle >= num_open_files)
+		return
+	OpenFileData *of = &OpenFile[handle]
+	if !of.used
+		return
+	of.used = false
+	of.entry = nil
+
+void FileTest()
+	int h = open("/test.txt")
+	if h < 0
+		prints("## kann Datei nicht lesen! ##\n")
+		return
+	cstring s
+	int r = read(h, &s, 256)
+	s[r] = 0
+	prints(s)
+	close(h)
 
 
 void main()
@@ -1356,7 +1443,12 @@ void main()
 
 	InitTimer()
 
-	TaskTest()
+//	TaskTest()
+
+	FileTest()
+	asm{
+		cli
+	}
 	prints("------\n")
 	
 	while true
