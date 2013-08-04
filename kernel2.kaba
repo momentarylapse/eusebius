@@ -94,7 +94,7 @@ int strcmp(cstring *a, cstring *b)
 			break
 	return 0
 
-int __temp_i__
+int __temp_i__, __temp_i2__
 void *__temp_p__
 int _p2i(void *p)
 	int *i = &p
@@ -331,7 +331,7 @@ class TaskData
 	int desc // Index in GDT
 	int pid, status
 	cstring name
-TaskData Task[MAX_TASKS], *CurTask, *TimerTask
+TaskData Task[MAX_TASKS], *CurTask, *TimerTask, *SysCallTask
 int NumTasks,CurPid
 int TaskCallData[2]
 bool InterruptsEnabled
@@ -528,33 +528,31 @@ void int_XX()
 class InterruptDescriptor
 	int a, b
 
+	void set(void *func)
+		if !func
+			a = 0
+			b = 0
+		else
+			int addr = _p2i(func)
+			// Interrupt Gate
+			a = 0x00080000 + (addr & 0xffff) // desc[1],addr[15..0]
+			b = (addr & 0xffff0000) + 0x00008e00 // addr[31..16],typ
+
+	TaskData *set_task(void *func)
+		if !func
+			a = 0
+			b = 0
+		else
+			TaskData *t = AddTask("IRQ", func)
+			t.tss.eflags = 0x000 // Iterrupt Flag = 0
+
+			// Interrupt Task Gate
+			a = 0x00080000*t.desc // desc,0[15..0]
+			b = 0x00008500 // 0[31..16],typ
+			return t
+		return nil
+
 InterruptDescriptor InterruptDescriptorTable[256]
-
-void SetInterrupt(int ir, void *func)
-	InterruptDescriptor *i = &InterruptDescriptorTable[ir]
-	if !func
-		i.a = 0
-		i.b = 0
-	else
-		int addr = _p2i(func)
-		// Interrupt Gate
-		i.a = 0x00080000 + (addr&0xffff) // desc[1],addr[15..0]
-		i.b = ((addr<<16)&0xffff) + 0x00008e00 // addr[31..16],typ
-
-void *SetInterruptTask(int ir, void *func)
-	InterruptDescriptor *i = &InterruptDescriptorTable[ir]
-	if !func
-		i.a = 0
-		i.b = 0
-	else
-		TaskData *t = AddTask("IRQ", func)
-		t.tss.eflags = 0x000 // Iterrupt Flag = 0
-
-		// Interrupt Task Gate
-		i.a = 0x00080000*t.desc // desc,0[15..0]
-		i.b = 0x00008500 // 0[31..16],typ
-		return t
-	return nil
 
 void irq_1()
 	while true
@@ -584,58 +582,66 @@ void int_timer()
 		asm{
 			iret
 		}
+
+
 void int_syscall()
 	asm{
-		jmp $
 		mov __temp_i__, eax
+		mov __temp_i2__, edx
 	}
 	int index = __temp_i__
+	int param = __temp_i2__
 	while true
 
-		prints("--SysCall: ")
+		prints("<<")
 		printi(index)
-		prints(" ")
-		int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		printi(last)
-		prints("\n")
+		prints(",")
+		printi(param)
+		//prints(" ")
+		//int last = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		//printi(last)
+		prints(">>")
 
 		// weitere Aufrufe erlauben
-		outportb(0x20,0x20)
+		//outportb(0x20,0x20)
 
 		// zurück
 		asm{
+			leave
+			//pop eax
+			//pop eax
 			iret
-			mov __temp_i__, eax
+			//mov __temp_i__, eax
 		}
-		index = __temp_i__
+		//index = __temp_i__
 
 void InitInterrupts()
 	prints("lade Iterrupt-Tabelle")
 
 	for int i, 0, 256
-		SetInterrupt(i,&int_XX)
+		InterruptDescriptorTable[i].set(&int_XX)
 
-	SetInterrupt( 0,&int_00)
-	SetInterrupt( 1,&int_01)
-	SetInterrupt( 2,&int_02)
-	SetInterrupt( 3,&int_03)
-	SetInterrupt( 4,&int_04)
-	SetInterrupt( 5,&int_05)
-	SetInterrupt( 6,&int_06)
-	SetInterrupt( 7,&int_07)
-	SetInterrupt( 8,&int_08)
-	SetInterrupt( 9,&int_09)
-	SetInterrupt(10,&int_10)
-	SetInterrupt(11,&int_11)
-	SetInterrupt(12,&int_12)
-	SetInterrupt(13,&int_13)
-	SetInterrupt(14,&int_14)
-	SetInterrupt(15,&int_15)
-	SetInterrupt(16,&int_16)
-	TimerTask = SetInterruptTask(32, &int_timer)
-	SetInterruptTask(33, &irq_1)
-	//SetInterruptTask(0x80, &int_syscall)
-	SetInterrupt(0x80, &int_syscall)
+	InterruptDescriptorTable[ 0].set(&int_00)
+	InterruptDescriptorTable[ 1].set(&int_01)
+	InterruptDescriptorTable[ 2].set(&int_02)
+	InterruptDescriptorTable[ 3].set(&int_03)
+	InterruptDescriptorTable[ 4].set(&int_04)
+	InterruptDescriptorTable[ 5].set(&int_05)
+	InterruptDescriptorTable[ 6].set(&int_06)
+	InterruptDescriptorTable[ 7].set(&int_07)
+	InterruptDescriptorTable[ 8].set(&int_08)
+	InterruptDescriptorTable[ 9].set(&int_09)
+	InterruptDescriptorTable[10].set(&int_10)
+	InterruptDescriptorTable[11].set(&int_11)
+	InterruptDescriptorTable[12].set(&int_12)
+	InterruptDescriptorTable[13].set(&int_13)
+	InterruptDescriptorTable[14].set(&int_14)
+	InterruptDescriptorTable[15].set(&int_15)
+	InterruptDescriptorTable[16].set(&int_16)
+	TimerTask = InterruptDescriptorTable[32].set_task(&int_timer)
+	InterruptDescriptorTable[33].set_task(&irq_1)
+	//InterruptDescriptorTable[0x80].set_task(&int_syscall)
+	InterruptDescriptorTable[0x80].set(&int_syscall)
 
 	// IRQs auf höhere Interrupts legen
 	outportb(0x20,0x11)
@@ -681,8 +687,10 @@ void InitInterrupts()
 	prints("   ok\n")
 
 void user_prints(cstring s)
+	__temp_p__ = &s
 	asm{
 		mov eax, 0x00000013
+		mov edx, __temp_p__
 		int 0x80
 	}
 
@@ -690,12 +698,13 @@ void second_task()
 	prints(" == Task2!!! ==\n")
 	//int ii = 0
 	//4 / ii
-	//user_prints(" TEST XXX ")
+	user_prints(" TEST XXX ")
 	int counter_j=1
 	while true
 		prints(" ")
 		printi(counter_j)
 		prints(" ")
+		user_prints(" TEST XXX ")
 
 		for int i, 0, 20000
 			nil
