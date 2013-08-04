@@ -3,18 +3,60 @@
 #define __VARIABLE_OFFSET__ 0x510000
 #define __ADD_ENTRY_POINT__
 
-void *p
+void *_p
+int _i1, _i2, _i3
 
 void prints(cstring s)
-	p = &s
+	_p = &s
 	asm{
 		mov eax, 0x00000004
-		mov ebx, p
+		mov ebx, _p
 		int 0x80
 	}
 
+int open(cstring filename)
+	_p = &filename
+	asm{
+		mov eax, 0x00000005
+		mov ebx, _p
+		int 0x80
+		mov _i1, eax
+	}
+	return _i1
+	
+void close(int h)
+	_i1 = h
+	asm{
+		mov eax, 0x00000006
+		mov ebx, _i1
+		int 0x80
+	}
+
+int read(int h, cstring *buf, int size)
+	_i1 = h
+	_i2 = size
+	_p = buf
+	asm{
+		mov eax, 0x00000003
+		mov ebx, _i1
+		mov ecx, _p
+		mov edx, _i2
+		int 0x80
+		mov _i3, eax
+	}
+	return _i3
+
 void main()
-	prints("Hallo Welt")
+	prints("Hallo Welt\nDateiinhalt: ")
+	int h = open("/test.txt")
+	if h >= 0
+		cstring s
+		int r = read(h, &s, 256)
+		s[r] = 0
+		prints(s)
+		close(h)
+	else
+		prints("## kann Datei nicht oeffnen ##\n")
 	
 	while true
 		nil

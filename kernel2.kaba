@@ -1500,7 +1500,7 @@ void main()
 	
 	InitInterrupts()
 
-	TaskTest()
+	//TaskTest()
 
 //	FileTest()
 	
