@@ -8,8 +8,8 @@ void *p
 void prints(cstring s)
 	p = &s
 	asm{
-		mov eax, 0x00000013
-		mov edx, p
+		mov eax, 0x00000004
+		mov ebx, p
 		int 0x80
 	}
 
