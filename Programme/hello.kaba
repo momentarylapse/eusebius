@@ -1,48 +1,20 @@
-#os
-#code_origin 0x200014
-#variables_offset 0x300000
+#define __OS__
+#define __CODE_ORIGIN__ 0x500000
+#define __VARIABLE_OFFSET__ 0x510000
+#define __ADD_ENTRY_POINT__
 
-int DrawOffset
-cstring *StringToDraw
+void *p
 
-//--------------------------------------------------------------
-// Text Modus
-void ClearScreen()
+void prints(cstring s)
+	p = &s
 	asm{
-		mov eax, 0xb8000
-		_clear_loop:
-			mov.b [eax], ' '
-			add eax,0x01
-			mov.b [eax], 0x00
-			add eax, 0x01
-			cmp eax, 0xb9000
-			js.b _clear_loop
-	}
-
-void DrawString(int x, int y, cstring str)
-	StringToDraw = &str
-	DrawOffset = 2 * (x+80*y)
-	asm{
-		mov edx, 0x00
-		_write_loop:
-			mov eax, edx
-			shl eax, 0x01
-			add eax, 0xb8000
-			add eax, DrawOffset
-			add edx, StringToDraw
-			mov.b bl, [edx]
-			sub edx, StringToDraw
-			mov.b [eax], bl
-			add eax, 0x00000001
-			mov.b [eax], 0x09
-			add edx, 0x00000001
-			cmp.b bl, 0x00
-			jnz.b _write_loop
+		mov eax, 0x00000013
+		mov edx, p
+		int 0x80
 	}
 
 void main()
-	ClearScreen()
-	DrawString(10, 2, "Hallo, Welt!")
+	prints("Hallo Welt")
 	
 	while true
 		nil

@@ -578,10 +578,10 @@ void int_timer()
 	while true
 
 		//prints(" Timer!\n")
-		prints("<")
+	/*	prints("<")
 		int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		printi(last)
-		prints(">")
+		prints(">")*/
 
 		// weitere Aufrufe erlauben
 		outportb(0x20,0x20)
@@ -1403,6 +1403,20 @@ void close(int handle)
 		return
 	of.used = false
 	of.entry = nil
+	
+
+void Execute(cstring filename)
+	int h = open(filename)
+	if h < 0
+		prints("## kann Prozess-Datei nicht lesen! ##\n")
+		return
+	void *p = _i2p(0x500000)
+	int r = read(h, p, 1024)
+	printh(p, r)
+	close(h)
+	
+	TaskData *t = AddTask(filename, p, 0)
+	RunTask(t)
 
 void FileTest()
 	int h = open("/test.txt")
@@ -1446,6 +1460,9 @@ void main()
 //	TaskTest()
 
 	FileTest()
+	
+	Execute("/hello")
+	
 	asm{
 		cli
 	}

@@ -22,20 +22,19 @@ loader_br.o : loader_br.kaba
 bochs/c0.img:
 	dd if=/dev/zero of=bochs/c0.img bs=1024 count=10080
 
-img.mfs: init.o kernel2.o
+Programme/hello.o: Programme/hello.kaba
+	$(KABA) --x86 -o Programme/hello.o Programme/hello.kaba
+
+img.mfs: init.o kernel2.o Programme/hello.o
 	cp init.o mfs/000-init
 	cp kernel2.o mfs/001-kernel
+	cp Programme/hello.o mfs/hello
 	$(KABA) tools/makemfs.kaba `pwd`/img.mfs `pwd`/mfs/
 
-bochs/c.img: bochs/c0.img loader_fake.o init.o kernel2.o img.mfs
+bochs/c.img: bochs/c0.img img.mfs
 	cp bochs/c0.img bochs/c.img
 	dd if=bochs/mbr0 of=bochs/c.img conv=notrunc
-	#dd if=test.o of=bochs/c.img conv=notrunc
 	dd if=loader_fake.o of=bochs/c.img conv=notrunc
-	#dd if=init.o of=bochs/c.img bs=512 seek=20 conv=notrunc
-	##dd if=test.o of=bochs/c.img bs=512 seek=1 conv=notrunc
-	##dd if=x of=bochs/c.img bs=512 seek=24 conv=notrunc
-	#dd if=kernel2.o of=bochs/c.img bs=512 seek=24 conv=notrunc
 	dd if=img.mfs of=bochs/c.img bs=512 seek=16 conv=notrunc
 
 clean:
