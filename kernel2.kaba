@@ -209,27 +209,30 @@ void prints(cstring str)
 			d = VideoMemory
 			d = &d[2*(SCREEN_WIDTH * TextLine)]
 		i ++
-	/*int position = (TextLine * SCREEN_WIDTH) + TextPos
+	int position = (TextLine * SCREEN_WIDTH) + TextPos
 	// cursor LOW port to vga INDEX register
 	outportb(0x3d4, 0x0f)
 	outportb(0x3d5, position)
 	// cursor HIGH port to vga INDEX register
 	outportb(0x3d4, 0x0e)
-	outportb(0x3d5, position >> 8)*/
+	outportb(0x3d5, position >> 8)
 
-void printi(int i)
+void _i2s(int i, cstring *s)
 	char ttt[16]
-	ttt[15]=0
-	int s=14
+	ttt[15] = 0
+	int offset = 14
 	while true
-		ttt[s]=i2c(i%10)+0x30
-		i/=10
-		s--
+		ttt[offset] = (i % 10) + 0x30
+		i /= 10
+		offset --
 		if i == 0
 			break
-	cstring *p
-	p = &ttt[s+1]
-	prints(*p)
+	strcpy(s, &ttt[offset + 1])
+
+void printi(int i)
+	cstring s
+	_i2s(i, &s)
+	prints(s)
 
 int printh(cstring *data,int size)
 	cstring ttt
@@ -331,6 +334,7 @@ class TaskData
 TaskData Task[MAX_TASKS], *CurTask, *TimerTask
 int NumTasks,CurPid
 int TaskCallData[2]
+bool InterruptsEnabled
 
 class GlobalDescriptorData
 	int a, b
@@ -348,8 +352,6 @@ class GlobalDescriptorData
 	void set_task(TaskData *t)
 		set_base(_p2i(&t.tss), 103, false)
 		b += 0x00000900 // not busy
-		//if CurTask == &t
-		//	b += 0x200 // busy
 
 GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
@@ -369,10 +371,10 @@ void *AddTask(cstring name, void *func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	NumTasks ++
 
-	asm{
-		//lgdt [_gdtr]
-		//sti
-	}
+	if InterruptsEnabled
+		asm{
+			sti
+		}
 	return t
 
 void RunTask(TaskData *t)
@@ -400,6 +402,7 @@ void RunTask(TaskData *t)
 
 void InitTasks()
 	prints("init Tasks")
+	InterruptsEnabled = false
 	
 	// null descriptor
 	for int i, 0, NUM_PRE_GDT_ENTRIES + MAX_TASKS
@@ -439,6 +442,7 @@ void InitTasks()
 		mov eax, __temp_i__ // Descriptor[n]
 		ltr ax
 	}
+	// markiert das aktuelle TSS als "busy"!
 
 	prints("   ok\n")
 
@@ -544,6 +548,7 @@ void *SetInterruptTask(int ir, void *func)
 		i.b = 0
 	else
 		TaskData *t = AddTask("IRQ", func)
+		t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 		// Interrupt Task Gate
 		i.a = 0x00080000*t.desc // desc,0[15..0]
@@ -553,28 +558,24 @@ void *SetInterruptTask(int ir, void *func)
 
 void irq_1()
 	while true
-		asm{
-			cli
-		}
 
-		prints(" IRQ ")
+		prints("<IRQ ")
 		outportb(0x20,0x20)
-		//int k=c2i(inportb(0x60))
-		//printi(k)
+		int k=c2i(inportb(0x60))
+		printi(k)
+		prints(">")
 		asm{
 			iret
 		}
 
 void int_timer()
 	while true
-		asm{
-			cli
-		}
 
 		//prints(" Timer!\n")
-		prints("-")
+		prints("<")
 		int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		printi(last)
+		prints(">")
 
 		// weitere Aufrufe erlauben
 		outportb(0x20,0x20)
@@ -583,6 +584,30 @@ void int_timer()
 		asm{
 			iret
 		}
+void int_syscall()
+	asm{
+		jmp $
+		mov __temp_i__, eax
+	}
+	int index = __temp_i__
+	while true
+
+		prints("--SysCall: ")
+		printi(index)
+		prints(" ")
+		int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		printi(last)
+		prints("\n")
+
+		// weitere Aufrufe erlauben
+		outportb(0x20,0x20)
+
+		// zurück
+		asm{
+			iret
+			mov __temp_i__, eax
+		}
+		index = __temp_i__
 
 void InitInterrupts()
 	prints("lade Iterrupt-Tabelle")
@@ -609,6 +634,8 @@ void InitInterrupts()
 	SetInterrupt(16,&int_16)
 	TimerTask = SetInterruptTask(32, &int_timer)
 	SetInterruptTask(33, &irq_1)
+	//SetInterruptTask(0x80, &int_syscall)
+	SetInterrupt(0x80, &int_syscall)
 
 	// IRQs auf höhere Interrupts legen
 	outportb(0x20,0x11)
@@ -635,7 +662,7 @@ void InitInterrupts()
 		mov [_idtr_base], eax
 		cli
 		lidt [_idtr]
-//		sti
+		sti
 	}
 
 	/*outportb(0x70,0x08)
@@ -649,17 +676,26 @@ void InitInterrupts()
 	asm{
 		mov [0x00000000], eax
 	}*/
-
+	
+	InterruptsEnabled = true
 	prints("   ok\n")
 
+void user_prints(cstring s)
+	asm{
+		mov eax, 0x00000013
+		int 0x80
+	}
 
 void second_task()
 	prints(" == Task2!!! ==\n")
+	//int ii = 0
+	//4 / ii
+	//user_prints(" TEST XXX ")
 	int counter_j=1
 	while true
 		prints(" ")
 		printi(counter_j)
-		TextPos++
+		prints(" ")
 
 		for int i, 0, 20000
 			nil
@@ -1275,10 +1311,10 @@ void main()
 	
 	FileSystem.Init()
 	FileSystem.Mount(Partition[0], FileSystem.root)
-	FileEntry *e = FileSystem.get("/dev/b")
+	/*FileEntry *e = FileSystem.get("/dev/b")
 	if e
 		e.show()
-	FileSystem.root.show()
+	FileSystem.root.show()*/
 	
 	InitTasks()
 	
@@ -1288,11 +1324,6 @@ void main()
 
 	TaskTest()
 	prints("------\n")
-	asm{
-		_loop:
-		nop
-		jmp _loop
-	}
 	
 	while true
 		nil
