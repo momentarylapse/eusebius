@@ -390,7 +390,9 @@ void *AddTask(cstring name, void *func, int pvl)
 	return t
 
 void RunTaskForced(TaskData *t)
-	//prints("RunTask ")
+	/*prints("springe in ")
+	printi(t.pid)
+	prints(t.name)*/
 	// "Task Gate Descriptor" ---- falsch, kein gate!
 	TaskCallData[0] = 0
 	TaskCallData[1] = 8 * t.desc
@@ -400,7 +402,7 @@ void RunTaskForced(TaskData *t)
 
 	// in Task springen
 	CurTask = t
-	t.status = TASK_STATUS_RUNNING
+	//t.status = TASK_STATUS_RUNNING
 	asm{
 		mov eax, __temp_p__
 		//db 0xff
@@ -411,6 +413,15 @@ void RunTaskForced(TaskData *t)
 		//call_far [eax]
 		//jmp_far 0x004000000000 //0x0040:0x00000000
 	}
+
+int GetNextTask(int pid)
+	for int i, pid + 1, NumTasks
+		if Task[i].status == TASK_STATUS_RUNNING
+			return i
+	for int i, 0, pid
+		if Task[i].status == TASK_STATUS_RUNNING
+			return i
+	return pid
 
 void InitTasks()
 	prints("init Tasks")
@@ -555,12 +566,12 @@ class InterruptDescriptor
 			a = 0x00080000 + (addr & 0xffff) // desc[1],addr[15..0]
 			b = (addr & 0xffff0000) + 0x00008e00 // addr[31..16],typ
 
-	TaskData *set_task(void *func)
+	TaskData *set_task(cstring name, void *func)
 		if !func
 			a = 0
 			b = 0
 		else
-			TaskData *t = AddTask("IRQ", func, 0)
+			TaskData *t = AddTask(name, func, 0)
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 			// Interrupt Task Gate
@@ -586,23 +597,16 @@ void irq_1()
 void int_timer()
 	while true
 
-		//prints(" Timer!\n")
 		if SchedulerEnabled
-			//prints("<")
+		
 			int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-			//printi(last)
-			int next = -1
-			for int i, last+1, NumTasks
-				if Task[i].status == TASK_STATUS_RUNNING
-					next = i
-			if next < 0
-				for int i, 0, last
-					if Task[i].status == TASK_STATUS_RUNNING
-						next = i
+			int next = GetNextTask(last)
 			GlobalDescriptorTable[Task[last].desc].set_busy(false)
 			GlobalDescriptorTable[Task[next].desc].set_busy(true)
 			TimerTask.tss.prev = (next + NUM_PRE_GDT_ENTRIES) << 3
-			/*prints(",")
+			/*prints("<")
+			printi(last)
+			prints(",")
 			printi(next)
 			prints(">")*/
 
@@ -689,9 +693,9 @@ void InitInterrupts()
 	InterruptDescriptorTable[14].set(&int_14)
 	InterruptDescriptorTable[15].set(&int_15)
 	InterruptDescriptorTable[16].set(&int_16)
-	TimerTask = InterruptDescriptorTable[32].set_task(&int_timer)
-	InterruptDescriptorTable[33].set_task(&irq_1)
-	//InterruptDescriptorTable[0x80].set_task(&int_syscall)
+	TimerTask = InterruptDescriptorTable[32].set_task("timer", &int_timer)
+	InterruptDescriptorTable[33].set_task("irq", &irq_1)
+	//InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
 	InterruptDescriptorTable[0x80].set(&int_syscall)
 
 	// IRQs auf höhere Interrupts legen
@@ -792,8 +796,6 @@ void TaskTest()
 	TaskData *b = AddTask("test", &second_task, 0)//3)
 	a.Start()
 	b.Start()
-	
-	StartScheduler()
 
 	/*RunTask(t)
 
@@ -1490,6 +1492,8 @@ void main()
 //	FileTest()
 	
 	//Execute("/hello")
+	
+	StartScheduler()
 	
 	asm{
 		cli
