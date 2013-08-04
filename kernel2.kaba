@@ -269,8 +269,9 @@ const int NUM_PRE_GDT_ENTRIES = 5
 const int TASK_SWITCH_DT = 20 // ms
 
 enum
+	TASK_STATUS_SLEEPING
+	TASK_STATUS_RUNNING
 	TASK_STATUS_DEAD
-	TASK_STATUS_ALIVE
 
 class TaskStateSegment
 	int prev
@@ -331,10 +332,13 @@ class TaskData
 	int desc // Index in GDT
 	int pid, status
 	cstring name
+	void Start()
+		status = TASK_STATUS_RUNNING
 TaskData Task[MAX_TASKS], *CurTask, *TimerTask, *SysCallTask
 int NumTasks,CurPid
 int TaskCallData[2]
 bool InterruptsEnabled
+bool SchedulerEnabled
 
 class GlobalDescriptorData
 	int a, b
@@ -353,6 +357,11 @@ class GlobalDescriptorData
 	void set_task(TaskData *t)
 		set_base(_p2i(&t.tss), 103, false)
 		b += 0x00000900 // not busy
+	void set_busy(bool busy)
+		if busy
+			b = b | 0x200
+		else
+			b = b & 0xfffffdff
 
 GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
@@ -361,13 +370,12 @@ void *AddTask(cstring name, void *func, int pvl)
 		cli
 	}
 	TaskData *t = &Task[NumTasks]
-	t.pid = CurPid
-	CurPid ++
+	t.pid = NumTasks
 
 	strcpy(&t.name, &name)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
 	t.stack = malloc(TASK_STACK_SIZE)
-	t.status = TASK_STATUS_DEAD
+	t.status = TASK_STATUS_SLEEPING
 	if pvl == 0
 		t.tss.set(t.stack, 1, 2, pvl, func)
 	else
@@ -381,7 +389,7 @@ void *AddTask(cstring name, void *func, int pvl)
 		}
 	return t
 
-void RunTask(TaskData *t)
+void RunTaskForced(TaskData *t)
 	//prints("RunTask ")
 	// "Task Gate Descriptor" ---- falsch, kein gate!
 	TaskCallData[0] = 0
@@ -392,7 +400,7 @@ void RunTask(TaskData *t)
 
 	// in Task springen
 	CurTask = t
-	t.status = TASK_STATUS_ALIVE
+	t.status = TASK_STATUS_RUNNING
 	asm{
 		mov eax, __temp_p__
 		//db 0xff
@@ -407,6 +415,7 @@ void RunTask(TaskData *t)
 void InitTasks()
 	prints("init Tasks")
 	InterruptsEnabled = false
+	SchedulerEnabled = false
 	
 	// null descriptor
 	for int i, 0, NUM_PRE_GDT_ENTRIES + MAX_TASKS
@@ -578,10 +587,24 @@ void int_timer()
 	while true
 
 		//prints(" Timer!\n")
-	/*	prints("<")
-		int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		printi(last)
-		prints(">")*/
+		if SchedulerEnabled
+			//prints("<")
+			int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+			//printi(last)
+			int next = -1
+			for int i, last+1, NumTasks
+				if Task[i].status == TASK_STATUS_RUNNING
+					next = i
+			if next < 0
+				for int i, 0, last
+					if Task[i].status == TASK_STATUS_RUNNING
+						next = i
+			GlobalDescriptorTable[Task[last].desc].set_busy(false)
+			GlobalDescriptorTable[Task[next].desc].set_busy(true)
+			TimerTask.tss.prev = (next + NUM_PRE_GDT_ENTRIES) << 3
+			/*prints(",")
+			printi(next)
+			prints(">")*/
 
 		// weitere Aufrufe erlauben
 		outportb(0x20,0x20)
@@ -647,7 +670,7 @@ void InitInterrupts()
 	prints("lade Iterrupt-Tabelle")
 
 	for int i, 0, 256
-		InterruptDescriptorTable[i].set(&int_XX)
+		InterruptDescriptorTable[i].set(nil)
 
 	InterruptDescriptorTable[ 0].set(&int_00)
 	InterruptDescriptorTable[ 1].set(&int_01)
@@ -734,18 +757,17 @@ void second_task()
 		user_prints(s)
 		user_prints(" ")
 
-		for int i, 0, 2000
+		for int i, 0, 200000
 			nil
 
-		if (counter_j % 50)==0
+		/*if (counter_j % 50)==0
 			user_prints("versuche, zurueck zu springen...\n")
 			asm{
 				iret
-			}
+			}*/
 		counter_j++
 
 void InitTimer()
-	prints("setze Timer-Daten")
 	// ticks/s: 1193180
 	// 100Hz:   11932 = 0x2e9c
 	int ticks_per_sec = 1193180
@@ -757,14 +779,23 @@ void InitTimer()
 	outportb(0x40, ticks_till_irq) //0x9c)
 	outportb(0x40, ticks_till_irq >> 8) //0x2e)
 
-	prints("  ok\n")
+void StartScheduler()
+	prints("starte Scheduler\n")
+	InitTimer()
+	SchedulerEnabled = true
+	RunTaskForced(TimerTask)
 
 void TaskTest()
 	prints("teste Task-Faehigkeit:\n")
 
-	TaskData *t = AddTask("test", &second_task, 0)//3)
+	TaskData *a = AddTask("test", &second_task, 0)//3)
+	TaskData *b = AddTask("test", &second_task, 0)//3)
+	a.Start()
+	b.Start()
+	
+	StartScheduler()
 
-	RunTask(t)
+	/*RunTask(t)
 
 	prints("fahre fort...\n")
 	for int i, 0, 40000
@@ -782,7 +813,7 @@ void TaskTest()
 	prints("fertig")
 	TextColor=tc
 	//while true
-	//	NULL
+	//	NULL*/
 
 //--------------------------------------------------------------
 // Ata Treiber
@@ -1412,11 +1443,10 @@ void Execute(cstring filename)
 		return
 	void *p = _i2p(0x500000)
 	int r = read(h, p, 1024)
-	printh(p, r)
 	close(h)
 	
 	TaskData *t = AddTask(filename, p, 0)
-	RunTask(t)
+	t.Start()
 
 void FileTest()
 	int h = open("/test.txt")
@@ -1455,13 +1485,11 @@ void main()
 	
 	InitInterrupts()
 
-	InitTimer()
+	TaskTest()
 
-//	TaskTest()
-
-	FileTest()
+//	FileTest()
 	
-	Execute("/hello")
+	//Execute("/hello")
 	
 	asm{
 		cli
