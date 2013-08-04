@@ -265,7 +265,7 @@ int printh(cstring *data,int size)
 const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
 const int NUM_PRE_GDT_ENTRIES = 5
-const int TASK_SWITCH_DT = 100 // ms
+const int TASK_SWITCH_DT = 50 // ms
 
 enum
 	TASK_STATUS_DEAD
@@ -374,9 +374,12 @@ void *AddTask(cstring name, void *func)
 	return t
 
 void RunTask(TaskData *t)
-	// "Task Gate Descriptor"
+	prints("RunTask - ")
+	// "Task Gate Descriptor" ---- falsch, kein gate!
 	TaskCallData[0] = 0
 	TaskCallData[1] = 8 * t.desc
+	printi(t.desc)
+	prints(":\n")
 	__temp_p__ = &TaskCallData[0]
 
 	// in Task springen
@@ -384,8 +387,13 @@ void RunTask(TaskData *t)
 	t.status = TASK_STATUS_ALIVE
 	asm{
 		mov eax, __temp_p__
-		call_far [eax]
-		//jmp 0x0040:0x00000000
+		//db 0xff
+		//db 0x28
+		//jmp_far [eax]
+		db 0xff
+		db 0x18
+		//call_far [eax]
+		//jmp_far 0x004000000000 //0x0040:0x00000000
 	}
 
 void InitTasks()
@@ -599,7 +607,7 @@ void InitInterrupts()
 		mov [_idtr_base], eax
 		cli
 		lidt [_idtr]
-		sti
+//		sti
 	}
 
 	/*outportb(0x70,0x08)
@@ -618,6 +626,7 @@ void InitInterrupts()
 
 
 void second_task()
+	prints(" == Task2!!! ==\n")
 	int counter_j=1
 	while true
 		prints(" ")
@@ -1232,7 +1241,7 @@ void main()
 	printi(MemorySize)
 	prints("k\n")
 	
-	Ata.Init()
+	/*Ata.Init()
 	ReadPartitions(0)
 	ShowPartitions()
 	
@@ -1241,7 +1250,7 @@ void main()
 	FileEntry *e = FileSystem.get("/dev/b")
 	if e
 		e.show()
-	FileSystem.root.show()
+	FileSystem.root.show()*/
 	
 	InitTasks()
 	
@@ -1249,7 +1258,7 @@ void main()
 
 	InitTimer()
 
-//	TaskTest()
+	TaskTest()
 	prints("------\n")
 	asm{
 		_loop:
