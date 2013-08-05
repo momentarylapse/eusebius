@@ -282,7 +282,6 @@ void cat(cstring *filename)
 		int r = read(h, &s, 128)
 		if r <= 0
 			break
-		printi(r)
 		s[r] = 0
 		prints(s)
 	close(h)
@@ -298,6 +297,7 @@ void hd(cstring *filename)
 			break
 		printh(&s, r)
 	close(h)
+	prints("\n")
 
 cstring cwd
 

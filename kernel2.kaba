@@ -960,8 +960,37 @@ int sys_read(int handle, char buffer[0]*, int size)
 			sub esp, 0x12
 		}
 		return __temp_i__
+		
+	if size > of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
+		size = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
+		
+	while size > 0
+	
+		// wieviel kann aus dem Puffer gelesen werden?
+		int cur_size = size
+		if cur_size > 2048 - of.pos_in_cluster
+			cur_size = 2048 - of.pos_in_cluster
 
-	// Datei zu Ende?
+		// direkt lesen (aus dem Lese-Puffer kopieren)
+		memcpy(buffer, &of.buffer[of.pos_in_cluster], cur_size)
+		buffer = &buffer[cur_size]
+		of.pos_in_cluster += cur_size
+		r += cur_size
+		size -= cur_size
+		
+		if of.pos_in_cluster >= 2048
+			// nächsten Cluster einlesen
+			of.pos_in_cluster = 0
+			of.cluster_no ++
+			//print(of.cluster_no,0,"X")
+			//printi(of.cluster_no)
+			int cl = of.entry.offset + of.cluster_no
+			int p_offset = Partition[CurrentPartition].offset
+			FileSystem.Read(0, p_offset + 4*cl, of.buffer)
+		
+	return r
+
+/*	// Datei zu Ende?
 	int f_rest = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
 	if size > f_rest
 		size = f_rest
@@ -995,7 +1024,7 @@ int sys_read(int handle, char buffer[0]*, int size)
 			size = post_read // noch zu lesender Rest
 		else
 			done = true
-	return r
+	return r*/
 
 void sys_close(int handle)
 	if (handle < 0) or (handle >= num_open_files)
@@ -1596,8 +1625,13 @@ void Execute(cstring filename)
 	if h < 0
 		prints("## kann Prozess-Datei nicht lesen! ##\n")
 		return
-	void *p = _i2p(0x500000)
-	int r = sys_read(h, p, 4096 * 10)
+	cstring *p = _i2p(0x500000)
+	cstring *pp = p
+	while true
+		int r = sys_read(h, pp, 1024)
+		if r <= 0
+			break
+		pp = &pp[r]
 	sys_close(h)
 	
 	TaskData *t = AddTask(filename, p, 0)
@@ -1657,7 +1691,7 @@ void main()
 	InitDrivers()
 
 	//TaskTest()
-//	FileTest()
+	//FileTest()
 	//DriverTest()
 	
 	Execute("/shell")
