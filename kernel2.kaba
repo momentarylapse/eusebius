@@ -1597,7 +1597,7 @@ void Execute(cstring filename)
 		prints("## kann Prozess-Datei nicht lesen! ##\n")
 		return
 	void *p = _i2p(0x500000)
-	int r = sys_read(h, p, 1024)
+	int r = sys_read(h, p, 4096 * 10)
 	sys_close(h)
 	
 	TaskData *t = AddTask(filename, p, 0)
@@ -1657,14 +1657,12 @@ void main()
 	InitDrivers()
 
 	//TaskTest()
-
 //	FileTest()
+	//DriverTest()
 	
-	//Execute("/hello")
+	Execute("/shell")
 	
-	//StartScheduler()
-	
-	DriverTest()
+	StartScheduler()
 	
 	asm{
 		cli

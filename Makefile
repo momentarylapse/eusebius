@@ -25,10 +25,14 @@ bochs/c0.img:
 Programme/hello.o: Programme/hello.kaba
 	$(KABA) --x86 -o Programme/hello.o Programme/hello.kaba
 
-img.mfs: init.o kernel2.o Programme/hello.o
+Programme/shell.o: Programme/shell.kaba
+	$(KABA) --x86 -o Programme/shell.o Programme/shell.kaba
+
+img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o
 	cp init.o mfs/000-init
 	cp kernel2.o mfs/001-kernel
 	cp Programme/hello.o mfs/hello
+	cp Programme/shell.o mfs/shell
 	$(KABA) tools/makemfs.kaba `pwd`/img.mfs `pwd`/mfs/
 
 bochs/c.img: bochs/c0.img img.mfs
