@@ -833,6 +833,25 @@ int dev_rand_read(FileEntry *f, cstring *buf, int size)
 int dev_rand_write(FileEntry *f, cstring *buf, int size)
 	return 0
 
+
+FileOperations dev_key_ops
+cstring dev_key_buf
+int dev_key_num
+void dev_key_open(FileEntry *f)
+	nil
+void dev_key_close(FileEntry *f)
+	nil
+int dev_key_read(FileEntry *f, cstring *buf, int size)
+	if size > dev_key_num
+		size = dev_key_num
+	for int i, 0, size
+		buf[i] = dev_key_buf[i]
+		dev_key_num --
+		memcpy(&dev_key_buf, &dev_key_buf[1], dev_key_num)
+	return size
+int dev_key_write(FileEntry *f, cstring *buf, int size)
+	return 0
+
 void InitDrivers()
 	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, FileSystem.root)
 	
@@ -858,6 +877,15 @@ void InitDrivers()
 	dev_rand_ops._read = &dev_rand_read
 	dev_rand_ops._write = &dev_rand_write
 	dev_rand.op = &dev_rand_ops
+	
+	dev_key_num = 0
+	
+	FileEntry *dev_key = FileSystem.add("keyboard", FILE_TYPE_CHAR, dev)
+	dev_key_ops._open = &dev_key_open
+	dev_key_ops._close = &dev_key_close
+	dev_key_ops._read = &dev_key_read
+	dev_key_ops._write = &dev_key_write
+	dev_key.op = &dev_key_ops
 	
 
 
@@ -1313,12 +1341,16 @@ InterruptDescriptor InterruptDescriptorTable[256]
 
 void irq_1()
 	while true
-
-		prints("<IRQ ")
-		outportb(0x20,0x20)
-		int k=c2i(inportb(0x60))
+		outportb(0x20, 0x20)
+		int k = inportb(0x60)
+		/*prints("<IRQ ")
 		printi(k)
-		prints(">")
+		prints(">")*/
+		if dev_key_num >= 64
+			// :P
+			dev_key_num = 0
+		dev_key_buf[dev_key_num] = k
+		dev_key_num ++
 		asm{
 			iret
 		}
@@ -1584,13 +1616,16 @@ void FileTest()
 
 void DriverTest()
 	prints("Treiber Test\n")
-	int h = sys_open("/dev/random")
+	int h = sys_open("/dev/keyboard")
 	if h < 0
 		prints("## kann Datei nicht lesen! ##\n")
 		return
-	cstring s
-	int r = sys_read(h, &s, 64)
-	printh(&s, r)
+	while true
+		cstring s
+		int r = sys_read(h, &s, 64)
+		if r > 0
+			printh(&s, r)
+			prints(" ")
 	sys_close(h)
 
 
