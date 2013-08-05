@@ -350,8 +350,8 @@ void process(int k)
 		cmd_length ++
 	else if k == 0x2a or k == 0x36
 		shift = true
-	else
-		printh(&k, 2)
+	//else
+	//	printh(&k, 2)
 
 void main()
 	shift = false

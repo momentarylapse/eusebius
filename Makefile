@@ -35,7 +35,7 @@ img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o
 	cp Programme/shell.o mfs/shell
 	$(KABA) tools/makemfs.kaba `pwd`/img.mfs `pwd`/mfs/
 
-bochs/c.img: bochs/c0.img img.mfs
+bochs/c.img: bochs/c0.img img.mfs loader_fake.o
 	cp bochs/c0.img bochs/c.img
 	dd if=bochs/mbr0 of=bochs/c.img conv=notrunc
 	dd if=loader_fake.o of=bochs/c.img conv=notrunc

@@ -465,8 +465,8 @@ class AtaData
 		for int n, 0, 4
 			TestDisk(n)
 			
-	
-	bool Read(int disk_no, int sector_offset, int num_sectors, char *buf)
+	// 1 Sektor = 512 b
+	bool ReadSector(int disk_no, int sector_offset, int num_sectors, char *buf)
 		if !DiskInfo[disk_no].isAvailable
 			return false
 		//DrawString(0,24,"MAtaRead")
@@ -606,14 +606,14 @@ int CurrentPartition
 
 void ReadPartitions(int disk_no)
 	// mbr lesen
-	Ata.Read(disk_no,0,1,&Ata.Buffer)
+	Ata.ReadSector(disk_no,0,1,&Ata.Buffer)
 	//MountPartition=false
 	for int n, 0, 4
 		PartitionData *p = &Partition[n]
 		int *offset = &Ata.Buffer[454+n*16]
-		p.offset = *offset
+		p.offset = *offset / 4
 		int *size = &Ata.Buffer[458+n*16]
-		p.size = *size
+		p.size = *size / 4
 		p.type = Ata.Buffer[450+n*16]
 		p.active = (Ata.Buffer[446+n*16] == 0x80)
 	/*for n, 0, 512
@@ -757,11 +757,11 @@ class FileSystemData
 				return nil
 		return e
 		
-	void Read(int disk_no, int sector_offset, char buffer[0]*)
-		Ata.Read(disk_no,sector_offset  ,1,&buffer[0])
-		Ata.Read(disk_no,sector_offset+1,1,&buffer[512])
-		Ata.Read(disk_no,sector_offset+2,1,&buffer[1024])
-		Ata.Read(disk_no,sector_offset+3,1,&buffer[1536])
+	void Read(int disk_no, int cluster_offset, char buffer[0]*)
+		Ata.ReadSector(disk_no, cluster_offset * 4    , 1, &buffer[0])
+		Ata.ReadSector(disk_no, cluster_offset * 4 + 1, 1, &buffer[512])
+		Ata.ReadSector(disk_no, cluster_offset * 4 + 2, 1, &buffer[1024])
+		Ata.ReadSector(disk_no, cluster_offset * 4 + 3, 1, &buffer[1536])
 	
 	int read_int()
 		int *p = &buf[buf_used]
@@ -777,7 +777,7 @@ class FileSystemData
 		
 	void Mount(PartitionData p, FileEntry *dir)
 		prints("mounte...")
-		Read(0, p.offset + 4, &buf)
+		Read(0, p.offset + 1, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
 		for int n, 0, NumFiles
@@ -924,7 +924,7 @@ int sys_open(cstring filename)
 		of.cluster_no = 0
 		of.pos_in_cluster = 0
 		int p_offset = Partition[CurrentPartition].offset
-		FileSystem.Read(0, p_offset + 4 * of.entry.offset, of.buffer)
+		FileSystem.Read(0, p_offset + of.entry.offset, of.buffer)
 	else if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._open
 		__temp_p2__ = of.entry
@@ -982,11 +982,9 @@ int sys_read(int handle, char buffer[0]*, int size)
 			// nächsten Cluster einlesen
 			of.pos_in_cluster = 0
 			of.cluster_no ++
-			//print(of.cluster_no,0,"X")
-			//printi(of.cluster_no)
 			int cl = of.entry.offset + of.cluster_no
 			int p_offset = Partition[CurrentPartition].offset
-			FileSystem.Read(0, p_offset + 4*cl, of.buffer)
+			FileSystem.Read(0, p_offset + cl, of.buffer)
 		
 	return r
 
@@ -1701,7 +1699,8 @@ void main()
 	asm{
 		cli
 	}
-	prints("------\n")
+	TextColor = 4
+	prints("\n------ keine Tasks => halte Kernel -----\n")
 	
 	while true
 		nil
