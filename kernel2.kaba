@@ -797,31 +797,67 @@ FileSystemData FileSystem
 //--------------------------------------------------------------
 // Gerätedateien
 
-FileOperations hello_ops
-
-void hello_open(FileEntry *f)
-	prints("--oeffne hello--\n")
-
-void hello_close(FileEntry *f)
-	prints("--schliesse hello--\n")
-	
-int hello_read(FileEntry *f, cstring *buf, int size)
-	prints("--lese hello--\n")
-	printi(size)
-	if size > 10
-		size = 10
-	strcpy(buf, &"Hallo Welt")
-	buf[size] = 0
+FileOperations dev_zero_ops
+void dev_zero_open(FileEntry *f)
+	nil
+void dev_zero_close(FileEntry *f)
+	nil
+int dev_zero_read(FileEntry *f, cstring *buf, int size)
+	for int i, 0, size
+		buf[i] = 0
 	return size
+int dev_zero_write(FileEntry *f, cstring *buf, int size)
+	return 0
+
+FileOperations dev_null_ops
+void dev_null_open(FileEntry *f)
+	nil
+void dev_null_close(FileEntry *f)
+	nil
+int dev_null_read(FileEntry *f, cstring *buf, int size)
+	return 0
+int dev_null_write(FileEntry *f, cstring *buf, int size)
+	return size
+
+FileOperations dev_rand_ops
+int dev_rand_state
+void dev_rand_open(FileEntry *f)
+	nil
+void dev_rand_close(FileEntry *f)
+	nil
+int dev_rand_read(FileEntry *f, cstring *buf, int size)
+	for int i, 0, size
+		dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
+		buf[i] = dev_rand_state
+	return size
+int dev_rand_write(FileEntry *f, cstring *buf, int size)
+	return 0
 
 void InitDrivers()
 	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, FileSystem.root)
-	FileEntry *h = FileSystem.add("hello", FILE_TYPE_CHAR, dev)
-	hello_ops._open = &hello_open
-	hello_ops._close = &hello_close
-	hello_ops._read = &hello_read
-	hello_ops._write = nil
-	h.op = &hello_ops
+	
+	FileEntry *dev_zero = FileSystem.add("zero", FILE_TYPE_CHAR, dev)
+	dev_zero_ops._open = &dev_zero_open
+	dev_zero_ops._close = &dev_zero_close
+	dev_zero_ops._read = &dev_zero_read
+	dev_zero_ops._write = &dev_zero_write
+	dev_zero.op = &dev_zero_ops
+	
+	FileEntry *dev_null = FileSystem.add("null", FILE_TYPE_CHAR, dev)
+	dev_null_ops._open = &dev_null_open
+	dev_null_ops._close = &dev_null_close
+	dev_null_ops._read = &dev_null_read
+	dev_null_ops._write = &dev_null_write
+	dev_null.op = &dev_null_ops
+	
+	dev_rand_state = 13
+	
+	FileEntry *dev_rand = FileSystem.add("random", FILE_TYPE_CHAR, dev)
+	dev_rand_ops._open = &dev_rand_open
+	dev_rand_ops._close = &dev_rand_close
+	dev_rand_ops._read = &dev_rand_read
+	dev_rand_ops._write = &dev_rand_write
+	dev_rand.op = &dev_rand_ops
 	
 
 
@@ -1548,21 +1584,13 @@ void FileTest()
 
 void DriverTest()
 	prints("Treiber Test\n")
-	int h = sys_open("/dev/hello")
-	printi(h)
+	int h = sys_open("/dev/random")
 	if h < 0
 		prints("## kann Datei nicht lesen! ##\n")
 		return
 	cstring s
-	int r = sys_read(h, &s, 5)
-	s[r] = 0
-	prints(s)
-	r = sys_read(h, &s, 25)
-	s[r] = 0
-	prints(s)
-	r = sys_read(h, &s, 2)
-	s[r] = 0
-	prints(s)
+	int r = sys_read(h, &s, 64)
+	printh(&s, r)
 	sys_close(h)
 
 
