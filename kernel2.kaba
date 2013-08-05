@@ -95,7 +95,7 @@ int strcmp(cstring *a, cstring *b)
 	return 0
 
 int __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__
-void *__temp_p__
+void *__temp_p__, *__temp_p2__, *__temp_p3__, *__temp_p4__
 int _p2i(void *p)
 	int *i = &p
 	return *i
@@ -658,7 +658,15 @@ void ShowPartitions()
 
 const int FILE_TYPE_FILE = 0
 const int FILE_TYPE_DIR = 1
-const int FILE_TYPE_DEVICE = 8
+const int FILE_TYPE_CHAR = 8
+const int FILE_TYPE_BLOCK = 16
+
+
+class FileOperations
+	void *_open
+	void *_close
+	void *_read
+	void *_write
 
 class FileEntry
 	cstring name
@@ -668,6 +676,7 @@ class FileEntry
 	int num_clusters
 	FileEntry *next
 	FileEntry *first_sub
+	FileOperations *op
 	
 	void add(FileEntry *e)
 		if first_sub
@@ -715,6 +724,7 @@ class FileSystemData
 		e.type = type
 		e.next = nil
 		e.first_sub = nil
+		e.op = nil
 		if parent
 			parent.add(e)
 		return e
@@ -722,10 +732,6 @@ class FileSystemData
 	void Init()
 		list_size = 0
 		root = add("-root-", FILE_TYPE_DIR, nil)
-		FileEntry *dev = add("dev", FILE_TYPE_DIR, root)
-		add("a", FILE_TYPE_FILE, root)
-		add("screen", FILE_TYPE_DEVICE, dev)
-		add("b", FILE_TYPE_DEVICE, dev)
 	
 	FileEntry *get(cstring path)
 		if path[0] != '/'
@@ -788,6 +794,36 @@ class FileSystemData
 
 FileSystemData FileSystem
 
+//--------------------------------------------------------------
+// Gerätedateien
+
+FileOperations hello_ops
+
+void hello_open(FileEntry *f)
+	prints("--oeffne hello--\n")
+
+void hello_close(FileEntry *f)
+	prints("--schliesse hello--\n")
+	
+int hello_read(FileEntry *f, cstring *buf, int size)
+	prints("--lese hello--\n")
+	printi(size)
+	if size > 10
+		size = 10
+	strcpy(buf, &"Hallo Welt")
+	buf[size] = 0
+	return size
+
+void InitDrivers()
+	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, FileSystem.root)
+	FileEntry *h = FileSystem.add("hello", FILE_TYPE_CHAR, dev)
+	hello_ops._open = &hello_open
+	hello_ops._close = &hello_close
+	hello_ops._read = &hello_read
+	hello_ops._write = nil
+	h.op = &hello_ops
+	
+
 
 //--------------------------------------------------------------
 // Dateizugriff
@@ -819,12 +855,21 @@ int sys_open(cstring filename)
 	if !of.entry
 		of.used = false
 		return -1
-	of.buffer = malloc(2048)
-	of.cluster_no = 0
-	of.pos_in_cluster = 0
-	int p_offset = Partition[CurrentPartition].offset
-	FileSystem.Read(0, p_offset + 4 * of.entry.offset, of.buffer)
-	of.pos_in_cluster = 0
+	if of.entry.type == FILE_TYPE_FILE
+		of.buffer = malloc(2048)
+		of.cluster_no = 0
+		of.pos_in_cluster = 0
+		int p_offset = Partition[CurrentPartition].offset
+		FileSystem.Read(0, p_offset + 4 * of.entry.offset, of.buffer)
+	else if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._open
+		__temp_p2__ = of.entry
+		asm{
+			mov eax, __temp_p__
+			push __temp_p2__
+			call eax
+			sub esp, 0x04
+		}
 	return index
 
 int sys_read(int handle, char buffer[0]*, int size)
@@ -835,6 +880,22 @@ int sys_read(int handle, char buffer[0]*, int size)
 	OpenFileData *of = &OpenFile[handle]
 	if !of.used
 		return -1
+		
+	if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._read
+		__temp_p2__ = of.entry
+		__temp_p3__ = buffer
+		__temp_i__ = size
+		asm{
+			mov eax, __temp_p__
+			push __temp_i__
+			push __temp_p3__
+			push __temp_p2__
+			call eax
+			mov __temp_i__, eax
+			sub esp, 0x12
+		}
+		return __temp_i__
 
 	// Datei zu Ende?
 	int f_rest = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
@@ -878,6 +939,17 @@ void sys_close(int handle)
 	OpenFileData *of = &OpenFile[handle]
 	if !of.used
 		return
+	if of.entry.type == FILE_TYPE_FILE
+		free(of.buffer)
+	else if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._close
+		__temp_p2__ = of.entry
+		asm{
+			mov eax, __temp_p__
+			push __temp_p2__
+			call eax
+			sub esp, 0x04
+		}
 	of.used = false
 	of.entry = nil
 
@@ -1474,6 +1546,25 @@ void FileTest()
 	prints(s)
 	sys_close(h)
 
+void DriverTest()
+	prints("Treiber Test\n")
+	int h = sys_open("/dev/hello")
+	printi(h)
+	if h < 0
+		prints("## kann Datei nicht lesen! ##\n")
+		return
+	cstring s
+	int r = sys_read(h, &s, 5)
+	s[r] = 0
+	prints(s)
+	r = sys_read(h, &s, 25)
+	s[r] = 0
+	prints(s)
+	r = sys_read(h, &s, 2)
+	s[r] = 0
+	prints(s)
+	sys_close(h)
+
 
 void main()
 	read_data_from_init()
@@ -1499,14 +1590,18 @@ void main()
 	InitTasks()
 	
 	InitInterrupts()
+	
+	InitDrivers()
 
 	//TaskTest()
 
 //	FileTest()
 	
-	Execute("/hello")
+	//Execute("/hello")
 	
-	StartScheduler()
+	//StartScheduler()
+	
+	DriverTest()
 	
 	asm{
 		cli
