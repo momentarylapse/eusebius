@@ -375,7 +375,7 @@ void main()
 					escaped = false
 		close(h)
 	else
-		prints("## kann Datei nicht oeffnen ##\n")
+		prints("## kann Tastatur nicht auslesen ##\n")
 	
 	while true
 		nil

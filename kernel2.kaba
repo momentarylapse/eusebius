@@ -1,6 +1,6 @@
 #define __OS__
 #define __CODE_ORIGIN__ 0x10000
-#define __VARIABLE_OFFSET__ 0x200010 // > 2mb, wegen Stack!
+#define __VARIABLE_OFFSET__ 0x110010 // > ~1mb, wegen Stack!
 #define __ADD_ENTRY_POINT__
 //#disasm
 
@@ -1080,7 +1080,10 @@ class TaskStateSegment
 	int x, y
 	
 	
-	void set(void *stack_pos, int _cs, int _ds, int pvl, void *task)
+	void set(void *stack_pos, int _cs, int _ds, bool kernel_mode, void *task)
+		int pvl = 0
+		//if !kernel_mode
+		//	pvl = 3
 		int _ss = _ds
 		prev = 0 // previous TSS (dynamisch)
 		esp0 = stack_pos
@@ -1149,7 +1152,7 @@ class GlobalDescriptorData
 
 GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
-void *AddTask(cstring name, void *func, int pvl)
+void *AddTask(cstring name, void *func, bool kernel_mode)
 	asm{
 		cli
 	}
@@ -1160,10 +1163,10 @@ void *AddTask(cstring name, void *func, int pvl)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
 	t.stack = malloc(TASK_STACK_SIZE)
 	t.status = TASK_STATUS_SLEEPING
-	if pvl == 0
-		t.tss.set(t.stack, 1, 2, pvl, func)
+	if kernel_mode
+		t.tss.set(t.stack, 1, 2, kernel_mode, func)
 	else
-		t.tss.set(t.stack, 3, 4, pvl, func)
+		t.tss.set(t.stack, 3, 4, kernel_mode, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	NumTasks ++
 
@@ -1221,15 +1224,15 @@ void InitTasks()
 	// kernel data
 	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false, 0)
 	// user code
-	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 3)
+	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 0)//3)
 	// user data
-	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 3)
+	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
 
 
 	CurPid = 1
 	NumTasks = 0
 
-	CurTask = AddTask("kernel", nil, 0)
+	CurTask = AddTask("kernel", nil, true)
 	
 	// GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
@@ -1355,7 +1358,7 @@ class InterruptDescriptor
 			a = 0
 			b = 0
 		else
-			TaskData *t = AddTask(name, func, 0)
+			TaskData *t = AddTask(name, func, true)
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 			// Interrupt Task Gate
@@ -1384,7 +1387,6 @@ void irq_1()
 
 void int_timer()
 	while true
-
 		if SchedulerEnabled
 		
 			int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
@@ -1591,8 +1593,8 @@ void StartScheduler()
 void TaskTest()
 	prints("teste Task-Faehigkeit:\n")
 
-	TaskData *a = AddTask("test", &second_task, 0)//3)
-	TaskData *b = AddTask("test", &second_task, 0)//3)
+	TaskData *a = AddTask("test", &second_task, false)
+	TaskData *b = AddTask("test", &second_task, false)
 	a.Start()
 	b.Start()
 
@@ -1632,10 +1634,10 @@ void Execute(cstring filename)
 		pp = &pp[r]
 	sys_close(h)
 	
-	TaskData *t = AddTask(filename, p, 0)
+	TaskData *t = AddTask(filename, p, false)
 	t.Start()
 
-void FileTest()
+/*void FileTest()
 	int h = sys_open("/test.txt")
 	if h < 0
 		prints("## kann Datei nicht lesen! ##\n")
@@ -1658,7 +1660,41 @@ void DriverTest()
 		if r > 0
 			printh(&s, r)
 			prints(" ")
-	sys_close(h)
+	sys_close(h)*/
+
+
+void PagingTest()
+	// 8 mb flat paging
+	int p[0]* = _i2p(0x00200000)
+	for int i, 0, 1024
+		p[i] = 13
+	p[0] = 0x00201007
+	p[1] = 0x00202007
+	p = _i2p(0x00201000)
+	for int i, 0, 1024
+		p[i] = 0x00001000 * i + 7
+	p = _i2p(0x00202000)
+	for int i, 0, 1024
+		p[i] = 0x00001000 * i + 0x00400007
+	p[1023] = 0x00012007
+	for int i, 0, NumTasks
+		Task[i].tss.cr3 = 0x00200000
+	asm{
+		mov eax, 0x00200000
+		mov cr3, eax
+		mov eax, cr0
+		or eax, 0x80000000
+		mov cr0, eax
+		
+		// flush cpu prefetch
+		jmp _flush
+		_flush:
+	}
+	prints("paging ok\n")
+	p = _i2p(0x007ff000)
+	printh(p, 256)
+	while true
+		nil
 
 
 void main()
@@ -1687,14 +1723,16 @@ void main()
 	InitInterrupts()
 	
 	InitDrivers()
+	
+	PagingTest()
 
-	//TaskTest()
+	TaskTest()
 	//FileTest()
 	//DriverTest()
 	
-	Execute("/shell")
+	//Execute("/shell")
 	
-	StartScheduler()
+	//StartScheduler()
 	
 	asm{
 		cli
