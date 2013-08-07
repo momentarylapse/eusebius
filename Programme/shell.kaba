@@ -1,6 +1,6 @@
 #define __OS__
-#define __CODE_ORIGIN__ 0x200000
-#define __VARIABLE_OFFSET__ 0x240000
+#define __CODE_ORIGIN__ 0x00a00000
+#define __VARIABLE_OFFSET__ 0xa40000
 #define __ADD_ENTRY_POINT__
 
 void *_p
