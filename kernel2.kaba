@@ -1154,11 +1154,17 @@ GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 void CreateUserPaging(int mem_offset, int dir_pos)
 	int p[0]* = _i2p(dir_pos)
 	for int i, 0, 1024
+		p[i] = 0
+	for int i, 0, 2
 		p[i] = dir_pos + 0x00001000 * (i + 1) + 7
-	for int n, 0, 16
+	for int n, 0, 2
 		p = _i2p(dir_pos + 0x00001000 * (n + 1))
 		for int i, 0, 1024
 			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
+	// ??
+	p = _i2p(dir_pos + 0x00001000 * (1 + 0))
+	for int i, 0, 330
+		p[i] = 0x00001000 * i + 7
 
 void *AddTask(cstring name, void *func, bool kernel_mode)
 	asm{
@@ -1175,14 +1181,11 @@ void *AddTask(cstring name, void *func, bool kernel_mode)
 		t.stack = malloc(TASK_STACK_SIZE)
 		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
 	else
-		//t.stack = _i2p(0x00300000)
+		t.stack = _i2p(0x00300000)
 		t.mem_offset = NumTasks * 0x00800000
-		t.stack = _i2p(t.mem_offset + 0x00300000)
 		int dir_pos = t.mem_offset + 0x10000
-		//CreateUserPaging(t.mem_offset, dir_pos)
-		CreateUserPaging(0, dir_pos)
+		CreateUserPaging(t.mem_offset, dir_pos)
 		t.tss.set(t.stack, 3, 4, /*3*/ 0, dir_pos, func)
-		//t.tss.set(t.stack, 3, 4, /*3*/ 0, KERNEL_PAGE_DIRECTORY, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	NumTasks ++
 
@@ -1646,15 +1649,13 @@ void Execute(cstring filename)
 	if h < 0
 		prints("## kann Prozess-Datei nicht lesen! ##\n")
 		return
-	//TaskData *t = AddTask(filename, _i2p(0x00200000), false)
-	TaskData *t = AddTask(filename, _i2p(0x01a00000), false)
+	TaskData *t = AddTask(filename, _i2p(0x00200000), false)
 	cstring *p = _i2p(t.mem_offset + 0x200000)
-	cstring *pp = p
 	while true
-		int r = sys_read(h, pp, 1024)
+		int r = sys_read(h, p, 1024)
 		if r <= 0
 			break
-		pp = &pp[r]
+		p = &p[r]
 	sys_close(h)
 	
 	t.Start()
