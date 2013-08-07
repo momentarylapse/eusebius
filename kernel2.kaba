@@ -1051,6 +1051,7 @@ const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
 const int NUM_PRE_GDT_ENTRIES = 5
 const int TASK_SWITCH_DT = 20 // ms
+const int KERNEL_PAGE_DIRECTORY = 0x00200000
 
 enum
 	TASK_STATUS_SLEEPING
@@ -1080,10 +1081,7 @@ class TaskStateSegment
 	int x, y
 	
 	
-	void set(void *stack_pos, int _cs, int _ds, bool kernel_mode, void *task)
-		int pvl = 0
-		//if !kernel_mode
-		//	pvl = 3
+	void set(void *stack_pos, int _cs, int _ds, int pvl, int page_dir, void *task)
 		int _ss = _ds
 		prev = 0 // previous TSS (dynamisch)
 		esp0 = stack_pos
@@ -1092,7 +1090,7 @@ class TaskStateSegment
 		ss1 = _ss * 8
 		esp2 = stack_pos
 		ss2 = _ss * 8
-		cr3 = 0 // (=PDPR)
+		cr3 = page_dir
 		eip = task
 		eflags = 0x200 + pvl * 0x1000 // IterruptFlag + PVL
 		eax = 0
@@ -1119,6 +1117,7 @@ class TaskData
 	int desc // Index in GDT
 	int pid, status
 	cstring name
+	int mem_offset
 	void Start()
 		status = TASK_STATUS_RUNNING
 TaskData Task[MAX_TASKS], *CurTask, *TimerTask, *SysCallTask
@@ -1152,6 +1151,15 @@ class GlobalDescriptorData
 
 GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
+void CreateUserPaging(int mem_offset, int dir_pos)
+	int p[0]* = _i2p(dir_pos)
+	for int i, 0, 1024
+		p[i] = dir_pos + 0x00001000 * (i + 1) + 7
+	for int n, 0, 16
+		p = _i2p(dir_pos + 0x00001000 * (n + 1))
+		for int i, 0, 1024
+			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
+
 void *AddTask(cstring name, void *func, bool kernel_mode)
 	asm{
 		cli
@@ -1161,12 +1169,20 @@ void *AddTask(cstring name, void *func, bool kernel_mode)
 
 	strcpy(&t.name, &name)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
-	t.stack = malloc(TASK_STACK_SIZE)
 	t.status = TASK_STATUS_SLEEPING
 	if kernel_mode
-		t.tss.set(t.stack, 1, 2, kernel_mode, func)
+		t.mem_offset = 0
+		t.stack = malloc(TASK_STACK_SIZE)
+		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
 	else
-		t.tss.set(t.stack, 3, 4, kernel_mode, func)
+		//t.stack = _i2p(0x00300000)
+		t.mem_offset = NumTasks * 0x00800000
+		t.stack = _i2p(t.mem_offset + 0x00300000)
+		int dir_pos = t.mem_offset + 0x10000
+		//CreateUserPaging(t.mem_offset, dir_pos)
+		CreateUserPaging(0, dir_pos)
+		t.tss.set(t.stack, 3, 4, /*3*/ 0, dir_pos, func)
+		//t.tss.set(t.stack, 3, 4, /*3*/ 0, KERNEL_PAGE_DIRECTORY, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	NumTasks ++
 
@@ -1435,7 +1451,7 @@ void int_syscall()
 		//show_pvl()
 		int r = 0
 	
-		if index == 3 // read
+		/*if index == 3 // read
 			cstring *p = _i2p(param2)
 			r = sys_read(param1, p, param3)
 		else if index == 4 // write
@@ -1449,7 +1465,12 @@ void int_syscall()
 		else
 			prints("<<")
 			printi(index)
-			prints(">>")
+			prints(">>")*/
+		TextColor = 4
+		prints("<<")
+		printi(index)
+		prints(">>")
+		TextColor = 7
 
 		// zurück
 		__temp_i__ = r
@@ -1593,8 +1614,8 @@ void StartScheduler()
 void TaskTest()
 	prints("teste Task-Faehigkeit:\n")
 
-	TaskData *a = AddTask("test", &second_task, false)
-	TaskData *b = AddTask("test", &second_task, false)
+	TaskData *a = AddTask("test", &second_task, true)
+	TaskData *b = AddTask("test", &second_task, true)
 	a.Start()
 	b.Start()
 
@@ -1625,7 +1646,9 @@ void Execute(cstring filename)
 	if h < 0
 		prints("## kann Prozess-Datei nicht lesen! ##\n")
 		return
-	cstring *p = _i2p(0x500000)
+	//TaskData *t = AddTask(filename, _i2p(0x00200000), false)
+	TaskData *t = AddTask(filename, _i2p(0x01a00000), false)
+	cstring *p = _i2p(t.mem_offset + 0x200000)
 	cstring *pp = p
 	while true
 		int r = sys_read(h, pp, 1024)
@@ -1634,7 +1657,6 @@ void Execute(cstring filename)
 		pp = &pp[r]
 	sys_close(h)
 	
-	TaskData *t = AddTask(filename, p, false)
 	t.Start()
 
 /*void FileTest()
@@ -1663,24 +1685,23 @@ void DriverTest()
 	sys_close(h)*/
 
 
-void PagingTest()
+void InitPaging()
+	prints("Paging")
 	// 8 mb flat paging
-	int p[0]* = _i2p(0x00200000)
+	int p[0]* = _i2p(KERNEL_PAGE_DIRECTORY)
 	for int i, 0, 1024
-		p[i] = 13
-	p[0] = 0x00201007
-	p[1] = 0x00202007
-	p = _i2p(0x00201000)
-	for int i, 0, 1024
-		p[i] = 0x00001000 * i + 7
-	p = _i2p(0x00202000)
-	for int i, 0, 1024
-		p[i] = 0x00001000 * i + 0x00400007
-	p[1023] = 0x00012007
-	for int i, 0, NumTasks
-		Task[i].tss.cr3 = 0x00200000
+		p[i] = KERNEL_PAGE_DIRECTORY + 0x00001000 * (i + 1) + 7
+	for int n, 0, 16
+		p = _i2p(KERNEL_PAGE_DIRECTORY + 0x00001000 * (n + 1))
+		for int i, 0, 1024
+			p[i] = 0x00001000 * i + 7 + n * 0x00400000
+		
+	// :P
+	//p[1023] = 0x00012007
+	
+	__temp_i__ = KERNEL_PAGE_DIRECTORY
 	asm{
-		mov eax, 0x00200000
+		mov eax, __temp_i__
 		mov cr3, eax
 		mov eax, cr0
 		or eax, 0x80000000
@@ -1690,11 +1711,10 @@ void PagingTest()
 		jmp _flush
 		_flush:
 	}
-	prints("paging ok\n")
-	p = _i2p(0x007ff000)
-	printh(p, 256)
-	while true
-		nil
+	prints(" ok\n")
+
+void PagingTest()
+	printh(_i2p(0x007ff000), 256)
 
 
 void main()
@@ -1718,21 +1738,23 @@ void main()
 		e.show()
 	FileSystem.root.show()*/
 	
+	InitPaging()
+	
 	InitTasks()
 	
 	InitInterrupts()
 	
 	InitDrivers()
 	
-	PagingTest()
+	//PagingTest()
 
-	TaskTest()
+	//TaskTest()
 	//FileTest()
 	//DriverTest()
 	
-	//Execute("/shell")
+	Execute("/shell")
 	
-	//StartScheduler()
+	StartScheduler()
 	
 	asm{
 		cli

@@ -1,6 +1,8 @@
 #define __OS__
-#define __CODE_ORIGIN__ 0x500000
-#define __VARIABLE_OFFSET__ 0x510000
+//#define __CODE_ORIGIN__ 0x200000
+//#define __VARIABLE_OFFSET__ 0x240000
+#define __CODE_ORIGIN__ 0x01a00000
+#define __VARIABLE_OFFSET__ 0x01a40000
 #define __ADD_ENTRY_POINT__
 
 void *_p
@@ -354,6 +356,8 @@ void process(int k)
 	//	printh(&k, 2)
 
 void main()
+	//while true
+	//	nil
 	shift = false
 	cmd_length = 0
 	int h = open("/dev/keyboard")
@@ -362,6 +366,8 @@ void main()
 		strcpy(&cwd, &"/")
 		prompt()
 		while true
+			for int i, 0, 100000
+				nil
 			cstring s
 			int r = read(h, &s, 1)
 			if r > 0
