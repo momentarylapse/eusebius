@@ -1,6 +1,6 @@
 #define __OS__
-#define __CODE_ORIGIN__ 0x500000
-#define __VARIABLE_OFFSET__ 0x510000
+#define __CODE_ORIGIN__ 0x00a00000
+#define __VARIABLE_OFFSET__ 0xa40000
 #define __ADD_ENTRY_POINT__
 
 void *_p
@@ -59,4 +59,9 @@ void main()
 		prints("## kann Datei nicht oeffnen ##\n")
 	
 	while true
-		nil
+		for int i, 0, 1000000
+			nil
+		cstring s
+		s[0] = h + '0'
+		s[1] = 0
+		prints(s)

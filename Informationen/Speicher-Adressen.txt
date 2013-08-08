@@ -1,6 +1,7 @@
 0x00.5100 - 0x00.5103	4	Speicher Menge
 0x00.7c00 - 0x00.7dff	512	MBR beim Start
 0x01.0000 - 0x01.ffff	64k	Kernel Image
+0x03.0000 - 0x04.ffff	64k	Lib Image + Var
 0x0b.8000 - 0x0b.8fff	4k	Bildschirmpuffer
 0x10.0000 - 0x11.0000	64k	Kernel Stack
 0x11.0010 - ?????????	??	Kernel Var (statisch)

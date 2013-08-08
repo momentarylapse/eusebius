@@ -26,13 +26,17 @@ Programme/hello.o: Programme/hello.kaba
 	$(KABA) --x86 -o Programme/hello.o Programme/hello.kaba
 
 Programme/shell.o: Programme/shell.kaba
-	$(KABA) --x86 -o Programme/shell.o Programme/shell.kaba
+	$(KABA) --x86 -o Programme/shell.o --import-symbols kalib_symbols Programme/shell.kaba
 
-img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o
+Programme/kalib.o: Programme/kalib.kaba
+	$(KABA) --x86 -o Programme/kalib.o --export-symbols kalib_symbols Programme/kalib.kaba
+
+img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/kalib.o
 	cp init.o mfs/000-init
 	cp kernel2.o mfs/001-kernel
 	cp Programme/hello.o mfs/hello
 	cp Programme/shell.o mfs/shell
+	cp Programme/kalib.o mfs/kalib
 	$(KABA) tools/makemfs.kaba `pwd`/img.mfs `pwd`/mfs/
 
 bochs/c.img: bochs/c0.img img.mfs loader_fake.o
@@ -42,5 +46,5 @@ bochs/c.img: bochs/c0.img img.mfs loader_fake.o
 	dd if=img.mfs of=bochs/c.img bs=512 seek=16 conv=notrunc
 
 clean:
-	rm -f *.o bochs/c.img img.mfs
+	rm -f *.o Programme/*.o bochs/c.img img.mfs
 

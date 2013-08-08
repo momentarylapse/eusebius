@@ -1574,36 +1574,6 @@ void InitInterrupts()
 	InterruptsEnabled = true
 	prints("   ok\n")
 
-void user_prints(cstring s)
-	__temp_p__ = &s
-	asm{
-		mov eax, 0x00000004
-		mov ebx, __temp_p__
-		int 0x80
-	}
-
-void second_task()
-	user_prints(" == Task2!!! ==\n")
-	show_pvl()
-	//int ii = 0
-	//4 / ii
-	int counter_j=1
-	while true
-		cstring s
-		_i2s(counter_j, &s)
-		user_prints(s)
-		user_prints(" ")
-
-		for int i, 0, 200000
-			nil
-
-		/*if (counter_j % 50)==0
-			user_prints("versuche, zurueck zu springen...\n")
-			asm{
-				iret
-			}*/
-		counter_j++
-
 void InitTimer()
 	// ticks/s: 1193180
 	// 100Hz:   11932 = 0x2e9c
@@ -1622,35 +1592,18 @@ void StartScheduler()
 	SchedulerEnabled = true
 	RunTaskForced(TimerTask)
 
-void TaskTest()
-	prints("teste Task-Faehigkeit:\n")
-
-	TaskData *a = AddTask("test", &second_task, true)
-	TaskData *b = AddTask("test", &second_task, true)
-	a.Start()
-	b.Start()
-
-	/*RunTask(t)
-
-	prints("fahre fort...\n")
-	for int i, 0, 40000
-		nil
-
-	RunTask(t)
-
-	asm{
-		cli
-	}
-
-	prints("   ok\n")
-	char tc=TextColor
-	TextColor=0x04
-	prints("fertig")
-	TextColor=tc
-	//while true
-	//	NULL*/
-
-	
+void LoadKaLib()
+	int h = sys_open("/kalib")
+	if h < 0
+		prints("## kann KaLib-Datei nicht lesen! ##\n")
+		return
+	cstring *p = _i2p(0x00030000)
+	while true
+		int r = sys_read(h, p, 1024)
+		if r <= 0
+			break
+		p = &p[r]
+	sys_close(h)
 
 void Execute(cstring filename)
 	int h = sys_open(filename)
@@ -1757,11 +1710,14 @@ void main()
 	
 	//PagingTest()
 
-	//TaskTest()
 	//FileTest()
 	//DriverTest()
 	
+	LoadKaLib()
+	
 	Execute("/shell")
+	//Execute("/hello")
+	//Execute("/hello")
 	
 	StartScheduler()
 	

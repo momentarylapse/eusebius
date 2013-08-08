@@ -1,6 +1,7 @@
 init
 kernel
 loader_br
+kalib_symbols
 br_empty
 hd_image
 image.mfs

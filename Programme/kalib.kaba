@@ -1,0 +1,39 @@
+#define __OS__
+#define __CODE_ORIGIN__ 0x00030000
+#define __VARIABLE_OFFSET__ 0x00040000
+
+int lib__loopi(int i, int min, int max)
+	if i > max
+		return max
+	if i < min
+		return min
+	return i
+
+void *lib___malloc_(int size)
+	int i@b = 0
+	i@b = 1
+	return nil
+
+void lib___free_(void *p)
+
+class lib__DynamicArray
+	void *data
+	int num
+	int item_size
+	int allocated
+	void __init__(int _item_size)
+		data = nil
+		num = 0
+		allocated = 0
+		item_size = _item_size
+	void __delete__()
+		if allocated > 0
+			lib___free_(data)
+		num = 0
+		allocated = 0
+		data = nil
+
+
+class lib__string : lib__DynamicArray
+	void __init__()
+		super.__init__(1)
