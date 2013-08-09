@@ -358,6 +358,15 @@ void process(int k)
 	//else
 	//	printh(&k, 2)
 
+class Test
+	int a, b, c, d
+	void __init__()
+		a = 1
+		b = 2
+		c = 3
+		d = 4
+		prints("xx")
+
 void main()
 	void *p
 	init_lib()
@@ -367,11 +376,20 @@ void main()
 	printh(&p, 4)
 	prints("   ")
 	printh(malloc_first_free, 8)
-	p = @malloc(16)
+	p = new Test
 	prints("\n")
 	printh(&p, 4)
 	prints("   ")
 	printh(malloc_first_free, 8)
+	printh(p, 16)
+	
+	string s
+	s.add('h')
+	s.add('a')
+	s.add('l')
+	s.add('l')
+	s.add('o')
+	print(s)
 	
 	shift = false
 	cmd_length = 0

@@ -32,6 +32,10 @@ int lib__loopi(int i, int min, int max)
 		return i - d * n
 	return i
 
+void memcpy(char dest[0]*, char source[0]*, int size)
+	for int i, 0, size
+		dest[i] = source[i]
+
 class MallocHeader
 	int size
 	void *next
@@ -51,27 +55,75 @@ void *lib__@malloc(int size)
 
 void lib__@free(void *p)
 
+void *lib__@realloc(void *p, int size)
+	char ppp[0]* = p
+	MallocHeader *h = &ppp[-sizeof(MallocHeader)]
+	int old_size = h.size
+	void *pp = lib__@malloc(size)
+	memcpy(pp, p, old_size)
+	lib__@free(p)
+	return pp
+
 class lib__DynamicArray
 	void *data
 	int num
 	int allocated
-	int item_size
-	void __init__(int _item_size)
+	int element_size
+	void init(int _element_size)
 		data = nil
 		num = 0
 		allocated = 0
-		item_size = _item_size
-	void __delete__()
+		element_size = _element_size
+	void clear()
 		if allocated > 0
 			lib__@free(data)
-		num = 0
-		allocated = 0
 		data = nil
+		allocated = 0
+		num = 0
+
+	void reserve(int size)
+		if allocated == 0
+			if size > 0
+				allocated = size * element_size
+					data = lib__@malloc(allocated)
+		else if size * element_size > allocated
+			allocated = size * element_size * 2
+			void *data0 = data
+			data = lib__@realloc(data, allocated)
+		else if size == 0
+			clear()
+
+	void resize(int size)
+		if size > num
+			reserve(size)
+			//memset((char*)data + num * element_size, 0, (size - num) * element_size);
+		num = size
 
 
 class lib__string : lib__DynamicArray
+	overwrite char data[0]*
 	void __init__()
-		super.__init__(1)
+		super.init(1)
+	void __delete__()
+		clear()
+	void add(char c)
+		resize(num + 1)
+		data[num - 1] = c
+		
+void prints(cstring s)
+	__temp_p__ = &s
+	asm{
+		mov eax, 0x00000004
+		mov ebx, __temp_p__
+		int 0x80
+	}
+
+void lib__print(string s)
+	cstring ss
+	ss[1] = 0
+	for int i, 0, s.num
+		ss[0] = s[i]
+		prints(ss)
 
 
 void init_lib()
