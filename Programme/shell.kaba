@@ -1,10 +1,12 @@
 #define __OS__
 #define __CODE_ORIGIN__ 0x00a00000
-#define __VARIABLE_OFFSET__ 0xa40000
+#define __VARIABLE_OFFSET__ 0x00a40000
 #define __ADD_ENTRY_POINT__
 
-extern int lib__loopi(int i, int min, int max)
-extern void lib___free_()
+extern int lib__clampi(int i, int a, int b)
+extern void init_lib()
+extern int *malloc_first_free
+extern int __temp_i__
 
 void *_p
 int _i1, _i2, _i3
@@ -307,7 +309,7 @@ cstring cwd
 void prompt()
 	prints(cwd)
 	prints(": ")
-	
+
 void exec(cstring cmd)
 	cstring c
 	for int i, 0, 256
@@ -357,6 +359,20 @@ void process(int k)
 	//	printh(&k, 2)
 
 void main()
+	void *p
+	init_lib()
+	printh(malloc_first_free, 8)
+	p = @malloc(16)
+	prints("\n")
+	printh(&p, 4)
+	prints("   ")
+	printh(malloc_first_free, 8)
+	p = @malloc(16)
+	prints("\n")
+	printh(&p, 4)
+	prints("   ")
+	printh(malloc_first_free, 8)
+	
 	shift = false
 	cmd_length = 0
 	int h = open("/dev/keyboard")

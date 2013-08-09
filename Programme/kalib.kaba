@@ -1,26 +1,61 @@
 #define __OS__
 #define __CODE_ORIGIN__ 0x00030000
 #define __VARIABLE_OFFSET__ 0x00040000
+#define __ADD_ENTRY_POINT__
 
-int lib__loopi(int i, int min, int max)
+const int MALLOC_OFFSET = 0x00b00000
+
+int __temp_i__
+void *__temp_p__
+int _p2i(void *p)
+	int *i = &p
+	return *i
+	
+void *_i2p(int i)
+	model *p = &i
+	return *p
+
+int lib__clampi(int i, int min, int max)
 	if i > max
 		return max
 	if i < min
 		return min
 	return i
 
-void *lib___malloc_(int size)
-	int i@b = 0
-	i@b = 1
+int lib__loopi(int i, int min, int max)
+	int d = max - min + 1
+	if i < min
+		int n = ( (min-i-1) / d ) + 1
+		return i + d * n
+	if i > max
+		int n = ( (i-max-1) / d ) + 1
+		return i - d * n
+	return i
+
+class MallocHeader
+	int size
+	void *next
+MallocHeader *malloc_first_free
+void *lib__@malloc(int size)
+	MallocHeader *h = malloc_first_free
+	int s = size + sizeof(MallocHeader)
+	while h
+		if s <= h.size
+			h.size -= s
+			char p[0]* = h
+			MallocHeader *hh = &p[h.size + sizeof(MallocHeader)]
+			hh.size = size
+			return &p[h.size + sizeof(MallocHeader) * 2]
+		h = h.next
 	return nil
 
-void lib___free_(void *p)
+void lib__@free(void *p)
 
 class lib__DynamicArray
 	void *data
 	int num
-	int item_size
 	int allocated
+	int item_size
 	void __init__(int _item_size)
 		data = nil
 		num = 0
@@ -28,7 +63,7 @@ class lib__DynamicArray
 		item_size = _item_size
 	void __delete__()
 		if allocated > 0
-			lib___free_(data)
+			lib__@free(data)
 		num = 0
 		allocated = 0
 		data = nil
@@ -37,3 +72,9 @@ class lib__DynamicArray
 class lib__string : lib__DynamicArray
 	void __init__()
 		super.__init__(1)
+
+
+void init_lib()
+	malloc_first_free = _i2p(0x00b00000)
+	malloc_first_free.size = 0x00200000 - sizeof(MallocHeader)
+	malloc_first_free.next = nil
