@@ -118,16 +118,20 @@ class lib__string : lib__DynamicArray
 	void __init__()
 		super.init(1)
 	overwrite void __delete__()
-		clear()
+		super.clear()
+	overwrite void resize(int size)
+		super.resize(size)
+	overwrite void clear()
+		super.clear()
 	void add(char c)
-		resize(num + 1)
+		super.resize(num + 1)
 		data[num - 1] = c
 	void __assign__(lib__string o)
-		resize(o.num)
+		super.resize(o.num)
 		memcpy(data, o.data, num)
 	void __iadd__(lib__string o)
 		int n0 = num
-		resize(num + o.num)
+		super.resize(num + o.num)
 		memcpy(&data[n0], o.data, o.num)
 	lib__string __add__(lib__string o)
 		lib__string r
@@ -169,6 +173,22 @@ class lib__string : lib__DynamicArray
 			if ok
 				return i
 		return -1
+		
+	int compare(lib__string s)
+		int n = num
+		if s.num < num
+			n = s.num
+		for int i, 0, n
+			char a = data[i]
+			char b = s.data[i]
+			if a != b
+				return a - b
+		return num - s.num
+		
+	bool __eq__(lib__string s)
+		return compare(s) == 0
+	bool __neq__(lib__string s)
+		return compare(s) != 0
 
 /*int string::rfind(const string &s, int start) const
 {

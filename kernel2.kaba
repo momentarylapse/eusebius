@@ -2,6 +2,7 @@
 #define __CODE_ORIGIN__ 0x10000
 #define __VARIABLE_OFFSET__ 0x110010 // > ~1mb, wegen Stack!
 #define __ADD_ENTRY_POINT__
+#define __STRING_CONST_AS_CSTRING__
 //#disasm
 
 int MemorySize
