@@ -3,7 +3,6 @@
 #define __VARIABLE_OFFSET__ 0x00a40000
 #define __ADD_ENTRY_POINT__
 
-extern int lib__clampi(int i, int a, int b)
 extern void init_lib()
 extern int *malloc_first_free
 extern int __temp_i__
@@ -389,7 +388,32 @@ void main()
 	s.add('l')
 	s.add('l')
 	s.add('o')
+	string s2 = s
+	s2 += s
 	print(s)
+	print(s2)
+	printh(&s, 16)
+	printh(&s2, 16)
+	
+	string ss[]
+	prints(" - ")
+	printi(sizeof(string))
+	ss.add(s)
+	ss.add(s2)
+	ss.add(s)
+	string glue
+	glue.add(' ')
+	glue.add('-')
+	glue.add(' ')
+	string s3 = ss.join(glue)
+	print(s3)
+	printh(&ss[0], 32)
+	string t
+	t.add('a')
+	string sss[] = s3.explode(t)
+	for int i, 0, sss.num
+		prints("\n")
+		print(sss[i])
 	
 	shift = false
 	cmd_length = 0

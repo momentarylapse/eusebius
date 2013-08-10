@@ -35,6 +35,14 @@ int lib__loopi(int i, int min, int max)
 void memcpy(char dest[0]*, char source[0]*, int size)
 	for int i, 0, size
 		dest[i] = source[i]
+		
+void prints(cstring s)
+	__temp_p__ = &s
+	asm{
+		mov eax, 0x00000004
+		mov ebx, __temp_p__
+		int 0x80
+	}
 
 class MallocHeader
 	int size
@@ -56,8 +64,8 @@ void *lib__@malloc(int size)
 void lib__@free(void *p)
 
 void *lib__@realloc(void *p, int size)
-	char ppp[0]* = p
-	MallocHeader *h = &ppp[-sizeof(MallocHeader)]
+	MallocHeader hp[0]* = p
+	MallocHeader *h = &hp[-1]
 	int old_size = h.size
 	void *pp = lib__@malloc(size)
 	memcpy(pp, p, old_size)
@@ -98,25 +106,222 @@ class lib__DynamicArray
 			reserve(size)
 			//memset((char*)data + num * element_size, 0, (size - num) * element_size);
 		num = size
+		
+	void __assign__(lib__DynamicArray a)
+		resize(a.num)
+		memcpy(data, a.data, num * element_size)
+		num = 0
 
 
 class lib__string : lib__DynamicArray
 	overwrite char data[0]*
 	void __init__()
 		super.init(1)
-	void __delete__()
+	overwrite void __delete__()
 		clear()
 	void add(char c)
 		resize(num + 1)
 		data[num - 1] = c
-		
-void prints(cstring s)
-	__temp_p__ = &s
-	asm{
-		mov eax, 0x00000004
-		mov ebx, __temp_p__
-		int 0x80
+	void __assign__(lib__string o)
+		resize(o.num)
+		memcpy(data, o.data, num)
+	void __iadd__(lib__string o)
+		int n0 = num
+		resize(num + o.num)
+		memcpy(&data[n0], o.data, o.num)
+	lib__string __add__(lib__string o)
+		lib__string r
+		r = *self
+		r += o
+		return r
+			
+	lib__string substr(int start, int length)
+		lib__string r
+		if start >= num
+			return r
+		if start < 0
+			// start from the end
+			start = num + start
+			if start < 0
+				return r
+		if length < 0
+			length = num - start + length + 1
+		if start + length > num
+			length = num - start
+		if length > 0
+			r.resize(length)
+			memcpy(r.data, &data[start], length)
+		return r
+
+	lib__string head(int size)
+		return substr(0, size)
+
+	lib__string tail(int size)
+		return substr(num - size, size)
+
+	int find(lib__string s, int start)
+		for int i, start, num - s.num
+			bool ok = true
+			for int j, 0, s.num
+				if data[i + j] != s.data[j]
+					ok = false
+					break
+			if ok
+				return i
+		return -1
+
+/*int string::rfind(const string &s, int start) const
+{
+	char *b = (char*)data;
+	char *aa = (char*)s.data;
+	if (start < 0)
+		start = num - 1;
+	for (int i=start;i>=0;i--){
+		bool ok = true;
+		for (int j=0;j<s.num;j++)
+			if (b[i + j] != aa[j]){
+				ok = false;
+				break;
+			}
+		if (ok)
+			return i;
 	}
+	return -1;
+}
+
+int string::compare(const string &s) const
+{
+	char *a = (char*)data;
+	int n = num;
+	if (num > s.num)
+		n = s.num;
+	for (int i=0;i<n;i++){
+		if (s[i] != a[i])
+			return (int)(unsigned char)a[i] - (int)(unsigned char)s[i];
+	}
+	return num - s.num;
+}
+
+inline int ichar(char a)
+{
+	if ((a >= 'A') && (a <= 'Z'))
+		return (int)(unsigned char)a - (int)(unsigned char)'A' + (int)(unsigned char)'a';
+	return (int)(unsigned char)a;
+}
+
+int string::icompare(const string &s) const
+{
+	char *a = (char*)data;
+	int n = num;
+	if (num > s.num)
+		n = s.num;
+	for (int i=0;i<n;i++){
+		if (ichar(s[i]) != ichar(a[i]))
+			return ichar(a[i]) - ichar(s[i]);
+	}
+	return num - s.num;
+}
+
+string string::reverse() const
+{
+	string r;
+	r.resize(num);
+	char *a = (char*)data;
+	char *b = (char*)r.data;
+	for (int i=0;i<num;i++)
+		b[num - i - 1] = a[i];
+	return r;
+}*/
+
+	void replace0(int start, int length, lib__string str)
+		if start + length > num
+			return
+		int d = str.num - length
+		if d > 0
+			resize(num + d)
+			//for (int i=num-1;i>=start+length;i--)
+			int j = num-1
+			while j >= start+length
+				data[j] = data[j - d]
+				j --
+		memcpy(&data[start], str.data, str.num)
+		if d < 0
+			for int i, start + str.num, num + d
+				data[i] = data[i - d]
+			resize(num + d)
+
+	lib__string replace(lib__string sub, lib__string by)
+		lib__string r = *self
+		int i = r.find(sub, 0)
+		while i >= 0
+			r.replace0(i, sub.num, by)
+			i = r.find(sub, i + by.num)
+		return r
+
+	lib__string lower()
+		lib__string r = *self
+		for int i, 0, num
+			if (data[i] >= 'A') and (data[i] <= 'Z')
+				r.data[i] += 'a' - 'A'
+		return r
+
+	lib__string upper()
+		lib__string r = *self
+		for int i, 0, num
+			if (data[i] >= 'a') and (data[i] <= 'z')
+				r.data[i] += 'A' - 'a'
+		return r
+
+class lib__string@list : lib__DynamicArray
+	overwrite lib__string data[0]*
+	void __init__()
+		super.init(sizeof(lib__string))
+	overwrite void __delete__()
+		for int i, 0, num
+			data[i].__delete__()
+		clear()
+	overwrite void resize(int size)
+		if size < num
+			// shrink -> destruct
+			for int i, size, num
+				data[i].__delete__()
+		else if size > num
+			reserve(size)
+			for int i, num, size
+				data[i].__init__()
+		num = size
+	void add(lib__string s)
+		resize(num + 1)
+		data[num - 1] = s
+	void __assign__(lib__string@list o)
+		resize(o.num)
+		for int i, 0, num
+			data[i] = o.data[i]
+
+	lib__string join(lib__string glue)
+		lib__string r
+		for int i, 0, num
+			if i > 0
+				r += glue
+			r += data[i]
+		return r
+		
+
+lib__string@list lib__string@@explode(lib__string me, lib__string s)
+	lib__string@list r
+
+	int pos = 0
+	while true
+		int pos2 = me.find(s, pos)
+		if pos2 < 0
+			break
+
+		r.add(me.substr(pos, pos2 - pos))
+
+		pos = s.num + pos2
+	if (r.num > 0) or (pos < me.num)
+		r.add(me.substr(pos, me.num - pos))
+	return r
 
 void lib__print(string s)
 	cstring ss
