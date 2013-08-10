@@ -5,7 +5,7 @@
 
 const int MALLOC_OFFSET = 0x00b00000
 
-int __temp_i__
+int __temp_i__, __temp_i2__, __temp_i3__
 void *__temp_p__
 int _p2i(void *p)
 	int *i = &p
@@ -14,6 +14,76 @@ int _p2i(void *p)
 void *_i2p(int i)
 	model *p = &i
 	return *p
+	
+	
+void s2cs(string s, cstring cs)
+	for int i, 0, s.num
+		cs[i] = s[i]
+	cs[s.num] = 0
+
+int exit(int r)
+	__temp_i__ = r
+	asm{
+		mov eax, 0x00000001
+		mov ebx, __temp_i__
+		int 0x80
+	}
+
+int open(string filename)
+	cstring tt
+	s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x00000005
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+	
+void close(int h)
+	__temp_i__ = h
+	asm{
+		mov eax, 0x00000006
+		mov ebx, __temp_i__
+		int 0x80
+	}
+
+int read(int h, void *buf, int size)
+	__temp_i__ = h
+	__temp_i2__ = size
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x00000003
+		mov ebx, __temp_i__
+		mov ecx, __temp_p__
+		mov edx, __temp_i2__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+	
+int write(int h, void *buf, int size)
+	__temp_i__ = h
+	__temp_i2__ = size
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x00000004
+		mov ebx, __temp_i__
+		mov ecx, __temp_p__
+		mov edx, __temp_i2__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int getpid()
+	asm{
+		mov eax, 0x00000014
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
 
 int lib__clampi(int i, int min, int max)
 	if i > max

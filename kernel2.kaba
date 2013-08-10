@@ -1014,41 +1014,6 @@ int sys_read(int handle, char buffer[0]*, int size)
 		
 	return r
 
-/*	// Datei zu Ende?
-	int f_rest = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
-	if size > f_rest
-		size = f_rest
-
-	bool done = false
-	while !done
-		int post_read = 0
-
-		// Cluster zu Ende?
-		int c_rest = 2048 - of.pos_in_cluster
-		if size > c_rest
-			post_read = size - c_rest // später lesen
-			size = c_rest // jetzt lesen
-
-
-		// direkt lesen (aus dem Lese-Puffer kopieren)
-		memcpy(buffer, &of.buffer[of.pos_in_cluster], size)
-		r += size
-
-
-		if post_read > 0
-			// nächsten Cluster einlesen
-			of.pos_in_cluster = 0
-			of.cluster_no ++
-			//print(of.cluster_no,0,"X")
-			//printi(of.cluster_no)
-			int cl = of.entry.offset + of.cluster_no
-			int p_offset = Partition[CurrentPartition].offset
-			FileSystem.Read(0, p_offset + 4*cl, of.buffer)
-			buffer = &buffer[size]
-			size = post_read // noch zu lesender Rest
-		else
-			done = true
-	return r*/
 
 int sys_write(int handle, char buffer[0]*, int size)
 	if (handle < 0) or (handle >= num_open_files)
@@ -1338,6 +1303,14 @@ void InitTasks()
 
 	prints("   ok\n")
 
+int sys_getpid()
+	asm{
+		xor, eax, eax
+		str ax
+		mov __temp_i__, eax
+	}
+	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
+
 //--------------------------------------------------------------
 // Interrupts
 
@@ -1446,7 +1419,7 @@ class InterruptDescriptor
 
 InterruptDescriptor InterruptDescriptorTable[256]
 
-void irq_1()
+void int_key()
 	while true
 		outportb(0x20, 0x20)
 		int k = inportb(0x60)
@@ -1512,9 +1485,11 @@ void int_syscall()
 		//show_pvl()
 		int r = 0
 		
-		int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		//int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 	
-		if index == 3 // read
+		if index == 1 // exit
+			nil
+		else if index == 3 // read
 			cstring *p = _i2p(param2)
 			r = sys_read(param1, p, param3)
 		else if index == 4 // write
@@ -1528,6 +1503,8 @@ void int_syscall()
 		else if index == 13 // prints
 			cstring *p = _i2p(param1)
 			prints(*p)
+		else if index == 20 // getpid
+			r = sys_getpid()
 		else
 			prints("<<")
 			printi(index)
@@ -1582,7 +1559,7 @@ void InitInterrupts()
 	InterruptDescriptorTable[15].set(&int_15)
 	InterruptDescriptorTable[16].set(&int_16)
 	TimerTask = InterruptDescriptorTable[32].set_task("timer", &int_timer)
-	InterruptDescriptorTable[33].set_task("irq", &irq_1)
+	InterruptDescriptorTable[33].set_task("key", &int_key)
 	//InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
 	InterruptDescriptorTable[0x80].set(&int_syscall)
 

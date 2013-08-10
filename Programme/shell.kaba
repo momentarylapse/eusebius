@@ -2,71 +2,20 @@
 #define __CODE_ORIGIN__ 0x00a00000
 #define __VARIABLE_OFFSET__ 0x00a40000
 #define __ADD_ENTRY_POINT__
-//#define __STRING_CONST_AS_CSTRING__
 
 extern void init_lib()
 extern int *malloc_first_free
-extern int __temp_i__
 
 int stdin, stdout
 
-void *_p
-int _i1, _i2, _i3
+extern void exit(int r)
+extern int open(string filename)
+extern void close(int h)
+extern int read(int h, cstring *buf, int size)
+extern int write(int h, cstring *buf, int size)
+extern int getpid()
 
-void s2cs(string s, cstring cs)
-	for int i, 0, s.num
-		cs[i] = s[i]
-	cs[s.num] = 0
-
-int open(string filename)
-	cstring tt
-	s2cs(filename, tt)
-	_p = &tt
-	asm{
-		mov eax, 0x00000005
-		mov ebx, _p
-		int 0x80
-		mov _i1, eax
-	}
-	return _i1
-	
-void close(int h)
-	_i1 = h
-	asm{
-		mov eax, 0x00000006
-		mov ebx, _i1
-		int 0x80
-	}
-
-int read(int h, cstring *buf, int size)
-	_i1 = h
-	_i2 = size
-	_p = buf
-	asm{
-		mov eax, 0x00000003
-		mov ebx, _i1
-		mov ecx, _p
-		mov edx, _i2
-		int 0x80
-		mov _i3, eax
-	}
-	return _i3
-	
-int write(int h, cstring *buf, int size)
-	_i1 = h
-	_i2 = size
-	_p = buf
-	asm{
-		mov eax, 0x00000004
-		mov ebx, _i1
-		mov ecx, _p
-		mov edx, _i2
-		int 0x80
-		mov _i3, eax
-	}
-	return _i3
-
-void prints(string s)
+void print(string s)
 	write(stdout, &s[0], s.num)
 
 
@@ -107,7 +56,7 @@ int printh(cstring *data, int size)
 			ttt[2] = ' '
 		else
 			ttt[2] = '.'
-		prints(ttt)
+		print(ttt)
 
 
 bool shift
@@ -280,20 +229,10 @@ int getchar(int k)
 			return 0x7a
 	return -1
 
-/*int strcmp(cstring *a, cstring *b)
-	for int i, 0, 256
-		if a[i] > b[i]
-			return 1
-		else if a[i] < b[i]
-			return -1
-		if a[i] == 0
-			break
-	return 0*/
-
 void cat(string filename)
 	int h = open(filename)
 	if h < 0
-		prints("  --kann Datei nicht oeffnen--\n")
+		print("  --kann Datei nicht oeffnen--\n")
 	string s
 	while true
 		s.resize(128)
@@ -301,13 +240,13 @@ void cat(string filename)
 		if r <= 0
 			break
 		s.resize(r)
-		prints(s)
+		print(s)
 	close(h)
 
 void hd(string filename)
 	int h = open(filename)
 	if h < 0
-		prints("  --kann Datei nicht oeffnen--\n")
+		print("  --kann Datei nicht oeffnen--\n")
 	string s
 	while true
 		s.resize(128)
@@ -316,13 +255,13 @@ void hd(string filename)
 			break
 		printh(&s[0], r)
 	close(h)
-	prints("\n")
+	print("\n")
 
 string cwd
 
 void prompt()
-	prints(cwd)
-	prints(": ")
+	print(cwd)
+	print(": ")
 
 void exec(string cmd)
 	string c[]
@@ -344,7 +283,7 @@ void exec(string cmd)
 		if c.num > 1
 			cwd = c[1]
 		else
-			prints("Verzeichnis?\n")
+			print("Verzeichnis?\n")
 	else if cc == "cat"
 		if c.num > 1
 			cat(c[1])
@@ -352,11 +291,13 @@ void exec(string cmd)
 		if c.num > 1
 			hd(c[1])
 	else if cc == "ls"
-		prints("ls....\n")
+		print("ls....\n")
+	else if cc == "exit"
+		exit(0)
 	else
-		prints("unbekannter Befehl: ")
-		prints(cc)
-		prints("\n")
+		print("unbekannter Befehl: ")
+		print(cc)
+		print("\n")
 	
 string command
 
@@ -367,7 +308,7 @@ void process(int k)
 		return
 	int c = getchar(k)
 	if c == 0x0a // '\n'
-		prints("\n")
+		print("\n")
 		if command.num > 0
 			exec(command)
 		prompt()
@@ -375,24 +316,14 @@ void process(int k)
 	else if c > 0
 		string s
 		s.add(c)
-		prints(s)
+		print(s)
 		command.add(c)
 	else if k == 0x2a or k == 0x36
 		shift = true
 	//else
 	//	printh(&k, 2)
 
-class Test
-	int a, b, c, d
-	void __init__()
-		a = 1
-		b = 2
-		c = 3
-		d = 4
-		prints("xx")
-
 void main()
-	void *p
 	init_lib()
 	command.__init__()
 	cwd.__init__()
@@ -401,10 +332,10 @@ void main()
 	
 	shift = false
 	if stdin < 0
-		prints("## kann Tastatur nicht auslesen ##\n")
+		print("## kann Tastatur nicht auslesen ##\n")
 	else if stdout < 0
 		// ... :P
-		prints("## kann stdout nicht oeffnen ##\n")
+		print("## kann stdout nicht oeffnen ##\n")
 	else
 		bool escaped = false
 		cwd = "/"
