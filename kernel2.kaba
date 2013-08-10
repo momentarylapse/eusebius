@@ -1127,6 +1127,7 @@ class TaskStateSegment
 		x = 0
 		y = 0
 
+int TaskCallData[2]
 
 class TaskData
 	TaskStateSegment tss
@@ -1137,10 +1138,37 @@ class TaskData
 	int mem_offset
 	void Start()
 		status = TASK_STATUS_RUNNING
-TaskData Task[MAX_TASKS], *CurTask, *TimerTask, *SysCallTask
-int NumTasks,CurPid
+		
+	void RunForced()
+		/*prints("springe in ")
+		printi(t.pid)
+		prints(t.name)*/
+		// "Task Gate Descriptor" ---- falsch, kein gate!
+		TaskCallData[0] = 0
+		TaskCallData[1] = 8 * desc
+		//printi(t.desc)
+		//prints(":\n")
+		__temp_p__ = &TaskCallData[0]
+
+		// in Task springen
+		//t.status = TASK_STATUS_RUNNING
+		asm{
+			mov eax, __temp_p__
+			//db 0xff
+			//db 0x28
+			//jmp_far [eax]
+			db 0xff
+			db 0x18
+			//call_far [eax]
+			//jmp_far 0x004000000000 //0x0040:0x00000000
+		}
+TaskData Task[MAX_TASKS]
+TaskData *KernelTask
+TaskData *IdleTask
+TaskData *TimerTask
+TaskData *SysCallTask
+int NumTasks//,CurPid
 int NumUserTasks
-int TaskCallData[2]
 bool InterruptsEnabled
 bool SchedulerEnabled
 
@@ -1217,31 +1245,7 @@ void *AddTask(cstring name, void *func, bool kernel_mode)
 		}
 	return t
 
-void RunTaskForced(TaskData *t)
-	/*prints("springe in ")
-	printi(t.pid)
-	prints(t.name)*/
-	// "Task Gate Descriptor" ---- falsch, kein gate!
-	TaskCallData[0] = 0
-	TaskCallData[1] = 8 * t.desc
-	//printi(t.desc)
-	//prints(":\n")
-	__temp_p__ = &TaskCallData[0]
-
-	// in Task springen
-	CurTask = t
-	//t.status = TASK_STATUS_RUNNING
-	asm{
-		mov eax, __temp_p__
-		//db 0xff
-		//db 0x28
-		//jmp_far [eax]
-		db 0xff
-		db 0x18
-		//call_far [eax]
-		//jmp_far 0x004000000000 //0x0040:0x00000000
-	}
-
+// Scheduler
 int GetNextTask(int pid)
 	for int i, pid + 1, NumTasks
 		if Task[i].status == TASK_STATUS_RUNNING
@@ -1249,7 +1253,13 @@ int GetNextTask(int pid)
 	for int i, 0, pid
 		if Task[i].status == TASK_STATUS_RUNNING
 			return i
-	return pid
+	return IdleTask.pid
+
+void idle_func()
+	while true
+		asm{
+			hlt
+		}
 
 void InitTasks()
 	prints("init Tasks")
@@ -1270,11 +1280,11 @@ void InitTasks()
 	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
 
 
-	CurPid = 1
 	NumTasks = 0
 	NumUserTasks = 0
 
-	CurTask = AddTask("kernel", nil, true)
+	KernelTask = AddTask("kernel", nil, true)
+	IdleTask = AddTask("idle", &idle_func, true)
 	
 	// GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
@@ -1294,7 +1304,7 @@ void InitTasks()
 	}
 
 	//prints("\n  setze Kernel-Task-Register")
-	__temp_i__ = CurTask.desc * 8
+	__temp_i__ = KernelTask.desc * 8
 	asm{
 		mov eax, __temp_i__ // Descriptor[n]
 		ltr ax
@@ -1310,6 +1320,12 @@ int sys_getpid()
 		mov __temp_i__, eax
 	}
 	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
+
+void sys_exit(int r)
+	int pid = sys_getpid()
+	TaskData *t = &Task[pid]
+	t.status = TASK_STATUS_DEAD
+	TimerTask.RunForced()
 
 //--------------------------------------------------------------
 // Interrupts
@@ -1469,6 +1485,7 @@ void show_pvl()
 	prints("[PVL:")
 	printi(pvl)
 	prints("]")
+
 	
 void int_syscall()
 	asm{
@@ -1488,7 +1505,7 @@ void int_syscall()
 		//int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 	
 		if index == 1 // exit
-			nil
+			sys_exit(param1)
 		else if index == 3 // read
 			cstring *p = _i2p(param2)
 			r = sys_read(param1, p, param3)
@@ -1622,7 +1639,7 @@ void StartScheduler()
 	prints("starte Scheduler\n")
 	InitTimer()
 	SchedulerEnabled = true
-	RunTaskForced(TimerTask)
+	TimerTask.RunForced()
 
 void LoadKaLib()
 	int h = sys_open("/kalib")
