@@ -7,16 +7,16 @@ extern void init_lib()
 extern int *malloc_first_free
 extern int __temp_i__
 
+int stdin, stdout
+
 void *_p
 int _i1, _i2, _i3
 
-void prints(cstring s)
-	_p = &s
-	asm{
-		mov eax, 0x00000004
-		mov ebx, _p
-		int 0x80
-	}
+int strlen(cstring *s)
+	for int i, 0, 256
+		if s[i] == 0
+			return i
+	return 256
 
 int open(cstring filename)
 	_p = &filename
@@ -49,6 +49,23 @@ int read(int h, cstring *buf, int size)
 		mov _i3, eax
 	}
 	return _i3
+	
+int write(int h, cstring *buf, int size)
+	_i1 = h
+	_i2 = size
+	_p = buf
+	asm{
+		mov eax, 0x00000004
+		mov ebx, _i1
+		mov ecx, _p
+		mov edx, _i2
+		int 0x80
+		mov _i3, eax
+	}
+	return _i3
+
+void prints(cstring s)
+	write(stdout, &s, strlen(&s))
 
 
 void _i2s(int i, cstring *s)
@@ -369,6 +386,8 @@ class Test
 void main()
 	void *p
 	init_lib()
+	stdin = open("/dev/keyboard")
+	stdout = open("/dev/tty")
 	printh(malloc_first_free, 8)
 	p = @malloc(16)
 	prints("\n")
@@ -417,8 +436,12 @@ void main()
 	
 	shift = false
 	cmd_length = 0
-	int h = open("/dev/keyboard")
-	if h >= 0
+	if stdin < 0
+		prints("## kann Tastatur nicht auslesen ##\n")
+	else if stdout < 0
+		// ... :P
+		prints("## kann stdout nicht oeffnen ##\n")
+	else
 		bool escaped = false
 		strcpy(&cwd, &"/")
 		prompt()
@@ -426,7 +449,7 @@ void main()
 			for int i, 0, 100000
 				nil
 			cstring s
-			int r = read(h, &s, 1)
+			int r = read(stdin, &s, 1)
 			if r > 0
 				if s[0] == 0xe0
 					escaped = true
@@ -436,9 +459,8 @@ void main()
 						k += 0xe000
 					process(k)
 					escaped = false
-		close(h)
-	else
-		prints("## kann Tastatur nicht auslesen ##\n")
+	close(stdin)
+	close(stdout)
 	
 	while true
 		nil

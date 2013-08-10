@@ -78,6 +78,12 @@ void memcpy(cstring *dest, cstring *source, int size)
 				loop _mem_cpy_loop
 		}*/
 
+int strlen(cstring *s)
+	for int i, 0, 256
+		if s[i] == 0
+			return i
+	return 256
+
 void strcpy(cstring *a, cstring *b)
 	for int i, 0, 256
 		a[i] = b[i]
@@ -190,11 +196,10 @@ void etm_shift()
 		d2[i * 2] = ' '
 		d2[i * 2 + 1] = 0
 
-void prints(cstring str)
+void prints_low(cstring *str, int size)
 	cstring *d = VideoMemory
 	d = &d[2*(SCREEN_WIDTH * TextLine + TextPos)]
-	int i = 0
-	while str[i] != 0
+	for int i, 0, size
 		if str[i] != 0x0a
 			d[0] = str[i]
 			d[1] = TextColor
@@ -208,7 +213,6 @@ void prints(cstring str)
 				TextLine --
 			d = VideoMemory
 			d = &d[2*(SCREEN_WIDTH * TextLine)]
-		i ++
 	int position = (TextLine * SCREEN_WIDTH) + TextPos
 	// cursor LOW port to vga INDEX register
 	outportb(0x3d4, 0x0f)
@@ -216,6 +220,9 @@ void prints(cstring str)
 	// cursor HIGH port to vga INDEX register
 	outportb(0x3d4, 0x0e)
 	outportb(0x3d5, position >> 8)
+
+void prints(cstring str)
+	prints_low(&str, strlen(&str))
 
 void _i2s(int i, cstring *s)
 	char ttt[16]
@@ -852,6 +859,17 @@ int dev_key_read(FileEntry *f, cstring *buf, int size)
 int dev_key_write(FileEntry *f, cstring *buf, int size)
 	return 0
 
+FileOperations dev_tty_ops
+void dev_tty_open(FileEntry *f)
+	nil
+void dev_tty_close(FileEntry *f)
+	nil
+int dev_tty_read(FileEntry *f, cstring *buf, int size)
+	return 0
+int dev_tty_write(FileEntry *f, cstring *buf, int size)
+	prints_low(buf, size)
+	return size
+
 void InitDrivers()
 	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, FileSystem.root)
 	
@@ -886,6 +904,13 @@ void InitDrivers()
 	dev_key_ops._read = &dev_key_read
 	dev_key_ops._write = &dev_key_write
 	dev_key.op = &dev_key_ops
+	
+	FileEntry *dev_tty = FileSystem.add("tty", FILE_TYPE_CHAR, dev)
+	dev_tty_ops._open = &dev_tty_open
+	dev_tty_ops._close = &dev_tty_close
+	dev_tty_ops._read = &dev_tty_read
+	dev_tty_ops._write = &dev_tty_write
+	dev_tty.op = &dev_tty_ops
 	
 
 
@@ -1023,6 +1048,32 @@ int sys_read(int handle, char buffer[0]*, int size)
 		else
 			done = true
 	return r*/
+
+int sys_write(int handle, char buffer[0]*, int size)
+	if (handle < 0) or (handle >= num_open_files)
+		return -1
+	int r=0
+
+	OpenFileData *of = &OpenFile[handle]
+	if !of.used
+		return -1
+		
+	if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._write
+		__temp_p2__ = of.entry
+		__temp_p3__ = buffer
+		__temp_i__ = size
+		asm{
+			mov eax, __temp_p__
+			push __temp_i__
+			push __temp_p3__
+			push __temp_p2__
+			call eax
+			mov __temp_i__, eax
+			sub esp, 0x12
+		}
+		return __temp_i__
+	return 0
 
 void sys_close(int handle)
 	if (handle < 0) or (handle >= num_open_files)
@@ -1466,13 +1517,16 @@ void int_syscall()
 			cstring *p = _i2p(param2)
 			r = sys_read(param1, p, param3)
 		else if index == 4 // write
-			cstring *p = _i2p(param1)
-			prints(*p)
+			cstring *p = _i2p(param2)
+			r = sys_write(param1, p, param3)
 		else if index == 5 // open
 			cstring *p = _i2p(param1)
 			r = sys_open(*p)
 		else if index == 6 // close
 			sys_close(param1)
+		else if index == 13 // prints
+			cstring *p = _i2p(param1)
+			prints(*p)
 		else
 			prints("<<")
 			printi(index)
