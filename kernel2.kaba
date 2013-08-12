@@ -1321,6 +1321,23 @@ int sys_getpid()
 	}
 	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
 
+int sys_execute(cstring filename)
+	int h = sys_open(filename)
+	if h < 0
+		prints("## kann Prozess-Datei nicht lesen! ##\n")
+		return -1
+	TaskData *t = AddTask(filename, _i2p(0x00a00000), false)
+	cstring *p = _i2p(t.mem_offset + 0x00200000)
+	while true
+		int r = sys_read(h, p, 1024)
+		if r <= 0
+			break
+		p = &p[r]
+	sys_close(h)
+	
+	t.Start()
+	return 0
+
 void sys_exit(int r)
 	int pid = sys_getpid()
 	TaskData *t = &Task[pid]
@@ -1517,6 +1534,9 @@ void int_syscall()
 			r = sys_open(*p)
 		else if index == 6 // close
 			sys_close(param1)
+		else if index == 11 // exec
+			cstring *p = _i2p(param1)
+			r = sys_execute(*p)
 		else if index == 13 // prints
 			cstring *p = _i2p(param1)
 			prints(*p)
@@ -1553,7 +1573,7 @@ void int_syscall()
 		param3 = __temp_i4__
 
 void InitInterrupts()
-	prints("lade Iterrupt-Tabelle")
+	prints("lade Interrupt-Tabelle")
 
 	for int i, 0, 256
 		InterruptDescriptorTable[i].set(nil)
@@ -1654,22 +1674,6 @@ void LoadKaLib()
 		p = &p[r]
 	sys_close(h)
 
-void Execute(cstring filename)
-	int h = sys_open(filename)
-	if h < 0
-		prints("## kann Prozess-Datei nicht lesen! ##\n")
-		return
-	TaskData *t = AddTask(filename, _i2p(0x00a00000), false)
-	cstring *p = _i2p(t.mem_offset + 0x00200000)
-	while true
-		int r = sys_read(h, p, 1024)
-		if r <= 0
-			break
-		p = &p[r]
-	sys_close(h)
-	
-	t.Start()
-
 /*void FileTest()
 	int h = sys_open("/test.txt")
 	if h < 0
@@ -1764,7 +1768,7 @@ void main()
 	
 	LoadKaLib()
 	
-	Execute("/shell")
+	sys_execute("/shell")
 	//Execute("/hello")
 	//Execute("/hello")
 	

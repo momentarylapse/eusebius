@@ -85,6 +85,18 @@ int getpid()
 	}
 	return __temp_i__
 
+int execute(string filename)
+	cstring tt
+	s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x0000000b
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
 int lib__clampi(int i, int min, int max)
 	if i > max
 		return max

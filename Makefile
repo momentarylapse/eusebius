@@ -25,22 +25,26 @@ loader_br.o : loader_br.kaba
 bochs/c0.img:
 	dd if=/dev/zero of=bochs/c0.img bs=1024 count=10080
 
-Programme/hello.o: Programme/hello.kaba
-	$(KABA) --x86 -o Programme/hello.o Programme/hello.kaba
+Programme/hello.o: Programme/hello.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o Programme/hello.o Programme/hello.kaba
 
 Programme/shell.o: Programme/shell.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o Programme/shell.o Programme/shell.kaba
+
+Programme/cat.o: Programme/cat.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o Programme/cat.o Programme/cat.kaba
 
 Programme/kalib.o: Programme/kalib.kaba
 	$(KABA) --x86 -o Programme/kalib.o --export-symbols kalib_symbols Programme/kalib.kaba
 
 kalib_symbols : Programme/kalib.o
 
-img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/kalib.o
+img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/cat.o Programme/kalib.o
 	cp init.o mfs/000-init
 	cp kernel2.o mfs/001-kernel
 	cp Programme/hello.o mfs/hello
 	cp Programme/shell.o mfs/shell
+	cp Programme/cat.o mfs/cat
 	cp Programme/kalib.o mfs/kalib
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 

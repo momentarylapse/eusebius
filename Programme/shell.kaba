@@ -9,6 +9,7 @@ extern int *malloc_first_free
 int stdin, stdout
 
 extern void exit(int r)
+extern int execute(string filename)
 extern int open(string filename)
 extern void close(int h)
 extern int read(int h, cstring *buf, int size)
@@ -292,6 +293,8 @@ void exec(string cmd)
 			hd(c[1])
 	else if cc == "ls"
 		print("ls....\n")
+	else if cc == "hello"
+		execute("/hello")
 	else if cc == "exit"
 		exit(0)
 	else

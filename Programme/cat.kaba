@@ -1,0 +1,47 @@
+#define __OS__
+#define __CODE_ORIGIN__ 0x00a00000
+#define __VARIABLE_OFFSET__ 0x00a40000
+#define __ADD_ENTRY_POINT__
+
+extern void init_lib()
+
+int stdin, stdout
+
+extern void exit(int r)
+extern int open(string filename)
+extern void close(int h)
+extern int read(int h, cstring *buf, int size)
+extern int write(int h, cstring *buf, int size)
+
+void print(string s)
+	write(stdout, &s[0], s.num)
+
+
+
+void cat(string filename)
+	int h = open(filename)
+	if h < 0
+		print("  --kann Datei nicht oeffnen--\n")
+		exit(-1)
+	string s
+	while true
+		s.resize(128)
+		int r = read(h, &s[0], 128)
+		if r <= 0
+			break
+		s.resize(r)
+		print(s)
+	close(h)
+
+
+void main()
+	init_lib()
+	//stdin = open("/dev/keyboard")
+	stdout = open("/dev/tty")
+	
+	cat("/a")
+	
+	//close(stdin)
+	close(stdout)
+	
+	exit(0)
