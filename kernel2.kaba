@@ -1162,11 +1162,16 @@ class TaskData
 			//call_far [eax]
 			//jmp_far 0x004000000000 //0x0040:0x00000000
 		}
+	int addr2kernel(int addr)
+		if addr < 0x00800000
+			return addr
+		return mem_offset + addr - 0x00800000
 TaskData Task[MAX_TASKS]
 TaskData *KernelTask
 TaskData *IdleTask
 TaskData *TimerTask
 TaskData *SysCallTask
+TaskData *RequestorTask
 int NumTasks//,CurPid
 int NumUserTasks
 bool InterruptsEnabled
@@ -1313,13 +1318,13 @@ void InitTasks()
 
 	prints("   ok\n")
 
-int sys_getpid()
+/*int sys_getpid()
 	asm{
 		xor, eax, eax
 		str ax
 		mov __temp_i__, eax
 	}
-	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
+	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES*/
 
 int sys_execute(cstring filename)
 	int h = sys_open(filename)
@@ -1339,9 +1344,7 @@ int sys_execute(cstring filename)
 	return 0
 
 void sys_exit(int r)
-	int pid = sys_getpid()
-	TaskData *t = &Task[pid]
-	t.status = TASK_STATUS_DEAD
+	RequestorTask.status = TASK_STATUS_DEAD
 	TimerTask.RunForced()
 
 //--------------------------------------------------------------
@@ -1505,43 +1508,39 @@ void show_pvl()
 
 	
 void int_syscall()
-	asm{
-		mov __temp_i__, eax
-		mov __temp_i2__, ebx
-		mov __temp_i3__, ecx
-		mov __temp_i4__, edx
-	}
-	int index = __temp_i__
-	int param1 = __temp_i2__
-	int param2 = __temp_i3__
-	int param3 = __temp_i4__
 	while true
 		//show_pvl()
 		int r = 0
 		
-		//int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		RequestorTask = &Task[pid]
+		//printi(pid)
+		int index = RequestorTask.tss.eax
+		int param1 = RequestorTask.tss.ebx
+		int param2 = RequestorTask.tss.ecx
+		int param3 = RequestorTask.tss.edx
 	
 		if index == 1 // exit
 			sys_exit(param1)
 		else if index == 3 // read
-			cstring *p = _i2p(param2)
+			cstring *p = _i2p(RequestorTask.addr2kernel(param2))
 			r = sys_read(param1, p, param3)
 		else if index == 4 // write
-			cstring *p = _i2p(param2)
+			p = _i2p(RequestorTask.addr2kernel(param2))
 			r = sys_write(param1, p, param3)
 		else if index == 5 // open
-			cstring *p = _i2p(param1)
+			p = _i2p(RequestorTask.addr2kernel(param1))
 			r = sys_open(*p)
 		else if index == 6 // close
 			sys_close(param1)
 		else if index == 11 // exec
-			cstring *p = _i2p(param1)
+			p = _i2p(RequestorTask.addr2kernel(param1))
 			r = sys_execute(*p)
 		else if index == 13 // prints
-			cstring *p = _i2p(param1)
+			p = _i2p(RequestorTask.addr2kernel(param1))
 			prints(*p)
 		else if index == 20 // getpid
-			r = sys_getpid()
+			r = pid
 		else
 			prints("<<")
 			printi(index)
@@ -1551,26 +1550,14 @@ void int_syscall()
 		printi(index)
 		prints(">>")
 		TextColor = 7*/
+		//while true
+		//	nil
 
 		// zurück
-		__temp_i__ = r
+		RequestorTask.tss.eax = r
 		asm{
-			leave
-			//pop eax
-			//pop eax
-			mov eax, __temp_i__
 			iret
-			mov __temp_i__, eax
-			mov __temp_i2__, ebx
-			mov __temp_i3__, ecx
-			mov __temp_i4__, edx
-			push ebp
-			mov ebp, esp
 		}
-		index = __temp_i__
-		param1 = __temp_i2__
-		param2 = __temp_i3__
-		param3 = __temp_i4__
 
 void InitInterrupts()
 	prints("lade Interrupt-Tabelle")
@@ -1597,8 +1584,8 @@ void InitInterrupts()
 	InterruptDescriptorTable[16].set(&int_16)
 	TimerTask = InterruptDescriptorTable[32].set_task("timer", &int_timer)
 	InterruptDescriptorTable[33].set_task("key", &int_key)
-	//InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
-	InterruptDescriptorTable[0x80].set(&int_syscall)
+	SysCallTask = InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
+	//InterruptDescriptorTable[0x80].set(&int_syscall)
 
 	// IRQs auf höhere Interrupts legen
 	outportb(0x20,0x11)
