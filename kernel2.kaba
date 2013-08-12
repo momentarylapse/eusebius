@@ -1255,7 +1255,7 @@ int GetNextTask(int pid)
 	for int i, pid + 1, NumTasks
 		if Task[i].status == TASK_STATUS_RUNNING
 			return i
-	for int i, 0, pid
+	for int i, 0, pid+1
 		if Task[i].status == TASK_STATUS_RUNNING
 			return i
 	return IdleTask.pid
@@ -1462,11 +1462,9 @@ void int_key()
 		/*prints("<IRQ ")
 		printi(k)
 		prints(">")*/
-		if dev_key_num >= 64
-			// :P
-			dev_key_num = 0
-		dev_key_buf[dev_key_num] = k
-		dev_key_num ++
+		if dev_key_num < 64
+			dev_key_buf[dev_key_num] = k
+			dev_key_num ++
 		asm{
 			iret
 		}
@@ -1756,8 +1754,8 @@ void main()
 	LoadKaLib()
 	
 	sys_execute("/shell")
-	//Execute("/hello")
-	//Execute("/hello")
+	//sys_execute("/hello")
+	//sys_execute("/hello")
 	
 	StartScheduler()
 	
