@@ -6,33 +6,33 @@ void main(string arg[])
 		return
 	DirEntry list[] = DirSearch(arg[1], "*", false)
 	print list.str()
-	file f = FileCreate(arg[0])
-	f.SetBinaryMode(true)
-	f.SetPos(ClusterSize, true)
+	File *f = FileCreate(arg[0])
+	f.setBinaryMode(true)
+	f.seek(ClusterSize, true)
 
 	// root directory
 	int cluster = 2
-	f.WriteInt(list.num)
+	f << list.num
 	int offset = 4
-	forall e in list
-		f.WriteStr(e.name)
+	for e in list
+		f << e.name
 		if e.is_dir
-			f.WriteInt(1) // flags
+			f << 1 // flags
 		else
-			f.WriteInt(0)
-		f.WriteInt(e.size)
-		f.WriteInt(1) // number of file parts
-		f.WriteInt(cluster)
+			f << 0
+		f << e.size
+		f << 1 // number of file parts
+		f << cluster
 		int num_clusters = (e.size - 1) / ClusterSize + 1
-		f.WriteInt(num_clusters)
+		f << num_clusters
 		cluster += num_clusters
 		offset += e.name.num + 22
-	f.SetPos(ClusterSize * cluster, true)
-	FileClose(f)
+	f.seek(ClusterSize * cluster, true)
+	delete(f)
 		
 	// files
 	cluster = 2
-	forall e in list
+	for e in list
 		string s="dd if='"+arg[1] + e.name
 		s+="' of='"+arg[0]
 		s+="' bs=2048 seek="+cluster

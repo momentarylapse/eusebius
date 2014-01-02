@@ -10,10 +10,19 @@ void *__temp_p__
 int _p2i(void *p)
 	int *i = &p
 	return *i
+
+//class PointerWrapper
+//	void *p
 	
 void *_i2p(int i)
-	model *p = &i
-	return *p
+//	PointerWrapper *p = &i
+//	return p.p
+	__temp_i__ = i
+	asm{
+		mov eax, __temp_i__
+		mov __temp_p__, eax
+	}
+	return __temp_p__
 	
 	
 void s2cs(string s, cstring cs)
@@ -199,8 +208,8 @@ class lib__string : lib__DynamicArray
 	overwrite char data[0]*
 	void __init__()
 		super.init(1)
-	overwrite void __delete__()
-		super.clear()
+	//overwrite void __delete__() ???????????????
+	//	super.clear()
 	overwrite void resize(int size)
 		super.resize(size)
 	overwrite void clear()
@@ -378,10 +387,10 @@ class lib__string@list : lib__DynamicArray
 	overwrite lib__string data[0]*
 	void __init__()
 		super.init(sizeof(lib__string))
-	overwrite void __delete__()
+	/*overwrite*/ void __delete__()
 		for int i, 0, num
 			data[i].__delete__()
-		clear()
+		//clear()
 	overwrite void resize(int size)
 		if size < num
 			// shrink -> destruct

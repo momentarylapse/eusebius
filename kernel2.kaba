@@ -106,10 +106,13 @@ void *__temp_p__, *__temp_p2__, *__temp_p3__, *__temp_p4__
 int _p2i(void *p)
 	int *i = &p
 	return *i
-	
+
+class PointerWrapper
+	void *p
+
 void *_i2p(int i)
-	model *p = &i
-	return *p
+	PointerWrapper *p = &i
+	return p.p
 
 
 //--------------------------------------------------------------
@@ -1722,7 +1725,7 @@ void main()
 	etm_init()
 	NumMemAllocs=0
 	
-	prints("Willkommen zu Eusebius 0.2.0   (c) by MichiSoft TM 2013\n")
+	prints("Willkommen zu Eusebius 0.2.0   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
 	printi(MemorySize)
 	prints("k\n")
