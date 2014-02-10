@@ -6,7 +6,7 @@
 const int MALLOC_OFFSET = 0x00b00000
 
 int __temp_i__, __temp_i2__, __temp_i3__
-void *__temp_p__
+void *__temp_p__, *__temp_p2__
 int _p2i(void *p)
 	int *i = &p
 	return *i
@@ -23,12 +23,22 @@ void *_i2p(int i)
 		mov __temp_p__, eax
 	}
 	return __temp_p__
-	
-	
+
+
 void s2cs(string s, cstring cs)
 	for int i, 0, s.num
 		cs[i] = s[i]
 	cs[s.num] = 0
+
+void sa2cs(string a[], cstring cs)
+	int n = 0
+	for int k, 0, a.num
+		for int i, 0, a[k].num
+			cs[n] = a[k][i]
+			n ++
+		cs[n] = 0
+		n ++
+	cs[n] = 0
 
 int exit(int r)
 	__temp_i__ = r
@@ -94,10 +104,10 @@ int getpid()
 	}
 	return __temp_i__
 
-int execute(string filename)
-	cstring tt
-	s2cs(filename, tt)
-	__temp_p__ = &tt
+int execute(string arg[])
+	cstring tt_arg
+	sa2cs(arg, tt_arg)
+	__temp_p__ = &tt_arg
 	asm{
 		mov eax, 0x0000000b
 		mov ebx, __temp_p__
@@ -139,6 +149,8 @@ class MallocHeader
 	int size
 	void *next
 MallocHeader *malloc_first_free
+
+
 void *lib__@malloc(int size)
 	MallocHeader *h = malloc_first_free
 	int s = size + sizeof(MallocHeader)
@@ -446,3 +458,26 @@ void init_lib()
 	malloc_first_free = _i2p(0x00b00000)
 	malloc_first_free.size = 0x00200000 - sizeof(MallocHeader)
 	malloc_first_free.next = nil
+	
+
+
+void get_args(lib__string@list arg)
+	asm{
+		mov eax, 0x00002001
+		int 0x80
+		mov __temp_p__, eax
+	}
+	cstring *cs = __temp_p__
+	lib__string s
+	
+	int p = 0
+	lib__string s
+	for int i, 0, 250
+		if (*cs)[i] == 0
+			if s.num == 0
+				break
+			arg.add(s)
+			s.clear()
+			p = i + 1
+		else
+			s.add((*cs)[i])

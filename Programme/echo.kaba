@@ -19,33 +19,14 @@ void print(string s)
 
 
 
-void cat(string filename)
-	int h = open(filename)
-	if h < 0
-		print("  --kann Datei nicht oeffnen--\n")
-		exit(-1)
-	string s
-	while true
-		s.resize(128)
-		int r = read(h, &s[0], 128)
-		if r <= 0
-			break
-		s.resize(r)
-		print(s)
-	close(h)
-
-
 void main()
 	init_lib()
-	//stdin = open("/dev/keyboard")
 	stdout = open("/dev/tty")
 	string arg[]
 	get_args(arg)
-	
 	for int i, 1, arg.num
-		cat(arg[i])
-	
-	//close(stdin)
-	close(stdout)
-	
+		if i > 1
+			print " "
+		print(arg[i])
+	print "\n"
 	exit(0)

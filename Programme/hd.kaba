@@ -19,20 +19,40 @@ void print(string s)
 
 
 
-void cat(string filename)
+int printh(cstring *data, int size)
+	string ttt
+	ttt.resize(3)
+	for int i, 0, size
+		int d = data[i]
+		int d1 = (d>>4)
+		int d2 = (d&15)
+		if d1 < 10
+			ttt[0] = d1+48
+		else
+			ttt[0] = d1+87
+		if d2<10
+			ttt[1] = d2+48
+		else
+			ttt[1] = d2+87
+		if i == size-1
+			ttt[2] = ' '
+		else
+			ttt[2] = '.'
+		print(ttt)
+
+void hd(string filename)
 	int h = open(filename)
 	if h < 0
 		print("  --kann Datei nicht oeffnen--\n")
-		exit(-1)
 	string s
 	while true
 		s.resize(128)
 		int r = read(h, &s[0], 128)
 		if r <= 0
 			break
-		s.resize(r)
-		print(s)
+		printh(&s[0], r)
 	close(h)
+	print("\n")
 
 
 void main()
@@ -43,7 +63,7 @@ void main()
 	get_args(arg)
 	
 	for int i, 1, arg.num
-		cat(arg[i])
+		hd(arg[i])
 	
 	//close(stdin)
 	close(stdout)
