@@ -6,7 +6,7 @@
 extern void init_lib()
 extern int *malloc_first_free
 
-int stdin, stdout
+extern int stdin, stdout
 
 extern void exit(int r)
 extern int execute(string arg[])
@@ -16,51 +16,10 @@ extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
 extern int getpid()
 
-void print(string s)
-	write(stdout, &s[0], s.num)
-
-
-/*void _i2s(int i, cstring *s)
-	char ttt[32]
-	ttt[15] = 0
-	int offset = 14
-	while true
-		ttt[offset] = (i % 10) + 0x30
-		i /= 10
-		offset --
-		if i == 0
-			break
-	for int j, 0, 16
-		s[j] = ttt[offset + 1 + j]*/
-
-void printi(int i)
-	/*cstring s
-	_i2s(i, &s)
-	prints(s)*/
-
-int printh(cstring *data, int size)
-	string ttt
-	ttt.resize(3)
-	for int i, 0, size
-		int d = data[i]
-		int d1 = (d>>4)
-		int d2 = (d&15)
-		if d1 < 10
-			ttt[0] = d1+48
-		else
-			ttt[0] = d1+87
-		if d2<10
-			ttt[1] = d2+48
-		else
-			ttt[1] = d2+87
-		if i == size-1
-			ttt[2] = ' '
-		else
-			ttt[2] = '.'
-		print(ttt)
-
-
 bool shift
+
+string cwd
+string command
 
 
 int getchar(int k)
@@ -254,18 +213,16 @@ void hd(string filename)
 		int r = read(h, &s[0], 128)
 		if r <= 0
 			break
-		printh(&s[0], r)
+		s.resize(r)
+		print(s.hex(false))
 	close(h)
 	print("\n")
-
-string cwd
 
 void prompt()
 	print(cwd)
 	print(": ")
 
-void exec(string cmd)
-	string c[]
+void parse(string cmd, string c[])
 	for int i, 0, cmd.num
 		if cmd[i] != ' '
 			string t
@@ -276,6 +233,10 @@ void exec(string cmd)
 				t.add(cmd[j])
 				i = j
 			c.add(t)
+
+void exec(string cmd)
+	string c[]
+	parse(cmd, c)
 	if c.num == 0
 		return
 	//prints(c.join("."))
@@ -301,8 +262,6 @@ void exec(string cmd)
 		print("unbekannter Befehl: ")
 		print(cc)
 		print("\n")
-	
-string command
 
 void process(int k)
 	if (k & 0x80) > 0
@@ -331,7 +290,6 @@ void main()
 	command.__init__()
 	cwd.__init__()
 	stdin = open("/dev/keyboard")
-	stdout = open("/dev/tty")
 	
 	shift = false
 	if stdin < 0

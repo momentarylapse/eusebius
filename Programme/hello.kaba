@@ -5,8 +5,6 @@
 
 extern void init_lib()
 
-int stdin, stdout
-
 extern void exit(int r)
 extern int open(string filename)
 extern void close(int h)
@@ -14,14 +12,10 @@ extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
 extern void get_args(string arg[])
 
-void print(string s)
-	write(stdout, &s[0], s.num)
-
 
 
 void main()
 	init_lib()
-	stdout = open("/dev/tty")
 	print("Hallo Welt\n")
 	print("Hallo Welt\nDateiinhalt: ")
 	int h = open("/test.txt")

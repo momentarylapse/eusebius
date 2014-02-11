@@ -5,17 +5,12 @@
 
 extern void init_lib()
 
-int stdin, stdout
-
 extern void exit(int r)
 extern int open(string filename)
 extern void close(int h)
 extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
 extern void get_args(string arg[])
-
-void print(string s)
-	write(stdout, &s[0], s.num)
 
 
 
@@ -37,15 +32,10 @@ void cat(string filename)
 
 void main()
 	init_lib()
-	//stdin = open("/dev/keyboard")
-	stdout = open("/dev/tty")
 	string arg[]
 	get_args(arg)
 	
 	for int i, 1, arg.num
 		cat(arg[i])
-	
-	//close(stdin)
-	close(stdout)
 	
 	exit(0)

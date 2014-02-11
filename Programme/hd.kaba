@@ -5,8 +5,6 @@
 
 extern void init_lib()
 
-int stdin, stdout
-
 extern void exit(int r)
 extern int open(string filename)
 extern void close(int h)
@@ -14,31 +12,6 @@ extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
 extern void get_args(string arg[])
 
-void print(string s)
-	write(stdout, &s[0], s.num)
-
-
-
-int printh(cstring *data, int size)
-	string ttt
-	ttt.resize(3)
-	for int i, 0, size
-		int d = data[i]
-		int d1 = (d>>4)
-		int d2 = (d&15)
-		if d1 < 10
-			ttt[0] = d1+48
-		else
-			ttt[0] = d1+87
-		if d2<10
-			ttt[1] = d2+48
-		else
-			ttt[1] = d2+87
-		if i == size-1
-			ttt[2] = ' '
-		else
-			ttt[2] = '.'
-		print(ttt)
 
 void hd(string filename)
 	int h = open(filename)
@@ -50,22 +23,18 @@ void hd(string filename)
 		int r = read(h, &s[0], 128)
 		if r <= 0
 			break
-		printh(&s[0], r)
+		s.resize(r)
+		print(s.hex(false))
 	close(h)
 	print("\n")
 
 
 void main()
 	init_lib()
-	//stdin = open("/dev/keyboard")
-	stdout = open("/dev/tty")
 	string arg[]
 	get_args(arg)
 	
 	for int i, 1, arg.num
 		hd(arg[i])
-	
-	//close(stdin)
-	close(stdout)
 	
 	exit(0)

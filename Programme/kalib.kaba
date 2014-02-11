@@ -1,9 +1,11 @@
 #define __OS__
 #define __CODE_ORIGIN__ 0x00030000
-#define __VARIABLE_OFFSET__ 0x00040000
+#define __VARIABLE_OFFSET__ 0x00a3f000
 #define __ADD_ENTRY_POINT__
 
 const int MALLOC_OFFSET = 0x00b00000
+
+int stdin, stdout
 
 int __temp_i__, __temp_i2__, __temp_i3__
 void *__temp_p__, *__temp_p2__
@@ -41,6 +43,10 @@ void sa2cs(string a[], cstring cs)
 	cs[n] = 0
 
 int exit(int r)
+/*	if stdin >= 0
+		close(stdin)
+	if stdout >= 0
+		close(stdout)*/
 	__temp_i__ = r
 	asm{
 		mov eax, 0x00000001
@@ -115,6 +121,27 @@ int execute(string arg[])
 		mov __temp_i__, eax
 	}
 	return __temp_i__
+
+void get_args(lib__string@list arg)
+	asm{
+		mov eax, 0x00002001
+		int 0x80
+		mov __temp_p__, eax
+	}
+	cstring *cs = __temp_p__
+	lib__string s
+	
+	int p = 0
+	lib__string s
+	for int i, 0, 250
+		if (*cs)[i] == 0
+			if s.num == 0
+				break
+			arg.add(s)
+			s.clear()
+			p = i + 1
+		else
+			s.add((*cs)[i])
 
 int lib__clampi(int i, int min, int max)
 	if i > max
@@ -220,8 +247,8 @@ class lib__string : lib__DynamicArray
 	overwrite char data[0]*
 	void __init__()
 		super.init(1)
-	//overwrite void __delete__() ???????????????
-	//	super.clear()
+	void __delete__()
+		super.clear()
 	overwrite void resize(int size)
 		super.resize(size)
 	overwrite void clear()
@@ -343,18 +370,14 @@ int string::icompare(const string &s) const
 			return ichar(a[i]) - ichar(s[i]);
 	}
 	return num - s.num;
-}
-
-string string::reverse() const
-{
-	string r;
-	r.resize(num);
-	char *a = (char*)data;
-	char *b = (char*)r.data;
-	for (int i=0;i<num;i++)
-		b[num - i - 1] = a[i];
-	return r;
 }*/
+
+	lib__string reverse()
+		lib__string r
+		r.resize(num)
+		for int i, 0, num
+			r.data[num - i - 1] = data[i]
+		return r
 
 	void replace0(int start, int length, lib__string str)
 		if start + length > num
@@ -394,6 +417,43 @@ string string::reverse() const
 			if (data[i] >= 'a') and (data[i] <= 'z')
 				r.data[i] += 'A' - 'a'
 		return r
+		
+
+	lib__string@list explode(lib__string s)
+		lib__string@list r
+
+		int pos = 0
+		while true
+			int pos2 = find(s, pos)
+			if pos2 < 0
+				break
+
+			r.add(substr(pos, pos2 - pos))
+
+			pos = s.num + pos2
+		if (r.num > 0) or (pos < num)
+			r.add(substr(pos, num - pos))
+		return r
+		
+	lib__string hex(bool inverted)
+		lib__string ttt
+		for int i, 0, num
+			int d = data[i]
+			int d1 = (d>>4)
+			int d2 = (d&15)
+			if d1 < 10
+				ttt.add(d1+48)
+			else
+				ttt.add(d1+87)
+			if d2<10
+				ttt.add(d2+48)
+			else
+				ttt.add(d2+87)
+			if i == num-1
+				ttt.add(' ')
+			else
+				ttt.add('.')
+		return ttt
 
 class lib__string@list : lib__DynamicArray
 	overwrite lib__string data[0]*
@@ -428,30 +488,23 @@ class lib__string@list : lib__DynamicArray
 				r += glue
 			r += data[i]
 		return r
-		
 
-lib__string@list lib__string@@explode(lib__string me, lib__string s)
-	lib__string@list r
-
-	int pos = 0
+lib__string lib__@i2s(int i)
+	lib__string s
 	while true
-		int pos2 = me.find(s, pos)
-		if pos2 < 0
+		s.add((i % 10) + 0x30)
+		i /= 10
+		if i == 0
 			break
+	return s.reverse()
 
-		r.add(me.substr(pos, pos2 - pos))
-
-		pos = s.num + pos2
-	if (r.num > 0) or (pos < me.num)
-		r.add(me.substr(pos, me.num - pos))
-	return r
-
-void lib__print(string s)
-	cstring ss
+void lib__print(lib__string s)
+	/*cstring ss
 	ss[1] = 0
 	for int i, 0, s.num
-		ss[0] = s[i]
-		prints(ss)
+		ss[0] = s.data[i]
+		prints(ss)*/
+	write(stdout, s.data, s.num)
 
 
 void init_lib()
@@ -459,25 +512,7 @@ void init_lib()
 	malloc_first_free.size = 0x00200000 - sizeof(MallocHeader)
 	malloc_first_free.next = nil
 	
+	stdout = open("/dev/tty")
+	stdin = -1
+	//stdin = open("/dev/keyboard")
 
-
-void get_args(lib__string@list arg)
-	asm{
-		mov eax, 0x00002001
-		int 0x80
-		mov __temp_p__, eax
-	}
-	cstring *cs = __temp_p__
-	lib__string s
-	
-	int p = 0
-	lib__string s
-	for int i, 0, 250
-		if (*cs)[i] == 0
-			if s.num == 0
-				break
-			arg.add(s)
-			s.clear()
-			p = i + 1
-		else
-			s.add((*cs)[i])
