@@ -32,6 +32,12 @@ void s2cs(string s, cstring cs)
 		cs[i] = s[i]
 	cs[s.num] = 0
 
+void cs2s(cstring cs, lib__string s)
+	for int i, 0, 255
+		if cs[i] == 0
+			return
+		s.add(cs[i])
+
 void sa2cs(string a[], cstring cs)
 	int n = 0
 	for int k, 0, a.num
@@ -109,6 +115,32 @@ int getpid()
 		mov __temp_i__, eax
 	}
 	return __temp_i__
+
+int chdir(string dir)
+	cstring tt
+	s2cs(dir, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x0000000c
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
+lib__string getcwd()
+	cstring tt
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x000000b7
+		mov ebx, __temp_p__
+		mov ecx, 0x00000100
+		int 0x80
+		mov __temp_i__, eax
+	}
+	lib__string r
+	cs2s(tt, r)
+	return r
 
 int execute(string arg[])
 	cstring tt_arg

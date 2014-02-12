@@ -15,10 +15,11 @@ extern void close(int h)
 extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
 extern int getpid()
+extern string getcwd()
+extern void chdir(string dir)
 
 bool shift
 
-string cwd
 string command
 
 class Variable
@@ -236,7 +237,7 @@ void hd(string filename)
 	print("\n")
 
 void prompt()
-	print(cwd + ": ")
+	print(getcwd() + ": ")
 
 string parse_var_name(string cmd, int pos)
 	string name
@@ -292,7 +293,7 @@ void exec(string cmd)
 		vars.show()
 	else if cc == "cd"
 		if c.num > 1
-			cwd = c[1]
+			chdir(c[1])
 		else
 			print("Verzeichnis?\n")
 	else if cc == "cat"
@@ -334,7 +335,6 @@ void process(int k)
 void main()
 	init_lib()
 	command.__init__()
-	cwd.__init__()
 	vars.__init__()
 	stdin = open("/dev/keyboard")
 	
@@ -346,7 +346,6 @@ void main()
 		print("## kann stdout nicht oeffnen ##\n")
 	else
 		bool escaped = false
-		cwd = "/"
 		prompt()
 		while true
 			for int i, 0, 100000

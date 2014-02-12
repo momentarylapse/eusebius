@@ -1139,6 +1139,7 @@ class TaskData
 	int pid, status
 	cstring name
 	cstring arg
+	cstring cur_dir
 	int mem_offset
 	void Start()
 		status = TASK_STATUS_RUNNING
@@ -1238,6 +1239,7 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode)
 	strcpy(&t.name, &name)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
 	t.status = TASK_STATUS_SLEEPING
+	strcpy(&t.cur_dir, &"/")
 	if kernel_mode
 		t.mem_offset = 0
 		t.stack = malloc(TASK_STACK_SIZE)
@@ -1545,11 +1547,17 @@ void int_syscall()
 		else if index == 11 // exec
 			p = _i2p(RequestorTask.addr2kernel(param1))
 			r = sys_execute(*p)
+		else if index == 12 // chdir
+			p = _i2p(RequestorTask.addr2kernel(param1))
+			strcpy(&RequestorTask.cur_dir, p)
 		else if index == 13 // prints
 			p = _i2p(RequestorTask.addr2kernel(param1))
 			prints(*p)
 		else if index == 20 // getpid
 			r = pid
+		else if index == 183 // getcwd
+			p = _i2p(RequestorTask.addr2kernel(param1))
+			strcpy(p, &RequestorTask.cur_dir)
 		else if index == 0x2001 // getarg
 			r = RequestorTask.addr2task(_p2i(&RequestorTask.arg))
 		else
