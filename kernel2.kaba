@@ -1374,7 +1374,12 @@ void sys_exit(TaskData *caller, int r)
 	caller.status = TASK_STATUS_DEAD
 	if caller.parent
 		caller.parent.Start()
-	TimerTask.RunForced()
+	//TimerTask.RunForced()
+	
+	// jump to parent
+	GlobalDescriptorTable[caller.desc].set_busy(false)
+	GlobalDescriptorTable[caller.parent.desc].set_busy(true)
+	SysCallTask.tss.prev = (caller.parent.pid + NUM_PRE_GDT_ENTRIES) << 3
 
 //--------------------------------------------------------------
 // Interrupts
@@ -1771,7 +1776,7 @@ void main()
 	etm_init()
 	NumMemAllocs=0
 	
-	prints("Willkommen zu Eusebius 0.2.1   (c) by MichiSoft TM 2014\n")
+	prints("Willkommen zu Eusebius 0.2.2   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
 	printi(MemorySize)
 	prints("k\n")
