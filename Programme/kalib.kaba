@@ -199,7 +199,7 @@ void memcpy(char dest[0]*, char source[0]*, int size)
 void prints(cstring s)
 	__temp_p__ = &s
 	asm{
-		mov eax, 0x0000000d
+		mov eax, 0x00002002
 		mov ebx, __temp_p__
 		int 0x80
 	}

@@ -941,7 +941,7 @@ int get_handle()
 	return num_open_files - 1
 			
 
-int sys_open(cstring filename)
+int sys_open(TaskData *caller, cstring filename)
 	int index = get_handle()
 	OpenFileData *of = &OpenFile[index]
 	of.entry = FileSystem.get(filename)
@@ -965,7 +965,7 @@ int sys_open(cstring filename)
 		}
 	return index
 
-int sys_read(int handle, char buffer[0]*, int size)
+int sys_read(TaskData *caller, int handle, char buffer[0]*, int size)
 	if (handle < 0) or (handle >= num_open_files)
 		return -1
 	int r=0
@@ -1018,7 +1018,7 @@ int sys_read(int handle, char buffer[0]*, int size)
 	return r
 
 
-int sys_write(int handle, char buffer[0]*, int size)
+int sys_write(TaskData *caller, int handle, char buffer[0]*, int size)
 	if (handle < 0) or (handle >= num_open_files)
 		return -1
 	int r=0
@@ -1044,7 +1044,7 @@ int sys_write(int handle, char buffer[0]*, int size)
 		return __temp_i__
 	return 0
 
-void sys_close(int handle)
+void sys_close(TaskData *caller, int handle)
 	if (handle < 0) or (handle >= num_open_files)
 		return
 	OpenFileData *of = &OpenFile[handle]
@@ -1137,6 +1137,7 @@ class TaskData
 	int stack[0]*
 	int desc // Index in GDT
 	int pid, status
+	TaskData *parent
 	cstring name
 	cstring arg
 	cstring cur_dir
@@ -1180,7 +1181,6 @@ TaskData *KernelTask
 TaskData *IdleTask
 TaskData *TimerTask
 TaskData *SysCallTask
-TaskData *RequestorTask
 int NumTasks//,CurPid
 int NumUserTasks
 bool InterruptsEnabled
@@ -1229,7 +1229,7 @@ void CreateUserPaging(int mem_offset, int dir_pos)
 		for int i, 0, 1024
 			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
 
-TaskData *AddTask(cstring name, void *func, bool kernel_mode)
+TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	asm{
 		cli
 	}
@@ -1239,7 +1239,11 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode)
 	strcpy(&t.name, &name)
 	t.desc = NUM_PRE_GDT_ENTRIES + NumTasks
 	t.status = TASK_STATUS_SLEEPING
-	strcpy(&t.cur_dir, &"/")
+	if parent
+		strcpy(&t.cur_dir, &parent.cur_dir)
+	else
+		strcpy(&t.cur_dir, &"/")
+	t.parent = parent
 	if kernel_mode
 		t.mem_offset = 0
 		t.stack = malloc(TASK_STACK_SIZE)
@@ -1254,10 +1258,10 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	NumTasks ++
 
-	if InterruptsEnabled
+	/*if InterruptsEnabled
 		asm{
 			sti
-		}
+		}*/
 	return t
 
 // Scheduler
@@ -1298,8 +1302,8 @@ void InitTasks()
 	NumTasks = 0
 	NumUserTasks = 0
 
-	KernelTask = AddTask("kernel", nil, true)
-	IdleTask = AddTask("idle", &idle_func, true)
+	KernelTask = AddTask("kernel", nil, true, nil)
+	IdleTask = AddTask("idle", &idle_func, true, KernelTask)
 	
 	// GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
@@ -1338,26 +1342,38 @@ void InitTasks()
 
 			
 
-int sys_execute(cstring filename)
-	int h = sys_open(filename)
+int sys_execute(TaskData *caller, cstring filename)
+	int h = sys_open(caller, filename)
 	if h < 0
-		prints("## kann Prozess-Datei nicht lesen! ##\n")
 		return -1
-	TaskData *t = AddTask(filename, _i2p(0x00a00000), false)
+	//prints(filename)
+	TaskData *t = AddTask(filename, _i2p(0x00a00000), false, caller)
+	/*prints("<<")
+	printi(caller.pid)
+	prints(" -> ")
+	printi(t.pid)
+	prints(">>")*/
 	memcpy(&t.arg, &filename, sizeof(cstring))
 	cstring *p = _i2p(t.mem_offset + 0x00200000)
 	while true
-		int r = sys_read(h, p, 1024)
+		int r = sys_read(caller, h, p, 1024)
 		if r <= 0
 			break
 		p = &p[r]
-	sys_close(h)
+	sys_close(caller, h)
+	//caller.status = TASK_STATUS_DEAD
 	
 	t.Start()
 	return 0
 
-void sys_exit(int r)
-	RequestorTask.status = TASK_STATUS_DEAD
+void sys_exit(TaskData *caller, int r)
+	/*prints("exit")
+	prints(">>>")
+	printi(caller.pid)
+	prints("---")*/
+	caller.status = TASK_STATUS_DEAD
+	if caller.parent
+		caller.parent.Start()
 	TimerTask.RunForced()
 
 //--------------------------------------------------------------
@@ -1457,7 +1473,7 @@ class InterruptDescriptor
 			a = 0
 			b = 0
 		else
-			TaskData *t = AddTask(name, func, true)
+			TaskData *t = AddTask(name, func, true, nil)
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 			// Interrupt Task Gate
@@ -1491,11 +1507,13 @@ void int_timer()
 			GlobalDescriptorTable[Task[last].desc].set_busy(false)
 			GlobalDescriptorTable[Task[next].desc].set_busy(true)
 			TimerTask.tss.prev = (next + NUM_PRE_GDT_ENTRIES) << 3
-			/*prints("<")
-			printi(last)
-			prints(",")
-			printi(next)
-			prints(">")*/
+	/*		if next != last
+				prints("<")
+				prints(Task[last].name)
+				prints(",")
+				prints(Task[next].name)
+				//printi(next)
+				prints(">")*/
 
 		// weitere Aufrufe erlauben
 		outportb(0x20,0x20)
@@ -1519,53 +1537,58 @@ void show_pvl()
 
 	
 void int_syscall()
+	asm{
+		cli
+	}
 	while true
 		//show_pvl()
 		int r = 0
 		
 		int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		RequestorTask = &Task[pid]
+		TaskData *caller = &Task[pid]
 		//printi(pid)
-		int index = RequestorTask.tss.eax
-		int param1 = RequestorTask.tss.ebx
-		int param2 = RequestorTask.tss.ecx
-		int param3 = RequestorTask.tss.edx
+		int index = caller.tss.eax
+		int param1 = caller.tss.ebx
+		int param2 = caller.tss.ecx
+		int param3 = caller.tss.edx
 	
 		if index == 1 // exit
-			sys_exit(param1)
+			sys_exit(caller, param1)
 		else if index == 3 // read
-			cstring *p = _i2p(RequestorTask.addr2kernel(param2))
-			r = sys_read(param1, p, param3)
+			cstring *p = _i2p(caller.addr2kernel(param2))
+			r = sys_read(caller, param1, p, param3)
 		else if index == 4 // write
-			p = _i2p(RequestorTask.addr2kernel(param2))
-			r = sys_write(param1, p, param3)
+			p = _i2p(caller.addr2kernel(param2))
+			r = sys_write(caller, param1, p, param3)
 		else if index == 5 // open
-			p = _i2p(RequestorTask.addr2kernel(param1))
-			r = sys_open(*p)
+			p = _i2p(caller.addr2kernel(param1))
+			r = sys_open(caller, *p)
 		else if index == 6 // close
-			sys_close(param1)
+			sys_close(caller, param1)
 		else if index == 11 // exec
-			p = _i2p(RequestorTask.addr2kernel(param1))
-			r = sys_execute(*p)
+			p = _i2p(caller.addr2kernel(param1))
+			r = sys_execute(caller, *p)
 		else if index == 12 // chdir
-			p = _i2p(RequestorTask.addr2kernel(param1))
-			strcpy(&RequestorTask.cur_dir, p)
-		else if index == 13 // prints
-			p = _i2p(RequestorTask.addr2kernel(param1))
-			prints(*p)
+			p = _i2p(caller.addr2kernel(param1))
+			strcpy(&caller.cur_dir, p)
 		else if index == 20 // getpid
 			r = pid
 		else if index == 183 // getcwd
-			p = _i2p(RequestorTask.addr2kernel(param1))
-			strcpy(p, &RequestorTask.cur_dir)
+			p = _i2p(caller.addr2kernel(param1))
+			strcpy(p, &caller.cur_dir)
 		else if index == 0x2001 // getarg
-			r = RequestorTask.addr2task(_p2i(&RequestorTask.arg))
+			r = caller.addr2task(_p2i(&caller.arg))
+		else if index == 0x2002 // prints
+			p = _i2p(caller.addr2kernel(param1))
+			prints(*p)
 		else
 			prints("<<")
 			printi(index)
 			prints(">>")
 		/*TextColor = 4
 		prints("<<")
+		prints(caller.name)
+		prints(":")
 		printi(index)
 		prints(">>")
 		TextColor = 7*/
@@ -1573,9 +1596,14 @@ void int_syscall()
 		//	nil
 
 		// zurück
-		RequestorTask.tss.eax = r
+		caller.tss.eax = r
+		if InterruptsEnabled
+			asm{
+				sti
+			}
 		asm{
 			iret
+			cli
 		}
 
 void InitInterrupts()
@@ -1668,17 +1696,17 @@ void StartScheduler()
 	TimerTask.RunForced()
 
 void LoadKaLib()
-	int h = sys_open("/kalib")
+	int h = sys_open(KernelTask, "/kalib")
 	if h < 0
 		prints("## kann KaLib-Datei nicht lesen! ##\n")
 		return
 	cstring *p = _i2p(0x00030000)
 	while true
-		int r = sys_read(h, p, 1024)
+		int r = sys_read(KernelTask, h, p, 1024)
 		if r <= 0
 			break
 		p = &p[r]
-	sys_close(h)
+	sys_close(KernelTask, h)
 
 /*void FileTest()
 	int h = sys_open("/test.txt")
@@ -1774,9 +1802,10 @@ void main()
 	
 	LoadKaLib()
 	
-	sys_execute("/shell")
-	//sys_execute("/hello")
-	//sys_execute("/hello")
+	if sys_execute(KernelTask, "/shell") < 0
+		prints("## kann /shell-Datei nicht lesen! ##\n")
+	//sys_execute(KernelTask, "/hello")
+	//sys_execute(KernelTask, "/hello")
 	
 	StartScheduler()
 	

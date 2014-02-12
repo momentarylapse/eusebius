@@ -305,7 +305,8 @@ void exec(string cmd)
 	else if cc == "ls"
 		print("ls....\n")
 	else if cc[0] == '/'
-		execute(c)
+		if execute(c) < 0
+			print("  --kann Prozess-Datei nicht oeffnen--\n")
 	else if cc == "exit"
 		exit(0)
 	else
