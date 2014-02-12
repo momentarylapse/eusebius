@@ -21,6 +21,23 @@ bool shift
 string cwd
 string command
 
+class Variable
+	string name, value
+class VariableSet
+	Variable *var[]
+	Variable *get(string name)
+		for v in var
+			if v.name == name
+				return v
+		Variable *v = new Variable
+		v.name = name
+		var.add(v)
+		return v
+	void show()
+		for v in var
+			print v.name + " = " + v.value + "\n"
+VariableSet vars
+
 
 int getchar(int k)
 	if k == 0x1c
@@ -219,29 +236,61 @@ void hd(string filename)
 	print("\n")
 
 void prompt()
-	print(cwd)
-	print(": ")
+	print(cwd + ": ")
 
-void parse(string cmd, string c[])
+string parse_var_name(string cmd, int pos)
+	string name
+	for int i, pos, cmd.num
+		if cmd[i] == ' ' or cmd[i] == '"' or cmd[i] == '$'
+			break
+		name.add(cmd[i])
+	return name
+
+string parse_single(string cmd, int *pos)
+	string t
+	bool in_string = false
+	for int j, *pos, cmd.num
+		if cmd[j] == ' ' and !in_string
+			break
+		if cmd[j] == '"'
+			in_string = ! in_string
+		else if cmd[j] == '$'
+			string var_name = parse_var_name(cmd, j+1)
+			t += vars.get(var_name).value
+			j += var_name.num
+		else
+			t.add(cmd[j])
+		*pos = j
+	return t
+
+void parse(string cmd0, string c[])
+	string cmd = cmd0
 	for int i, 0, cmd.num
-		if cmd[i] != ' '
-			string t
-			t.clear()
-			for int j, i, cmd.num
-				if cmd[j] == ' '
-					break
-				t.add(cmd[j])
-				i = j
-			c.add(t)
+		if cmd[i] == ' '
+			continue
+		string t = parse_single(cmd, &i)
+		if t.num > 0
+			if t[0] == '#'
+				break
+		c.add(t)
+
+void execute_assign(string cmd)
+	string a[] = cmd.explode("=")
+	if a.num == 2
+		vars.get(a[0]).value = a[1]
 
 void exec(string cmd)
 	string c[]
 	parse(cmd, c)
 	if c.num == 0
 		return
-	//prints(c.join("."))
+	//print(c.join(" - ")+"|\n")
 	string cc = c[0]
-	if cc == "cd"
+	if cc.find("=", 0) > 0
+		execute_assign(cc)
+	else if cc == "var"
+		vars.show()
+	else if cc == "cd"
 		if c.num > 1
 			cwd = c[1]
 		else
@@ -259,9 +308,7 @@ void exec(string cmd)
 	else if cc == "exit"
 		exit(0)
 	else
-		print("unbekannter Befehl: ")
-		print(cc)
-		print("\n")
+		print("unbekannter Befehl: " + cc + "\n")
 
 void process(int k)
 	if (k & 0x80) > 0
@@ -271,8 +318,7 @@ void process(int k)
 	int c = getchar(k)
 	if c == 0x0a // '\n'
 		print("\n")
-		if command.num > 0
-			exec(command)
+		exec(command)
 		prompt()
 		command.clear()
 	else if c > 0
@@ -289,6 +335,7 @@ void main()
 	init_lib()
 	command.__init__()
 	cwd.__init__()
+	vars.__init__()
 	stdin = open("/dev/keyboard")
 	
 	shift = false

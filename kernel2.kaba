@@ -1735,7 +1735,7 @@ void main()
 	etm_init()
 	NumMemAllocs=0
 	
-	prints("Willkommen zu Eusebius 0.2.0   (c) by MichiSoft TM 2014\n")
+	prints("Willkommen zu Eusebius 0.2.1   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
 	printi(MemorySize)
 	prints("k\n")

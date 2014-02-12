@@ -202,17 +202,17 @@ void *lib__@realloc(void *p, int size)
 	lib__@free(p)
 	return pp
 
-class lib__DynamicArray
-	void *data
+class lib__@DynamicArray
+	cstring *data
 	int num
 	int allocated
 	int element_size
-	void init(int _element_size)
+	void __mem_init__(int _element_size)
 		data = nil
 		num = 0
 		allocated = 0
 		element_size = _element_size
-	void clear()
+	void __mem_clear__()
 		if allocated > 0
 			lib__@free(data)
 		data = nil
@@ -229,39 +229,46 @@ class lib__DynamicArray
 			void *data0 = data
 			data = lib__@realloc(data, allocated)
 		else if size == 0
-			clear()
+			__mem_clear__()
 
-	void resize(int size)
+	void __mem_resize__(int size)
 		if size > num
 			reserve(size)
 			//memset((char*)data + num * element_size, 0, (size - num) * element_size);
 		num = size
+
+	void __mem_remove__(int index)
+		if index < 0 or index >= num
+			return
+		for int i, index*element_size, (num-1)*element_size
+			data[i] = data[i+element_size]
+		__mem_resize__(num - 1)
 		
-	void __assign__(lib__DynamicArray a)
-		resize(a.num)
+	void __assign__(lib__@DynamicArray a)
+		__mem_resize__(a.num)
 		memcpy(data, a.data, num * element_size)
 		num = 0
 
 
-class lib__string : lib__DynamicArray
+class lib__string : lib__@DynamicArray
 	overwrite char data[0]*
 	void __init__()
-		super.init(1)
+		__mem_init__(1)
 	void __delete__()
-		super.clear()
-	overwrite void resize(int size)
-		super.resize(size)
-	overwrite void clear()
-		super.clear()
+		__mem_clear__()
+	void resize(int size)
+		__mem_resize__(size)
+	void clear()
+		__mem_clear__()
 	void add(char c)
-		super.resize(num + 1)
+		__mem_resize__(num + 1)
 		data[num - 1] = c
 	void __assign__(lib__string o)
-		super.resize(o.num)
+		__mem_resize__(o.num)
 		memcpy(data, o.data, num)
 	void __iadd__(lib__string o)
 		int n0 = num
-		super.resize(num + o.num)
+		__mem_resize__(num + o.num)
 		memcpy(&data[n0], o.data, o.num)
 	lib__string __add__(lib__string o)
 		lib__string r
@@ -455,15 +462,15 @@ int string::icompare(const string &s) const
 				ttt.add('.')
 		return ttt
 
-class lib__string@list : lib__DynamicArray
+class lib__string@list : lib__@DynamicArray
 	overwrite lib__string data[0]*
 	void __init__()
-		super.init(sizeof(lib__string))
+		__mem_init__(sizeof(lib__string))
 	/*overwrite*/ void __delete__()
 		for int i, 0, num
 			data[i].__delete__()
 		//clear()
-	overwrite void resize(int size)
+	void resize(int size)
 		if size < num
 			// shrink -> destruct
 			for int i, size, num
