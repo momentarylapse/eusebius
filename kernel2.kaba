@@ -91,6 +91,10 @@ void strcpy(cstring *a, cstring *b)
 		if b[i] == 0
 			break
 
+void strcat(cstring *a, cstring *b)
+	int n = strlen(a)
+	strcpy(&a[n], b)
+
 int strcmp(cstring *a, cstring *b)
 	for int i, 0, 256
 		if a[i] > b[i]
@@ -944,7 +948,7 @@ int get_handle()
 int sys_open(TaskData *caller, cstring filename)
 	int index = get_handle()
 	OpenFileData *of = &OpenFile[index]
-	of.entry = FileSystem.get(filename)
+	of.entry = caller.get_file(filename)
 	if !of.entry
 		of.used = false
 		return -1
@@ -1076,6 +1080,8 @@ const int KERNEL_PAGE_DIRECTORY = 0x00200000
 enum
 	TASK_STATUS_SLEEPING
 	TASK_STATUS_RUNNING
+	TASK_STATUS_WAITING
+	TASK_STATUS_ZOMBIE
 	TASK_STATUS_DEAD
 
 class TaskStateSegment
@@ -1144,7 +1150,8 @@ class TaskData
 	int mem_offset
 	void Start()
 		status = TASK_STATUS_RUNNING
-		
+	
+	// nur um einmalig den Scheduler zu starten
 	void RunForced()
 		/*prints("springe in ")
 		printi(t.pid)
@@ -1176,6 +1183,29 @@ class TaskData
 		if addr < 0x00800000
 			return addr
 		return addr - mem_offset + 0x00800000
+	
+	int set_cur_dir(cstring *dir)
+		FileEntry *e = get_file(*dir)
+		if !e
+			return -1
+		if e.type != FILE_TYPE_DIR
+			return -2
+		if (*dir)[0] == '/'
+			strcpy(&cur_dir, dir)
+		else
+			strcat(&cur_dir, dir)
+		if cur_dir[strlen(&cur_dir) - 1] != '/'
+			strcat(&cur_dir, &"/")
+		return 0
+		
+	FileEntry *get_file(cstring path)
+		if path[0] == '/'
+			return FileSystem.get(path)
+		cstring long
+		strcpy(&long, &cur_dir)
+		strcat(&long, &path)
+		return FileSystem.get(long)
+	
 TaskData Task[MAX_TASKS]
 TaskData *KernelTask
 TaskData *IdleTask
@@ -1346,7 +1376,6 @@ int sys_execute(TaskData *caller, cstring filename)
 	int h = sys_open(caller, filename)
 	if h < 0
 		return -1
-	//prints(filename)
 	TaskData *t = AddTask(filename, _i2p(0x00a00000), false, caller)
 	/*prints("<<")
 	printi(caller.pid)
@@ -1361,10 +1390,9 @@ int sys_execute(TaskData *caller, cstring filename)
 			break
 		p = &p[r]
 	sys_close(caller, h)
-	//caller.status = TASK_STATUS_DEAD
 	
 	t.Start()
-	return 0
+	return t.pid
 
 void sys_exit(TaskData *caller, int r)
 	/*prints("exit")
@@ -1374,7 +1402,6 @@ void sys_exit(TaskData *caller, int r)
 	caller.status = TASK_STATUS_DEAD
 	if caller.parent
 		caller.parent.Start()
-	//TimerTask.RunForced()
 	
 	// jump to parent
 	GlobalDescriptorTable[caller.desc].set_busy(false)
@@ -1575,7 +1602,7 @@ void int_syscall()
 			r = sys_execute(caller, *p)
 		else if index == 12 // chdir
 			p = _i2p(caller.addr2kernel(param1))
-			strcpy(&caller.cur_dir, p)
+			r = caller.set_cur_dir(p)
 		else if index == 20 // getpid
 			r = pid
 		else if index == 183 // getcwd

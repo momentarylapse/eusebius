@@ -16,7 +16,7 @@ extern void get_args(string arg[])
 void hd(string filename)
 	int h = open(filename)
 	if h < 0
-		print("  --kann Datei nicht oeffnen--\n")
+		print("hd: kann Datei nicht oeffnen: " + filename + "\n")
 	string s
 	while true
 		s.resize(128)
