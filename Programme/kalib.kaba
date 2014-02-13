@@ -5,7 +5,7 @@
 
 const int MALLOC_OFFSET = 0x00b00000
 
-int stdin, stdout
+int stdin, stdout, lib_error
 
 int __temp_i__, __temp_i2__, __temp_i3__
 void *__temp_p__, *__temp_p2__
@@ -33,6 +33,7 @@ void s2cs(string s, cstring cs)
 	cs[s.num] = 0
 
 void cs2s(cstring cs, lib__string s)
+	s.clear()
 	for int i, 0, 255
 		if cs[i] == 0
 			return
@@ -100,6 +101,20 @@ int write(int h, void *buf, int size)
 	__temp_p__ = buf
 	asm{
 		mov eax, 0x00000004
+		mov ebx, __temp_i__
+		mov ecx, __temp_p__
+		mov edx, __temp_i2__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int getdents(int h, void *buf)//lib__DirEntry)
+	__temp_i__ = h
+	__temp_i2__ = 1
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x0000008d
 		mov ebx, __temp_i__
 		mov ecx, __temp_p__
 		mov edx, __temp_i2__
@@ -280,7 +295,6 @@ class lib__@DynamicArray
 		__mem_resize__(a.num)
 		memcpy(data, a.data, num * element_size)
 		num = 0
-
 
 class lib__string : lib__@DynamicArray
 	overwrite char data[0]*
@@ -537,6 +551,15 @@ lib__string lib__@i2s(int i)
 			break
 	return s.reverse()
 
+
+lib__string lib__@b2s(bool b)
+	lib__string r
+	if b
+		r.add('1')
+	else
+		r.add('0')
+	return r
+
 void lib__print(lib__string s)
 	/*cstring ss
 	ss[1] = 0
@@ -545,6 +568,94 @@ void lib__print(lib__string s)
 		prints(ss)*/
 	write(stdout, s.data, s.num)
 
+
+
+class lib__DirEntry
+	lib__string name
+	int dddd, eee
+	int size
+	bool is_dir
+	void __init__()
+		name.__init__()
+	void __assign__(lib__DirEntry o)
+		name = o.name
+		size = o.size
+		is_dir = o.is_dir
+
+
+class lib__DirEntry@list : lib__@DynamicArray
+	overwrite lib__DirEntry data[0]*
+	void __init__()
+		__mem_init__(sizeof(lib__DirEntry))
+	/*overwrite*/ void __delete__()
+		for int i, 0, num
+			data[i].__delete__()
+		//clear()
+	void resize(int size)
+		if size < num
+			// shrink -> destruct
+			for int i, size, num
+				data[i].__delete__()
+		else if size > num
+			reserve(size)
+			for int i, num, size
+				data[i].__init__()
+		num = size
+	void add(lib__DirEntry s)
+		resize(num + 1)
+		data[num - 1] = s
+	void __assign__(lib__DirEntry@list o)
+		resize(o.num)
+		for int i, 0, num
+			data[i] = o.data[i]
+	void swap(int i, int j)
+		lib__DirEntry e = data[i]
+		data[i] = data[j]
+		data[j] = e
+		
+
+
+
+class dirent_struct
+	int struct_size
+	int size
+	int type
+	cstring name
+	void fill(lib__DirEntry e)
+		cs2s(name, e.name)
+		e.size = size
+		e.is_dir = (type == 1)
+
+lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs)
+	lib__DirEntry@list l
+	int h = open(dirname)
+	if h < 0
+		lib_error = -1
+		return l
+	dirent_struct d
+	int r = getdents(h, &d)
+	lib__DirEntry e
+	while r > 0
+		lib__string s
+		cs2s(d.name, s)
+		d.fill(e)
+		l.add(e)
+		r = getdents(h, &d)
+	close(h)
+	lib_error = 0
+	
+	for int i, 0, l.num-1
+		for int j, i+1, l.num
+			if !l.data[i].is_dir and l.data[j].is_dir
+				l.swap(i, j)
+	for int i, 0, l.num-1
+		for int j, i+1, l.num
+			/*if l.data[i].is_dir != l.data[j].is_dir
+				nil
+			else */
+			if (l.data[i].name.compare(l.data[j].name) < 0)
+				l.swap(i, j)
+	return l
 
 void init_lib()
 	malloc_first_free = _i2p(0x00b00000)

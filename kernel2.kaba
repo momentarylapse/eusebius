@@ -952,10 +952,10 @@ int sys_open(TaskData *caller, cstring filename)
 	if !of.entry
 		of.used = false
 		return -1
+	of.cluster_no = 0
+	of.pos_in_cluster = 0
 	if of.entry.type == FILE_TYPE_FILE
 		of.buffer = malloc(2048)
-		of.cluster_no = 0
-		of.pos_in_cluster = 0
 		int p_offset = Partition[CurrentPartition].offset
 		FileSystem.Read(0, p_offset + of.entry.offset, of.buffer)
 	else if of.entry.type == FILE_TYPE_CHAR
@@ -1047,6 +1047,39 @@ int sys_write(TaskData *caller, int handle, char buffer[0]*, int size)
 		}
 		return __temp_i__
 	return 0
+
+class dirent_struct
+	int struct_size
+	int size
+	int type
+	cstring name
+
+int sys_getdents(TaskData *caller, int handle, char buffer[0]*, int num)
+	if (handle < 0) or (handle >= num_open_files)
+		return -1
+
+	OpenFileData *of = &OpenFile[handle]
+	if !of.used
+		return -1
+
+	if of.entry.type != FILE_TYPE_DIR
+		return -2
+	
+	FileEntry *e = of.entry.first_sub
+	for int i, 0, of.pos_in_cluster
+		e = e.next
+		if !e
+			return 0
+	dirent_struct *r = buffer
+	
+	if !e
+		return 0
+	r.struct_size = strlen(&e.name) + 13
+	r.size = e.size
+	r.type = e.type
+	strcpy(&r.name, &e.name)
+	of.pos_in_cluster ++
+	return 1
 
 void sys_close(TaskData *caller, int handle)
 	if (handle < 0) or (handle >= num_open_files)
@@ -1605,6 +1638,9 @@ void int_syscall()
 			r = caller.set_cur_dir(p)
 		else if index == 20 // getpid
 			r = pid
+		else if index == 141 // getdents
+			p = _i2p(caller.addr2kernel(param2))
+			r = sys_getdents(caller, param1, p, param3)
 		else if index == 183 // getcwd
 			p = _i2p(caller.addr2kernel(param1))
 			strcpy(p, &caller.cur_dir)

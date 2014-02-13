@@ -6,28 +6,32 @@
 extern void init_lib()
 
 extern void exit(int r)
-extern int open(string filename)
-extern void close(int h)
-extern int read(int h, cstring *buf, int size)
-extern int write(int h, cstring *buf, int size)
+extern int lib_error
 extern void get_args(string arg[])
+extern string getcwd()
+extern void cs2s(cstring cs, string s)
 
 
+string i2s2(int i, int n)
+	string s = i
+	string r
+	for int j, s.num, n
+		r.add(' ')
+	return r + s
 
-void cat(string filename)
-	int h = open(filename)
-	if h < 0
-		print("  --kann Datei nicht oeffnen--\n")
-		exit(-1)
-	string s
-	while true
-		s.resize(128)
-		int r = read(h, &s[0], 128)
-		if r <= 0
-			break
-		s.resize(r)
-		print(s)
-	close(h)
+
+void ls(string dirname)
+	DirEntry l[] = DirSearch(dirname, "", true)
+	if lib_error != 0
+		print("ls: kann Verzeichnis nicht oeffnen: " + dirname + "\n")
+	
+	for e in l
+		if e.is_dir
+			print "Verzeichnis "
+		else
+			print "Datei       "
+		print i2s2(e.size, 8)
+		print " " + e.name + "\n"
 
 
 void main()
@@ -36,6 +40,8 @@ void main()
 	get_args(arg)
 	
 	for int i, 1, arg.num
-		cat(arg[i])
+		ls(arg[i])
+	if arg.num == 1
+		ls(getcwd())
 	
 	exit(0)
