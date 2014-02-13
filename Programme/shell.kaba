@@ -17,6 +17,7 @@ extern int write(int h, cstring *buf, int size)
 extern int getpid()
 extern string getcwd()
 extern int chdir(string dir)
+extern void showstats()
 
 bool shift
 
@@ -262,6 +263,8 @@ void exec(string cmd)
 		execute_assign(cc)
 	else if cc == "var"
 		vars.show()
+	else if cc == "top"
+		showstats()
 	else if cc == "cd"
 		if c.num > 1
 			if chdir(c[1]) != 0

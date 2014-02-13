@@ -130,6 +130,12 @@ int getpid()
 		mov __temp_i__, eax
 	}
 	return __temp_i__
+	
+void showstats()
+	asm{
+		mov eax, 0x00002003
+		int 0x80
+	}
 
 int chdir(string dir)
 	cstring tt
