@@ -1,0 +1,17 @@
+#define __OS__
+#define __CODE_ORIGIN__ 0x00a00000
+#define __VARIABLE_OFFSET__ 0x00a40000
+#define __ADD_ENTRY_POINT__
+
+extern void init_lib()
+
+extern void exit(int r)
+extern void showstats()
+
+
+
+void main()
+	init_lib()
+	showstats()
+	
+	exit(0)
