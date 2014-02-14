@@ -569,12 +569,17 @@ class lib__string@list : lib__@DynamicArray
 		return r
 
 lib__string lib__@i2s(int i)
+	bool sign = i >= 0
+	if !sign
+		i = -i
 	lib__string s
 	while true
 		s.add((i % 10) + 0x30)
 		i /= 10
 		if i == 0
 			break
+	if !sign
+		s.add('-')
 	return s.reverse()
 
 

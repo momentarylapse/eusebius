@@ -233,6 +233,9 @@ void prints(cstring str)
 	prints_low(&str, strlen(&str))
 
 void _i2s(int i, cstring *s)
+	bool sign = (i >= 0)
+	if !sign
+		i = -i
 	char ttt[16]
 	ttt[15] = 0
 	int offset = 14
@@ -242,6 +245,9 @@ void _i2s(int i, cstring *s)
 		offset --
 		if i == 0
 			break
+	if !sign
+		ttt[offset] = '-'
+		offset --
 	strcpy(s, &ttt[offset + 1])
 
 void printi(int i)
@@ -1182,6 +1188,7 @@ class TaskData
 	int desc // Index in GDT
 	int pid, status
 	int return_status
+	int *wait_target
 	int waiting_mode, waiting_param
 	TaskData *parent
 	cstring name
@@ -1261,6 +1268,7 @@ TaskData *IdleTask
 TaskData *TimerTask
 TaskData *SysCallTask
 int CurPid
+int RunningPid
 int UserMemMask
 bool InterruptsEnabled
 bool SchedulerEnabled
@@ -1404,6 +1412,7 @@ void InitTasks()
 
 	CurPid = 0
 	UserMemMask = 0
+	RunningPid = 0
 
 	KernelTask = AddTask("kernel", nil, true, nil)
 	IdleTask = AddTask("idle", &idle_func, true, KernelTask)
@@ -1473,6 +1482,8 @@ void sys_exit(TaskData *caller, int r)
 	for int i, 0, MAX_TASKS
 		if Task[i].status == TASK_STATUS_WAITING
 			if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param == caller.pid
+				Task[i].tss.eax = 0// // return waitpid()
+				*Task[i].wait_target = r
 				caller.clean_up_deep()
 				Task[i].start()
 
@@ -1487,51 +1498,70 @@ int sys_waitpid(TaskData *caller, int pid, int *status)
 		t.clean_up_deep()
 		caller.start()
 		return 0
+	caller.wait_target = status
 	caller.status = TASK_STATUS_WAITING
 	caller.waiting_mode = WAITING_MODE_TASK_EXIT
 	caller.waiting_param = pid
+
+
+void panic(cstring s)
+	asm{
+		cli
+	}
+	TextColor=0x04
+	prints("\n\n                   --  Panik  --\n\n")
+	prints(s)
+	while true
+		nil
 
 //--------------------------------------------------------------
 // Interrupts
 
 
 void int_handler(int i)
-	TextColor=0x04
-	prints("\nInt ")
-	printi(i)
+	if !Task[RunningPid].kernel_mode
+		sys_exit(&Task[RunningPid], i-666)
+		asm{
+			sti
+		}
+		while true
+			nil
+	cstring s, nn
+	strcpy(&s, &"Int ")
+	_i2s(i, &nn)
+	strcat(&s, &nn)
 	if i==0
-		prints(": Division durch Null")
+		strcat(&s, &": Division durch Null")
 	if i==1
-		prints(": Debug")
+		strcat(&s, &": Debug")
 	if i==3
-		prints(": Breakpoint")
+		strcat(&s, &": Breakpoint")
 	if i==4
-		prints(": Overflow")
+		strcat(&s, &": Overflow")
 	if i==5
-		prints(": Bounds Check")
+		strcat(&s, &": Bounds Check")
 	if i==6
-		prints(": Invalider Opcode")
+		strcat(&s, &": Invalider Opcode")
 	if i==7
-		prints(": kein Ko-Prozessor")
+		strcat(&s, &": kein Ko-Prozessor")
 	if i==8
-		prints(": System-Fehler")
+		strcat(&s, &": System-Fehler")
 	if i==9
-		prints(": Ko-Prozessor-Segment overrun")
+		strcat(&s, &": Ko-Prozessor-Segment overrun")
 	if i==10
-		prints(": Invalides TSS")
+		strcat(&s, &": Invalides TSS")
 	if i==11
-		prints(": Segment fehlt")
+		strcat(&s, &": Segment fehlt")
 	if i==12
-		prints(": Stack-Fehler")
+		strcat(&s, &": Stack-Fehler")
 	if i==13
-		prints(": General Protection Fault")
+		strcat(&s, &": General Protection Fault")
 	if i==14
-		prints(": Page-Fault")
+		strcat(&s, &": Page-Fault")
 	if i==16
-		prints(": Koprozessor-Fehler")
-	prints("  8-P")
-	while true
-		nil
+		strcat(&s, &": Koprozessor-Fehler")
+	strcat(&s, &"  8-P")
+	panic(s)
 
 void int_00()
 	int_handler(0)
@@ -1622,6 +1652,7 @@ void int_timer()
 			GlobalDescriptorTable[Task[pid_cur].desc].set_busy(false)
 			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
 			TimerTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+			RunningPid = pid_next
 	/*		if next != last
 				prints("<")
 				prints(Task[pid_cur].name)
@@ -1755,6 +1786,7 @@ void int_syscall()
 			prints(">>")*/
 			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
 			SysCallTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+			RunningPid = pid_next
 
 		// zurück
 		caller.tss.eax = r
@@ -1859,7 +1891,7 @@ void StartScheduler()
 void LoadKaLib()
 	int h = sys_open(KernelTask, "/kalib")
 	if h < 0
-		prints("## kann KaLib-Datei nicht lesen! ##\n")
+		panic("kann KaLib-Datei nicht lesen!")
 		return
 	cstring *p = _i2p(0x00030000)
 	while true
@@ -1964,17 +1996,10 @@ void main()
 	LoadKaLib()
 	
 	if sys_execute(KernelTask, "/shell") < 0
-		prints("## kann /shell-Datei nicht lesen! ##\n")
+		panic("kann /shell-Datei nicht lesen!")
 	//sys_execute(KernelTask, "/hello")
 	//sys_execute(KernelTask, "/hello")
 	
 	StartScheduler()
 	
-	asm{
-		cli
-	}
-	TextColor = 4
-	prints("\n------ keine Tasks => halte Kernel -----\n")
-	
-	while true
-		nil
+	panic("keine Tasks")
