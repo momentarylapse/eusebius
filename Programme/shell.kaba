@@ -40,6 +40,71 @@ class VariableSet
 			print v.name + " = " + v.value + "\n"
 VariableSet vars
 
+class Job
+	string cmd
+	int pid, id
+	bool done
+	void __init__(int _pid, int _id, string _cmd)
+		pid = _pid
+		id = _id
+		cmd = _cmd
+		done = false
+	void test()
+		int status
+		if waitpid(pid, &status, false) == -2
+			return
+		if self != jobs.fg
+			print "[" + id + "] Fertig: " + cmd + "\n"
+		if status < -600//-652
+			print("  -- Programm hat was boeses gemacht! --\n")
+		//print(" status " + status)
+		done = true
+
+class JobManager
+	Job *job[]
+	Job *fg
+	void __init__()
+		fg = nil
+	int get_next_id()
+		int id = 1
+		for j in job
+			if j.id >= id
+				id = j.id + 1
+		return id
+	Job *create(string c[], string cmd)
+		bool as_bg = (c[c.num - 1] == "&")
+		if as_bg
+			c.remove(c.num - 1)
+		int id = get_next_id()
+		int pid = execute(c)
+		if as_bg
+			print "[" + id + "]: "
+			//print pid
+			print "\n"
+		if pid < 0
+			return nil
+		Job *j = new Job(pid, id, cmd)
+		job.add(j)
+		if !as_bg
+			fg = j
+		return j
+	void test_all()
+		for j in job
+			j.test()
+		for int i, 0, job.num
+			if job[i].done
+				if job[i] == fg
+					fg = nil
+					prompt()
+				delete job[i]
+				job.remove(i)
+				i --
+	void show()
+		for j in job
+			print "" + j.id + " - " + j.cmd + "\n"
+
+JobManager jobs
+
 
 int getchar(int k)
 	if k == 0x1c
@@ -252,21 +317,12 @@ void execute_assign(string cmd)
 	if a.num == 2
 		vars.get(a[0]).value = a[1]
 
-int execute_job(string c[])
-	if c[c.num - 1] == "&"
-		c.remove(c.num - 1)
-		return execute(c)
-	int pid = execute(c)
-	if pid < 0
-		return pid
-	int status
-	waitpid(pid, &status, true)
-	if status < -600//-652
-		print("  -- Programm hat was boeses gemacht! --\n")
-	//print(" status " + status)
-	return pid
+bool execute_job(string c[], string cmd)
+	Job *j = jobs.create(c, cmd)
+	return j
 
 void exec(string cmd)
+	string cmd0 = cmd
 	string c[]
 	parse(cmd, c)
 	if c.num == 0
@@ -275,8 +331,10 @@ void exec(string cmd)
 	string cc = c[0]
 	if cc.find("=", 0) > 0
 		execute_assign(cc)
-	else if cc == "var"
+	else if cc == "vars"
 		vars.show()
+	else if cc == "jobs"
+		jobs.show()
 	else if cc == "cd"
 		if c.num > 1
 			if chdir(c[1]) != 0
@@ -287,14 +345,16 @@ void exec(string cmd)
 		exit(0)
 	else
 		if cc[0] == '/' or cc[0] == '.'
-			if execute_job(c) >= 0
+			if execute_job(c, cmd0)
 				return
 		c[0] = vars.get("PATH").value + c[0]
-		if execute_job(c) >= 0
+		if execute_job(c, cmd0)
 			return
 		print("unbekannter Befehl: " + cc + "\n")
 
 void process(int k)
+	if jobs.fg
+		return
 	if (k & 0x80) > 0
 		if k == 0xaa or k == 0xb6
 			shift = false
@@ -302,9 +362,11 @@ void process(int k)
 	int c = getchar(k)
 	if c == 0x0a // '\n'
 		print("\n")
+		jobs.test_all()
 		exec(command)
-		prompt()
 		command.clear()
+		if !jobs.fg
+			prompt()
 	else if c > 0
 		string s
 		s.add(c)
@@ -320,6 +382,7 @@ void main()
 	command.__init__()
 	vars.__init__()
 	vars.get("PATH").value = "/"
+	jobs.__init__()
 	stdin = open("/dev/keyboard")
 	
 	shift = false
@@ -334,9 +397,13 @@ void main()
 		while true
 			for int i, 0, 100000
 				nil
-			cstring buf
-			int r = read(stdin, &buf, 1)
-			if r > 0
+			if jobs.fg
+				jobs.test_all()
+			else
+				cstring buf
+				int r = read(stdin, &buf, 1)
+				if r <= 0
+					continue
 				if buf[0] == 0xe0
 					escaped = true
 				else

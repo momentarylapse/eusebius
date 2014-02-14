@@ -229,6 +229,11 @@ int lib__loopi(int i, int min, int max)
 		return i - d * n
 	return i
 
+float lib__max(float a, float b)
+	if a > b
+		return a
+	return b
+
 void memcpy(char dest[0]*, char source[0]*, int size)
 	for int i, 0, size
 		dest[i] = source[i]
@@ -530,6 +535,24 @@ int string::icompare(const string &s) const
 				ttt.add('.')
 		return ttt
 
+class lib__int@list : lib__@DynamicArray
+	overwrite int data[0]*
+	void __init__()
+		__mem_init__(sizeof(int))
+	void resize(int size)
+		if size > num
+			reserve(size)
+		num = size
+	void add(int i)
+		resize(num + 1)
+		data[num - 1] = i
+	void remove(int index)
+		if (index < 0) or (index >= num)
+			return
+		for int i, index, num - 1
+			data[i] = data[i+1]
+		resize(num - 1)
+
 class lib__string@list : lib__@DynamicArray
 	overwrite lib__string data[0]*
 	void __init__()
@@ -558,7 +581,7 @@ class lib__string@list : lib__@DynamicArray
 	void remove(int index)
 		if (index < 0) or (index >= num)
 			return
-		for int i, index, num - 2
+		for int i, index, num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
 		//data[index].__clear__()
@@ -586,6 +609,12 @@ lib__string lib__@i2s(int i)
 		s.add('-')
 	return s.reverse()
 
+lib__string lib__p2s(void *p)
+	lib__string r
+	r.resize(sizeof(p))
+	void *pp = &p
+	memcpy(r.data, pp, sizeof(p))
+	return r.hex(true)
 
 lib__string lib__@b2s(bool b)
 	lib__string r
@@ -593,6 +622,16 @@ lib__string lib__@b2s(bool b)
 		r.add('1')
 	else
 		r.add('0')
+	return r
+
+lib__string lib__@ia2s(lib__int@list a)
+	lib__string r
+	r.add('[')
+	for int i, 0, a.num
+		if i > 0
+			r.add(',')
+		r += lib__@i2s(a.data[i])
+	r.add(']')
 	return r
 
 void lib__print(lib__string s)
