@@ -1506,6 +1506,15 @@ int sys_waitpid(TaskData *caller, int pid, int *status, int options)
 	caller.waiting_param = pid
 	return 0
 
+int sys_kill(TaskData *caller, int pid, int signal)
+	if pid < 0 or pid >= MAX_TASKS
+		return -1
+	TaskData *t = &Task[pid]
+	if t.status == TASK_STATUS_UNUSED
+		return -1
+	t.clean_up_deep()
+	return 0
+
 
 void panic(cstring s)
 	asm{
@@ -1754,6 +1763,8 @@ void int_syscall()
 			r = caller.set_cur_dir(p)
 		else if index == 20 // getpid
 			r = pid
+		else if index == 37 // kill
+			r = sys_kill(caller, param1, param2)
 		else if index == 141 // getdents
 			p = _i2p(caller.addr2kernel(param2))
 			r = sys_getdents(caller, param1, p, param3)
@@ -1967,7 +1978,7 @@ void main()
 	etm_init()
 	NumMemAllocs=0
 	
-	prints("Willkommen zu Eusebius 0.2.3   (c) by MichiSoft TM 2014\n")
+	prints("Willkommen zu Eusebius 0.2.4   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
 	printi(MemorySize)
 	prints("k\n")

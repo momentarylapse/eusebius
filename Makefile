@@ -40,6 +40,9 @@ Programme/hd.o: Programme/hd.kaba kalib_symbols
 Programme/echo.o: Programme/echo.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o Programme/echo.o Programme/echo.kaba
 
+Programme/kill.o: Programme/kill.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o Programme/kill.o Programme/kill.kaba
+
 Programme/ls.o: Programme/ls.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o Programme/ls.o Programme/ls.kaba
 
@@ -51,7 +54,7 @@ Programme/kalib.o: Programme/kalib.kaba
 
 kalib_symbols : Programme/kalib.o
 
-img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/cat.o Programme/echo.o Programme/top.o Programme/ls.o Programme/hd.o Programme/kalib.o
+img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/cat.o Programme/echo.o Programme/kill.o Programme/top.o Programme/ls.o Programme/hd.o Programme/kalib.o
 	cp init.o mfs/000-init
 	cp kernel2.o mfs/001-kernel
 	cp Programme/hello.o mfs/hello
@@ -61,6 +64,7 @@ img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/cat.o Pr
 	cp Programme/ls.o mfs/ls
 	cp Programme/top.o mfs/top
 	cp Programme/echo.o mfs/echo
+	cp Programme/kill.o mfs/kill
 	cp Programme/kalib.o mfs/kalib
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 

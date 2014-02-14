@@ -18,6 +18,7 @@ extern int getpid()
 extern string getcwd()
 extern int chdir(string dir)
 extern int waitpid(int pid, void *status, bool block)
+extern int kill(int pid, int signal)
 
 bool shift
 

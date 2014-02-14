@@ -147,6 +147,18 @@ int waitpid(int pid, void *status, bool block)
 	}
 	return __temp_i3__
 	
+int kill(int pid, int signal)
+	__temp_i__ = pid
+	__temp_i2__ = signal
+	asm{
+		mov eax, 0x00000025
+		mov ebx, __temp_i__
+		mov ecx, __temp_i2__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+	
 void showstats()
 	asm{
 		mov eax, 0x00002003
@@ -534,6 +546,21 @@ int string::icompare(const string &s) const
 			else
 				ttt.add('.')
 		return ttt
+	
+	int int()
+		if num == 0
+			return 0
+		bool sign = (data[0] != '-')
+		int r = 0
+		int i0 = 0
+		if !sign
+			i0 = 1
+		for int i, i0, num
+			int c = data[i]
+			r = r * 10 + c - 48
+		if !sign
+			return -r
+		return r
 
 class lib__int@list : lib__@DynamicArray
 	overwrite int data[0]*
