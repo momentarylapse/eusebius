@@ -1116,7 +1116,7 @@ enum
 	TASK_STATUS_RUNNING
 	TASK_STATUS_WAITING
 	TASK_STATUS_ZOMBIE
-	TASK_STATUS_DEAD
+	//TASK_STATUS_DEAD
 
 class TaskStateSegment
 	int prev
@@ -1172,22 +1172,28 @@ class TaskStateSegment
 
 int TaskCallData[2]
 
+enum
+	WAITING_MODE_TASK_EXIT
+	WAITING_MODE_FILE_READ
+
 class TaskData
 	TaskStateSegment tss
 	int stack[0]*
 	int desc // Index in GDT
 	int pid, status
+	int return_status
+	int waiting_mode, waiting_param
 	TaskData *parent
 	cstring name
 	cstring arg
 	cstring cur_dir
 	int mem_offset
 	bool kernel_mode
-	void Start()
+	void start()
 		status = TASK_STATUS_RUNNING
 	
 	// nur um einmalig den Scheduler zu starten
-	void RunForced()
+	void run_forced()
 		/*prints("springe in ")
 		printi(t.pid)
 		prints(t.name)*/
@@ -1240,7 +1246,11 @@ class TaskData
 		strcpy(&long, &cur_dir)
 		strcat(&long, &path)
 		return FileSystem.get(long)
-	void clean_up()
+	void make_zombie()
+		status = TASK_STATUS_ZOMBIE
+		if !kernel_mode
+			free_user_mem(mem_offset)
+	void clean_up_deep()
 		status = TASK_STATUS_UNUSED
 		if !kernel_mode
 			free_user_mem(mem_offset)
@@ -1366,6 +1376,7 @@ int GetNextTask(int pid)
 
 void idle_func()
 	while true
+		//prints("-idle-")
 		asm{
 			hlt
 		}
@@ -1453,23 +1464,32 @@ int sys_execute(TaskData *caller, cstring filename)
 		p = &p[r]
 	sys_close(caller, h)
 	
-	t.Start()
+	t.start()
 	return t.pid
 
 void sys_exit(TaskData *caller, int r)
-	/*prints("exit")
-	prints(">>>")
-	printi(caller.pid)
-	prints("---")*/
-	caller.status = TASK_STATUS_DEAD
-	if caller.parent
-		caller.parent.Start()
-	caller.clean_up()
-	
-	// jump to parent
-	GlobalDescriptorTable[caller.desc].set_busy(false)
-	GlobalDescriptorTable[caller.parent.desc].set_busy(true)
-	SysCallTask.tss.prev = (caller.parent.pid + NUM_PRE_GDT_ENTRIES) << 3
+	caller.return_status = r
+	caller.make_zombie()
+	for int i, 0, MAX_TASKS
+		if Task[i].status == TASK_STATUS_WAITING
+			if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param == caller.pid
+				caller.clean_up_deep()
+				Task[i].start()
+
+int sys_waitpid(TaskData *caller, int pid, int *status)
+	if pid < 0 or pid >= MAX_TASKS
+		return -1
+	TaskData *t = &Task[pid]
+	if t.status == TASK_STATUS_UNUSED
+		return -1
+	if t.status == TASK_STATUS_ZOMBIE
+		*status = t.return_status
+		t.clean_up_deep()
+		caller.start()
+		return 0
+	caller.status = TASK_STATUS_WAITING
+	caller.waiting_mode = WAITING_MODE_TASK_EXIT
+	caller.waiting_param = pid
 
 //--------------------------------------------------------------
 // Interrupts
@@ -1597,17 +1617,17 @@ void int_timer()
 	while true
 		if SchedulerEnabled
 		
-			int last = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-			int next = GetNextTask(last)
-			GlobalDescriptorTable[Task[last].desc].set_busy(false)
-			GlobalDescriptorTable[Task[next].desc].set_busy(true)
-			TimerTask.tss.prev = (next + NUM_PRE_GDT_ENTRIES) << 3
+			int pid_cur = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+			int pid_next = GetNextTask(pid_cur)
+			GlobalDescriptorTable[Task[pid_cur].desc].set_busy(false)
+			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			TimerTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
 	/*		if next != last
 				prints("<")
-				prints(Task[last].name)
+				prints(Task[pid_cur].name)
 				prints(",")
-				prints(Task[next].name)
-				//printi(next)
+				prints(Task[pid_next].name)
+				//printi(pid_next)
 				prints(">")*/
 
 		// weitere Aufrufe erlauben
@@ -1647,7 +1667,16 @@ void sys_showstats()
 			else
 				prints("U")
 			TextPos = 23
-			printi(Task[i].status)
+			if Task[i].status == TASK_STATUS_RUNNING
+				prints("R")
+			else if Task[i].status == TASK_STATUS_SLEEPING
+				prints("S")
+			else if Task[i].status == TASK_STATUS_WAITING
+				prints("W")
+			else if Task[i].status == TASK_STATUS_ZOMBIE
+				prints("Z")
+			else
+				printi(Task[i].status)
 			prints("\n")
 
 	
@@ -1680,6 +1709,9 @@ void int_syscall()
 			r = sys_open(caller, *p)
 		else if index == 6 // close
 			sys_close(caller, param1)
+		else if index == 7 // waitpid
+			p = _i2p(caller.addr2kernel(param2))
+			sys_waitpid(caller, param1, p)
 		else if index == 11 // exec
 			p = _i2p(caller.addr2kernel(param1))
 			r = sys_execute(caller, *p)
@@ -1713,6 +1745,16 @@ void int_syscall()
 		TextColor = 7*/
 		//while true
 		//	nil
+		
+		// task switch?
+		if caller.status != TASK_STATUS_RUNNING
+			GlobalDescriptorTable[caller.desc].set_busy(false)
+			int pid_next = GetNextTask(pid)
+			/*prints("<<")
+			printi(pid_next)
+			prints(">>")*/
+			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			SysCallTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
 
 		// zurück
 		caller.tss.eax = r
@@ -1812,7 +1854,7 @@ void StartScheduler()
 	prints("starte Scheduler\n")
 	InitTimer()
 	SchedulerEnabled = true
-	TimerTask.RunForced()
+	TimerTask.run_forced()
 
 void LoadKaLib()
 	int h = sys_open(KernelTask, "/kalib")

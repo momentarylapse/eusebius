@@ -17,6 +17,7 @@ extern int write(int h, cstring *buf, int size)
 extern int getpid()
 extern string getcwd()
 extern int chdir(string dir)
+extern int waitpid(int pid, void *status)
 
 bool shift
 
@@ -251,6 +252,17 @@ void execute_assign(string cmd)
 	if a.num == 2
 		vars.get(a[0]).value = a[1]
 
+int execute_waiting(string c[])
+	if c[c.num - 1] == "&"
+		c.remove(c.num - 1)
+		return execute(c)
+	int pid = execute(c)
+	if pid < 0
+		return pid
+	int status
+	waitpid(pid, &status)
+	return pid
+
 void exec(string cmd)
 	string c[]
 	parse(cmd, c)
@@ -272,10 +284,10 @@ void exec(string cmd)
 		exit(0)
 	else
 		if cc[0] == '/' or cc[0] == '.'
-			if execute(c) >= 0
+			if execute_waiting(c) >= 0
 				return
 		c[0] = vars.get("PATH").value + c[0]
-		if execute(c) >= 0
+		if execute_waiting(c) >= 0
 			return
 		print("unbekannter Befehl: " + cc + "\n")
 

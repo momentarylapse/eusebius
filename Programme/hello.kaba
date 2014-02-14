@@ -6,28 +6,12 @@
 extern void init_lib()
 
 extern void exit(int r)
-extern int open(string filename)
-extern void close(int h)
-extern int read(int h, cstring *buf, int size)
-extern int write(int h, cstring *buf, int size)
-extern void get_args(string arg[])
 
 
 
 void main()
 	init_lib()
 	print("Hallo Welt\n")
-	print("Hallo Welt\nDateiinhalt: ")
-	int h = open("/test.txt")
-	string s
-	if h >= 0
-		s.resize(256)
-		int r = read(h, &s[0], 256)
-		s.resize(r)
-		print(s)
-		close(h)
-	else
-		print("## kann Datei nicht oeffnen ##\n")
 	
 	while true
 		for int i, 0, 1000000

@@ -131,6 +131,18 @@ int getpid()
 	}
 	return __temp_i__
 	
+int waitpid(int pid, void *status)
+	__temp_i__ = pid
+	__temp_p__ = status
+	asm{
+		mov eax, 0x00000007
+		mov ebx, __temp_i__
+		mov ecx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+	
 void showstats()
 	asm{
 		mov eax, 0x00002003
@@ -539,6 +551,14 @@ class lib__string@list : lib__@DynamicArray
 		resize(o.num)
 		for int i, 0, num
 			data[i] = o.data[i]
+	void remove(int index)
+		if (index < 0) or (index >= num)
+			return
+		for int i, index, num - 2
+			data[i] = data[i+1]
+		resize(num - 1)
+		//data[index].__clear__()
+		//__mem_remove__(index)
 
 	lib__string join(lib__string glue)
 		lib__string r
