@@ -1487,7 +1487,7 @@ void sys_exit(TaskData *caller, int r)
 				caller.clean_up_deep()
 				Task[i].start()
 
-int sys_waitpid(TaskData *caller, int pid, int *status)
+int sys_waitpid(TaskData *caller, int pid, int *status, int options)
 	if pid < 0 or pid >= MAX_TASKS
 		return -1
 	TaskData *t = &Task[pid]
@@ -1498,10 +1498,13 @@ int sys_waitpid(TaskData *caller, int pid, int *status)
 		t.clean_up_deep()
 		caller.start()
 		return 0
+	if (options & 1) > 0
+		return -2
 	caller.wait_target = status
 	caller.status = TASK_STATUS_WAITING
 	caller.waiting_mode = WAITING_MODE_TASK_EXIT
 	caller.waiting_param = pid
+	return 0
 
 
 void panic(cstring s)
@@ -1742,7 +1745,7 @@ void int_syscall()
 			sys_close(caller, param1)
 		else if index == 7 // waitpid
 			p = _i2p(caller.addr2kernel(param2))
-			sys_waitpid(caller, param1, p)
+			sys_waitpid(caller, param1, p, param3)
 		else if index == 11 // exec
 			p = _i2p(caller.addr2kernel(param1))
 			r = sys_execute(caller, *p)

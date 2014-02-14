@@ -131,13 +131,17 @@ int getpid()
 	}
 	return __temp_i__
 	
-int waitpid(int pid, void *status)
+int waitpid(int pid, void *status, bool block)
 	__temp_i__ = pid
 	__temp_p__ = status
+	__temp_i2__ = 0
+	if !block
+		__temp_i2__ = 1
 	asm{
 		mov eax, 0x00000007
 		mov ebx, __temp_i__
 		mov ecx, __temp_p__
+		mov edx, __temp_i2__
 		int 0x80
 		mov __temp_i3__, eax
 	}

@@ -17,7 +17,7 @@ extern int write(int h, cstring *buf, int size)
 extern int getpid()
 extern string getcwd()
 extern int chdir(string dir)
-extern int waitpid(int pid, void *status)
+extern int waitpid(int pid, void *status, bool block)
 
 bool shift
 
@@ -260,7 +260,7 @@ int execute_job(string c[])
 	if pid < 0
 		return pid
 	int status
-	waitpid(pid, &status)
+	waitpid(pid, &status, true)
 	if status < -600//-652
 		print("  -- Programm hat was boeses gemacht! --\n")
 	//print(" status " + status)
