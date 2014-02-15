@@ -9,6 +9,7 @@ use "file_access.kaba"
 use "tasks.kaba"
 use "interrupts.kaba"
 use "syscall.kaba"
+use "scheduler.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 //#disasm
@@ -65,7 +66,8 @@ void DriverTest()
 
 
 void InitPaging()
-	prints("Paging")
+	if VerbosityLevel >= 1
+		prints("Paging")
 	// 8 mb flat paging
 	int p[0]* = _i2p(KERNEL_PAGE_DIRECTORY)
 	for int i, 0, 1024
@@ -90,7 +92,8 @@ void InitPaging()
 		jmp _flush
 		_flush:
 	}
-	prints(" ok\n")
+	if VerbosityLevel >= 1
+		prints(" ok\n")
 
 void PagingTest()
 	printh(_i2p(0x007ff000), 256)

@@ -1,0 +1,58 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "tasks.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+const int TASK_SWITCH_DT = 20 // ms
+
+bool SchedulerEnabled
+
+
+void int_timer()
+	while true
+		if SchedulerEnabled
+		
+			int pid_cur = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+			int pid_next = GetNextTask(pid_cur)
+			GlobalDescriptorTable[Task[pid_cur].desc].set_busy(false)
+			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			TimerTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+			RunningPid = pid_next
+	/*		if next != last
+				prints("<")
+				prints(Task[pid_cur].name)
+				prints(",")
+				prints(Task[pid_next].name)
+				//printi(pid_next)
+				prints(">")*/
+
+		// weitere Aufrufe erlauben
+		outportb(0x20,0x20)
+
+		// zurück
+		asm{
+			iret
+		}
+
+void InitTimer()
+	// ticks/s: 1193180
+	// 100Hz:   11932 = 0x2e9c
+	int ticks_per_sec = 1193180
+	int ticks_till_irq = (ticks_per_sec >> 10) * TASK_SWITCH_DT
+	if ticks_till_irq > 0xffff
+		ticks_till_irq = 0xffff
+	//1/0
+	outportb(0x43, 0x34)
+	outportb(0x40, ticks_till_irq) //0x9c)
+	outportb(0x40, ticks_till_irq >> 8) //0x2e)
+
+void StartScheduler()
+	SchedulerEnabled = false
+	if VerbosityLevel >= 1
+		prints("starte Scheduler\n")
+	InitTimer()
+	SchedulerEnabled = true
+	TimerTask.run_forced()
+

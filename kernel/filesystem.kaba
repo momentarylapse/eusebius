@@ -185,7 +185,8 @@ class FileSystemData
 		s[l] = 0
 		
 	void Mount(PartitionData p, FileEntry *dir)
-		prints("mounte...")
+		if VerbosityLevel >= 1
+			prints("mounte...")
 		Read(0, p.offset + 1, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
@@ -199,6 +200,7 @@ class FileSystemData
 			read_int() // NumParts = 1
 			e.offset = read_int()
 			e.num_clusters = read_int()
-		prints(" ok\n")
+		if VerbosityLevel >= 1
+			prints(" ok\n")
 
 FileSystemData FileSystem

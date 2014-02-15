@@ -10,6 +10,9 @@ use "base.kaba"
 void *VideoMemory
 char TextColor, TextColor2
 int TextPos, TextLine
+
+int VerbosityLevel
+
 const int SCREEN_WIDTH = 80
 const int SCREEN_HEIGHT = 25
 
@@ -22,6 +25,7 @@ void clrscr()
 	TextPos = 0
 
 void etm_init()
+	VerbosityLevel = 0
 	asm{
 		mov eax, 0x000b8000
 		mov VideoMemory, eax

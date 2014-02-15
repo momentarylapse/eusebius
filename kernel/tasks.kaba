@@ -72,7 +72,6 @@ void sys_close(TaskData *caller, int handle)
 const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
 const int NUM_PRE_GDT_ENTRIES = 5
-const int TASK_SWITCH_DT = 20 // ms
 const int KERNEL_PAGE_DIRECTORY = 0x00200000
 
 enum
@@ -253,7 +252,6 @@ int CurPid
 int RunningPid
 int UserMemMask
 bool InterruptsEnabled
-bool SchedulerEnabled
 
 class GlobalDescriptorData
 	int a, b
@@ -372,9 +370,9 @@ void idle_func()
 		}
 
 void InitTasks()
-	prints("init Tasks")
+	if VerbosityLevel >= 1
+		prints("init Tasks")
 	InterruptsEnabled = false
-	SchedulerEnabled = false
 	
 	// null descriptor
 	for int i, 0, NUM_PRE_GDT_ENTRIES + MAX_TASKS
@@ -426,7 +424,8 @@ void InitTasks()
 	}
 	// markiert das aktuelle TSS als "busy"!
 
-	prints("   ok\n")
+	if VerbosityLevel >= 1
+		prints("   ok\n")
 
 /*int sys_getpid()
 	asm{
