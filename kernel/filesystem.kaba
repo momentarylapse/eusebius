@@ -1,0 +1,204 @@
+#define __OS__
+use "base.kaba"
+use "ata.kaba"
+use "text_mode.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+class PartitionData
+	int offset, size
+	char type
+	bool active
+	
+PartitionData Partition[4]
+int CurrentPartition
+
+void ReadPartitions(int disk_no)
+	// mbr lesen
+	Ata.ReadSector(disk_no,0,1,&Ata.Buffer)
+	//MountPartition=false
+	for int n, 0, 4
+		PartitionData *p = &Partition[n]
+		int *offset = &Ata.Buffer[454+n*16]
+		p.offset = *offset / 4
+		int *size = &Ata.Buffer[458+n*16]
+		p.size = *size / 4
+		p.type = Ata.Buffer[450+n*16]
+		p.active = (Ata.Buffer[446+n*16] == 0x80)
+	/*for n, 0, 512
+		DrawHex(n*3,2,&AtaBuffer[n],1)*/
+		
+void ShowPartitions()
+	prints("Primaere Partitionen:     Offset   Groesse\n")
+	for int n, 0, 4
+		PartitionData *p = &Partition[n]
+		prints("/dev/hda")
+		printi(n + 1)
+		if (p.type != 0x00) and (p.size > 0)
+			TextPos = 60
+			if p.active
+				prints("(aktiv)")
+			TextPos = 27
+			printi(p.offset)
+			TextPos = 36
+			printi(p.size)
+			TextPos = 50
+			if p.type == 0x83
+				prints("Linux")
+			else if p.type == 0x20
+				prints("MichiFS")
+			else if p.type == 0x0c
+				prints("Fat 32")
+			else if p.type == 0x0e
+				prints("Fat 16")
+			else if p.type == 0x07
+				prints("NTFS")
+			else if p.type == 0x0f
+				prints("Erweitert...")
+			else
+				printh(&p.type, 1)
+		else
+			TextPos = 50
+			prints("---")
+		prints("\n")
+
+//--------------------------------------------------------------
+// Dateisystem
+
+const int FILE_TYPE_FILE = 0
+const int FILE_TYPE_DIR = 1
+const int FILE_TYPE_CHAR = 8
+const int FILE_TYPE_BLOCK = 16
+
+
+class FileOperations
+	void *_open
+	void *_close
+	void *_read
+	void *_write
+
+class FileEntry
+	cstring name
+	int type
+	int size
+	int offset
+	int num_clusters
+	FileEntry *next
+	FileEntry *first_sub
+	FileOperations *op
+	
+	void add(FileEntry *e)
+		if first_sub
+			FileEntry *i = first_sub
+			while i.next
+				i = i.next
+			i.next = e
+		else
+			first_sub = e
+	void _show()
+		printi(type)
+		prints(" ")
+		printi(size)
+		prints(" ")
+		prints(name)
+		prints("\n")
+	
+	void show()
+		_show()
+		FileEntry *e = first_sub
+		while e
+			prints("    ")
+			e._show()
+			e = e.next
+	FileEntry *get_sub(cstring sname)
+		FileEntry *e = first_sub
+		while e
+			if strcmp(&sname, &e.name) == 0
+				return e
+			e = e.next
+		return nil
+
+class FileSystemData
+	FileEntry list[256] // TODO: dynamic memory
+	int list_size
+	FileEntry *root
+	
+	char buf[2048]
+	int buf_used
+	
+	FileEntry *add(cstring name, int type, FileEntry *parent)
+		FileEntry *e = &list[list_size]
+		list_size ++
+		strcpy(&e.name, &name)
+		e.type = type
+		e.next = nil
+		e.first_sub = nil
+		e.op = nil
+		if parent
+			parent.add(e)
+		return e
+	
+	void Init()
+		list_size = 0
+		root = add("-root-", FILE_TYPE_DIR, nil)
+	
+	FileEntry *get(cstring path)
+		if path[0] != '/'
+			return nil
+		if path[1] == 0
+			return root
+		FileEntry *e = root
+		cstring sub
+		int ppos = 1
+		bool has_more = true
+		while has_more
+			strcpy(&sub, &path[ppos])
+			cstring name
+			for int i, 0, 256
+				if (sub[i] == '/') or (sub[i] == 0)
+					has_more = (sub[i] == '/')
+					ppos += i + 1
+					name[i] = 0
+					break
+				name[i] = sub[i]
+			e = e.get_sub(name)
+			if !e
+				return nil
+		return e
+		
+	void Read(int disk_no, int cluster_offset, char buffer[0]*)
+		Ata.ReadSector(disk_no, cluster_offset * 4    , 1, &buffer[0])
+		Ata.ReadSector(disk_no, cluster_offset * 4 + 1, 1, &buffer[512])
+		Ata.ReadSector(disk_no, cluster_offset * 4 + 2, 1, &buffer[1024])
+		Ata.ReadSector(disk_no, cluster_offset * 4 + 3, 1, &buffer[1536])
+	
+	int read_int()
+		int *p = &buf[buf_used]
+		buf_used += 4
+		return *p
+	void read_str(cstring s)
+		int l = buf[buf_used] + buf[buf_used+1]*256
+		buf_used += 2
+		for int i, 0, l
+			s[i] = buf[buf_used + i]
+		buf_used += l
+		s[l] = 0
+		
+	void Mount(PartitionData p, FileEntry *dir)
+		prints("mounte...")
+		Read(0, p.offset + 1, &buf)
+		buf_used = 0
+		int NumFiles = read_int()
+		for int n, 0, NumFiles
+			cstring name
+			read_str(name)
+			FileEntry *e = add(name, FILE_TYPE_FILE, dir)
+			//e.type =
+			read_int()
+			e.size = read_int()
+			read_int() // NumParts = 1
+			e.offset = read_int()
+			e.num_clusters = read_int()
+		prints(" ok\n")
+
+FileSystemData FileSystem

@@ -1,0 +1,175 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "filesystem.kaba"
+use "base_mem.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+const int MAX_OPEN_FILES = 128
+
+
+//--------------------------------------------------------------
+// Dateizugriff
+
+class OpenFileData
+	bool used
+	FileEntry *entry
+	int pos_in_cluster
+	int cluster_no
+	char buffer[0]*
+
+OpenFileData OpenFile[MAX_OPEN_FILES]
+
+OpenFileData *get_handle()
+	for int i, 0, MAX_OPEN_FILES
+		if !OpenFile[i].used
+			OpenFile[i].used = true
+			return &OpenFile[i]
+	return nil
+
+
+
+OpenFileData *kernel_open(cstring filename)
+	OpenFileData *of = get_handle()
+	if !of
+		return nil
+	of.entry = FileSystem.get(filename)
+	if !of.entry
+		of.used = false
+		return nil
+	of.cluster_no = 0
+	of.pos_in_cluster = 0
+	if of.entry.type == FILE_TYPE_FILE
+		of.buffer = malloc(2048)
+		int p_offset = Partition[CurrentPartition].offset
+		FileSystem.Read(0, p_offset + of.entry.offset, of.buffer)
+	else if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._open
+		__temp_p2__ = of.entry
+		asm{
+			mov eax, __temp_p__
+			push __temp_p2__
+			call eax
+			sub esp, 0x04
+		}
+	return of
+
+
+int kernel_read(OpenFileData *of, char buffer[0]*, int size)
+	int r=0
+		
+	if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._read
+		__temp_p2__ = of.entry
+		__temp_p3__ = buffer
+		__temp_i__ = size
+		asm{
+			mov eax, __temp_p__
+			push __temp_i__
+			push __temp_p3__
+			push __temp_p2__
+			call eax
+			mov __temp_i__, eax
+			sub esp, 0x12
+		}
+		return __temp_i__
+		
+	if size > of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
+		size = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
+		
+	while size > 0
+	
+		// wieviel kann aus dem Puffer gelesen werden?
+		int cur_size = size
+		if cur_size > 2048 - of.pos_in_cluster
+			cur_size = 2048 - of.pos_in_cluster
+
+		// direkt lesen (aus dem Lese-Puffer kopieren)
+		memcpy(buffer, &of.buffer[of.pos_in_cluster], cur_size)
+		buffer = &buffer[cur_size]
+		of.pos_in_cluster += cur_size
+		r += cur_size
+		size -= cur_size
+		
+		if of.pos_in_cluster >= 2048
+			// nächsten Cluster einlesen
+			of.pos_in_cluster = 0
+			of.cluster_no ++
+			int cl = of.entry.offset + of.cluster_no
+			int p_offset = Partition[CurrentPartition].offset
+			FileSystem.Read(0, p_offset + cl, of.buffer)
+		
+	return r
+
+
+int kernel_write(OpenFileData *of, char buffer[0]*, int size)
+	int r=0
+
+	if !of.used
+		return -1
+		
+	if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._write
+		__temp_p2__ = of.entry
+		__temp_p3__ = buffer
+		__temp_i__ = size
+		asm{
+			mov eax, __temp_p__
+			push __temp_i__
+			push __temp_p3__
+			push __temp_p2__
+			call eax
+			mov __temp_i__, eax
+			sub esp, 0x12
+		}
+		return __temp_i__
+	return 0
+
+
+class dirent_struct
+	int struct_size
+	int size
+	int type
+	cstring name
+
+int kernel_getdents(OpenFileData *of, char buffer[0]*, int num)
+	if !of.used
+		return -1
+
+	if of.entry.type != FILE_TYPE_DIR
+		return -2
+	
+	FileEntry *e = of.entry.first_sub
+	for int i, 0, of.pos_in_cluster
+		e = e.next
+		if !e
+			return 0
+	dirent_struct *r = buffer
+	
+	if !e
+		return 0
+	r.struct_size = strlen(&e.name) + 13
+	r.size = e.size
+	r.type = e.type
+	strcpy(&r.name, &e.name)
+	of.pos_in_cluster ++
+	return 1
+
+
+void kernel_close(OpenFileData *of)
+	if !of.used
+		return
+	if of.entry.type == FILE_TYPE_FILE
+		free(of.buffer)
+	else if of.entry.type == FILE_TYPE_CHAR
+		__temp_p__ = of.entry.op._close
+		__temp_p2__ = of.entry
+		asm{
+			mov eax, __temp_p__
+			push __temp_p2__
+			call eax
+			sub esp, 0x04
+		}
+	of.used = false
+	of.entry = nil

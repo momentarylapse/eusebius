@@ -1,0 +1,53 @@
+#define __OS__
+use "base.kaba"
+
+
+//--------------------------------------------------------------
+// Speicher-"Verwaltung"	
+
+const int MEM_ALLOC_OFFSET = 0x00400000 // (4-2)=2mb Kernel-Variablen
+const int MAX_MEM_ALLOCS = 4096
+
+int NumMemAllocs
+class mem_alloc_t
+	int Offset,End
+mem_alloc_t MemAlloc[MAX_MEM_ALLOCS]
+
+
+// Speicherblöcke bleiben immer so sortiert, dass der Offset monoton mit dem Index steigt!
+void *malloc(int size)
+	// Anfang
+	int offset=MEM_ALLOC_OFFSET
+	int a=0
+	// suchen
+	while a<NumMemAllocs
+		if offset+size<MemAlloc[a].Offset
+			break
+		offset=MemAlloc[a].End
+		a ++
+	// hintere Allocs verschieben
+	int a2=NumMemAllocs-1
+	while a2>=a
+		MemAlloc[a2+1]=MemAlloc[a2]
+		a2--
+	// neuen Alloc einfuegen
+	MemAlloc[a].Offset=offset
+	MemAlloc[a].End=offset+size
+	NumMemAllocs++
+	return _i2p(offset)
+
+void free(void *mem)
+	int mem_i=_p2i(mem)
+	int a=0
+	int ae=-1
+	while (ae<0) or (a<NumMemAllocs)
+		if MemAlloc[a].Offset==mem_i
+			ae=a
+		a++
+	if ae>=0
+		a=ae
+		NumMemAllocs--
+		while a<NumMemAllocs
+			MemAlloc[a]=MemAlloc[a+1]
+			a++
+	
