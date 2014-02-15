@@ -54,6 +54,7 @@ class Job
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
+		vars.get("QM").value = status
 		if self != jobs.fg
 			print "[" + id + "] Fertig: " + cmd + "\n"
 		if status < -600//-652
@@ -72,6 +73,13 @@ class JobManager
 			if j.id >= id
 				id = j.id + 1
 		return id
+	Job *get(int id)
+		if (id == -1) and (job.num > 0)
+			return job[job.num - 1]
+		for j in job
+			if j.id == id
+				return j
+		return nil
 	Job *create(string c[], string cmd)
 		bool as_bg = (c[c.num - 1] == "&")
 		if as_bg
@@ -322,6 +330,23 @@ bool execute_job(string c[], string cmd)
 	Job *j = jobs.create(c, cmd)
 	return j
 
+void do_fg(string c[])
+	int id = -1
+	if c.num >= 2
+		id = c[1].int()
+	Job *j = jobs.get(id)
+	if j
+		jobs.fg = j
+	else
+		print "kein Job\n"
+
+void do_cd(string c[])
+	if c.num > 1
+		if chdir(c[1]) != 0
+			print "kein gueltiges Verzeichnis: " + c[1] + "\n"
+	else
+		print("Verzeichnis?\n")
+
 void exec(string cmd)
 	string cmd0 = cmd
 	string c[]
@@ -336,12 +361,10 @@ void exec(string cmd)
 		vars.show()
 	else if cc == "jobs"
 		jobs.show()
+	else if cc == "fg"
+		do_fg(c)
 	else if cc == "cd"
-		if c.num > 1
-			if chdir(c[1]) != 0
-				print "kein gueltiges Verzeichnis: " + c[1] + "\n"
-		else
-			print("Verzeichnis?\n")
+		do_cd(c)
 	else if cc == "exit"
 		exit(0)
 	else

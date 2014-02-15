@@ -16,6 +16,7 @@ void main()
 	if arg.num > 1
 		if kill(arg[1].int(), 9) < 0
 			print "kill: Prozess nicht gefunden\n"
+			exit(-1)
 	else
 		print "kill: kill <PID>\n"
 	exit(0)
