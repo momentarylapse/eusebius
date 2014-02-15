@@ -1,0 +1,505 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "filesystem.kaba"
+use "file_access.kaba"
+use "base_mem.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+
+
+const int MAX_OPEN_FILES_PER_TASK = 16
+
+
+
+//--------------------------------------------------------------
+// Dateizugriff
+
+
+int sys_open(TaskData *caller, cstring filename)
+	cstring long
+	caller.translate_file(long, filename)
+	OpenFileData *of = kernel_open(long)
+	if !of
+		return -1
+	int index = caller.set_handle(of)
+	if index < 0
+		kernel_close(of)
+	return index
+
+
+int sys_read(TaskData *caller, int handle, char buffer[0]*, int size)
+	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+		return -1
+
+	OpenFileData *of = caller.handle[handle]
+	if !of
+		return -1
+	return kernel_read(of, buffer, size)
+
+
+int sys_write(TaskData *caller, int handle, char buffer[0]*, int size)
+	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+		return -1
+
+	OpenFileData *of = caller.handle[handle]
+	if !of
+		return -1
+	return kernel_write(of, buffer, size)
+
+int sys_getdents(TaskData *caller, int handle, char buffer[0]*, int num)
+	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+		return -1
+
+	OpenFileData *of = caller.handle[handle]
+	if !of
+		return -1
+	return kernel_getdents(of, buffer, num)
+
+void sys_close(TaskData *caller, int handle)
+	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+		return
+	OpenFileData *of = caller.handle[handle]
+	if !of
+		return
+	kernel_close(of)
+	caller.handle[handle] = nil
+
+//--------------------------------------------------------------
+// Tasks
+
+const int MAX_TASKS = 256
+const int TASK_STACK_SIZE = 40960
+const int NUM_PRE_GDT_ENTRIES = 5
+const int TASK_SWITCH_DT = 20 // ms
+const int KERNEL_PAGE_DIRECTORY = 0x00200000
+
+enum
+	TASK_STATUS_UNUSED
+	TASK_STATUS_SLEEPING
+	TASK_STATUS_RUNNING
+	TASK_STATUS_WAITING
+	TASK_STATUS_ZOMBIE
+	//TASK_STATUS_DEAD
+
+class TaskStateSegment
+	int prev
+	void *esp0
+	int ss0
+	void *esp1
+	int ss1
+	void *esp2
+	int ss2
+	int cr3 // =PDPR
+	void *eip
+	int eflags // Iterrupt Flag
+	int eax
+	int ecx
+	int edx
+	int ebx
+	void *esp
+	void *ebp
+	int esi
+	int edi
+	int es, cs, ss, ds, fs, gs
+	int x, y
+	
+	
+	void set(void *stack_pos, int _cs, int _ds, int pvl, int page_dir, void *task)
+		int _ss = _ds
+		prev = 0 // previous TSS (dynamisch)
+		esp0 = stack_pos
+		ss0 = _ss * 8
+		esp1 = stack_pos
+		ss1 = _ss * 8
+		esp2 = stack_pos
+		ss2 = _ss * 8
+		cr3 = page_dir
+		eip = task
+		eflags = 0x200 + pvl * 0x1000 // IterruptFlag + PVL
+		eax = 0
+		ecx = 0
+		edx = 0
+		ebx = 0
+		esp = stack_pos
+		ebp = stack_pos
+		esi = 0
+		edi = 0
+		es = _ds * 8
+		cs = _cs * 8
+		ss = _ss * 8
+		ds = _ds * 8
+		fs = _ds * 8
+		gs = _ds * 8
+		x = 0
+		y = 0
+
+int TaskCallData[2]
+
+enum
+	WAITING_MODE_TASK_EXIT
+	WAITING_MODE_FILE_READ
+
+class TaskData
+	TaskStateSegment tss
+	int stack[0]*
+	int desc // Index in GDT
+	int pid, status
+	int return_status
+	int *wait_target
+	int waiting_mode, waiting_param
+	TaskData *parent
+	cstring name
+	cstring arg
+	cstring cur_dir
+	int mem_offset
+	bool kernel_mode
+	OpenFileData *handle[MAX_OPEN_FILES_PER_TASK]
+	void __assign__(TaskData o)
+		nil
+	
+	void start()
+		status = TASK_STATUS_RUNNING
+	
+	// nur um einmalig den Scheduler zu starten
+	void run_forced()
+		/*prints("springe in ")
+		printi(t.pid)
+		prints(t.name)*/
+		// "Task Gate Descriptor" ---- falsch, kein gate!
+		TaskCallData[0] = 0
+		TaskCallData[1] = 8 * desc
+		//printi(t.desc)
+		//prints(":\n")
+		__temp_p__ = &TaskCallData[0]
+
+		// in Task springen
+		//t.status = TASK_STATUS_RUNNING
+		asm{
+			mov eax, __temp_p__
+			//db 0xff
+			//db 0x28
+			//jmp_far [eax]
+			db 0xff
+			db 0x18
+			//call_far [eax]
+			//jmp_far 0x004000000000 //0x0040:0x00000000
+		}
+	int addr2kernel(int addr)
+		if addr < 0x00800000
+			return addr
+		return mem_offset + addr - 0x00800000
+	int addr2task(int addr)
+		if addr < 0x00800000
+			return addr
+		return addr - mem_offset + 0x00800000
+	
+	int set_cur_dir(cstring *dir)
+		FileEntry *e = get_file(*dir)
+		if !e
+			return -1
+		if e.type != FILE_TYPE_DIR
+			return -2
+		if (*dir)[0] == '/'
+			strcpy(&cur_dir, dir)
+		else
+			strcat(&cur_dir, dir)
+		if cur_dir[strlen(&cur_dir) - 1] != '/'
+			strcat(&cur_dir, &"/")
+		return 0
+	
+	void translate_file(cstring out, cstring in)
+		if in[0] == '/'
+			strcpy(&out, &in)
+		else
+			strcpy(&out, &cur_dir)
+			strcat(&out, &in)
+		
+	FileEntry *get_file(cstring path)
+		if path[0] == '/'
+			return FileSystem.get(path)
+		cstring long
+		strcpy(&long, &cur_dir)
+		strcat(&long, &path)
+		return FileSystem.get(long)
+		
+	int set_handle(OpenFileData *h)
+		for int i, 0, MAX_OPEN_FILES_PER_TASK
+			if !handle[i]
+				handle[i] = h
+				return i
+		return -1
+
+	void make_zombie()
+		status = TASK_STATUS_ZOMBIE
+		for int i, 0, MAX_OPEN_FILES_PER_TASK
+			if handle[i]
+				kernel_close(handle[i])
+				handle[i] = nil
+		if !kernel_mode
+			free_user_mem(mem_offset)
+
+	void clean_up_deep()
+		make_zombie()
+		status = TASK_STATUS_UNUSED
+	
+TaskData Task[MAX_TASKS]
+TaskData *KernelTask
+TaskData *IdleTask
+TaskData *TimerTask
+TaskData *SysCallTask
+int CurPid
+int RunningPid
+int UserMemMask
+bool InterruptsEnabled
+bool SchedulerEnabled
+
+class GlobalDescriptorData
+	int a, b
+	void set_base(int base, int limit, bool gran)
+		a = (base << 16) + (limit & 0xffff) // base[15..0] limit[15..0]
+		b = (base & 0xff000000) + (limit & 0x0f0000) + ((base >> 16) & 0xff)  // base[31..24],..limit[19..16] not busy, base[23..16]
+		b += 0x00008000 // present
+		if gran
+			b += 0x00800000
+	void set_data(int base, int limit, bool executable, int pvl)
+		set_base(base, limit >> 12, true)
+		b += 0x00401200
+		if executable
+			b += 0x00000800
+		b += 0x00002000 * pvl
+	void set_task(TaskData *t)
+		set_base(_p2i(&t.tss), 103, false)
+		b += 0x00000900 // not busy
+	void set_busy(bool busy)
+		if busy
+			b = b | 0x200
+		else
+			b = b & 0xfffffdff
+
+GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
+
+void CreateUserPaging(int mem_offset, int dir_pos)
+	// 8 mb kernel + 8 mb user
+	int p[0]* = _i2p(dir_pos)
+	for int i, 0, 1024
+		p[i] = 0
+	for int i, 0, 4
+		p[i] = dir_pos + 0x00001000 * (i + 1) + 7
+	// kernel pages (1:1)
+	for int n, 0, 2
+		p = _i2p(dir_pos + 0x00001000 * (n + 1))
+		for int i, 0, 1024
+			p[i] = 0x00001000 * i + 7 + n * 0x00400000
+	// user pages
+	for int n, 0, 2
+		p = _i2p(dir_pos + 0x00001000 * (n + 3))
+		for int i, 0, 1024
+			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
+
+int get_user_mem()
+	for int i, 0, MAX_TASKS
+		int mask = 1 << i
+		if (UserMemMask & mask) == 0
+			UserMemMask = UserMemMask | mask
+			//prints("u")
+			//printi(i)
+			return (i + 1) * 0x00800000
+	return 0
+
+void free_user_mem(int p)
+	int n = (p / 0x00800000) - 1
+	//prints("fu")
+	//printi(n)
+	int mask = 0xffffffff - (1 << n)
+	UserMemMask = UserMemMask & mask
+
+int get_next_pid()
+	for int i, CurPid, MAX_TASKS
+		if Task[i].status == TASK_STATUS_UNUSED
+			CurPid = i + 1
+			return i
+	for int i, 0, CurPid
+		if Task[i].status == TASK_STATUS_UNUSED
+			CurPid = i + 1
+			return i
+	return -1
+
+TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
+	int pid = get_next_pid()
+	TaskData *t = &Task[pid]
+	t.pid = pid
+
+	strcpy(&t.name, &name)
+	t.desc = NUM_PRE_GDT_ENTRIES + pid
+	t.status = TASK_STATUS_SLEEPING
+	if parent
+		strcpy(&t.cur_dir, &parent.cur_dir)
+	else
+		strcpy(&t.cur_dir, &"/")
+	t.parent = parent
+	t.kernel_mode = kernel_mode
+	if kernel_mode
+		t.mem_offset = 0
+		t.stack = malloc(TASK_STACK_SIZE)
+		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
+	else
+		t.stack = _i2p(0x00c00000)
+		t.mem_offset = get_user_mem()
+		int dir_pos = t.mem_offset + 0x10000
+		CreateUserPaging(t.mem_offset, dir_pos)
+		t.tss.set(t.stack, 3, 4, /*3*/ 0, dir_pos, func)
+	GlobalDescriptorTable[t.desc].set_task(t)
+
+	return t
+
+// Scheduler
+int GetNextTask(int pid)
+	for int i, pid + 1, MAX_TASKS
+		if Task[i].status == TASK_STATUS_RUNNING
+			return i
+	for int i, 0, pid+1
+		if Task[i].status == TASK_STATUS_RUNNING
+			return i
+	return IdleTask.pid
+
+void idle_func()
+	while true
+		//prints("-idle-")
+		asm{
+			hlt
+		}
+
+void InitTasks()
+	prints("init Tasks")
+	InterruptsEnabled = false
+	SchedulerEnabled = false
+	
+	// null descriptor
+	for int i, 0, NUM_PRE_GDT_ENTRIES + MAX_TASKS
+		GlobalDescriptorTable[i].a = 0x00000000
+		GlobalDescriptorTable[i].b = 0x00000000
+	// kernel code
+	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true, 0)
+	// kernel data
+	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false, 0)
+	// user code
+	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 0)//3)
+	// user data
+	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
+
+	for int i, 0, MAX_TASKS
+		Task[i].status = TASK_STATUS_UNUSED
+		for int j, 0, MAX_OPEN_FILES_PER_TASK
+			Task[i].handle[j] = nil
+
+	CurPid = 0
+	UserMemMask = 0
+	RunningPid = 0
+
+	KernelTask = AddTask("kernel", nil, true, nil)
+	IdleTask = AddTask("idle", &idle_func, true, KernelTask)
+	
+	// GDT laden
+	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
+	__temp_p__ = &GlobalDescriptorTable
+	asm{
+		jmp _after_gdt_data
+		_gdtr:
+		dw 0x0000
+		_gdtr_base:
+		dd 0x00000000
+		_after_gdt_data:
+		mov eax, __temp_i__
+		mov [_gdtr], eax
+		mov eax, __temp_p__
+		mov [_gdtr_base], eax
+		lgdt [_gdtr]
+	}
+
+	//prints("\n  setze Kernel-Task-Register")
+	__temp_i__ = KernelTask.desc * 8
+	asm{
+		mov eax, __temp_i__ // Descriptor[n]
+		ltr ax
+	}
+	// markiert das aktuelle TSS als "busy"!
+
+	prints("   ok\n")
+
+/*int sys_getpid()
+	asm{
+		xor, eax, eax
+		str ax
+		mov __temp_i__, eax
+	}
+	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES*/
+
+			
+
+int sys_execute(TaskData *caller, cstring filename)
+	int h = sys_open(caller, filename)
+	if h < 0
+		return -1
+	TaskData *t = AddTask(filename, _i2p(0x00a00000), false, caller)
+	/*prints("<<")
+	printi(caller.pid)
+	prints(" -> ")
+	printi(t.pid)
+	prints(">>")*/
+	memcpy(&t.arg, &filename, sizeof(cstring))
+	cstring *p = _i2p(t.mem_offset + 0x00200000)
+	while true
+		int r = sys_read(caller, h, p, 1024)
+		if r <= 0
+			break
+		p = &p[r]
+	sys_close(caller, h)
+	
+	t.start()
+	return t.pid
+
+void sys_exit(TaskData *caller, int r)
+	caller.return_status = r
+	caller.make_zombie()
+	for int i, 0, MAX_TASKS
+		if Task[i].status == TASK_STATUS_WAITING
+			if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param == caller.pid
+				Task[i].tss.eax = 0// // return waitpid()
+				*Task[i].wait_target = r
+				caller.clean_up_deep()
+				Task[i].start()
+
+int sys_waitpid(TaskData *caller, int pid, int *status, int options)
+	if pid < 0 or pid >= MAX_TASKS
+		return -1
+	TaskData *t = &Task[pid]
+	if t.status == TASK_STATUS_UNUSED
+		return -1
+	if t.status == TASK_STATUS_ZOMBIE
+		*status = t.return_status
+		t.clean_up_deep()
+		caller.start()
+		return 0
+	if (options & 1) > 0
+		return -2
+	caller.wait_target = status
+	caller.status = TASK_STATUS_WAITING
+	caller.waiting_mode = WAITING_MODE_TASK_EXIT
+	caller.waiting_param = pid
+	return 0
+
+int sys_kill(TaskData *caller, int pid, int signal)
+	if pid < 0 or pid >= MAX_TASKS
+		return -1
+	TaskData *t = &Task[pid]
+	if t.status == TASK_STATUS_UNUSED
+		return -1
+	if signal == 9
+		t.clean_up_deep()
+	else if signal == 19
+		t.status = TASK_STATUS_SLEEPING
+	else if signal == 18
+		t.status = TASK_STATUS_RUNNING
+	return 0

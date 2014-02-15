@@ -118,3 +118,18 @@ void InitDrivers()
 	dev_tty_ops._write = &dev_tty_write
 	dev_tty.op = &dev_tty_ops
 	
+
+
+void int_key()
+	while true
+		outportb(0x20, 0x20)
+		int k = inportb(0x60)
+		/*prints("<IRQ ")
+		printi(k)
+		prints(">")*/
+		if dev_key_num < 64
+			dev_key_buf[dev_key_num] = k
+			dev_key_num ++
+		asm{
+			iret
+		}

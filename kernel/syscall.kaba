@@ -1,0 +1,130 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "filesystem.kaba"
+use "file_access.kaba"
+use "base_mem.kaba"
+use "tasks.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+
+void sys_showstats()
+	prints("------------------------------\nMem: ")
+	printh(&UserMemMask, 2)
+	TextPos = 16
+	printi(MemAlloc[NumMemAllocs-1].End - MemAlloc[0].Offset)
+	prints("\n")
+	for int i, 0, MAX_TASKS
+		if Task[i].status != TASK_STATUS_UNUSED
+			printi(i)
+			TextPos = 3
+			prints(Task[i].name)
+			TextPos = 20
+			if Task[i].kernel_mode
+				prints("K")
+			else
+				prints("U")
+			TextPos = 23
+			if Task[i].status == TASK_STATUS_RUNNING
+				prints("R")
+			else if Task[i].status == TASK_STATUS_SLEEPING
+				prints("S")
+			else if Task[i].status == TASK_STATUS_WAITING
+				prints("W")
+			else if Task[i].status == TASK_STATUS_ZOMBIE
+				prints("Z")
+			else
+				printi(Task[i].status)
+			prints("\n")
+
+	
+void int_syscall()
+	asm{
+		cli
+	}
+	while true
+		//show_pvl()
+		int r = 0
+		
+		int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		TaskData *caller = &Task[pid]
+		//printi(pid)
+		int index = caller.tss.eax
+		int param1 = caller.tss.ebx
+		int param2 = caller.tss.ecx
+		int param3 = caller.tss.edx
+	
+		if index == 1 // exit
+			sys_exit(caller, param1)
+		else if index == 3 // read
+			cstring *p = _i2p(caller.addr2kernel(param2))
+			r = sys_read(caller, param1, p, param3)
+		else if index == 4 // write
+			p = _i2p(caller.addr2kernel(param2))
+			r = sys_write(caller, param1, p, param3)
+		else if index == 5 // open
+			p = _i2p(caller.addr2kernel(param1))
+			r = sys_open(caller, *p)
+		else if index == 6 // close
+			sys_close(caller, param1)
+		else if index == 7 // waitpid
+			p = _i2p(caller.addr2kernel(param2))
+			r = sys_waitpid(caller, param1, p, param3)
+		else if index == 11 // exec
+			p = _i2p(caller.addr2kernel(param1))
+			r = sys_execute(caller, *p)
+		else if index == 12 // chdir
+			p = _i2p(caller.addr2kernel(param1))
+			r = caller.set_cur_dir(p)
+		else if index == 20 // getpid
+			r = pid
+		else if index == 37 // kill
+			r = sys_kill(caller, param1, param2)
+		else if index == 141 // getdents
+			p = _i2p(caller.addr2kernel(param2))
+			r = sys_getdents(caller, param1, p, param3)
+		else if index == 183 // getcwd
+			p = _i2p(caller.addr2kernel(param1))
+			strcpy(p, &caller.cur_dir)
+		else if index == 0x2001 // getarg
+			r = caller.addr2task(_p2i(&caller.arg))
+		else if index == 0x2002 // prints
+			p = _i2p(caller.addr2kernel(param1))
+		else if index == 0x2003 // showstats
+			sys_showstats()
+		else
+			prints("<<")
+			printi(index)
+			prints(">>")
+		/*TextColor = 4
+		prints("<<")
+		prints(caller.name)
+		prints(":")
+		printi(index)
+		prints(">>")
+		TextColor = 7*/
+		//while true
+		//	nil
+		
+		// task switch?
+		if caller.status != TASK_STATUS_RUNNING
+			GlobalDescriptorTable[caller.desc].set_busy(false)
+			int pid_next = GetNextTask(pid)
+			/*prints("<<")
+			printi(pid_next)
+			prints(">>")*/
+			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			SysCallTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+			RunningPid = pid_next
+
+		// zurück
+		caller.tss.eax = r
+		if InterruptsEnabled
+			asm{
+				sti
+			}
+		asm{
+			iret
+			cli
+		}

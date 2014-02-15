@@ -1,0 +1,244 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "filesystem.kaba"
+use "file_access.kaba"
+use "base_mem.kaba"
+use "tasks.kaba"
+use "std_char_devs.kaba"
+use "syscall.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+
+//--------------------------------------------------------------
+// Interrupts
+
+
+void int_handler(int i)
+	if !Task[RunningPid].kernel_mode
+		sys_exit(&Task[RunningPid], i-666)
+		asm{
+			sti
+		}
+		while true
+			nil
+	cstring s, nn
+	strcpy(&s, &"Int ")
+	_i2s(i, &nn)
+	strcat(&s, &nn)
+	if i==0
+		strcat(&s, &": Division durch Null")
+	if i==1
+		strcat(&s, &": Debug")
+	if i==3
+		strcat(&s, &": Breakpoint")
+	if i==4
+		strcat(&s, &": Overflow")
+	if i==5
+		strcat(&s, &": Bounds Check")
+	if i==6
+		strcat(&s, &": Invalider Opcode")
+	if i==7
+		strcat(&s, &": kein Ko-Prozessor")
+	if i==8
+		strcat(&s, &": System-Fehler")
+	if i==9
+		strcat(&s, &": Ko-Prozessor-Segment overrun")
+	if i==10
+		strcat(&s, &": Invalides TSS")
+	if i==11
+		strcat(&s, &": Segment fehlt")
+	if i==12
+		strcat(&s, &": Stack-Fehler")
+	if i==13
+		strcat(&s, &": General Protection Fault")
+	if i==14
+		strcat(&s, &": Page-Fault")
+	if i==16
+		strcat(&s, &": Koprozessor-Fehler")
+	strcat(&s, &"  8-P")
+	panic(s)
+
+void int_00()
+	int_handler(0)
+void int_01()
+	int_handler(1)
+void int_02()
+	int_handler(2)
+void int_03()
+	int_handler(3)
+void int_04()
+	int_handler(4)
+void int_05()
+	int_handler(5)
+void int_06()
+	int_handler(6)
+void int_07()
+	int_handler(7)
+void int_08()
+	int_handler(8)
+void int_09()
+	int_handler(9)
+void int_10()
+	int_handler(10)
+void int_11()
+	int_handler(11)
+void int_12()
+	int_handler(12)
+void int_13()
+	int_handler(13)
+void int_14()
+	int_handler(14)
+void int_15()
+	int_handler(15)
+void int_16()
+	int_handler(16)
+void int_XX()
+	int_handler(2004)
+
+class InterruptDescriptor
+	int a, b
+
+	void set(void *func)
+		if !func
+			a = 0
+			b = 0
+		else
+			int addr = _p2i(func)
+			// Interrupt Gate
+			a = 0x00080000 + (addr & 0xffff) // desc[1],addr[15..0]
+			b = (addr & 0xffff0000) + 0x00008e00 // addr[31..16],typ
+
+	TaskData *set_task(cstring name, void *func)
+		if !func
+			a = 0
+			b = 0
+		else
+			TaskData *t = AddTask(name, func, true, nil)
+			t.tss.eflags = 0x000 // Iterrupt Flag = 0
+
+			// Interrupt Task Gate
+			a = 0x00080000*t.desc // desc,0[15..0]
+			b = 0x00008500 // 0[31..16],typ
+			return t
+		return nil
+
+InterruptDescriptor InterruptDescriptorTable[256]
+
+
+void int_timer()
+	while true
+		if SchedulerEnabled
+		
+			int pid_cur = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+			int pid_next = GetNextTask(pid_cur)
+			GlobalDescriptorTable[Task[pid_cur].desc].set_busy(false)
+			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			TimerTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+			RunningPid = pid_next
+	/*		if next != last
+				prints("<")
+				prints(Task[pid_cur].name)
+				prints(",")
+				prints(Task[pid_next].name)
+				//printi(pid_next)
+				prints(">")*/
+
+		// weitere Aufrufe erlauben
+		outportb(0x20,0x20)
+
+		// zurück
+		asm{
+			iret
+		}
+
+
+void InitInterrupts()
+	prints("lade Interrupt-Tabelle")
+
+	for int i, 0, 256
+		InterruptDescriptorTable[i].set(nil)
+
+	InterruptDescriptorTable[ 0].set(&int_00)
+	InterruptDescriptorTable[ 1].set(&int_01)
+	InterruptDescriptorTable[ 2].set(&int_02)
+	InterruptDescriptorTable[ 3].set(&int_03)
+	InterruptDescriptorTable[ 4].set(&int_04)
+	InterruptDescriptorTable[ 5].set(&int_05)
+	InterruptDescriptorTable[ 6].set(&int_06)
+	InterruptDescriptorTable[ 7].set(&int_07)
+	InterruptDescriptorTable[ 8].set(&int_08)
+	InterruptDescriptorTable[ 9].set(&int_09)
+	InterruptDescriptorTable[10].set(&int_10)
+	InterruptDescriptorTable[11].set(&int_11)
+	InterruptDescriptorTable[12].set(&int_12)
+	InterruptDescriptorTable[13].set(&int_13)
+	InterruptDescriptorTable[14].set(&int_14)
+	InterruptDescriptorTable[15].set(&int_15)
+	InterruptDescriptorTable[16].set(&int_16)
+	TimerTask = InterruptDescriptorTable[32].set_task("timer", &int_timer)
+	InterruptDescriptorTable[33].set_task("key", &int_key)
+	SysCallTask = InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
+	//InterruptDescriptorTable[0x80].set(&int_syscall)
+
+	// IRQs auf höhere Interrupts legen
+	outportb(0x20,0x11)
+	outportb(0xa0,0x11)
+	outportb(0x21,0x20)
+	outportb(0xa1,0x28)
+	outportb(0x21,0x04)
+	outportb(0xa1,0x02)
+	outportb(0x21,0x01)
+	outportb(0xa1,0x01)
+	outportb(0x21,0x00)
+	outportb(0xa1,0x00)
+	
+	__temp_p__ = &InterruptDescriptorTable
+
+	asm{
+		jmp _after_idt_data
+		_idtr:
+		dw 0x07ff
+		_idtr_base:
+		dd 0x00000000
+		_after_idt_data:
+		mov eax, __temp_p__
+		mov [_idtr_base], eax
+		cli
+		lidt [_idtr]
+		sti
+	}
+
+	/*outportb(0x70,0x08)
+	char c=inportb(0x71)
+	outportb(0x71,c|0x40)*/
+
+	/*prints("versuche boese Speicher-Operation...")
+
+	int i = 0
+	1/i
+	asm{
+		mov [0x00000000], eax
+	}*/
+	
+	InterruptsEnabled = true
+	prints("   ok\n")
+
+void InitTimer()
+	// ticks/s: 1193180
+	// 100Hz:   11932 = 0x2e9c
+	int ticks_per_sec = 1193180
+	int ticks_till_irq = (ticks_per_sec >> 10) * TASK_SWITCH_DT
+	if ticks_till_irq > 0xffff
+		ticks_till_irq = 0xffff
+	//1/0
+	outportb(0x43, 0x34)
+	outportb(0x40, ticks_till_irq) //0x9c)
+	outportb(0x40, ticks_till_irq >> 8) //0x2e)
+
+void StartScheduler()
+	prints("starte Scheduler\n")
+	InitTimer()
+	SchedulerEnabled = true
+	TimerTask.run_forced()

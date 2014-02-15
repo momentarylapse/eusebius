@@ -1,5 +1,6 @@
 #define __OS__
 use "base.kaba"
+#define __STRING_CONST_AS_CSTRING__
 
 
 
@@ -114,3 +115,16 @@ int printh(cstring *data,int size)
 	int x
 	for x, 0, 100000
 		nil*/
+		
+
+
+void panic(cstring s)
+	asm{
+		cli
+	}
+	TextColor=0x04
+	prints("\n\n                   --  Panik  --\n\n")
+	prints(s)
+	while true
+		nil
+
