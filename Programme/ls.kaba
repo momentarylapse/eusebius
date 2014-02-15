@@ -1,15 +1,4 @@
-#define __OS__
-#define __CODE_ORIGIN__ 0x00a00000
-#define __VARIABLE_OFFSET__ 0x00a40000
-#define __ADD_ENTRY_POINT__
-
-extern void init_lib()
-
-extern void exit(int r)
-extern int lib_error
-extern void get_args(string arg[])
-extern string getcwd()
-extern void cs2s(cstring cs, string s)
+use "prog_header.kaba"
 
 
 string i2s2(int i, int n)

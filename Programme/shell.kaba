@@ -1,24 +1,5 @@
-#define __OS__
-#define __CODE_ORIGIN__ 0x00a00000
-#define __VARIABLE_OFFSET__ 0x00a40000
-#define __ADD_ENTRY_POINT__
+use "prog_header.kaba"
 
-extern void init_lib()
-extern int *malloc_first_free
-
-extern int stdin, stdout
-
-extern void exit(int r)
-extern int execute(string arg[])
-extern int open(string filename)
-extern void close(int h)
-extern int read(int h, cstring *buf, int size)
-extern int write(int h, cstring *buf, int size)
-extern int getpid()
-extern string getcwd()
-extern int chdir(string dir)
-extern int waitpid(int pid, void *status, bool block)
-extern int kill(int pid, int signal)
 
 bool shift
 
