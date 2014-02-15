@@ -336,7 +336,20 @@ void do_fg(string c[])
 		id = c[1].int()
 	Job *j = jobs.get(id)
 	if j
+		kill(j.pid, 18)
 		jobs.fg = j
+		print j.cmd + "\n"
+	else
+		print "kein Job\n"
+
+void do_bg(string c[])
+	int id = -1
+	if c.num >= 2
+		id = c[1].int()
+	Job *j = jobs.get(id)
+	if j
+		kill(j.pid, 18)
+		print "im Hintergrund: " + j.cmd + "\n"
 	else
 		print "kein Job\n"
 
@@ -363,6 +376,8 @@ void exec(string cmd)
 		jobs.show()
 	else if cc == "fg"
 		do_fg(c)
+	else if cc == "bg"
+		do_bg(c)
 	else if cc == "cd"
 		do_cd(c)
 	else if cc == "exit"
@@ -377,13 +392,25 @@ void exec(string cmd)
 		print("unbekannter Befehl: " + cc + "\n")
 
 void process(int k)
-	if jobs.fg
-		return
 	if (k & 0x80) > 0
 		if k == 0xaa or k == 0xb6
 			shift = false
 		return
+	if k == 0x2a or k == 0x36
+		shift = true
 	int c = getchar(k)
+	if jobs.fg
+		if c == 0x5a // 'Z'
+			kill(jobs.fg.pid, 19)
+			jobs.fg = nil
+			print "angehalten\n"
+			prompt()
+		if c == 0x43 // 'C'
+			kill(jobs.fg.pid, 9)
+			jobs.test_all()
+			prompt()
+		return
+		
 	if c == 0x0a // '\n'
 		print("\n")
 		jobs.test_all()
@@ -396,8 +423,6 @@ void process(int k)
 		s.add(c)
 		print(s)
 		command.add(c)
-	else if k == 0x2a or k == 0x36
-		shift = true
 	//else
 	//	printh(&k, 2)
 
@@ -423,19 +448,18 @@ void main()
 				nil
 			if jobs.fg
 				jobs.test_all()
+			cstring buf
+			int r = read(stdin, &buf, 1)
+			if r <= 0
+				continue
+			if buf[0] == 0xe0
+				escaped = true
 			else
-				cstring buf
-				int r = read(stdin, &buf, 1)
-				if r <= 0
-					continue
-				if buf[0] == 0xe0
-					escaped = true
-				else
-					int k = buf[0]
-					if escaped
-						k += 0xe000
-					process(k)
-					escaped = false
+				int k = buf[0]
+				if escaped
+					k += 0xe000
+				process(k)
+				escaped = false
 	close(stdin)
 	close(stdout)
 	

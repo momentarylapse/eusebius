@@ -13,10 +13,20 @@ void main()
 	string arg[]
 	get_args(arg)
 	
+	int signal = 9
+	int pid[]
+	
 	if arg.num > 1
-		if kill(arg[1].int(), 9) < 0
-			print "kill: Prozess nicht gefunden\n"
-			exit(-1)
+		for int i, 1, arg.num
+			int n = arg[i].int()
+			if n < 0
+				signal = -n
+			else
+				pid.add(n)
+		for p in pid
+			if kill(p, signal) < 0
+				print "kill: Prozess " + p + " nicht gefunden\n"
+				exit(-1)
 	else
 		print "kill: kill <PID>\n"
 	exit(0)

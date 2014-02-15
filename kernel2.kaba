@@ -1512,7 +1512,12 @@ int sys_kill(TaskData *caller, int pid, int signal)
 	TaskData *t = &Task[pid]
 	if t.status == TASK_STATUS_UNUSED
 		return -1
-	t.clean_up_deep()
+	if signal == 9
+		t.clean_up_deep()
+	else if signal == 19
+		t.status = TASK_STATUS_SLEEPING
+	else if signal == 18
+		t.status = TASK_STATUS_RUNNING
 	return 0
 
 
