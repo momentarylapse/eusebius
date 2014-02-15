@@ -1,3 +1,4 @@
+#define __OS__
 use "prog_header.kaba"
 
 void main()

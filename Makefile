@@ -13,8 +13,8 @@ test.o : test.kaba
 init.o : init.kaba
 	$(KABA) --x86 -o init.o init.kaba
 
-kernel2.o : kernel2.kaba
-	$(KABA) --x86 -o kernel2.o kernel2.kaba
+kernel/kernel.o : kernel/kernel.kaba kernel/base.kaba
+	$(KABA) --x86 -o kernel/kernel.o kernel/kernel.kaba
  
 loader_fake.o : loader_fake.kaba
 	$(KABA) --x86 -o loader_fake.o loader_fake.kaba
@@ -54,9 +54,9 @@ Programme/kalib.o: Programme/kalib.kaba
 
 kalib_symbols : Programme/kalib.o
 
-img.mfs: init.o kernel2.o Programme/hello.o Programme/shell.o Programme/cat.o Programme/echo.o Programme/kill.o Programme/top.o Programme/ls.o Programme/hd.o Programme/kalib.o
+img.mfs: init.o kernel/kernel.o Programme/hello.o Programme/shell.o Programme/cat.o Programme/echo.o Programme/kill.o Programme/top.o Programme/ls.o Programme/hd.o Programme/kalib.o
 	cp init.o mfs/000-init
-	cp kernel2.o mfs/001-kernel
+	cp kernel/kernel.o mfs/001-kernel
 	cp Programme/hello.o mfs/hello
 	cp Programme/shell.o mfs/shell
 	cp Programme/cat.o mfs/cat
@@ -75,5 +75,5 @@ bochs/c.img: bochs/c0.img img.mfs loader_fake.o
 	dd if=img.mfs of=bochs/c.img bs=512 seek=16 conv=notrunc
 
 clean:
-	rm -f *.o Programme/*.o bochs/c.img img.mfs
+	rm -f *.o kernel/*.o Programme/*.o bochs/c.img img.mfs
 
