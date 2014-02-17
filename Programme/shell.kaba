@@ -102,6 +102,8 @@ int getchar(int k)
 		return 0x0a // '\n'
 	if k == 0x39
 		return 0x20 // ' '
+	if k == 0x0e
+		return 0x7f // BACKSPACE
 	if shift
 		if k == 0x0b
 			return 0x3d // '='
@@ -400,8 +402,13 @@ void process(int k)
 		command.clear()
 		if !jobs.fg
 			prompt()
-	else if c > 0
+	else if c == 0x7f // BACKSPACE
 		string s
+		if command.num > 0
+			s.add(c)
+			print(s)
+			command.resize(command.num - 1)
+	else if c > 0
 		s.add(c)
 		print(s)
 		command.add(c)

@@ -1,0 +1,225 @@
+class BinaryFile : File
+	int xread(cstring *p, int size)
+		string r = read(size)
+		for int i, 0, r.num
+			p[i] = r[i]
+		return r.num
+
+class Word
+	char c[2]
+	int int()
+		int a = c[0]
+		int b = c[1]
+		return a + b * 256
+
+class Inode
+	Word rights
+	Word user
+	int size
+	int atime, ctime, mtime, dtime
+	Word group
+	Word hard_links
+	int blocks
+	int flags
+	int version
+	int iblock[15]
+	int file_version
+	int acl
+	int size_high
+	int dummy
+	int xx_high[3]
+	bool isDir()
+		return (rights.int() & 0xf000) == 0x4000
+	bool isFile()
+		return (rights.int() & 0xf000) == 0x8000
+
+class DirEntryHeader
+	int inode
+	Word rec_len
+	char name_len
+	char file_type
+
+class SuperBlock
+	int inodes_count
+	int blocks_count
+	int reserved_blocks_count
+	int free_blocks_count
+	int free_inodes_count
+	int first_data_block
+	int log_block_size
+	int log_cluster_size
+	int blocks_per_group
+	int obso_frags_per_group
+	int inodes_per_group
+	int mtime, wtime
+	Word mnt_count, max_mnt_count
+	Word magic
+	Word state
+	Word errors
+	Word minor_rev_level
+	int lastcheck, checkinterval
+	int creator_os
+	int rev_level
+	Word def_resuid, def_resgid
+	int first_ino
+	Word inode_size
+	Word block_group_nr
+	int feature_compat, feature_incompat, feature_ro_compat
+	char uuid[16]
+	char volume_name[16]
+	char last_mounted[64]
+	char _filler_[1024-200]
+
+class BlockGroupDescriptor
+	int block_bitmap
+	int inode_bitmap
+	int inode_table
+	Word free_blocks_count, free_inodes_count
+	Word used_dirs_count
+	Word flags
+	int exclude_bitmap
+	Word block_bitmap_csum, inode_bitmap_csum
+	Word itable_unused
+	Word checksum
+
+
+class Ext2Reader
+	BinaryFile *f
+	int block_size
+	int block_offset
+	int inodes_per_block
+	SuperBlock sb
+	BlockGroupDescriptor bg
+	bool readable, writable
+	
+	void testCompatibility()
+		readable = false
+		writable = false
+		if (sb.feature_incompat & 0xfffffffd) > 0
+			print "---- nicht lesbar ----"
+			print sb.feature_incompat
+			return
+		readable = true
+		if (sb.feature_ro_compat & 0xfffffffe) > 0
+			print "---- nicht schreibbar ----"
+			print sb.feature_ro_compat
+			return
+		writable = true
+	
+	void read(string filename)
+		f = FileOpen(filename)
+		if !f
+			return
+		f.setBinaryMode(true)
+	
+		f.seek(1024, true)
+		f.xread(&sb, sizeof(SuperBlock))
+		block_size = 1 << (sb.log_block_size + 10)
+		inodes_per_block = block_size / sizeof(Inode) //128
+		block_offset = 1024
+		if block_size == 1024
+			block_offset = 0
+	
+		f.seek(1024 + block_size, true)
+		f.xread(&bg, sizeof(BlockGroupDescriptor))
+		
+		//showMetaData()
+		testCompatibility()
+		if readable
+			print "Root:"
+			showInodeRecursive(2, 1)
+		
+		delete f
+	
+	string readBlock(int index)
+		f.seek(block_offset + block_size * index, true)
+		return f.read(block_size)
+	
+	void readInode(int index, Inode inode)
+		int group_no = (index - 1) / sb.inodes_per_group // 0...
+		int offset = (index - 1) % sb.inodes_per_group
+		// group_no!!!!!!!!!!!!!!
+		int pos = block_offset
+		pos += group_no * sb.blocks_per_group * block_size
+		pos += bg.inode_table * block_size
+		pos += offset * sizeof(Inode)
+		
+		f.seek(pos, true)
+		f.xread(&inode, sizeof(Inode))
+	
+	string readInodeContents(int index)
+		Inode inode
+		readInode(index, inode)
+		string r
+		int num_blocks = (inode.size-1) / block_size + 1
+		int size = num_blocks * block_size
+		int num_direct = min(num_blocks, 12)
+		for int i, 0, num_direct
+			r += readBlock(inode.iblock[i])
+		// indirect...
+		
+		r.resize(inode.size)
+		return r
+	
+	void showInodeRecursive(int index, int shift)
+		Inode inode
+		readInode(index, inode)
+		string indent
+		for int i, 0, shift
+			indent += "  "
+		string info = "s=" + inode.size
+		//print inode.mtime
+		if inode.isDir()
+			info += "  dir"
+		else if inode.isFile()
+			info += "  file"
+		else
+			info += "  ???"
+		info += "  i=" + index
+		print indent + info
+		if inode.isDir()
+			string cont = readInodeContents(index)
+			int p = 0
+			while p < cont.num
+				DirEntryHeader *d = &cont[p]
+				if d.rec_len.int() == 0
+					break
+				string name = cont.substr(p + 8, d.name_len)
+				info = "  " + name
+				//print "--"+name
+				info += "  i=" + d.inode
+				int ft = d.file_type
+				if ft == 2
+					info += "  dir"
+				else if ft == 1
+					info += "  file"
+				else
+					info += "  ???"
+				p += d.rec_len.int()
+				if name.num == 0 or d.inode == 0
+					continue
+				print indent + info
+				
+				if name != "." and name != ".."
+				//	if ft == 2 or ft == 1
+						showInodeRecursive(d.inode, shift + 2)
+			
+			//print cont.substr(0, 32).hex(false)
+	
+	void showMetaData()
+		print block_size
+		print "--------"
+		print sb.inodes_count
+		print sb.blocks_count
+		print sb.log_block_size
+		print sb.first_data_block
+		print sb.blocks_per_group
+		print sb.inodes_per_group
+		print "--------"
+		print bg.block_bitmap
+		print bg.inode_bitmap
+		print bg.inode_table
+
+void main(string arg[])
+	Ext2Reader r
+	r.read(arg[0])
