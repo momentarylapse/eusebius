@@ -12,7 +12,7 @@ use "paging.kaba"
 
 void sys_showstats()
 	prints("------------------------------\nMem:  ")
-	printi(Paging.get_used() * 4)
+	printi(Paging.get_used() / 1024)
 	prints("k von ")
 	printi(MemorySize / 1024)
 	prints("k       Heap:  ")
@@ -91,7 +91,9 @@ void int_syscall()
 			p = _i2p(caller.addr2kernel(param1))
 			strcpy(p, &caller.cur_dir)
 		else if index == 0x2001 // getarg
-			r = caller.addr2task(_p2i(&caller.arg))
+			p = _i2p(caller.addr2kernel(param1))
+			memcpy(p, &caller.arg, sizeof(cstring))
+			nil//r = caller.addr2task(_p2i(&caller.arg))
 		else if index == 0x2002 // prints
 			p = _i2p(caller.addr2kernel(param1))
 		else if index == 0x2003 // showstats

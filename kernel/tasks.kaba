@@ -186,13 +186,7 @@ class TaskData
 			//jmp_far 0x004000000000 //0x0040:0x00000000
 		}
 	int addr2kernel(int addr)
-		if addr < 0x00800000
-			return addr
-		return mem_offset + addr - 0x00800000
-	int addr2task(int addr)
-		if addr < 0x00800000
-			return addr
-		return addr - mem_offset + 0x00800000
+		return _addr2kernel(tss.cr3, addr)
 	
 	int set_cur_dir(cstring *dir)
 		FileEntry *e = get_file(*dir)

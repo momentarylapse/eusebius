@@ -204,25 +204,26 @@ int execute(string arg[])
 	return __temp_i__
 
 void get_args(lib__string@list arg)
+	cstring cs
+	__temp_p__ = &cs
 	asm{
 		mov eax, 0x00002001
+		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_p__, eax
 	}
-	cstring *cs = __temp_p__
 	lib__string s
 	
 	int p = 0
 	lib__string s
 	for int i, 0, 250
-		if (*cs)[i] == 0
+		if cs[i] == 0
 			if s.num == 0
 				break
 			arg.add(s)
 			s.clear()
 			p = i + 1
 		else
-			s.add((*cs)[i])
+			s.add(cs[i])
 
 int lib__clampi(int i, int min, int max)
 	if i > max
