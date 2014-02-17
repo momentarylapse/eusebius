@@ -1,0 +1,123 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "base_mem.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+const int PAGE_SIZE = 4096
+const int MAX_PAGE_MASKS = 32768 // 2^32 / PAGE_SIZE / 32
+// 1 mask = 32 pages = 128k
+
+const int KERNEL_PAGE_DIRECTORY = 0x00200000
+
+
+class PageController
+	int mask[MAX_PAGE_MASKS]
+	int num_masks
+	void init()
+		if VerbosityLevel >= 1
+			prints("Paging")
+		num_masks = MemorySize / PAGE_SIZE / 32
+		for int i, 0, num_masks
+			mask[i] = 0
+		
+		// reserve 8mb for kernel
+		for int i, 0, 64
+			mask[i] = 0xffffffff
+			
+			
+		// 8 mb flat paging
+		int p[0]* = _i2p(KERNEL_PAGE_DIRECTORY)
+		for int i, 0, 1024
+			p[i] = KERNEL_PAGE_DIRECTORY + 0x00001000 * (i + 1) + 7
+		for int n, 0, 16
+			p = _i2p(KERNEL_PAGE_DIRECTORY + 0x00001000 * (n + 1))
+			for int i, 0, 1024
+				p[i] = 0x00001000 * i + 7 + n * 0x00400000
+		
+		// :P
+		//p[1023] = 0x00012007
+	
+		__temp_i__ = KERNEL_PAGE_DIRECTORY
+		asm{
+			mov eax, __temp_i__
+			mov cr3, eax
+			mov eax, cr0
+			or eax, 0x80000000
+			mov cr0, eax
+		
+			// flush cpu prefetch
+			jmp _flush
+			_flush:
+		}
+		if VerbosityLevel >= 1
+			prints(" ok\n")
+		
+		
+	int alloc(int size)
+		int num_pages_req = (size + PAGE_SIZE - 1) / PAGE_SIZE
+		int num_masks_req = (num_pages_req + 31) / 32
+		for int i, 0, num_masks-num_masks_req
+			bool ok = true
+			for int j, 0, num_masks_req
+				if mask[i+j] != 0
+					ok = false
+					break
+			if ok
+				for int j, 0, num_masks_req
+					mask[i+j] = 0xffffffff
+				return i * PAGE_SIZE * 32
+		return 0
+
+	void free(int p, int size)
+		int offset = p / PAGE_SIZE / 32
+		int num_pages_req = (size + PAGE_SIZE - 1) / PAGE_SIZE
+		int num_masks_req = (num_pages_req + 31) / 32
+		for int j, 0, num_masks_req
+			mask[offset + j] = 0
+
+	int get_used()
+		int n = 0
+		for int i, 0, num_masks
+			if mask[i] != 0
+				n += 32
+		return n
+
+PageController Paging
+
+/*
+void CreateUserPaging(int mem_offset, int dir_pos)
+	// 8 mb kernel + 8 mb user
+	int p[0]* = _i2p(dir_pos)
+	for int i, 0, 1024
+		p[i] = 0
+	for int i, 0, 4
+		p[i] = dir_pos + 0x00001000 * (i + 1) + 7
+	// kernel pages (1:1)
+	for int n, 0, 2
+		p = _i2p(dir_pos + 0x00001000 * (n + 1))
+		for int i, 0, 1024
+			p[i] = 0x00001000 * i + 7 + n * 0x00400000
+	// user pages
+	for int n, 0, 2
+		p = _i2p(dir_pos + 0x00001000 * (n + 3))
+		for int i, 0, 1024
+			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
+
+int get_user_mem()
+	for int i, 0, MAX_TASKS
+		int mask = 1 << i
+		if (UserMemMask & mask) == 0
+			UserMemMask = UserMemMask | mask
+			//prints("u")
+			//printi(i)
+			return (i + 1) * 0x00800000
+	return 0
+
+void free_user_mem(int p)
+	int n = (p / 0x00800000) - 1
+	//prints("fu")
+	//printi(n)
+	int mask = 0xffffffff - (1 << n)
+	UserMemMask = UserMemMask & mask
+*/

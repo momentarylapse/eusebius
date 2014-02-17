@@ -10,6 +10,7 @@ use "tasks.kaba"
 use "interrupts.kaba"
 use "syscall.kaba"
 use "scheduler.kaba"
+use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 //#disasm
@@ -65,36 +66,6 @@ void DriverTest()
 	sys_close(h)*/
 
 
-void InitPaging()
-	if VerbosityLevel >= 1
-		prints("Paging")
-	// 8 mb flat paging
-	int p[0]* = _i2p(KERNEL_PAGE_DIRECTORY)
-	for int i, 0, 1024
-		p[i] = KERNEL_PAGE_DIRECTORY + 0x00001000 * (i + 1) + 7
-	for int n, 0, 16
-		p = _i2p(KERNEL_PAGE_DIRECTORY + 0x00001000 * (n + 1))
-		for int i, 0, 1024
-			p[i] = 0x00001000 * i + 7 + n * 0x00400000
-		
-	// :P
-	//p[1023] = 0x00012007
-	
-	__temp_i__ = KERNEL_PAGE_DIRECTORY
-	asm{
-		mov eax, __temp_i__
-		mov cr3, eax
-		mov eax, cr0
-		or eax, 0x80000000
-		mov cr0, eax
-		
-		// flush cpu prefetch
-		jmp _flush
-		_flush:
-	}
-	if VerbosityLevel >= 1
-		prints(" ok\n")
-
 void PagingTest()
 	printh(_i2p(0x007ff000), 256)
 
@@ -106,7 +77,7 @@ void main()
 	
 	prints("Willkommen zu Eusebius 0.2.4   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
-	printi(MemorySize)
+	printi(MemorySize / 1024)
 	prints("k\n")
 	
 	Ata.Init()
@@ -120,7 +91,7 @@ void main()
 		e.show()
 	FileSystem.root.show()*/
 	
-	InitPaging()
+	Paging.init()
 	
 	InitTasks()
 	

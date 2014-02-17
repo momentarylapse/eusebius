@@ -4,6 +4,7 @@ use "text_mode.kaba"
 use "filesystem.kaba"
 use "file_access.kaba"
 use "base_mem.kaba"
+use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -23,7 +24,7 @@ int sys_open(TaskData *caller, cstring filename)
 	OpenFileData *of = kernel_open(long)
 	if !of
 		return -1
-	int index = caller.set_handle(of)
+	int index = caller.add_handle(of)
 	if index < 0
 		kernel_close(of)
 	return index
@@ -72,7 +73,6 @@ void sys_close(TaskData *caller, int handle)
 const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
 const int NUM_PRE_GDT_ENTRIES = 5
-const int KERNEL_PAGE_DIRECTORY = 0x00200000
 
 enum
 	TASK_STATUS_UNUSED
@@ -152,7 +152,7 @@ class TaskData
 	cstring name
 	cstring arg
 	cstring cur_dir
-	int mem_offset
+	int mem_offset, mem_size
 	bool kernel_mode
 	OpenFileData *handle[MAX_OPEN_FILES_PER_TASK]
 	void __assign__(TaskData o)
@@ -223,7 +223,7 @@ class TaskData
 		strcat(&long, &path)
 		return FileSystem.get(long)
 		
-	int set_handle(OpenFileData *h)
+	int add_handle(OpenFileData *h)
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
 			if !handle[i]
 				handle[i] = h
@@ -237,7 +237,7 @@ class TaskData
 				kernel_close(handle[i])
 				handle[i] = nil
 		if !kernel_mode
-			free_user_mem(mem_offset)
+			Paging.free(mem_offset, mem_size)
 
 	void clean_up_deep()
 		make_zombie()
@@ -250,7 +250,6 @@ TaskData *TimerTask
 TaskData *SysCallTask
 int CurPid
 int RunningPid
-int UserMemMask
 bool InterruptsEnabled
 
 class GlobalDescriptorData
@@ -296,22 +295,6 @@ void CreateUserPaging(int mem_offset, int dir_pos)
 		for int i, 0, 1024
 			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
 
-int get_user_mem()
-	for int i, 0, MAX_TASKS
-		int mask = 1 << i
-		if (UserMemMask & mask) == 0
-			UserMemMask = UserMemMask | mask
-			//prints("u")
-			//printi(i)
-			return (i + 1) * 0x00800000
-	return 0
-
-void free_user_mem(int p)
-	int n = (p / 0x00800000) - 1
-	//prints("fu")
-	//printi(n)
-	int mask = 0xffffffff - (1 << n)
-	UserMemMask = UserMemMask & mask
 
 int get_next_pid()
 	for int i, CurPid, MAX_TASKS
@@ -344,7 +327,8 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
 	else
 		t.stack = _i2p(0x00c00000)
-		t.mem_offset = get_user_mem()
+		t.mem_size = 0x00800000
+		t.mem_offset = Paging.alloc(t.mem_size)
 		int dir_pos = t.mem_offset + 0x10000
 		CreateUserPaging(t.mem_offset, dir_pos)
 		t.tss.set(t.stack, 3, 4, /*3*/ 0, dir_pos, func)
@@ -393,7 +377,7 @@ void InitTasks()
 			Task[i].handle[j] = nil
 
 	CurPid = 0
-	UserMemMask = 0
+	//UserMemMask = 0
 	RunningPid = 0
 
 	KernelTask = AddTask("kernel", nil, true, nil)

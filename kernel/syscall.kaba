@@ -5,16 +5,19 @@ use "filesystem.kaba"
 use "file_access.kaba"
 use "base_mem.kaba"
 use "tasks.kaba"
+use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
 
 void sys_showstats()
-	prints("------------------------------\nMem: ")
-	printh(&UserMemMask, 2)
-	TextPos = 16
-	printi(MemAlloc[NumMemAllocs-1].End - MemAlloc[0].Offset)
-	prints("\n")
+	prints("------------------------------\nMem:  ")
+	printi(Paging.get_used() * 4)
+	prints("k von ")
+	printi(MemorySize / 1024)
+	prints("k       Heap:  ")
+	printi((MemAlloc[NumMemAllocs-1].End - MemAlloc[0].Offset) / 1024)
+	prints("k\n")
 	for int i, 0, MAX_TASKS
 		if Task[i].status != TASK_STATUS_UNUSED
 			printi(i)

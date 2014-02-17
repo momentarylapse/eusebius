@@ -5,7 +5,7 @@
 #define __STRING_CONST_AS_CSTRING__
 
 
-int MemorySize
+int MemorySize // in bytes
 
 
 //--------------------------------------------------------------
@@ -56,6 +56,7 @@ int inportd(int port)
 void read_data_from_init()
 	asm{
 		mov eax, [0x00005100]
+		shl eax, 0x0a
 		mov MemorySize, eax
 	}
 
