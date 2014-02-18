@@ -15,59 +15,6 @@ const int MAX_OPEN_FILES_PER_TASK = 16
 
 
 //--------------------------------------------------------------
-// Dateizugriff
-
-
-int sys_open(TaskData *caller, cstring filename)
-	cstring long
-	caller.translate_file(long, filename)
-	OpenFileData *of = kernel_open(long)
-	if !of
-		return -1
-	int index = caller.add_handle(of)
-	if index < 0
-		kernel_close(of)
-	return index
-
-
-int sys_read(TaskData *caller, int handle, char buffer[0]*, int size)
-	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-		return -1
-
-	OpenFileData *of = caller.handle[handle]
-	if !of
-		return -1
-	return kernel_read(of, buffer, size)
-
-
-int sys_write(TaskData *caller, int handle, char buffer[0]*, int size)
-	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-		return -1
-
-	OpenFileData *of = caller.handle[handle]
-	if !of
-		return -1
-	return kernel_write(of, buffer, size)
-
-int sys_getdents(TaskData *caller, int handle, char buffer[0]*, int num)
-	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-		return -1
-
-	OpenFileData *of = caller.handle[handle]
-	if !of
-		return -1
-	return kernel_getdents(of, buffer, num)
-
-void sys_close(TaskData *caller, int handle)
-	if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-		return
-	OpenFileData *of = caller.handle[handle]
-	if !of
-		return
-	kernel_close(of)
-	caller.handle[handle] = nil
-
-//--------------------------------------------------------------
 // Tasks
 
 const int MAX_TASKS = 256
@@ -154,7 +101,7 @@ class TaskData
 	cstring cur_dir
 	int mem_offset, mem_size
 	bool kernel_mode
-	OpenFileData *handle[MAX_OPEN_FILES_PER_TASK]
+	OpenFileData *handles[MAX_OPEN_FILES_PER_TASK]
 	void __assign__(TaskData o)
 		nil
 	
@@ -219,23 +166,146 @@ class TaskData
 		
 	int add_handle(OpenFileData *h)
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
-			if !handle[i]
-				handle[i] = h
+			if !handles[i]
+				handles[i] = h
 				return i
 		return -1
 
 	void make_zombie()
 		status = TASK_STATUS_ZOMBIE
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
-			if handle[i]
-				kernel_close(handle[i])
-				handle[i] = nil
+			if handles[i]
+				kernel_close(handles[i])
+				handles[i] = nil
 		if !kernel_mode
 			Paging.free(mem_offset, mem_size)
 
 	void clean_up_deep()
 		make_zombie()
 		status = TASK_STATUS_UNUSED
+		
+		
+
+//--------------------------------------------------------------
+// Dateizugriff
+
+
+	int sys_open(cstring filename)
+		cstring long
+		translate_file(long, filename)
+		OpenFileData *of = kernel_open(long)
+		if !of
+			return -1
+		int index = add_handle(of)
+		if index < 0
+			kernel_close(of)
+		return index
+
+
+	int sys_read(int handle, int addr, int size)
+		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+			return -1
+
+		OpenFileData *of = handles[handle]
+		if !of
+			return -1
+		return kernel_read(of, tss.cr3, addr, size)
+
+
+	int sys_write(int handle, int addr, int size)
+		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+			return -1
+
+		OpenFileData *of = handles[handle]
+		if !of
+			return -1
+		return kernel_write(of, tss.cr3, addr, size)
+
+	int sys_getdents(int handle, int addr, int num)
+		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+			return -1
+
+		OpenFileData *of = handles[handle]
+		if !of
+			return -1
+		return kernel_getdents(of, tss.cr3, addr, num)
+
+	void sys_close(int handle)
+		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+			return
+		OpenFileData *of = handles[handle]
+		if !of
+			return
+		kernel_close(of)
+		handles[handle] = nil
+	
+	int sys_execute(cstring filename)
+		int h = sys_open(filename)
+		if h < 0
+			return -1
+		TaskData *t = AddTask(filename, _i2p(0x00a00000), false, self)
+		/*prints("<<")
+		printi(caller.pid)
+		prints(" -> ")
+		printi(t.pid)
+		prints(">>")*/
+		memcpy(&t.arg, &filename, sizeof(cstring))
+		int addr = 0x00200000 + t.mem_offset // kernel space...
+		OpenFileData *of = handles[h]
+		while true
+			//int r = sys_read(caller, h, addr, 1024)
+			int r = kernel_read(of, KERNEL_PAGE_DIRECTORY, addr, 1024)
+			if r <= 0
+				break
+			addr += r
+		sys_close(h)
+	
+		t.start()
+		return t.pid
+
+	void sys_exit(int r)
+		return_status = r
+		make_zombie()
+		for int i, 0, MAX_TASKS
+			if Task[i].status == TASK_STATUS_WAITING
+				if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param == pid
+					Task[i].tss.eax = 0// // return waitpid()
+					*Task[i].wait_target = r
+					clean_up_deep()
+					Task[i].start()
+
+	int sys_waitpid(int _pid, int *_status, int options)
+		if _pid < 0 or _pid >= MAX_TASKS
+			return -1
+		TaskData *t = &Task[_pid]
+		if t.status == TASK_STATUS_UNUSED
+			return -1
+		if t.status == TASK_STATUS_ZOMBIE
+			*_status = t.return_status
+			t.clean_up_deep()
+			start()
+			return 0
+		if (options & 1) > 0
+			return -2
+		wait_target = _status
+		status = TASK_STATUS_WAITING
+		waiting_mode = WAITING_MODE_TASK_EXIT
+		waiting_param = _pid
+		return 0
+
+	int sys_kill(int _pid, int signal)
+		if _pid < 0 or _pid >= MAX_TASKS
+			return -1
+		TaskData *t = &Task[_pid]
+		if t.status == TASK_STATUS_UNUSED
+			return -1
+		if signal == 9
+			t.clean_up_deep()
+		else if signal == 19
+			t.status = TASK_STATUS_SLEEPING
+		else if signal == 18
+			t.status = TASK_STATUS_RUNNING
+		return 0
 	
 TaskData Task[MAX_TASKS]
 TaskData *KernelTask
@@ -368,7 +438,7 @@ void InitTasks()
 	for int i, 0, MAX_TASKS
 		Task[i].status = TASK_STATUS_UNUSED
 		for int j, 0, MAX_OPEN_FILES_PER_TASK
-			Task[i].handle[j] = nil
+			Task[i].handles[j] = nil
 
 	CurPid = 0
 	//UserMemMask = 0
@@ -415,68 +485,3 @@ void InitTasks()
 
 			
 
-int sys_execute(TaskData *caller, cstring filename)
-	int h = sys_open(caller, filename)
-	if h < 0
-		return -1
-	TaskData *t = AddTask(filename, _i2p(0x00a00000), false, caller)
-	/*prints("<<")
-	printi(caller.pid)
-	prints(" -> ")
-	printi(t.pid)
-	prints(">>")*/
-	memcpy(&t.arg, &filename, sizeof(cstring))
-	cstring *p = _i2p(t.mem_offset + 0x00200000)
-	while true
-		int r = sys_read(caller, h, p, 1024)
-		if r <= 0
-			break
-		p = &p[r]
-	sys_close(caller, h)
-	
-	t.start()
-	return t.pid
-
-void sys_exit(TaskData *caller, int r)
-	caller.return_status = r
-	caller.make_zombie()
-	for int i, 0, MAX_TASKS
-		if Task[i].status == TASK_STATUS_WAITING
-			if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param == caller.pid
-				Task[i].tss.eax = 0// // return waitpid()
-				*Task[i].wait_target = r
-				caller.clean_up_deep()
-				Task[i].start()
-
-int sys_waitpid(TaskData *caller, int pid, int *status, int options)
-	if pid < 0 or pid >= MAX_TASKS
-		return -1
-	TaskData *t = &Task[pid]
-	if t.status == TASK_STATUS_UNUSED
-		return -1
-	if t.status == TASK_STATUS_ZOMBIE
-		*status = t.return_status
-		t.clean_up_deep()
-		caller.start()
-		return 0
-	if (options & 1) > 0
-		return -2
-	caller.wait_target = status
-	caller.status = TASK_STATUS_WAITING
-	caller.waiting_mode = WAITING_MODE_TASK_EXIT
-	caller.waiting_param = pid
-	return 0
-
-int sys_kill(TaskData *caller, int pid, int signal)
-	if pid < 0 or pid >= MAX_TASKS
-		return -1
-	TaskData *t = &Task[pid]
-	if t.status == TASK_STATUS_UNUSED
-		return -1
-	if signal == 9
-		t.clean_up_deep()
-	else if signal == 19
-		t.status = TASK_STATUS_SLEEPING
-	else if signal == 18
-		t.status = TASK_STATUS_RUNNING
-	return 0

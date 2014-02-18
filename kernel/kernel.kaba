@@ -13,6 +13,8 @@ use "scheduler.kaba"
 use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
+const int KALIB_LOCATION = 0x00030000
+
 //#disasm
 
 void show_pvl()
@@ -28,17 +30,17 @@ void show_pvl()
 	prints("]")
 
 void LoadKaLib()
-	int h = sys_open(KernelTask, "/kalib")
+	int h = KernelTask.sys_open("/kalib")
 	if h < 0
 		panic("kann KaLib-Datei nicht lesen!")
 		return
-	cstring *p = _i2p(0x00030000)
+	int addr = KALIB_LOCATION
 	while true
-		int r = sys_read(KernelTask, h, p, 1024)
+		int r = KernelTask.sys_read(h, addr, 1024)
 		if r <= 0
 			break
-		p = &p[r]
-	sys_close(KernelTask, h)
+		addr += r
+	KernelTask.sys_close(h)
 
 /*void FileTest()
 	int h = sys_open("/test.txt")
@@ -106,7 +108,7 @@ void main()
 	
 	LoadKaLib()
 	
-	if sys_execute(KernelTask, "/shell") < 0
+	if KernelTask.sys_execute("/shell") < 0
 		panic("kann /shell-Datei nicht lesen!")
 	//sys_execute(KernelTask, "/hello")
 	//sys_execute(KernelTask, "/hello")

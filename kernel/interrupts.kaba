@@ -18,7 +18,7 @@ use "scheduler.kaba"
 
 void int_handler(int i)
 	if !Task[RunningPid].kernel_mode
-		sys_exit(&Task[RunningPid], i-666)
+		Task[RunningPid].sys_exit(i-666)
 		asm{
 			sti
 		}

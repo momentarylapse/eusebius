@@ -3,6 +3,7 @@ use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
 use "base_mem.kaba"
+use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -56,13 +57,14 @@ OpenFileData *kernel_open(cstring filename)
 	return of
 
 
-int kernel_read(OpenFileData *of, char buffer[0]*, int size)
+int kernel_read(OpenFileData *of, int dir_pos, int addr, int size)
 	int r=0
+	//cstring *buffer = _i2p(_addr2kernel(dir_pos, addr))
 		
 	if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._read
 		__temp_p2__ = of.entry
-		__temp_p3__ = buffer
+		__temp_p3__ = _i2p(_addr2kernel(dir_pos, addr))//buffer
 		__temp_i__ = size
 		asm{
 			mov eax, __temp_p__
@@ -86,11 +88,13 @@ int kernel_read(OpenFileData *of, char buffer[0]*, int size)
 			cur_size = 2048 - of.pos_in_cluster
 
 		// direkt lesen (aus dem Lese-Puffer kopieren)
-		memcpy(buffer, &of.buffer[of.pos_in_cluster], cur_size)
-		buffer = &buffer[cur_size]
+		//memcpy(buffer, &of.buffer[of.pos_in_cluster], cur_size)
+		//buffer = &buffer[cur_size]
+		memcpy2task(dir_pos, addr, &of.buffer[of.pos_in_cluster], cur_size)
 		of.pos_in_cluster += cur_size
 		r += cur_size
 		size -= cur_size
+		addr += cur_size
 		
 		if of.pos_in_cluster >= 2048
 			// nächsten Cluster einlesen
@@ -103,8 +107,9 @@ int kernel_read(OpenFileData *of, char buffer[0]*, int size)
 	return r
 
 
-int kernel_write(OpenFileData *of, char buffer[0]*, int size)
+int kernel_write(OpenFileData *of, int dir_pos, int addr, int size)
 	int r=0
+	cstring *buffer = _i2p(_addr2kernel(dir_pos, addr))
 
 	if !of.used
 		return -1
@@ -133,7 +138,8 @@ class dirent_struct
 	int type
 	cstring name
 
-int kernel_getdents(OpenFileData *of, char buffer[0]*, int num)
+int kernel_getdents(OpenFileData *of, int dir_pos, int addr, int num)
+	cstring *buffer = _i2p(_addr2kernel(dir_pos, addr))
 	if !of.used
 		return -1
 
