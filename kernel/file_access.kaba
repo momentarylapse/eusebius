@@ -64,12 +64,14 @@ int kernel_read(OpenFileData *of, int dir_pos, int addr, int size)
 	if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._read
 		__temp_p2__ = of.entry
-		__temp_p3__ = _i2p(_addr2kernel(dir_pos, addr))//buffer
-		__temp_i__ = size
+		__temp_i__ = dir_pos
+		__temp_i2__ = addr
+		__temp_i3__ = size
 		asm{
 			mov eax, __temp_p__
+			push __temp_i3__
+			push __temp_i2__
 			push __temp_i__
-			push __temp_p3__
 			push __temp_p2__
 			call eax
 			mov __temp_i__, eax
@@ -117,12 +119,14 @@ int kernel_write(OpenFileData *of, int dir_pos, int addr, int size)
 	if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._write
 		__temp_p2__ = of.entry
-		__temp_p3__ = buffer
-		__temp_i__ = size
+		__temp_i__ = dir_pos
+		__temp_i2__ = addr
+		__temp_i3__ = size
 		asm{
 			mov eax, __temp_p__
+			push __temp_i3__
+			push __temp_i2__
 			push __temp_i__
-			push __temp_p3__
 			push __temp_p2__
 			call eax
 			mov __temp_i__, eax

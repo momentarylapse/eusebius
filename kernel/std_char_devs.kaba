@@ -2,6 +2,7 @@
 use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
+use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -15,11 +16,12 @@ void dev_zero_open(FileEntry *f)
 	nil
 void dev_zero_close(FileEntry *f)
 	nil
-int dev_zero_read(FileEntry *f, cstring *buf, int size)
+int dev_zero_read(FileEntry *f, int dir_pos, int addr, int size)
+	int zero = 0
 	for int i, 0, size
-		buf[i] = 0
+		memcpy2task(dir_pos, addr + i, &zero, 1)
 	return size
-int dev_zero_write(FileEntry *f, cstring *buf, int size)
+int dev_zero_write(FileEntry *f, int dir_pos, int addr, int size)
 	return 0
 
 FileOperations dev_null_ops
@@ -27,9 +29,9 @@ void dev_null_open(FileEntry *f)
 	nil
 void dev_null_close(FileEntry *f)
 	nil
-int dev_null_read(FileEntry *f, cstring *buf, int size)
+int dev_null_read(FileEntry *f, int dir_pos, int addr, int size)
 	return 0
-int dev_null_write(FileEntry *f, cstring *buf, int size)
+int dev_null_write(FileEntry *f, int dir_pos, int addr, int size)
 	return size
 
 FileOperations dev_rand_ops
@@ -38,12 +40,12 @@ void dev_rand_open(FileEntry *f)
 	nil
 void dev_rand_close(FileEntry *f)
 	nil
-int dev_rand_read(FileEntry *f, cstring *buf, int size)
+int dev_rand_read(FileEntry *f, int dir_pos, int addr, int size)
 	for int i, 0, size
 		dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
-		buf[i] = dev_rand_state
+		memcpy2task(dir_pos, addr + i, &dev_rand_state, 1)
 	return size
-int dev_rand_write(FileEntry *f, cstring *buf, int size)
+int dev_rand_write(FileEntry *f, int dir_pos, int addr, int size)
 	return 0
 
 
@@ -54,15 +56,15 @@ void dev_key_open(FileEntry *f)
 	nil
 void dev_key_close(FileEntry *f)
 	nil
-int dev_key_read(FileEntry *f, cstring *buf, int size)
+int dev_key_read(FileEntry *f, int dir_pos, int addr, int size)
+	cstring *buf = _i2p(_addr2kernel(dir_pos, addr))
 	if size > dev_key_num
 		size = dev_key_num
-	for int i, 0, size
-		buf[i] = dev_key_buf[i]
-		dev_key_num --
-		memcpy(&dev_key_buf, &dev_key_buf[1], dev_key_num)
+	memcpy2task(dir_pos, addr, &dev_key_buf, size)
+	dev_key_num -= size
+	memcpy(&dev_key_buf, &dev_key_buf[size], dev_key_num)
 	return size
-int dev_key_write(FileEntry *f, cstring *buf, int size)
+int dev_key_write(FileEntry *f, int dir_pos, int addr, int size)
 	return 0
 
 FileOperations dev_tty_ops
@@ -70,10 +72,12 @@ void dev_tty_open(FileEntry *f)
 	nil
 void dev_tty_close(FileEntry *f)
 	nil
-int dev_tty_read(FileEntry *f, cstring *buf, int size)
+int dev_tty_read(FileEntry *f, int dir_pos, int addr, int size)
 	return 0
-int dev_tty_write(FileEntry *f, cstring *buf, int size)
-	prints_low(buf, size)
+int dev_tty_write(FileEntry *f, int dir_pos, int addr, int size)
+	for int i, 0, size
+		cstring *buf = _i2p(_addr2kernel(dir_pos, addr + i))
+		prints_low(buf, 1)
 	return size
 
 void InitDrivers()
