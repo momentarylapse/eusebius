@@ -65,19 +65,19 @@ void int_syscall()
 		else if index == 4 // write
 			r = caller.sys_write(param1, param2, param3)
 		else if index == 5 // open
-			cstring *p = _i2p(caller.addr2kernel(param1))
-			r = caller.sys_open(*p)
+			cstring filename
+			memcpy2kernel(&filename, caller.page_dir_pos, param1, sizeof(cstring))
+			r = caller.sys_open(filename)
 		else if index == 6 // close
 			caller.sys_close(param1)
 		else if index == 7 // waitpid
-			p = _i2p(caller.addr2kernel(param2))
-			r = caller.sys_waitpid(param1, p, param3)
+			r = caller.sys_waitpid(param1, param2, param3)
 		else if index == 11 // exec
-			p = _i2p(caller.addr2kernel(param1))
-			r = caller.sys_execute(*p)
+			memcpy2kernel(&filename, caller.page_dir_pos, param1, sizeof(cstring))
+			r = caller.sys_execute(filename)
 		else if index == 12 // chdir
-			p = _i2p(caller.addr2kernel(param1))
-			r = caller.set_cur_dir(p)
+			memcpy2kernel(&filename, caller.page_dir_pos, param1, sizeof(cstring))
+			r = caller.set_cur_dir(&filename)
 		else if index == 20 // getpid
 			r = pid
 		else if index == 37 // kill
@@ -85,14 +85,12 @@ void int_syscall()
 		else if index == 141 // getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 183 // getcwd
-			p = _i2p(caller.addr2kernel(param1))
-			strcpy(p, &caller.cur_dir)
+			memcpy2task(caller.page_dir_pos, param1, &caller.cur_dir, sizeof(cstring))
 		else if index == 0x2001 // getarg
-			p = _i2p(caller.addr2kernel(param1))
-			memcpy(p, &caller.arg, sizeof(cstring))
+			memcpy2task(caller.page_dir_pos, param1, &caller.arg, sizeof(cstring))
 			nil//r = caller.addr2task(_p2i(&caller.arg))
 		else if index == 0x2002 // prints
-			p = _i2p(caller.addr2kernel(param1))
+			nil//p = _i2p(caller.addr2kernel(param1))
 		else if index == 0x2003 // showstats
 			sys_showstats()
 		else

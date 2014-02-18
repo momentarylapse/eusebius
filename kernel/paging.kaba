@@ -95,37 +95,34 @@ int _addr2kernel(int dir_pos, int addr)
 	n = p[b] & 0xfffff000
 	return n + c
 
-void memcpy2kernel(cstring *p, int dir_pos, int addr, int size)
+void memcpy2kernel(cstring *o, int dir_pos, int addr, int size)
 	while size > 0
 		int a = addr >> 22
 		int b = (addr >> 12) & 0x000003ff
 		int c = addr & 0x00000fff
-		int p[0]* = _i2p(dir_pos)
-		int n = p[a] & 0xfffff000
-		p = _i2p(n)
-		n = p[b] & 0xfffff000
+		int pd[0]* = _i2p(dir_pos)
+		int n = pd[a] & 0xfffff000
+		pd = _i2p(n)
+		n = pd[b] & 0xfffff000
 		cstring *pp = _i2p( n + c)
 		int num = PAGE_SIZE - c
 		if num > size
 			num = size
 		for int i, 0, num
-			p[i] = pp[i]
+			o[i] = pp[i]
 		addr += num
 		size -= num
+		o = &o[num]
 
 void memcpy2task(int dir_pos, int addr, cstring *p, int size)
-	cstring *q = _i2p(_addr2kernel(dir_pos, addr))
-	memcpy(q, p, size)
-	return
-	prints(" m2t ")
 	while size > 0
 		int a = addr >> 22
 		int b = (addr >> 12) & 0x000003ff
 		int c = addr & 0x00000fff
-		int p[0]* = _i2p(dir_pos)
-		int n = p[a] & 0xfffff000
-		p = _i2p(n)
-		n = p[b] & 0xfffff000
+		int pd[0]* = _i2p(dir_pos)
+		int n = pd[a] & 0xfffff000
+		pd = _i2p(n)
+		n = pd[b] & 0xfffff000
 		cstring *pp = _i2p( n + c)
 		int num = PAGE_SIZE - c
 		if num > size

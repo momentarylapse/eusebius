@@ -99,6 +99,7 @@ class TaskData
 	cstring name
 	cstring arg
 	cstring cur_dir
+	int page_dir_pos
 	int mem_offset, mem_size
 	bool kernel_mode
 	OpenFileData *handles[MAX_OPEN_FILES_PER_TASK]
@@ -133,7 +134,7 @@ class TaskData
 			//jmp_far 0x004000000000 //0x0040:0x00000000
 		}
 	int addr2kernel(int addr)
-		return _addr2kernel(tss.cr3, addr)
+		return _addr2kernel(page_dir_pos, addr)
 	
 	int set_cur_dir(cstring *dir)
 		FileEntry *e = get_file(*dir)
@@ -209,7 +210,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_read(of, tss.cr3, addr, size)
+		return kernel_read(of, page_dir_pos, addr, size)
 
 
 	int sys_write(int handle, int addr, int size)
@@ -219,7 +220,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_write(of, tss.cr3, addr, size)
+		return kernel_write(of, page_dir_pos, addr, size)
 
 	int sys_getdents(int handle, int addr, int num)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -228,7 +229,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_getdents(of, tss.cr3, addr, num)
+		return kernel_getdents(of, page_dir_pos, addr, num)
 
 	void sys_close(int handle)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -274,12 +275,13 @@ class TaskData
 					clean_up_deep()
 					Task[i].start()
 
-	int sys_waitpid(int _pid, int *_status, int options)
+	int sys_waitpid(int _pid, int status_addr, int options)
 		if _pid < 0 or _pid >= MAX_TASKS
 			return -1
 		TaskData *t = &Task[_pid]
 		if t.status == TASK_STATUS_UNUSED
 			return -1
+		int *_status = _i2p(addr2kernel(status_addr))
 		if t.status == TASK_STATUS_ZOMBIE
 			*_status = t.return_status
 			t.clean_up_deep()
@@ -388,14 +390,15 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	if kernel_mode
 		t.mem_offset = 0
 		t.stack = malloc(TASK_STACK_SIZE)
+		t.page_dir_pos = KERNEL_PAGE_DIRECTORY
 		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
 	else
 		t.stack = _i2p(0x00c00000)
 		t.mem_size = 0x00800000
 		t.mem_offset = Paging.alloc(t.mem_size)
-		int dir_pos = t.mem_offset + 0x10000
-		CreateUserPaging(t.mem_offset, dir_pos)
-		t.tss.set(t.stack, 3, 4, /*3*/ 0, dir_pos, func)
+		t.page_dir_pos = t.mem_offset + 0x10000
+		CreateUserPaging(t.mem_offset, t.page_dir_pos)
+		t.tss.set(t.stack, 3, 4, /*3*/ 0, t.page_dir_pos, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
 	return t
