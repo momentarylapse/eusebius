@@ -39,6 +39,8 @@ void sys_showstats()
 				prints("Z")
 			else
 				printi(Task[i].status)
+			TextPos = 27
+			printi(Task[i].page_dir.count_pages())
 			prints("\n")
 
 	
@@ -66,17 +68,17 @@ void int_syscall()
 			r = caller.sys_write(param1, param2, param3)
 		else if index == 5 // open
 			cstring filename
-			memcpy2kernel(&filename, caller.page_dir_pos, param1, sizeof(cstring))
+			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.sys_open(filename)
 		else if index == 6 // close
 			caller.sys_close(param1)
 		else if index == 7 // waitpid
 			r = caller.sys_waitpid(param1, param2, param3)
 		else if index == 11 // exec
-			memcpy2kernel(&filename, caller.page_dir_pos, param1, sizeof(cstring))
+			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.sys_execute(filename)
 		else if index == 12 // chdir
-			memcpy2kernel(&filename, caller.page_dir_pos, param1, sizeof(cstring))
+			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.set_cur_dir(&filename)
 		else if index == 20 // getpid
 			r = pid
@@ -85,9 +87,9 @@ void int_syscall()
 		else if index == 141 // getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 183 // getcwd
-			memcpy2task(caller.page_dir_pos, param1, &caller.cur_dir, sizeof(cstring))
+			caller.page_dir.memcpy2task(param1, &caller.cur_dir, sizeof(cstring))
 		else if index == 0x2001 // getarg
-			memcpy2task(caller.page_dir_pos, param1, &caller.arg, sizeof(cstring))
+			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
 			nil//r = caller.addr2task(_p2i(&caller.arg))
 		else if index == 0x2002 // prints
 			nil//p = _i2p(caller.addr2kernel(param1))

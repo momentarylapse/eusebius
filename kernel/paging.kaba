@@ -5,11 +5,92 @@ use "base_mem.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 const int PAGE_SIZE = 4096
+const int PAGE_TABLE_ENTRIES = 1024
 const int MAX_PAGE_MASKS = 32768 // 2^32 / PAGE_SIZE / 32
 // 1 mask = 32 pages = 128k
 
 const int KERNEL_PAGE_DIRECTORY = 0x00200000
 
+int ceil_quot(int n, int m)
+	return (n + m - 1) / m
+
+class PageTable
+	int e[PAGE_TABLE_ENTRIES]
+	
+	void init()
+		for int i, 0, PAGE_TABLE_ENTRIES
+			e[i] = 0
+	
+	int count_entries()
+		int num_entries = 0
+		for int i, 0, PAGE_TABLE_ENTRIES
+			if e[i] == 0
+				return i
+		return PAGE_TABLE_ENTRIES
+
+class PageDirectory : PageTable
+
+	int addr2kernel(int addr)
+		int a = addr >> 22
+		int b = (addr >> 12) & 0x000003ff
+		int c = addr & 0x00000fff
+		int n = e[a] & 0xfffff000
+		PageTable *pt = _i2p(n)
+		n = pt.e[b] & 0xfffff000
+		return n + c
+
+	void memcpy2kernel(cstring *o, int addr, int size)
+		while size > 0
+			int a = addr >> 22
+			int b = (addr >> 12) & 0x000003ff
+			int c = addr & 0x00000fff
+			int n = e[a] & 0xfffff000
+			PageTable *pt = _i2p(n)
+			n = pt.e[b] & 0xfffff000
+			cstring *pp = _i2p( n + c)
+			int num = PAGE_SIZE - c
+			if num > size
+				num = size
+			for int i, 0, num
+				o[i] = pp[i]
+			addr += num
+			size -= num
+			o = &o[num]
+
+	void memcpy2task(int addr, cstring *p, int size)
+		while size > 0
+			int a = addr >> 22
+			int b = (addr >> 12) & 0x000003ff
+			int c = addr & 0x00000fff
+			int n = e[a] & 0xfffff000
+			PageTable *pt = _i2p(n)
+			n = pt.e[b] & 0xfffff000
+			cstring *pp = _i2p( n + c)
+			int num = PAGE_SIZE - c
+			if num > size
+				num = size
+			for int i, 0, num
+				pp[i] = p[i]
+			addr += num
+			size -= num
+	
+	int get_last_table()
+		int last_table = -1
+		for int i, 0, PAGE_TABLE_ENTRIES
+			if e[i] == 0
+				last_table = i - 1
+				break
+		if last_table < 0
+			return 0
+		return last_table
+	
+	int count_pages()
+		int last_table = get_last_table()
+		//return last_table
+		int pos = (e[last_table] & 0xfffff000)
+		PageTable *pt = _i2p(pos)
+		int num_entries = pt.count_entries()
+		return last_table * PAGE_TABLE_ENTRIES + num_entries
 
 class PageController
 	int mask[MAX_PAGE_MASKS]
@@ -18,6 +99,7 @@ class PageController
 		if VerbosityLevel >= 1
 			prints("Paging")
 		num_masks = MemorySize / PAGE_SIZE / 32
+		MemorySize = num_masks * PAGE_SIZE * 32 // easier memory management...
 		for int i, 0, num_masks
 			mask[i] = 0
 		
@@ -27,16 +109,16 @@ class PageController
 			
 			
 		// 8 mb flat paging
-		int p[0]* = _i2p(KERNEL_PAGE_DIRECTORY)
+		int nmax = MemorySize / PAGE_SIZE / 1024
+		PageTable *p = _i2p(KERNEL_PAGE_DIRECTORY)
 		for int i, 0, 1024
-			p[i] = KERNEL_PAGE_DIRECTORY + 0x00001000 * (i + 1) + 7
-		for int n, 0, 16
+			p.e[i] = 0
+			if i <= nmax
+				p.e[i] = KERNEL_PAGE_DIRECTORY + 0x00001000 * (i + 1) + 7
+		for int n, 0, nmax
 			p = _i2p(KERNEL_PAGE_DIRECTORY + 0x00001000 * (n + 1))
 			for int i, 0, 1024
-				p[i] = 0x00001000 * i + 7 + n * 0x00400000
-		
-		// :P
-		//p[1023] = 0x00012007
+				p.e[i] = 0x00001000 * i + 7 + n * 0x00400000
 	
 		__temp_i__ = KERNEL_PAGE_DIRECTORY
 		asm{
@@ -53,10 +135,33 @@ class PageController
 		if VerbosityLevel >= 1
 			prints(" ok\n")
 		
-		
-	int alloc(int size)
-		int num_pages_req = (size + PAGE_SIZE - 1) / PAGE_SIZE
-		int num_masks_req = (num_pages_req + 31) / 32
+	int alloc_page()
+		bool ok = true
+		for int i, 0, num_masks
+			if mask[i] == 0xffffffff
+				continue
+			for int j, 0, 32
+				int m = 1 << j
+				if (mask[i] & m) == 0
+					mask[i] = mask[i] | m
+					return (i * 32 + j) * PAGE_SIZE
+		return 0
+	
+	void free_page(int pos)
+		int page_no = pos / PAGE_SIZE
+		int mask_no = page_no / 32
+		if mask_no > num_masks or mask_no < 0
+			return
+		int offset = page_no & 0x0000001f // % 32
+		int m = 1 << offset
+		if (mask[mask_no] & m) > 0
+			mask[mask_no] -= m
+			
+	int alloc_chunk(int size)
+		//int num_pages_req = (size - PAGE_SIZE + 1) / PAGE_SIZE//ceil_quot(size, PAGE_SIZE)
+		//int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)
+		int num_pages_req = ceil_quot(size, PAGE_SIZE)
+		int num_masks_req = ceil_quot(num_pages_req, 32)
 		for int i, 0, num_masks-num_masks_req
 			bool ok = true
 			for int j, 0, num_masks_req
@@ -69,10 +174,10 @@ class PageController
 				return i * PAGE_SIZE * 32
 		return 0
 
-	void free(int p, int size)
+	void free_chunk(int p, int size)
 		int offset = p / PAGE_SIZE / 32
-		int num_pages_req = (size + PAGE_SIZE - 1) / PAGE_SIZE
-		int num_masks_req = (num_pages_req + 31) / 32
+		int num_pages_req = (size - PAGE_SIZE + 1) / PAGE_SIZE//ceil_quot(size, PAGE_SIZE)
+		int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)
 		for int j, 0, num_masks_req
 			mask[offset + j] = 0
 
@@ -82,55 +187,19 @@ class PageController
 			if mask[i] != 0
 				n += 32
 		return n * PAGE_SIZE
+	
+	int create_page_directory()
+		int pos = alloc_page()
+		PageDirectory *pd = _i2p(pos)
+		pd.init()
+		return pos
+		
+	
+	/*void page_dir_grow(Page, int req_size, bool writable)
+		int req_num_pages = ceil_quot(req_size, PAGE_SIZE)
+		int last_table = page_dir_get_last_table(pos)*/
 
 PageController Paging
-
-int _addr2kernel(int dir_pos, int addr)
-	int a = addr >> 22
-	int b = (addr >> 12) & 0x000003ff
-	int c = addr & 0x00000fff
-	int p[0]* = _i2p(dir_pos)
-	int n = p[a] & 0xfffff000
-	p = _i2p(n)
-	n = p[b] & 0xfffff000
-	return n + c
-
-void memcpy2kernel(cstring *o, int dir_pos, int addr, int size)
-	while size > 0
-		int a = addr >> 22
-		int b = (addr >> 12) & 0x000003ff
-		int c = addr & 0x00000fff
-		int pd[0]* = _i2p(dir_pos)
-		int n = pd[a] & 0xfffff000
-		pd = _i2p(n)
-		n = pd[b] & 0xfffff000
-		cstring *pp = _i2p( n + c)
-		int num = PAGE_SIZE - c
-		if num > size
-			num = size
-		for int i, 0, num
-			o[i] = pp[i]
-		addr += num
-		size -= num
-		o = &o[num]
-
-void memcpy2task(int dir_pos, int addr, cstring *p, int size)
-	while size > 0
-		int a = addr >> 22
-		int b = (addr >> 12) & 0x000003ff
-		int c = addr & 0x00000fff
-		int pd[0]* = _i2p(dir_pos)
-		int n = pd[a] & 0xfffff000
-		pd = _i2p(n)
-		n = pd[b] & 0xfffff000
-		cstring *pp = _i2p( n + c)
-		int num = PAGE_SIZE - c
-		if num > size
-			num = size
-		for int i, 0, num
-			pp[i] = p[i]
-		addr += num
-		size -= num
 
 /*
 void CreateUserPaging(int mem_offset, int dir_pos)

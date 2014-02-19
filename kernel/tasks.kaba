@@ -99,7 +99,7 @@ class TaskData
 	cstring name
 	cstring arg
 	cstring cur_dir
-	int page_dir_pos
+	PageDirectory *page_dir
 	int mem_offset, mem_size
 	bool kernel_mode
 	OpenFileData *handles[MAX_OPEN_FILES_PER_TASK]
@@ -134,7 +134,7 @@ class TaskData
 			//jmp_far 0x004000000000 //0x0040:0x00000000
 		}
 	int addr2kernel(int addr)
-		return _addr2kernel(page_dir_pos, addr)
+		return page_dir.addr2kernel(addr)
 	
 	int set_cur_dir(cstring *dir)
 		FileEntry *e = get_file(*dir)
@@ -179,7 +179,7 @@ class TaskData
 				kernel_close(handles[i])
 				handles[i] = nil
 		if !kernel_mode
-			Paging.free(mem_offset, mem_size)
+			Paging.free_chunk(mem_offset, mem_size)
 
 	void clean_up_deep()
 		make_zombie()
@@ -210,7 +210,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_read(of, page_dir_pos, addr, size)
+		return kernel_read(of, page_dir, addr, size)
 
 
 	int sys_write(int handle, int addr, int size)
@@ -220,7 +220,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_write(of, page_dir_pos, addr, size)
+		return kernel_write(of, page_dir, addr, size)
 
 	int sys_getdents(int handle, int addr, int num)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -229,7 +229,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_getdents(of, page_dir_pos, addr, num)
+		return kernel_getdents(of, page_dir, addr, num)
 
 	void sys_close(int handle)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -255,7 +255,7 @@ class TaskData
 		OpenFileData *of = handles[h]
 		while true
 			//int r = sys_read(caller, h, addr, 1024)
-			int r = kernel_read(of, KERNEL_PAGE_DIRECTORY, addr, 1024)
+			int r = kernel_read(of, KernelTask.page_dir, addr, 1024)
 			if r <= 0
 				break
 			addr += r
@@ -390,15 +390,15 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	if kernel_mode
 		t.mem_offset = 0
 		t.stack = malloc(TASK_STACK_SIZE)
-		t.page_dir_pos = KERNEL_PAGE_DIRECTORY
+		t.page_dir = _i2p(KERNEL_PAGE_DIRECTORY)
 		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
 	else
 		t.stack = _i2p(0x00c00000)
 		t.mem_size = 0x00800000
-		t.mem_offset = Paging.alloc(t.mem_size)
-		t.page_dir_pos = t.mem_offset + 0x10000
-		CreateUserPaging(t.mem_offset, t.page_dir_pos)
-		t.tss.set(t.stack, 3, 4, /*3*/ 0, t.page_dir_pos, func)
+		t.mem_offset = Paging.alloc_chunk(t.mem_size)
+		t.page_dir = _i2p(t.mem_offset + 0x10000)
+		CreateUserPaging(t.mem_offset, _p2i(t.page_dir))
+		t.tss.set(t.stack, 3, 4, /*3*/ 0, _p2i(t.page_dir), func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
 	return t

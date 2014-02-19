@@ -57,21 +57,20 @@ OpenFileData *kernel_open(cstring filename)
 	return of
 
 
-int kernel_read(OpenFileData *of, int dir_pos, int addr, int size)
+int kernel_read(OpenFileData *of, PageDirectory *page_dir, int addr, int size)
 	int r=0
-	//cstring *buffer = _i2p(_addr2kernel(dir_pos, addr))
 		
 	if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._read
 		__temp_p2__ = of.entry
-		__temp_i__ = dir_pos
-		__temp_i2__ = addr
-		__temp_i3__ = size
+		__temp_p3__ = page_dir
+		__temp_i__ = addr
+		__temp_i2__ = size
 		asm{
 			mov eax, __temp_p__
-			push __temp_i3__
 			push __temp_i2__
 			push __temp_i__
+			push __temp_p3__
 			push __temp_p2__
 			call eax
 			mov __temp_i__, eax
@@ -92,7 +91,7 @@ int kernel_read(OpenFileData *of, int dir_pos, int addr, int size)
 		// direkt lesen (aus dem Lese-Puffer kopieren)
 		//memcpy(buffer, &of.buffer[of.pos_in_cluster], cur_size)
 		//buffer = &buffer[cur_size]
-		memcpy2task(dir_pos, addr, &of.buffer[of.pos_in_cluster], cur_size)
+		page_dir.memcpy2task(addr, &of.buffer[of.pos_in_cluster], cur_size)
 		of.pos_in_cluster += cur_size
 		r += cur_size
 		size -= cur_size
@@ -109,9 +108,8 @@ int kernel_read(OpenFileData *of, int dir_pos, int addr, int size)
 	return r
 
 
-int kernel_write(OpenFileData *of, int dir_pos, int addr, int size)
+int kernel_write(OpenFileData *of, PageDirectory *page_dir, int addr, int size)
 	int r=0
-	cstring *buffer = _i2p(_addr2kernel(dir_pos, addr))
 
 	if !of.used
 		return -1
@@ -119,14 +117,14 @@ int kernel_write(OpenFileData *of, int dir_pos, int addr, int size)
 	if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._write
 		__temp_p2__ = of.entry
-		__temp_i__ = dir_pos
-		__temp_i2__ = addr
-		__temp_i3__ = size
+		__temp_p3__ = page_dir
+		__temp_i__ = addr
+		__temp_i2__ = size
 		asm{
 			mov eax, __temp_p__
-			push __temp_i3__
 			push __temp_i2__
 			push __temp_i__
+			push __temp_p3__
 			push __temp_p2__
 			call eax
 			mov __temp_i__, eax
@@ -142,8 +140,8 @@ class dirent_struct
 	int type
 	cstring name
 
-int kernel_getdents(OpenFileData *of, int dir_pos, int addr, int num)
-	cstring *buffer = _i2p(_addr2kernel(dir_pos, addr))
+int kernel_getdents(OpenFileData *of, PageDirectory *page_dir, int addr, int num)
+	cstring *buffer = _i2p(page_dir.addr2kernel(addr))
 	if !of.used
 		return -1
 
