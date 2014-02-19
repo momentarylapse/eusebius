@@ -117,6 +117,7 @@ class PageDirectory : PageTable
 class PageController
 	int mask[MAX_PAGE_MASKS]
 	int num_masks
+	int mask_occupation
 	int alloc_count, free_count
 	void init()
 		if VerbosityLevel >= 1
@@ -129,6 +130,7 @@ class PageController
 		// reserve 8mb for kernel
 		for int i, 0, 64
 			mask[i] = 0xffffffff
+		mask_occupation = 64
 		
 		alloc_count = 0
 		free_count = 0
@@ -154,12 +156,13 @@ class PageController
 		
 	int alloc_page()
 		bool ok = true
-		for int i, 0, num_masks
+		for int i, mask_occupation, num_masks
 			if mask[i] == 0xffffffff
 				continue
 			for int j, 0, 32
 				int m = 1 << j
 				if (mask[i] & m) == 0
+					mask_occupation = i
 					mask[i] = mask[i] | m
 					alloc_count ++
 					return (i * 32 + j) * PAGE_SIZE
@@ -171,15 +174,12 @@ class PageController
 		if mask_no > num_masks or mask_no < 0
 			return
 		int offset = page_no & 0x0000001f // % 32
-		/*if mask_no == 130
-			printh(&mask[130], 4)
-			prints(" ")
-			printi(offset)
-			prints("   ")*/
 		int m = 1 << offset
 		if (mask[mask_no] & m) != 0
 			free_count ++
 			mask[mask_no] -= m
+			if mask_no < mask_occupation
+				mask_occupation = mask_no
 		else
 			prints("  -e-  ")
 			printh(&mask[mask_no], 4)
@@ -247,7 +247,6 @@ class PageController
 		return pd
 	
 	void free_page_directory(PageDirectory *pd, int keep_below)
-		int nn = 0
 		for int i, 0, PAGE_TABLE_ENTRIES
 			if pd.e[i] == 0
 				break
@@ -259,16 +258,11 @@ class PageController
 					break
 				int pos = pt.e[j] & 0xfffff000
 				if pos >= keep_below
-					//prints(" ")
-					//printi(pos)
 					free_page(pos)
-					nn ++
 			// free table
 			free_page(table_pos)
-			nn ++
 		// free dir
 		free_page(_p2i(pd))
-		nn ++
 		
 	
 	void page_dir_grow(PageDirectory *page_dir, int req_size, bool writable)
