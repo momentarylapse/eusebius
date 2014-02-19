@@ -18,7 +18,13 @@ use "scheduler.kaba"
 
 void int_handler(int i)
 	if !Task[RunningPid].kernel_mode
-		Task[RunningPid].sys_exit(i-666)
+		__temp_i__ = i - 666
+		asm{
+			mov eax, 0x00000001
+			mov ebx, __temp_i__
+			int 0x80
+		}
+		//Task[RunningPid].sys_exit(i-666)
 		asm{
 			sti
 		}

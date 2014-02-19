@@ -20,6 +20,7 @@ const int MAX_OPEN_FILES_PER_TASK = 16
 const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
 const int NUM_PRE_GDT_ENTRIES = 5
+const int INITIAL_TASK_MEM = 0x00800000
 
 enum
 	TASK_STATUS_UNUSED
@@ -100,7 +101,7 @@ class TaskData
 	cstring arg
 	cstring cur_dir
 	PageDirectory *page_dir
-	int mem_offset, mem_size
+	//int mem_offset, mem_size
 	bool kernel_mode
 	OpenFileData *handles[MAX_OPEN_FILES_PER_TASK]
 	void __assign__(TaskData o)
@@ -179,7 +180,9 @@ class TaskData
 				kernel_close(handles[i])
 				handles[i] = nil
 		if !kernel_mode
-			Paging.free_chunk(mem_offset, mem_size)
+			if page_dir
+				Paging.free_page_directory(page_dir, KERNEL_MEM)
+				page_dir = nil
 
 	void clean_up_deep()
 		make_zombie()
@@ -251,11 +254,11 @@ class TaskData
 		printi(t.pid)
 		prints(">>")*/
 		memcpy(&t.arg, &filename, sizeof(cstring))
-		int addr = 0x00200000 + t.mem_offset // kernel space...
+		int addr = 0x00200000 + KERNEL_MEM // task space...
 		OpenFileData *of = handles[h]
 		while true
 			//int r = sys_read(caller, h, addr, 1024)
-			int r = kernel_read(of, KernelTask.page_dir, addr, 1024)
+			int r = kernel_read(of, t.page_dir, addr, 1024)
 			if r <= 0
 				break
 			addr += r
@@ -343,25 +346,6 @@ class GlobalDescriptorData
 
 GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
-void CreateUserPaging(int mem_offset, int dir_pos)
-	// 8 mb kernel + 8 mb user
-	int p[0]* = _i2p(dir_pos)
-	for int i, 0, 1024
-		p[i] = 0
-	for int i, 0, 4
-		p[i] = dir_pos + 0x00001000 * (i + 1) + 7
-	// kernel pages (1:1)
-	for int n, 0, 2
-		p = _i2p(dir_pos + 0x00001000 * (n + 1))
-		for int i, 0, 1024
-			p[i] = 0x00001000 * i + 7 + n * 0x00400000
-	// user pages
-	for int n, 0, 2
-		p = _i2p(dir_pos + 0x00001000 * (n + 3))
-		for int i, 0, 1024
-			p[i] = mem_offset + 0x00001000 * i + 7 + n * 0x00400000
-
-
 int get_next_pid()
 	for int i, CurPid, MAX_TASKS
 		if Task[i].status == TASK_STATUS_UNUSED
@@ -388,16 +372,13 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	t.parent = parent
 	t.kernel_mode = kernel_mode
 	if kernel_mode
-		t.mem_offset = 0
 		t.stack = malloc(TASK_STACK_SIZE)
 		t.page_dir = KernelPageDir
 		t.tss.set(t.stack, 1, 2, 0, KernelPageDir, func)
 	else
 		t.stack = _i2p(0x00c00000)
-		t.mem_size = 0x00800000
-		t.mem_offset = Paging.alloc_chunk(t.mem_size)
-		t.page_dir = _i2p(t.mem_offset + 0x10000)
-		CreateUserPaging(t.mem_offset, _p2i(t.page_dir))
+		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
+		Paging.page_dir_grow(t.page_dir, INITIAL_TASK_MEM, true)
 		t.tss.set(t.stack, 3, 4, /*3*/ 0, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 

@@ -5,6 +5,7 @@ use "base.kaba"
 //--------------------------------------------------------------
 // Speicher-"Verwaltung"	
 
+const int KERNEL_MEM = 0x00800000 // 8mb
 const int MEM_ALLOC_OFFSET = 0x00400000 // (4-2)=2mb Kernel-Variablen
 const int MAX_MEM_ALLOCS = 4096
 
