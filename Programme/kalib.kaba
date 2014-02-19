@@ -50,16 +50,22 @@ void sa2cs(string a[], cstring cs)
 	cs[n] = 0
 
 int exit(int r)
-/*	if stdin >= 0
-		close(stdin)
-	if stdout >= 0
-		close(stdout)*/
 	__temp_i__ = r
 	asm{
 		mov eax, 0x00000001
 		mov ebx, __temp_i__
 		int 0x80
 	}
+
+int brk(int size)
+	__temp_i__ = size
+	asm{
+		mov eax, 0x0000002d
+		mov ebx, __temp_i__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
 
 int open(string filename)
 	cstring tt

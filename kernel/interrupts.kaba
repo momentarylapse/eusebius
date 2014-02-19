@@ -20,10 +20,11 @@ void int_handler(int i)
 	if !Task[RunningPid].kernel_mode
 		__temp_i__ = i - 666
 		asm{
-			mov eax, 0x00000001
+			mov eax, 0x00000001 // sys_exit
 			mov ebx, __temp_i__
 			int 0x80
 		}
+		// we won't reach this point...
 		//Task[RunningPid].sys_exit(i-666)
 		asm{
 			sti

@@ -311,6 +311,13 @@ class TaskData
 		else if signal == 18
 			t.status = TASK_STATUS_RUNNING
 		return 0
+
+	int sys_brk(int size)
+		int cur_size = page_dir.count_pages() * PAGE_SIZE
+		if size <= cur_size
+			return cur_size
+		Paging.page_dir_grow(page_dir, size, true)
+		return size
 	
 TaskData Task[MAX_TASKS]
 TaskData *KernelTask

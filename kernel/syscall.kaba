@@ -84,6 +84,8 @@ void int_syscall()
 			r = pid
 		else if index == 37 // kill
 			r = caller.sys_kill(param1, param2)
+		else if index == 45 // brk
+			r = caller.sys_brk(param1)
 		else if index == 141 // getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 183 // getcwd
