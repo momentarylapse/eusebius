@@ -37,7 +37,7 @@ class TaskStateSegment
 	int ss1
 	void *esp2
 	int ss2
-	int cr3 // =PDPR
+	PageDirectory *cr3 // =PDPR
 	void *eip
 	int eflags // Iterrupt Flag
 	int eax
@@ -52,7 +52,7 @@ class TaskStateSegment
 	int x, y
 	
 	
-	void set(void *stack_pos, int _cs, int _ds, int pvl, int page_dir, void *task)
+	void set(void *stack_pos, int _cs, int _ds, int pvl, PageDirectory *page_dir, void *task)
 		int _ss = _ds
 		prev = 0 // previous TSS (dynamisch)
 		esp0 = stack_pos
@@ -390,15 +390,15 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	if kernel_mode
 		t.mem_offset = 0
 		t.stack = malloc(TASK_STACK_SIZE)
-		t.page_dir = _i2p(KERNEL_PAGE_DIRECTORY)
-		t.tss.set(t.stack, 1, 2, 0, KERNEL_PAGE_DIRECTORY, func)
+		t.page_dir = KernelPageDir
+		t.tss.set(t.stack, 1, 2, 0, KernelPageDir, func)
 	else
 		t.stack = _i2p(0x00c00000)
 		t.mem_size = 0x00800000
 		t.mem_offset = Paging.alloc_chunk(t.mem_size)
 		t.page_dir = _i2p(t.mem_offset + 0x10000)
 		CreateUserPaging(t.mem_offset, _p2i(t.page_dir))
-		t.tss.set(t.stack, 3, 4, /*3*/ 0, _p2i(t.page_dir), func)
+		t.tss.set(t.stack, 3, 4, /*3*/ 0, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
 	return t
