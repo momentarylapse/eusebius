@@ -83,11 +83,13 @@ class FileEntry
 	int size
 	int offset
 	int num_clusters
+	FileEntry *parent
 	FileEntry *next
 	FileEntry *first_sub
 	FileOperations *op
 	
 	void add(FileEntry *e)
+		e.parent = self
 		if first_sub
 			FileEntry *i = first_sub
 			while i.next
@@ -111,6 +113,10 @@ class FileEntry
 			e._show()
 			e = e.next
 	FileEntry *get_sub(cstring sname)
+		if strcmp(&sname, &"..") == 0
+			return parent
+		if strcmp(&sname, &".") == 0
+			return self
 		FileEntry *e = first_sub
 		while e
 			if strcmp(&sname, &e.name) == 0
@@ -130,6 +136,7 @@ class FileSystemData
 		FileEntry *e = &list[list_size]
 		list_size ++
 		strcpy(&e.name, &name)
+		e.parent = parent
 		e.type = type
 		e.next = nil
 		e.first_sub = nil
@@ -142,14 +149,17 @@ class FileSystemData
 		list_size = 0
 		root = add("-root-", FILE_TYPE_DIR, nil)
 	
-	FileEntry *get(cstring path)
-		if path[0] != '/'
+	FileEntry *get(cstring path, FileEntry *cur_dir)
+		int ppos = 0
+		if path[0] == '/'
+			ppos = 1
+			cur_dir = root
+			if path[1] == 0
+				return root
+		else if !cur_dir
 			return nil
-		if path[1] == 0
-			return root
-		FileEntry *e = root
+		FileEntry *e = cur_dir
 		cstring sub
-		int ppos = 1
 		bool has_more = true
 		while has_more
 			strcpy(&sub, &path[ppos])
@@ -165,6 +175,15 @@ class FileSystemData
 			if !e
 				return nil
 		return e
+	
+	void get_name(cstring path, FileEntry *e)
+		if e.parent
+			get_name(path, e.parent)
+			if e.parent.parent
+				strcat(&path, &"/")
+			strcat(&path, &e.name)
+		else
+			strcpy(&path, &"/")
 		
 	void Read(int disk_no, int cluster_offset, char buffer[0]*)
 		Ata.ReadSector(disk_no, cluster_offset * 4    , 1, &buffer[0])

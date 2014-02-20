@@ -148,11 +148,11 @@ OpenFileData *get_handle()
 
 
 
-OpenFileData *kernel_open(cstring filename)
+OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
 	OpenFileData *of = get_handle()
 	if !of
 		return nil
-	of.entry = FileSystem.get(filename)
+	of.entry = FileSystem.get(filename, cur_dir)
 	if !of.entry
 		of.used = false
 		return nil

@@ -99,7 +99,7 @@ class TaskData
 	TaskData *parent
 	cstring name
 	cstring arg
-	cstring cur_dir
+	FileEntry *cur_dir
 	PageDirectory *page_dir
 	//int mem_offset, mem_size
 	bool kernel_mode
@@ -137,34 +137,17 @@ class TaskData
 	int addr2kernel(int addr)
 		return page_dir.addr2kernel(addr)
 	
-	int set_cur_dir(cstring *dir)
-		FileEntry *e = get_file(*dir)
+	int set_cur_dir(cstring dir)
+		FileEntry *e = get_file(dir)
 		if !e
 			return -1
 		if e.type != FILE_TYPE_DIR
 			return -2
-		if (*dir)[0] == '/'
-			strcpy(&cur_dir, dir)
-		else
-			strcat(&cur_dir, dir)
-		if cur_dir[strlen(&cur_dir) - 1] != '/'
-			strcat(&cur_dir, &"/")
+		cur_dir = e
 		return 0
-	
-	void translate_file(cstring out, cstring in)
-		if in[0] == '/'
-			strcpy(&out, &in)
-		else
-			strcpy(&out, &cur_dir)
-			strcat(&out, &in)
 		
 	FileEntry *get_file(cstring path)
-		if path[0] == '/'
-			return FileSystem.get(path)
-		cstring long
-		strcpy(&long, &cur_dir)
-		strcat(&long, &path)
-		return FileSystem.get(long)
+		return FileSystem.get(path, cur_dir)
 		
 	int add_handle(OpenFileData *h)
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
@@ -195,9 +178,7 @@ class TaskData
 
 
 	int sys_open(cstring filename)
-		cstring long
-		translate_file(long, filename)
-		OpenFileData *of = kernel_open(long)
+		OpenFileData *of = kernel_open(filename, cur_dir)
 		if !of
 			return -1
 		int index = add_handle(of)
@@ -384,9 +365,9 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	t.desc = NUM_PRE_GDT_ENTRIES + pid
 	t.status = TASK_STATUS_SLEEPING
 	if parent
-		strcpy(&t.cur_dir, &parent.cur_dir)
+		t.cur_dir = parent.cur_dir
 	else
-		strcpy(&t.cur_dir, &"/")
+		t.cur_dir = FileSystem.root
 	t.parent = parent
 	t.kernel_mode = kernel_mode
 	if kernel_mode
