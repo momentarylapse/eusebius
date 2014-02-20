@@ -418,8 +418,8 @@ class lib__string : lib__@DynamicArray
 		if s.num < num
 			n = s.num
 		for int i, 0, n
-			char a = data[i]
-			char b = s.data[i]
+			int a = data[i]
+			int b = s.data[i]
 			if a != b
 				return a - b
 		return num - s.num
@@ -768,10 +768,9 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 				l.swap(i, j)
 	for int i, 0, l.num-1
 		for int j, i+1, l.num
-			/*if l.data[i].is_dir != l.data[j].is_dir
+			if l.data[i].is_dir != l.data[j].is_dir
 				nil
-			else */
-			if (l.data[i].name.compare(l.data[j].name) < 0)
+			else if (l.data[i].name.compare(l.data[j].name) > 0)
 				l.swap(i, j)
 	return l
 
