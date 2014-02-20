@@ -19,6 +19,123 @@ class OpenFileData
 	int pos_in_cluster
 	int cluster_no
 	char buffer[0]*
+	
+
+	int read(PageDirectory *page_dir, int addr, int size)
+		int r=0
+		
+		if entry.type == FILE_TYPE_CHAR
+			__temp_p__ = entry.op._read
+			__temp_p2__ = entry
+			__temp_p3__ = page_dir
+			__temp_i__ = addr
+			__temp_i2__ = size
+			asm{
+				mov eax, __temp_p__
+				push __temp_i2__
+				push __temp_i__
+				push __temp_p3__
+				push __temp_p2__
+				call eax
+				mov __temp_i__, eax
+				sub esp, 0x12
+			}
+			return __temp_i__
+		
+		if size > entry.size - cluster_no * 2048 - pos_in_cluster
+			size = entry.size - cluster_no * 2048 - pos_in_cluster
+		
+		while size > 0
+	
+			// wieviel kann aus dem Puffer gelesen werden?
+			int cur_size = size
+			if cur_size > 2048 - pos_in_cluster
+				cur_size = 2048 - pos_in_cluster
+
+			// direkt lesen (aus dem Lese-Puffer kopieren)
+			page_dir.memcpy2task(addr, &buffer[pos_in_cluster], cur_size)
+			pos_in_cluster += cur_size
+			r += cur_size
+			size -= cur_size
+			addr += cur_size
+		
+			if pos_in_cluster >= 2048
+				// nächsten Cluster einlesen
+				pos_in_cluster = 0
+				cluster_no ++
+				int cl = entry.offset + cluster_no
+				int p_offset = Partition[CurrentPartition].offset
+				FileSystem.Read(0, p_offset + cl, buffer)
+		
+		return r
+
+
+	int write(PageDirectory *page_dir, int addr, int size)
+		int r=0
+
+		if !used
+			return -1
+		
+		if entry.type == FILE_TYPE_CHAR
+			__temp_p__ = entry.op._write
+			__temp_p2__ = entry
+			__temp_p3__ = page_dir
+			__temp_i__ = addr
+			__temp_i2__ = size
+			asm{
+				mov eax, __temp_p__
+				push __temp_i2__
+				push __temp_i__
+				push __temp_p3__
+				push __temp_p2__
+				call eax
+				mov __temp_i__, eax
+				sub esp, 0x12
+			}
+			return __temp_i__
+		return 0
+
+	int getdents(PageDirectory *page_dir, int addr, int num)
+		if !used
+			return -1
+
+		if entry.type != FILE_TYPE_DIR
+			return -2
+	
+		FileEntry *e = entry.first_sub
+		for int i, 0, pos_in_cluster
+			e = e.next
+			if !e
+				return 0
+		if !e
+			return 0
+		dirent_struct r
+		r.struct_size = strlen(&e.name) + 13
+		r.size = e.size
+		r.type = e.type
+		strcpy(&r.name, &e.name)
+		page_dir.memcpy2task(addr, &r, r.struct_size)
+		pos_in_cluster ++
+		return 1
+
+
+	void close()
+		if !used
+			return
+		if entry.type == FILE_TYPE_FILE
+			free(buffer)
+		else if entry.type == FILE_TYPE_CHAR
+			__temp_p__ = entry.op._close
+			__temp_p2__ = entry
+			asm{
+				mov eax, __temp_p__
+				push __temp_p2__
+				call eax
+				sub esp, 0x04
+			}
+		used = false
+		entry = nil
+
 
 OpenFileData OpenFile[MAX_OPEN_FILES]
 
@@ -57,126 +174,8 @@ OpenFileData *kernel_open(cstring filename)
 	return of
 
 
-int kernel_read(OpenFileData *of, PageDirectory *page_dir, int addr, int size)
-	int r=0
-		
-	if of.entry.type == FILE_TYPE_CHAR
-		__temp_p__ = of.entry.op._read
-		__temp_p2__ = of.entry
-		__temp_p3__ = page_dir
-		__temp_i__ = addr
-		__temp_i2__ = size
-		asm{
-			mov eax, __temp_p__
-			push __temp_i2__
-			push __temp_i__
-			push __temp_p3__
-			push __temp_p2__
-			call eax
-			mov __temp_i__, eax
-			sub esp, 0x12
-		}
-		return __temp_i__
-		
-	if size > of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
-		size = of.entry.size - of.cluster_no * 2048 - of.pos_in_cluster
-		
-	while size > 0
-	
-		// wieviel kann aus dem Puffer gelesen werden?
-		int cur_size = size
-		if cur_size > 2048 - of.pos_in_cluster
-			cur_size = 2048 - of.pos_in_cluster
-
-		// direkt lesen (aus dem Lese-Puffer kopieren)
-		//memcpy(buffer, &of.buffer[of.pos_in_cluster], cur_size)
-		//buffer = &buffer[cur_size]
-		page_dir.memcpy2task(addr, &of.buffer[of.pos_in_cluster], cur_size)
-		of.pos_in_cluster += cur_size
-		r += cur_size
-		size -= cur_size
-		addr += cur_size
-		
-		if of.pos_in_cluster >= 2048
-			// nächsten Cluster einlesen
-			of.pos_in_cluster = 0
-			of.cluster_no ++
-			int cl = of.entry.offset + of.cluster_no
-			int p_offset = Partition[CurrentPartition].offset
-			FileSystem.Read(0, p_offset + cl, of.buffer)
-		
-	return r
-
-
-int kernel_write(OpenFileData *of, PageDirectory *page_dir, int addr, int size)
-	int r=0
-
-	if !of.used
-		return -1
-		
-	if of.entry.type == FILE_TYPE_CHAR
-		__temp_p__ = of.entry.op._write
-		__temp_p2__ = of.entry
-		__temp_p3__ = page_dir
-		__temp_i__ = addr
-		__temp_i2__ = size
-		asm{
-			mov eax, __temp_p__
-			push __temp_i2__
-			push __temp_i__
-			push __temp_p3__
-			push __temp_p2__
-			call eax
-			mov __temp_i__, eax
-			sub esp, 0x12
-		}
-		return __temp_i__
-	return 0
-
-
 class dirent_struct
 	int struct_size
 	int size
 	int type
 	cstring name
-
-int kernel_getdents(OpenFileData *of, PageDirectory *page_dir, int addr, int num)
-	if !of.used
-		return -1
-
-	if of.entry.type != FILE_TYPE_DIR
-		return -2
-	
-	FileEntry *e = of.entry.first_sub
-	for int i, 0, of.pos_in_cluster
-		e = e.next
-		if !e
-			return 0
-	if !e
-		return 0
-	dirent_struct r
-	r.struct_size = strlen(&e.name) + 13
-	r.size = e.size
-	r.type = e.type
-	strcpy(&r.name, &e.name)
-	page_dir.memcpy2task(addr, &r, r.struct_size)
-	of.pos_in_cluster ++
-	return 1
-
-
-void kernel_close(OpenFileData *of)
-	if !of.used
-		return
-	if of.entry.type == FILE_TYPE_FILE
-		free(of.buffer)
-	else if of.entry.type == FILE_TYPE_CHAR
-		__temp_p__ = of.entry.op._close
-		__temp_p2__ = of.entry
-		asm{
-			mov eax, __temp_p__
-			push __temp_p2__
-			call eax
-			sub esp, 0x04
-		}
-	of.used = false
-	of.entry = nil

@@ -177,7 +177,7 @@ class TaskData
 		status = TASK_STATUS_ZOMBIE
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
 			if handles[i]
-				kernel_close(handles[i])
+				handles[i].close()
 				handles[i] = nil
 		if !kernel_mode
 			if page_dir
@@ -202,7 +202,7 @@ class TaskData
 			return -1
 		int index = add_handle(of)
 		if index < 0
-			kernel_close(of)
+			of.close()
 		return index
 
 
@@ -213,7 +213,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_read(of, page_dir, addr, size)
+		return of.read(page_dir, addr, size)
 
 
 	int sys_write(int handle, int addr, int size)
@@ -223,7 +223,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_write(of, page_dir, addr, size)
+		return of.write(page_dir, addr, size)
 
 	int sys_getdents(int handle, int addr, int num)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -232,7 +232,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return kernel_getdents(of, page_dir, addr, num)
+		return of.getdents(page_dir, addr, num)
 
 	void sys_close(int handle)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -240,7 +240,7 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return
-		kernel_close(of)
+		of.close()
 		handles[handle] = nil
 	
 	int sys_execute(cstring filename)
@@ -253,7 +253,7 @@ class TaskData
 		OpenFileData *of = handles[h]
 		while true
 			//int r = sys_read(caller, h, addr, 1024)
-			int r = kernel_read(of, t.page_dir, addr, 1024)
+			int r = of.read(t.page_dir, addr, 1024)
 			if r <= 0
 				break
 			addr += r
