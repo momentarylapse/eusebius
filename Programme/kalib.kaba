@@ -66,6 +66,16 @@ int brk(int size)
 		mov __temp_i__, eax
 	}
 	return __temp_i__
+	
+int fork()
+	asm{
+		mov eax, 0x00000002
+		int 0x80
+		mov __temp_i__, eax
+	}
+	if __temp_i__ == 0
+		stdout = open("/dev/tty")
+	return __temp_i__
 
 int open(string filename)
 	cstring tt

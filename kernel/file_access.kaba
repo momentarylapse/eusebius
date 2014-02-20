@@ -141,7 +141,6 @@ class dirent_struct
 	cstring name
 
 int kernel_getdents(OpenFileData *of, PageDirectory *page_dir, int addr, int num)
-	cstring *buffer = _i2p(page_dir.addr2kernel(addr))
 	if !of.used
 		return -1
 
@@ -153,14 +152,14 @@ int kernel_getdents(OpenFileData *of, PageDirectory *page_dir, int addr, int num
 		e = e.next
 		if !e
 			return 0
-	dirent_struct *r = buffer
-	
 	if !e
 		return 0
+	dirent_struct r
 	r.struct_size = strlen(&e.name) + 13
 	r.size = e.size
 	r.type = e.type
 	strcpy(&r.name, &e.name)
+	page_dir.memcpy2task(addr, &r, r.struct_size)
 	of.pos_in_cluster ++
 	return 1
 

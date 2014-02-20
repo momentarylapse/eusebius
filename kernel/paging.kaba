@@ -106,6 +106,20 @@ class PageDirectory : PageTable
 		int num_entries = pt.count_entries()
 		return last_table * PAGE_TABLE_ENTRIES + num_entries
 	
+	void clone(PageDirectory *pd2, int above)
+		int mem = (pd2.count_pages() - count_pages()) * PAGE_SIZE
+		Paging.page_dir_grow(self, mem, true)
+		for int i, 0, PAGE_TABLE_ENTRIES
+			if pd2.e[i] == 0
+				break
+			PageTable *pt = _i2p(e[i] & 0xfffff000)
+			PageTable *pt2 = _i2p(pd2.e[i] & 0xfffff000)
+			for int j, 0, PAGE_TABLE_ENTRIES
+				if pt2.e[j] == 0
+					break
+				if pt2.e[j] >= above
+					memcpy(_i2p(pt.e[j] & 0xfffff000), _i2p(pt2.e[j] & 0xfffff000), PAGE_SIZE)
+	
 	void show()
 		printh(self, 64)
 		prints("...\n")

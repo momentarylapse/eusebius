@@ -248,11 +248,6 @@ class TaskData
 		if h < 0
 			return -1
 		TaskData *t = AddTask(filename, _i2p(0x00a00000), false, self)
-		/*prints("<<")
-		printi(caller.pid)
-		prints(" -> ")
-		printi(t.pid)
-		prints(">>")*/
 		memcpy(&t.arg, &filename, sizeof(cstring))
 		int addr = 0x00200000 + KERNEL_MEM // task space...
 		OpenFileData *of = handles[h]
@@ -318,6 +313,22 @@ class TaskData
 			return cur_size
 		Paging.page_dir_grow(page_dir, size, true)
 		return size
+	
+	int sys_fork()
+		TaskData *t = AddTask("-fork-", _i2p(0x00a00000), false, self)
+		if !t
+			return -1
+		t.page_dir.clone(page_dir, KERNEL_MEM)
+		memcpy(&t.arg, &arg, sizeof(cstring))
+		strcpy(&t.name, &name)
+		strcpy(&t.cur_dir, &cur_dir)
+		t.parent = self
+		t.tss = tss
+		t.tss.cr3 = t.page_dir
+		t.tss.eax = 0 // fork() return for child
+	
+		t.start()
+		return t.pid
 	
 TaskData Task[MAX_TASKS]
 TaskData *KernelTask

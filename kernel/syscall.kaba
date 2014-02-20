@@ -18,6 +18,16 @@ void sys_showstats()
 	prints("k       Heap:  ")
 	printi((MemAlloc[NumMemAllocs-1].End - MemAlloc[0].Offset) / 1024)
 	prints("k\n")
+	asm{
+		db 0x0f
+		db 0x31
+		mov __temp_i__, eax
+		mov __temp_i2__, edx
+	}
+	printi(__temp_i2__)
+	prints("  ")
+	printi(__temp_i__)
+	prints("\n")
 	for int i, 0, MAX_TASKS
 		if Task[i].status != TASK_STATUS_UNUSED
 			printi(i)
@@ -62,6 +72,8 @@ void int_syscall()
 	
 		if index == 1 // exit
 			caller.sys_exit(param1)
+		else if index == 2 // fork
+			r = caller.sys_fork()
 		else if index == 3 // read
 			r = caller.sys_read(param1, param2, param3)
 		else if index == 4 // write
@@ -92,7 +104,6 @@ void int_syscall()
 			caller.page_dir.memcpy2task(param1, &caller.cur_dir, sizeof(cstring))
 		else if index == 0x2001 // getarg
 			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
-			nil//r = caller.addr2task(_p2i(&caller.arg))
 		else if index == 0x2002 // prints
 			nil//p = _i2p(caller.addr2kernel(param1))
 		else if index == 0x2003 // showstats
