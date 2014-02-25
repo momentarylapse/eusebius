@@ -87,7 +87,7 @@ void main()
 	ShowPartitions()
 	
 	FileSystem.Init()
-	FileSystem.Mount(Partition[0], FileSystem.root)
+	FileSystem.Mount(Partition[1], FileSystem.root)
 	
 	Paging.init()
 	

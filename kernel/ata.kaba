@@ -201,6 +201,7 @@ class AtaData
 		prints("\n")
 
 	void Init()
+		NumPartitions = 0
 		prints("ATA Geraete:\n")
 	
 		// set up Device Control register
@@ -344,58 +345,73 @@ AtaData Ata
 class PartitionData
 	int disk_no
 	int offset, size
+	int block_size
 	char type
 	bool active
+	cstring name
 	
-PartitionData Partition[4]
+PartitionData Partition[8]
+int NumPartitions
 
 void ReadPartitions(int disk_no)
+	PartitionData *p = &Partition[NumPartitions]
+	NumPartitions ++
+	p.disk_no = disk_no
+	p.offset = 0
+	p.size = Ata.DiskInfo[disk_no].size
+	p.type = 0
+	p.active = false
+	strcpy(&p.name, &"hda")
+	p.name[2] = 'a' + disk_no
 	// mbr lesen
-	Ata.ReadSector(disk_no,0,1,&Ata.Buffer)
+	Ata.ReadSector(disk_no, 0, 1, &Ata.Buffer)
 	//MountPartition=false
 	for int n, 0, 4
-		PartitionData *p = &Partition[n]
-		p.disk_no = disk_no
 		int *offset = &Ata.Buffer[454+n*16]
-		p.offset = *offset / 4
 		int *size = &Ata.Buffer[458+n*16]
-		p.size = *size / 4
+		int type = Ata.Buffer[450+n*16]
+		if (type == 0) or (*size == 0)
+			continue
+		p = &Partition[NumPartitions]
+		NumPartitions ++
+		p.disk_no = disk_no
+		p.offset = *offset
+		p.size = *size
 		p.type = Ata.Buffer[450+n*16]
 		p.active = (Ata.Buffer[446+n*16] == 0x80)
+		strcpy(&p.name, &"hda_")
+		p.name[2] = 'a' + disk_no
+		p.name[3] = n + 49
 	/*for n, 0, 512
 		DrawHex(n*3,2,&AtaBuffer[n],1)*/
 		
 void ShowPartitions()
 	prints("Primaere Partitionen:     Offset   Groesse\n")
-	for int n, 0, 4
+	for int n, 0, NumPartitions
 		PartitionData *p = &Partition[n]
-		prints("/dev/hda")
-		printi(n + 1)
-		if (p.type != 0x00) and (p.size > 0)
-			TextPos = 60
-			if p.active
-				prints("(aktiv)")
-			TextPos = 27
-			printi(p.offset)
-			TextPos = 36
-			printi(p.size)
-			TextPos = 50
-			if p.type == 0x83
-				prints("Linux")
-			else if p.type == 0x20
-				prints("MichiFS")
-			else if p.type == 0x0c
-				prints("Fat 32")
-			else if p.type == 0x0e
-				prints("Fat 16")
-			else if p.type == 0x07
-				prints("NTFS")
-			else if p.type == 0x0f
-				prints("Erweitert...")
-			else
-				printh(&p.type, 1)
+		prints("/dev/")
+		prints(p.name)
+		TextPos = 60
+		if p.active
+			prints("(aktiv)")
+		TextPos = 27
+		printi(p.offset/2)
+		TextPos = 36
+		printi(p.size/2)
+		TextPos = 50
+		if p.type == 0x83
+			prints("Linux")
+		else if p.type == 0x20
+			prints("MichiFS")
+		else if p.type == 0x0c
+			prints("Fat 32")
+		else if p.type == 0x0e
+			prints("Fat 16")
+		else if p.type == 0x07
+			prints("NTFS")
+		else if p.type == 0x0f
+			prints("Erweitert...")
 		else
-			TextPos = 50
-			prints("---")
+			printh(&p.type, 1)
 		prints("\n")
 

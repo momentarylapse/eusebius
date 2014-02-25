@@ -152,7 +152,7 @@ class FileSystemData
 	void Mount(PartitionData p, FileEntry *dir)
 		if VerbosityLevel >= 1
 			prints("mounte...")
-		Read(0, p.offset + 1, &buf)
+		Read(0, p.offset/4 + 1, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
 		for int n, 0, NumFiles
