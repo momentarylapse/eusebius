@@ -1,0 +1,5 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+#define __STRING_CONST_AS_CSTRING__
+

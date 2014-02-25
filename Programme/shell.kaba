@@ -272,7 +272,7 @@ void prompt()
 string parse_var_name(string cmd, int pos)
 	string name
 	for int i, pos, cmd.num
-		if cmd[i] == ' ' or cmd[i] == '"' or cmd[i] == '$'
+		if cmd[i] == ' ' or cmd[i] == '"' or cmd[i] == '$' or cmd[i] == '.' or cmd[i] == ':' or cmd[i] == ','
 			break
 		name.add(cmd[i])
 	return name

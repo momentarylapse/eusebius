@@ -88,10 +88,6 @@ void main()
 	
 	FileSystem.Init()
 	FileSystem.Mount(Partition[0], FileSystem.root)
-	/*FileEntry *e = FileSystem.get("/dev/b")
-	if e
-		e.show()
-	FileSystem.root.show()*/
 	
 	Paging.init()
 	

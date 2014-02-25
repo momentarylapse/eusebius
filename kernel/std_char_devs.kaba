@@ -80,16 +80,16 @@ int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 
 void InitDrivers()
-	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, FileSystem.root)
+	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
 	
-	FileEntry *dev_zero = FileSystem.add("zero", FILE_TYPE_CHAR, dev)
+	FileEntry *dev_zero = FileSystem.add("zero", FILE_TYPE_CHAR, nil, dev)
 	dev_zero_ops._open = &dev_zero_open
 	dev_zero_ops._close = &dev_zero_close
 	dev_zero_ops._read = &dev_zero_read
 	dev_zero_ops._write = &dev_zero_write
 	dev_zero.op = &dev_zero_ops
 	
-	FileEntry *dev_null = FileSystem.add("null", FILE_TYPE_CHAR, dev)
+	FileEntry *dev_null = FileSystem.add("null", FILE_TYPE_CHAR, nil, dev)
 	dev_null_ops._open = &dev_null_open
 	dev_null_ops._close = &dev_null_close
 	dev_null_ops._read = &dev_null_read
@@ -98,7 +98,7 @@ void InitDrivers()
 	
 	dev_rand_state = 13
 	
-	FileEntry *dev_rand = FileSystem.add("random", FILE_TYPE_CHAR, dev)
+	FileEntry *dev_rand = FileSystem.add("random", FILE_TYPE_CHAR, nil, dev)
 	dev_rand_ops._open = &dev_rand_open
 	dev_rand_ops._close = &dev_rand_close
 	dev_rand_ops._read = &dev_rand_read
@@ -107,14 +107,14 @@ void InitDrivers()
 	
 	dev_key_num = 0
 	
-	FileEntry *dev_key = FileSystem.add("keyboard", FILE_TYPE_CHAR, dev)
+	FileEntry *dev_key = FileSystem.add("keyboard", FILE_TYPE_CHAR, nil, dev)
 	dev_key_ops._open = &dev_key_open
 	dev_key_ops._close = &dev_key_close
 	dev_key_ops._read = &dev_key_read
 	dev_key_ops._write = &dev_key_write
 	dev_key.op = &dev_key_ops
 	
-	FileEntry *dev_tty = FileSystem.add("tty", FILE_TYPE_CHAR, dev)
+	FileEntry *dev_tty = FileSystem.add("tty", FILE_TYPE_CHAR, nil, dev)
 	dev_tty_ops._open = &dev_tty_open
 	dev_tty_ops._close = &dev_tty_close
 	dev_tty_ops._read = &dev_tty_read
