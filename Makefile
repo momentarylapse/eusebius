@@ -22,9 +22,6 @@ loader_fake.o : loader_fake.kaba
 loader_br.o : loader_br.kaba
 	$(KABA) --x86 -o loader_br.o loader_br.kaba
 
-bochs/c0.img:
-	dd if=/dev/zero of=bochs/c0.img bs=1024 count=10080
-
 Programme/hello.o: Programme/hello.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o Programme/hello.o Programme/hello.kaba
 
@@ -68,9 +65,14 @@ img.mfs: init.o kernel/kernel.o Programme/hello.o Programme/shell.o Programme/ca
 	cp Programme/kalib.o mfs/kalib
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
-bochs/c.img: bochs/c0.img img.mfs loader_fake.o
-	cp bochs/c0.img bochs/c.img
-	dd if=bochs/mbr0 of=bochs/c.img conv=notrunc
+bochs/c.img: img.mfs loader_fake.o
+	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160
+	if [ -f Experimente/ext2/img2 ]; \
+	then \
+	    dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc; \
+	else \
+	    dd if=bochs/mbr0 of=bochs/c.img conv=notrunc; \
+	fi
 	dd if=loader_fake.o of=bochs/c.img conv=notrunc
 	dd if=img.mfs of=bochs/c.img bs=512 seek=16 conv=notrunc
 
