@@ -53,9 +53,17 @@ void main()	//-------------------------------------------------------------	// R
 		mov es, ax
 		mov bx, 0x0000 // 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
 		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80
-		mov cx, 0x001d
-		mov dx, 0x0080
+		mov al, 0x80 // 128 sectors * 512 bytes = 64k
+		mov cx, 0x001d // sector 0x1f, cylinder 0
+		mov dx, 0x0080 // head 0x00, disc 0
+		int 0x13
+		mov ax, 0x2000
+		mov es, ax
+		mov bx, 0x0000 // 0x2000:0x0000 = 0x20000 real mode segmentation is ugly
+		mov ah, 0x02 // "ReadSector"
+		mov al, 0x80 // 128 sectors * 512 bytes = 64k
+		mov cx, 0x001f // sector 0x1f, cylinder 0
+		mov dx, 0x0280 // head 0x02, disc 0
 		int 0x13
 	//	mov al, [0x5008] // Größe: 1Sektor = 512b
 	//	mov cx, [0x5004]
@@ -65,11 +73,6 @@ void main()	//-------------------------------------------------------------	// R
 		//jnz _reset_drive
 
 
-		// Debug
-		mov al, '2'
-		mov ah, 0x0e
-		mov bx, 0x0000
-		int 0x10		
 		// Speicher-Segmente laden
 		lgdt [_gdtr]
 

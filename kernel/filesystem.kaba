@@ -74,9 +74,6 @@ class FileSystemData
 	int list_size
 	FileEntry *root
 	
-	char buf[2048]
-	int buf_used
-	
 	FileEntry *add(cstring name, int type, PartitionData *dev, FileEntry *parent)
 		FileEntry *e = &list[list_size]
 		list_size ++
@@ -136,6 +133,50 @@ class FileSystemData
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 1, 1, &buffer[512])
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 2, 1, &buffer[1024])
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 3, 1, &buffer[1536])
+		
+	void Mount(PartitionData p, FileEntry *dir)
+		if VerbosityLevel >= 1
+			prints("mounte...")
+		FSTMichiFS.mount(p, dir)
+		if VerbosityLevel >= 1
+			prints(" ok\n")
+
+FileSystemData FileSystem
+
+/*class Word
+	char c[2]
+	int int()
+		int a = c[0]
+		int b = c[1]
+		return a + b * 256
+
+class Inode
+	Word rights
+	Word user
+	int size
+	int atime, ctime, mtime, dtime
+	Word group
+	Word hard_links
+	int blocks
+	int flags
+	int version
+	int iblock[15]
+	int file_version
+	int acl
+	int size_high
+	int dummy
+	int xx_high[3]
+	bool isDir()
+		return (rights.int() & 0xf000) == 0x4000
+	bool isFile()
+		return (rights.int() & 0xf000) == 0x8000*/
+
+class FileSystemType
+	int cluster_size
+
+class FileSystemTypeMichiFS : FileSystemType
+	char buf[2048]
+	int buf_used
 	
 	int read_int()
 		int *p = &buf[buf_used]
@@ -148,24 +189,24 @@ class FileSystemData
 			s[i] = buf[buf_used + i]
 		buf_used += l
 		s[l] = 0
-		
-	void Mount(PartitionData p, FileEntry *dir)
-		if VerbosityLevel >= 1
-			prints("mounte...")
-		Read(0, p.offset/4 + 1, &buf)
+	bool mount(PartitionData p, FileEntry *dir)
+		cluster_size = 2048
+		FileSystem.Read(0, p.offset/4 + 1, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
 		for int n, 0, NumFiles
 			cstring name
 			read_str(name)
-			FileEntry *e = add(name, FILE_TYPE_FILE, &p, dir)
+			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, &p, dir)
 			//e.type =
 			read_int()
 			e.size = read_int()
 			read_int() // NumParts = 1
 			e.offset = read_int()
 			e.num_clusters = read_int()
-		if VerbosityLevel >= 1
-			prints(" ok\n")
+	
+	void readBlock(int no, cstring *buf)
+	void readFileBlock(int inode, int block, cstring *buf)
 
-FileSystemData FileSystem
+FileSystemTypeMichiFS FSTMichiFS
+

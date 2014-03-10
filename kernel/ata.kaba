@@ -349,6 +349,7 @@ class PartitionData
 	char type
 	bool active
 	cstring name
+	void *readFileBlock // (int inode, int block, cstring *buf)
 	
 PartitionData Partition[8]
 int NumPartitions
@@ -360,6 +361,7 @@ void ReadPartitions(int disk_no)
 	p.offset = 0
 	p.size = Ata.DiskInfo[disk_no].size
 	p.type = 0
+	p.readFileBlock = nil
 	p.active = false
 	strcpy(&p.name, &"hda")
 	p.name[2] = 'a' + disk_no
