@@ -6,6 +6,7 @@
 const int MALLOC_OFFSET = 0x00b00000
 
 int stdin, stdout, lib_error
+bool __free_error__
 
 int __temp_i__, __temp_i2__, __temp_i3__
 void *__temp_p__, *__temp_p2__
@@ -289,62 +290,71 @@ MallocHeader *malloc_first_free
 
 
 void *lib__@malloc(int size)
+	if size <= 0
+		return nil
 	MallocHeader *cur = malloc_first_free
 	size += sizeof(MallocHeader)
 	while cur
 		if size <= cur.size - sizeof(MallocHeader)
 			cur.size -= size
-			char p[0]* = cur
-			MallocHeader *hh = &p[cur.size]
+			MallocHeader *hh = cur.after()
 			hh.size = size
 			hh.next = nil
 			hh.prev = nil
-			return &p[cur.size + sizeof(MallocHeader)]
+			return hh.payload()
 		cur = cur.next
 	return nil
 
 void _cleanup(MallocHeader *h)
 	if h.next
-		char pp[0]* = h
-		MallocHeader *after = &pp[h.size]
-		if after == h.next
+		if h.after() == h.next
 			h.size += h.next.size
 			h.next = h.next.next
 			if h.next
 				h.next.prev = h
 	if h.prev
-		pp = h.prev
-		after = &pp[h.prev.size]
-		if after == h
+		if h.prev.after() == h
 			h.prev.size += h.size
 			if h.next
 				h.next.prev = h.prev
 			h.prev.next = h.next
 
+void __lib_free_error__()
+	__free_error__ = true
+	for int i, 0, 31
+		int c = "\n\nkalib: invalid call to free()"[i]
+		write(stdout, &c, 1)
+	//lib__print "kalib: invalid call to free()"
+	exit(-1)
+
 void lib__@free(void *p)
-	return
+	if __free_error__
+		return
 	//print "---free"
 	MallocHeader *cur = malloc_first_free
+	if _p2i(p) < _p2i(cur)
+		__lib_free_error__()
 	while cur
 		if (_p2i(p) < _p2i(cur.next)) or !cur.next
 			char pp[0]* = p
 			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
-			/*temp = hh
-			asm{
-				mov rax, temp
-				and eax, 0xffffffff
-				mov temp, rax
-			}
-			hh = temp*/
+			
+			if hh.size < 0
+				//__lib_free_error__()
+				return
+			if (_p2i(hh.after()) > _p2i(cur.next)) and cur.next
+				//__lib_free_error__()
+				return // TODO...
 			
 			hh.next = cur.next
 			if cur.next
 				cur.next.prev = hh
 			hh.prev = cur
 			cur.next = hh
-			//_cleanup(hh)
+			_cleanup(hh)
 			return
 		cur = cur.next
+	__lib_free_error__()
 
 void *lib__@realloc(void *p, int size)
 	MallocHeader hp[0]* = p
@@ -825,6 +835,7 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 	return l
 
 void init_lib()
+	__free_error__ = false
 	malloc_first_free = _i2p(0x00b00000)
 	malloc_first_free.size = 0x00200000 - sizeof(MallocHeader)
 	malloc_first_free.next = nil
