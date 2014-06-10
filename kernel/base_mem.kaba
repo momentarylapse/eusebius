@@ -1,5 +1,6 @@
 #define __OS__
 use "base.kaba"
+use "text_mode.kaba"
 
 
 //--------------------------------------------------------------
@@ -9,46 +10,89 @@ const int KERNEL_MEM = 0x00800000 // 8mb
 const int MEM_ALLOC_OFFSET = 0x00400000 // (4-2)=2mb Kernel-Variablen
 const int MAX_MEM_ALLOCS = 4096
 
-int NumMemAllocs
-class mem_alloc_t
-	int Offset,End
-mem_alloc_t MemAlloc[MAX_MEM_ALLOCS]
+int MemHeapAllocated
 
 
-// Speicherblöcke bleiben immer so sortiert, dass der Offset monoton mit dem Index steigt!
+class MallocHeader
+	int size // header + payload
+	MallocHeader *next
+	MallocHeader *prev
+	void *after()
+		char pp[0]* = self
+		return &pp[size]
+	void *payload()
+		char pp[0]* = self
+		return &pp[sizeof(MallocHeader)]
+MallocHeader *malloc_first_free
+
+
 void *malloc(int size)
-	// Anfang
-	int offset=MEM_ALLOC_OFFSET
-	int a=0
-	// suchen
-	while a<NumMemAllocs
-		if offset+size<MemAlloc[a].Offset
-			break
-		offset=MemAlloc[a].End
-		a ++
-	// hintere Allocs verschieben
-	int a2=NumMemAllocs-1
-	while a2>=a
-		MemAlloc[a2+1]=MemAlloc[a2]
-		a2--
-	// neuen Alloc einfuegen
-	MemAlloc[a].Offset=offset
-	MemAlloc[a].End=offset+size
-	NumMemAllocs++
-	return _i2p(offset)
-
-void free(void *mem)
-	int mem_i=_p2i(mem)
-	int a=0
-	int ae=-1
-	while (ae<0) or (a<NumMemAllocs)
-		if MemAlloc[a].Offset==mem_i
-			ae=a
-		a++
-	if ae>=0
-		a=ae
-		NumMemAllocs--
-		while a<NumMemAllocs
-			MemAlloc[a]=MemAlloc[a+1]
-			a++
+	//prints "-malloc "
+	MallocHeader *cur = malloc_first_free
 	
+	// count in the allocation header
+	size += sizeof(MallocHeader)
+	while cur
+		if size <= cur.size - sizeof(MallocHeader)
+			cur.size -= size
+			MallocHeader *hh = cur.after()
+			hh.size = size
+			hh.next = nil
+			hh.prev = nil
+			MemHeapAllocated += size
+			memcheck()
+			return hh.payload()
+		cur = cur.next
+	return nil
+
+void _cleanup(MallocHeader *h)
+	if h.next
+		if h.after() == h.next
+			h.size += h.next.size
+			h.next = h.next.next
+			if h.next
+				h.next.prev = h
+	if h.prev
+		if h.prev.after() == h
+			h.prev.size += h.size
+			if h.next
+				h.next.prev = h.prev
+			h.prev.next = h.next
+
+void free(void *p)
+	//prints "---free"
+	MallocHeader *cur = malloc_first_free
+	while cur
+		if (_p2i(p) < _p2i(cur.next)) or !cur.next
+			char pp[0]* = p
+			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
+			MemHeapAllocated -= hh.size
+			
+			hh.next = cur.next
+			if cur.next
+				cur.next.prev = hh
+			hh.prev = cur
+			cur.next = hh
+			_cleanup(hh)
+			memcheck()
+			return
+		cur = cur.next
+
+
+
+void memcheck()
+	MallocHeader *h = malloc_first_free
+	while h
+		if h.next
+			if _p2i(h.next) < _p2i(h) + h.size
+				panic "memcheck: h.next>h+size"
+			if h != h.next.prev
+				panic "memcheck: h!=h.next.prev"
+		h = h.next
+
+void mem_init()
+	MemHeapAllocated = 0
+	malloc_first_free = _i2p(MEM_ALLOC_OFFSET)
+	malloc_first_free.size = 0x00200000
+	malloc_first_free.next = nil
+	malloc_first_free.prev = nil

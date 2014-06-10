@@ -143,14 +143,14 @@ class FileSystemData
 
 FileSystemData FileSystem
 
-/*class Word
+class Word
 	char c[2]
 	int int()
 		int a = c[0]
 		int b = c[1]
 		return a + b * 256
 
-class Inode
+class Ext2Inode
 	Word rights
 	Word user
 	int size
@@ -169,7 +169,7 @@ class Inode
 	bool isDir()
 		return (rights.int() & 0xf000) == 0x4000
 	bool isFile()
-		return (rights.int() & 0xf000) == 0x8000*/
+		return (rights.int() & 0xf000) == 0x8000
 
 class FileSystemType
 	int cluster_size
@@ -209,4 +209,8 @@ class FileSystemTypeMichiFS : FileSystemType
 	void readFileBlock(int inode, int block, cstring *buf)
 
 FileSystemTypeMichiFS FSTMichiFS
+
+class MountPoint
+	FileSystemType *type
+	PartitionData *dev
 

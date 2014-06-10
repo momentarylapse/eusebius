@@ -74,8 +74,8 @@ void PagingTest()
 
 void main()
 	read_data_from_init()
+	mem_init()
 	etm_init()
-	NumMemAllocs=0
 	
 	prints("Willkommen zu Eusebius 0.2.5   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")

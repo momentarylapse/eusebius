@@ -16,7 +16,7 @@ void sys_showstats()
 	prints("k von ")
 	printi(MemorySize / 1024)
 	prints("k       Heap:  ")
-	printi((MemAlloc[NumMemAllocs-1].End - MemAlloc[0].Offset) / 1024)
+	printi(MemHeapAllocated / 1024)
 	prints("k\n")
 	asm{
 		db 0x0f

@@ -91,6 +91,7 @@ enum
 class TaskData
 	TaskStateSegment tss
 	int stack[0]*
+	int stack_size
 	int desc // Index in GDT
 	int pid, status
 	int return_status
@@ -170,6 +171,9 @@ class TaskData
 	void clean_up_deep()
 		make_zombie()
 		status = TASK_STATUS_UNUSED
+		
+	void *get_initial_stack_pos()
+		return _i2p(_p2i(stack) + stack_size)
 		
 		
 
@@ -370,15 +374,16 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 		t.cur_dir = FileSystem.root
 	t.parent = parent
 	t.kernel_mode = kernel_mode
+	t.stack_size = TASK_STACK_SIZE
 	if kernel_mode
 		t.stack = malloc(TASK_STACK_SIZE)
 		t.page_dir = KernelPageDir
-		t.tss.set(t.stack, 1, 2, 0, KernelPageDir, func)
+		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
 	else
 		t.stack = _i2p(0x00c00000)
 		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
 		Paging.page_dir_grow(t.page_dir, INITIAL_TASK_MEM, true)
-		t.tss.set(t.stack, 3, 4, /*3*/ 0, t.page_dir, func)
+		t.tss.set(t.get_initial_stack_pos(), 3, 4, /*3*/ 0, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
 	return t

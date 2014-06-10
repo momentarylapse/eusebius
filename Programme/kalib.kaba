@@ -276,25 +276,75 @@ void prints(cstring s)
 	}
 
 class MallocHeader
-	int size
-	void *next
+	int size // header + payload
+	MallocHeader *next
+	MallocHeader *prev
+	void *after()
+		char pp[0]* = self
+		return &pp[size]
+	void *payload()
+		char pp[0]* = self
+		return &pp[sizeof(MallocHeader)]
 MallocHeader *malloc_first_free
 
 
 void *lib__@malloc(int size)
-	MallocHeader *h = malloc_first_free
-	int s = size + sizeof(MallocHeader)
-	while h
-		if s <= h.size
-			h.size -= s
-			char p[0]* = h
-			MallocHeader *hh = &p[h.size + sizeof(MallocHeader)]
+	MallocHeader *cur = malloc_first_free
+	size += sizeof(MallocHeader)
+	while cur
+		if size <= cur.size - sizeof(MallocHeader)
+			cur.size -= size
+			char p[0]* = cur
+			MallocHeader *hh = &p[cur.size]
 			hh.size = size
-			return &p[h.size + sizeof(MallocHeader) * 2]
-		h = h.next
+			hh.next = nil
+			hh.prev = nil
+			return &p[cur.size + sizeof(MallocHeader)]
+		cur = cur.next
 	return nil
 
+void _cleanup(MallocHeader *h)
+	if h.next
+		char pp[0]* = h
+		MallocHeader *after = &pp[h.size]
+		if after == h.next
+			h.size += h.next.size
+			h.next = h.next.next
+			if h.next
+				h.next.prev = h
+	if h.prev
+		pp = h.prev
+		after = &pp[h.prev.size]
+		if after == h
+			h.prev.size += h.size
+			if h.next
+				h.next.prev = h.prev
+			h.prev.next = h.next
+
 void lib__@free(void *p)
+	return
+	//print "---free"
+	MallocHeader *cur = malloc_first_free
+	while cur
+		if (_p2i(p) < _p2i(cur.next)) or !cur.next
+			char pp[0]* = p
+			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
+			/*temp = hh
+			asm{
+				mov rax, temp
+				and eax, 0xffffffff
+				mov temp, rax
+			}
+			hh = temp*/
+			
+			hh.next = cur.next
+			if cur.next
+				cur.next.prev = hh
+			hh.prev = cur
+			cur.next = hh
+			//_cleanup(hh)
+			return
+		cur = cur.next
 
 void *lib__@realloc(void *p, int size)
 	MallocHeader hp[0]* = p
@@ -778,6 +828,7 @@ void init_lib()
 	malloc_first_free = _i2p(0x00b00000)
 	malloc_first_free.size = 0x00200000 - sizeof(MallocHeader)
 	malloc_first_free.next = nil
+	malloc_first_free.prev = nil
 	
 	stdout = open("/dev/tty")
 	stdin = -1
