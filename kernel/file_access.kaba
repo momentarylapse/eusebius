@@ -16,9 +16,9 @@ const int MAX_OPEN_FILES = 128
 class OpenFileData
 	bool used
 	FileEntry *entry
-	int pos_in_cluster
-	int cluster_no
-	int cluster_size
+	int pos_in_block
+	int block_no
+	int block_size
 	char buffer[0]*
 	
 
@@ -43,28 +43,28 @@ class OpenFileData
 			}
 			return __temp_i__
 		
-		if size > entry.size - cluster_no * cluster_size - pos_in_cluster
-			size = entry.size - cluster_no * cluster_size - pos_in_cluster
+		if size > entry.size - block_no * block_size - pos_in_block
+			size = entry.size - block_no * block_size - pos_in_block
 		
 		while size > 0
 	
 			// wieviel kann aus dem Puffer gelesen werden?
 			int cur_size = size
-			if cur_size > cluster_size - pos_in_cluster
-				cur_size = cluster_size - pos_in_cluster
+			if cur_size > block_size - pos_in_block
+				cur_size = block_size - pos_in_block
 
 			// direkt lesen (aus dem Lese-Puffer kopieren)
-			page_dir.memcpy2task(addr, &buffer[pos_in_cluster], cur_size)
-			pos_in_cluster += cur_size
+			page_dir.memcpy2task(addr, &buffer[pos_in_block], cur_size)
+			pos_in_block += cur_size
 			r += cur_size
 			size -= cur_size
 			addr += cur_size
 		
-			if pos_in_cluster >= cluster_size
-				// nächsten Cluster einlesen
-				pos_in_cluster = 0
-				cluster_no ++
-				int cl = entry.offset + cluster_no
+			if pos_in_block >= block_size
+				// read next block
+				pos_in_block = 0
+				block_no ++
+				int cl = entry.blocks[block_no]
 				int p_offset = entry.device.offset / 4
 				FileSystem.Read(entry.device.disk_no, p_offset + cl, buffer)
 		
@@ -104,7 +104,7 @@ class OpenFileData
 			return -2
 	
 		FileEntry *e = entry.first_sub
-		for int i, 0, pos_in_cluster
+		for int i, 0, pos_in_block
 			e = e.next
 			if !e
 				return 0
@@ -116,7 +116,7 @@ class OpenFileData
 		r.type = e.type
 		strcpy(&r.name, &e.name)
 		page_dir.memcpy2task(addr, &r, r.struct_size)
-		pos_in_cluster ++
+		pos_in_block ++
 		return 1
 
 
@@ -157,13 +157,13 @@ OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
 	if !of.entry
 		of.used = false
 		return nil
-	of.cluster_no = 0
-	of.pos_in_cluster = 0
-	of.cluster_size = 2048
+	of.block_no = 0
+	of.pos_in_block = 0
+	of.block_size = 2048
 	if of.entry.type == FILE_TYPE_FILE
-		of.buffer = malloc(of.cluster_size)
+		of.buffer = malloc(of.block_size)
 		int p_offset = of.entry.device.offset / 4
-		FileSystem.Read(of.entry.device.disk_no, p_offset + of.entry.offset, of.buffer)
+		FileSystem.Read(of.entry.device.disk_no, p_offset + of.entry.blocks[0], of.buffer)
 	else if of.entry.type == FILE_TYPE_CHAR
 		__temp_p__ = of.entry.op._open
 		__temp_p2__ = of.entry
