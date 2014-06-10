@@ -28,7 +28,7 @@ class FileEntry
 	int num_blocks
 	int blocks[0]*
 	int inode
-	PartitionData *device
+	MountPoint *mount
 	FileEntry *parent
 	FileEntry *next
 	FileEntry *first_sub
@@ -70,17 +70,43 @@ class FileEntry
 			e = e.next
 		return nil
 
+
+
+class MountPoint
+	FileSystemType *type
+	PartitionData *dev
+	FileEntry *dest
+	int block_offset
+	int block_size
+	
+	int dev_blocks_per_block
+	int dev_block_offset
+	
+	void update(int _bs, int _bo)
+		block_size = _bs
+		dev_blocks_per_block = _bs / 512
+		block_offset = _bo
+		dev_block_offset = _bo / 512
+	
+	void readBlock(int block_no, cstring *buf)
+		for int i, 0, dev_blocks_per_block
+			Ata.ReadSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+
+
+
 class FileSystemData
+	MountPoint mounts[16]
+	int num_mounts
 	FileEntry *root
 	
-	FileEntry *add(cstring name, int type, PartitionData *dev, FileEntry *parent)
+	FileEntry *add(cstring name, int type, MountPoint *mount, FileEntry *parent)
 		FileEntry *e = malloc(sizeof(FileEntry))
 		e.num_blocks = 0
 		e.blocks = nil
 		strcpy(&e.name, &name)
 		e.parent = parent
 		e.type = type
-		e.device = dev
+		e.mount = mount
 		e.next = nil
 		e.first_sub = nil
 		e.op = nil
@@ -89,6 +115,7 @@ class FileSystemData
 		return e
 	
 	void Init()
+		num_mounts = 0
 		root = add("-root-", FILE_TYPE_DIR, nil, nil)
 	
 	FileEntry *get(cstring path, FileEntry *cur_dir)
@@ -127,16 +154,21 @@ class FileSystemData
 		else
 			strcpy(&path, &"/")
 		
-	void Read(int disk_no, int cluster_offset, char buffer[0]*)
+	void __Read(int disk_no, int cluster_offset, char buffer[0]*)
 		Ata.ReadSector(disk_no, cluster_offset * 4    , 1, &buffer[0])
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 1, 1, &buffer[512])
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 2, 1, &buffer[1024])
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 3, 1, &buffer[1536])
 		
-	void Mount(PartitionData p, FileEntry *dir)
+	void Mount(PartitionData *dev, FileEntry *dir)
 		if VerbosityLevel >= 1
 			prints("mounte...")
-		FSTMichiFS.mount(p, dir)
+		MountPoint *mp = &mounts[num_mounts]
+		num_mounts ++
+		mp.dest = dir
+		mp.dev = dev
+		mp.type = &FSTMichiFS
+		FSTMichiFS.mount(mp)
 		if VerbosityLevel >= 1
 			prints(" ok\n")
 
@@ -171,7 +203,7 @@ class Ext2Inode
 		return (rights.int() & 0xf000) == 0x8000
 
 class FileSystemType
-	int cluster_size
+	int dummy
 
 class FileSystemTypeMichiFS : FileSystemType
 	char buf[2048]
@@ -188,15 +220,15 @@ class FileSystemTypeMichiFS : FileSystemType
 			s[i] = buf[buf_used + i]
 		buf_used += l
 		s[l] = 0
-	bool mount(PartitionData p, FileEntry *dir)
-		cluster_size = 2048
-		FileSystem.Read(0, p.offset/4 + 1, &buf)
+	bool mount(MountPoint *mp)
+		mp.update(2048, 0)
+		mp.readBlock(1, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
 		for int n, 0, NumFiles
 			cstring name
 			read_str(name)
-			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, &p, dir)
+			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, mp, mp.dest)
 			//e.type =
 			read_int()
 			e.size = read_int()
@@ -207,12 +239,7 @@ class FileSystemTypeMichiFS : FileSystemType
 			for int i, 0, e.num_blocks
 				e.blocks[i] = first_block + i
 	
-	void readBlock(int no, cstring *buf)
-	void readFileBlock(int inode, int block, cstring *buf)
+	//void readBlock(int no, cstring *buf)
+	//void readFileBlock(int inode, int block, cstring *buf)
 
 FileSystemTypeMichiFS FSTMichiFS
-
-class MountPoint
-	FileSystemType *type
-	PartitionData *dev
-

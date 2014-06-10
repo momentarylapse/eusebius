@@ -77,7 +77,7 @@ void main()
 	mem_init()
 	etm_init()
 	
-	prints("Willkommen zu Eusebius 0.2.5   (c) by MichiSoft TM 2014\n")
+	prints("Willkommen zu Eusebius 0.2.6   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
@@ -87,7 +87,7 @@ void main()
 	ShowPartitions()
 	
 	FileSystem.Init()
-	FileSystem.Mount(Partition[1], FileSystem.root)
+	FileSystem.Mount(&Partition[1], FileSystem.root)
 	
 	Paging.init()
 	
