@@ -1,5 +1,6 @@
 #define __OS__
 use "base.kaba"
+use "base_mem.kaba"
 use "ata.kaba"
 use "text_mode.kaba"
 #define __STRING_CONST_AS_CSTRING__
@@ -70,13 +71,10 @@ class FileEntry
 		return nil
 
 class FileSystemData
-	FileEntry list[256] // TODO: dynamic memory
-	int list_size
 	FileEntry *root
 	
 	FileEntry *add(cstring name, int type, PartitionData *dev, FileEntry *parent)
-		FileEntry *e = &list[list_size]
-		list_size ++
+		FileEntry *e = malloc(sizeof(FileEntry))
 		strcpy(&e.name, &name)
 		e.parent = parent
 		e.type = type
@@ -89,7 +87,6 @@ class FileSystemData
 		return e
 	
 	void Init()
-		list_size = 0
 		root = add("-root-", FILE_TYPE_DIR, nil, nil)
 	
 	FileEntry *get(cstring path, FileEntry *cur_dir)

@@ -11,13 +11,15 @@ use "paging.kaba"
 
 
 void sys_showstats()
-	prints("------------------------------\nMem:  ")
+	prints("Paging:  ")
 	printi(Paging.get_used() / 1024)
 	prints("k von ")
 	printi(MemorySize / 1024)
-	prints("k       Heap:  ")
+	prints("k\nHeap:    ")
 	printi(MemHeapAllocated / 1024)
-	prints("k\n")
+	prints("k von ")
+	printi(MEM_HEAP_SIZE / 1024)
+	prints("k\nZeit:    ")
 	asm{
 		db 0x0f
 		db 0x31
@@ -27,7 +29,7 @@ void sys_showstats()
 	printi(__temp_i2__)
 	prints("  ")
 	printi(__temp_i__)
-	prints("\n")
+	prints("\n---------------------------------\n")
 	for int i, 0, MAX_TASKS
 		if Task[i].status != TASK_STATUS_UNUSED
 			printi(i)

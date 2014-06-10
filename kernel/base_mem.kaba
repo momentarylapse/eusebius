@@ -7,8 +7,8 @@ use "text_mode.kaba"
 // Speicher-"Verwaltung"	
 
 const int KERNEL_MEM = 0x00800000 // 8mb
-const int MEM_ALLOC_OFFSET = 0x00400000 // (4-2)=2mb Kernel-Variablen
-const int MAX_MEM_ALLOCS = 4096
+const int MEM_HEAP_OFFSET = 0x00400000 // (4-2)=2mb Kernel-Variablen
+const int MEM_HEAP_SIZE = 0x00400000
 
 int MemHeapAllocated
 
@@ -92,7 +92,7 @@ void memcheck()
 
 void mem_init()
 	MemHeapAllocated = 0
-	malloc_first_free = _i2p(MEM_ALLOC_OFFSET)
-	malloc_first_free.size = 0x00200000
+	malloc_first_free = _i2p(MEM_HEAP_OFFSET)
+	malloc_first_free.size = MEM_HEAP_SIZE
 	malloc_first_free.next = nil
 	malloc_first_free.prev = nil
