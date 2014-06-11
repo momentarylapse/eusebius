@@ -55,19 +55,18 @@ kalib_symbols : bin/kalib
 img.mfs: init kernel/kernel $(BINS)
 	mkdir -p mfs
 	cp init mfs/000-init
-	cp kernel/kernel mfs/001-kernel
-	cp $(BINS) mfs
-	echo "aaa" > mfs/a
-	echo "bbbb" > mfs/b
-	echo "hallo\nkleiner Test" > mfs/test.txt
+	cp kernel/kernel mfs/kernel
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
 img.ext2: $(BINS) img.mfs
 	mkdir -p img-src
 	mkdir -p img-src/dev
 	mkdir -p img-src/bin
-	echo "hallo" > img-src/a
-	cp -r kernel img-src
+	mkdir -p img-src/boot
+	mkdir -p img-src/home
+	echo "aaa" > img-src/home/a
+	echo "bbbb" > img-src/home/b
+	echo "hallo\nkleiner Test" > img-src/home/test.txt
 	cp -r $(BINS) img-src/bin
 	genext2fs -b 1024 -d img-src img.ext2 
 

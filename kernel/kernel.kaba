@@ -30,7 +30,7 @@ void show_pvl()
 	prints("]")
 
 void LoadKaLib()
-	int h = KernelTask.sys_open("/kalib")
+	int h = KernelTask.sys_open("/bin/kalib")
 	if h < 0
 		panic("kann KaLib-Datei nicht lesen!")
 		return
@@ -87,10 +87,10 @@ void main()
 	ShowPartitions()
 	
 	FileSystem.Init()
-	FileSystem.Mount(&Partition[1], FileSystem.root, "michifs")
 	
-	FileEntry *mnt = FileSystem.add("mnt", FILE_TYPE_DIR, nil, FileSystem.root)
-	FileSystem.Mount(&Partition[2], mnt, "ext2")
+	FileSystem.Mount(&Partition[2], FileSystem.root, "ext2")
+	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
+	FileSystem.Mount(&Partition[1], boot, "michifs")
 	
 	Paging.init()
 	
@@ -107,8 +107,8 @@ void main()
 	
 	LoadKaLib()
 	
-	if KernelTask.sys_execute("/shell") < 0
-		panic("kann /shell-Datei nicht lesen!")
+	if KernelTask.sys_execute("/bin/shell") < 0
+		panic("kann /bin/shell-Datei nicht lesen!")
 	//sys_execute(KernelTask, "/hello")
 	//sys_execute(KernelTask, "/hello")
 	

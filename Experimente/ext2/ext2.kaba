@@ -92,6 +92,9 @@ class Ext2Reader
 	BlockGroupDescriptor bg
 	bool readable, writable
 	
+	string filter[]
+	bool show_details
+	
 	void testCompatibility()
 		readable = false
 		writable = false
@@ -126,8 +129,9 @@ class Ext2Reader
 		//showMetaData()
 		testCompatibility()
 		if readable
-			print "Root:"
-			showInodeRecursive(2, 1)
+			if filter.num == 0
+				print "Root:"
+			showInodeRecursive(2, 0)
 		
 		delete f
 	
@@ -161,11 +165,11 @@ class Ext2Reader
 		r.resize(inode.size)
 		return r
 	
-	void showInodeRecursive(int index, int shift)
+	void showInodeRecursive(int index, int level)
 		Inode inode
 		readInode(index, inode)
 		string indent
-		for int i, 0, shift
+		for int i, 0, level*2+1
 			indent += "  "
 		string info = "s=" + inode.size
 		//print inode.mtime
@@ -177,6 +181,8 @@ class Ext2Reader
 			info += "  ???"
 		info += "  i=" + index
 		print indent + info
+		if show_details
+			print indent + inode.iblock[0]
 		if inode.isDir()
 			string cont = readInodeContents(index)
 			int p = 0
@@ -198,11 +204,14 @@ class Ext2Reader
 				p += d.rec_len.int()
 				if name.num == 0 or d.inode == 0
 					continue
+				if filter.num > 0
+					if filter[level] != name
+						continue
 				print indent + info
 				
 				if name != "." and name != ".."
 				//	if ft == 2 or ft == 1
-						showInodeRecursive(d.inode, shift + 2)
+						showInodeRecursive(d.inode, level+1)
 			
 			//print cont.substr(0, 32).hex(false)
 	
@@ -221,5 +230,15 @@ class Ext2Reader
 		print bg.inode_table
 
 void main(string arg[])
+	string filename
 	Ext2Reader r
-	r.read(arg[0])
+	r.show_details = false
+	for int i, 0, arg.num
+		if arg[i] == "details"
+			r.show_details = true
+		else if arg[i] == "filter"
+			i ++
+			r.filter = arg[i].explode("/")
+		else
+			filename = arg[i]
+	r.read(filename)

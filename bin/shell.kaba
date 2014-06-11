@@ -419,7 +419,7 @@ void main()
 	init_lib()
 	command.__init__()
 	vars.__init__()
-	vars.get("PATH").value = "/"
+	vars.get("PATH").value = "/bin/"
 	jobs.__init__()
 	stdin = open("/dev/keyboard")
 	

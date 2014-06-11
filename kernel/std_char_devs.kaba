@@ -80,7 +80,8 @@ int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 
 void InitDrivers()
-	FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
+	//FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
+	FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
 	
 	FileEntry *dev_zero = FileSystem.add("zero", FILE_TYPE_CHAR, nil, dev)
 	dev_zero_ops._open = &dev_zero_open
