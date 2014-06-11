@@ -160,15 +160,19 @@ class FileSystemData
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 2, 1, &buffer[1024])
 		Ata.ReadSector(disk_no, cluster_offset * 4 + 3, 1, &buffer[1536])
 		
-	void Mount(PartitionData *dev, FileEntry *dir)
+	void Mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
 		if VerbosityLevel >= 1
 			prints("mounte...")
 		MountPoint *mp = &mounts[num_mounts]
 		num_mounts ++
 		mp.dest = dir
 		mp.dev = dev
-		mp.type = &FSTMichiFS
-		FSTMichiFS.mount(mp)
+		if strcmp(&fs_name, &"michifs") == 0
+			mp.type = &FSTMichiFS
+			FSTMichiFS.mount(mp)
+		else if strcmp(&fs_name, &"ext2") == 0
+			mp.type = &FSTExt2
+			FSTExt2.mount(mp)
 		if VerbosityLevel >= 1
 			prints(" ok\n")
 
@@ -180,27 +184,6 @@ class Word
 		int a = c[0]
 		int b = c[1]
 		return a + b * 256
-
-class Ext2Inode
-	Word rights
-	Word user
-	int size
-	int atime, ctime, mtime, dtime
-	Word group
-	Word hard_links
-	int blocks
-	int flags
-	int version
-	int iblock[15]
-	int file_version
-	int acl
-	int size_high
-	int dummy
-	int xx_high[3]
-	bool isDir()
-		return (rights.int() & 0xf000) == 0x4000
-	bool isFile()
-		return (rights.int() & 0xf000) == 0x8000
 
 class FileSystemType
 	int dummy
@@ -242,4 +225,179 @@ class FileSystemTypeMichiFS : FileSystemType
 	//void readBlock(int no, cstring *buf)
 	//void readFileBlock(int inode, int block, cstring *buf)
 
+class Ext2Inode
+	Word rights
+	Word user
+	int size
+	int atime, ctime, mtime, dtime
+	Word group
+	Word hard_links
+	int blocks
+	int flags
+	int version
+	int iblock[15]
+	int file_version
+	int acl
+	int size_high
+	int dummy
+	int xx_high[3]
+	bool isDir()
+		return (rights.int() & 0xf000) == 0x4000
+	bool isFile()
+		return (rights.int() & 0xf000) == 0x8000
+
+class Ext2SuperBlock
+	int inodes_count
+	int blocks_count
+	int reserved_blocks_count
+	int free_blocks_count
+	int free_inodes_count
+	int first_data_block
+	int log_block_size
+	int log_cluster_size
+	int blocks_per_group
+	int obso_frags_per_group
+	int inodes_per_group
+	int mtime, wtime
+	Word mnt_count, max_mnt_count
+	Word magic
+	Word state
+	Word errors
+	Word minor_rev_level
+	int lastcheck, checkinterval
+	int creator_os
+	int rev_level
+	Word def_resuid, def_resgid
+	int first_ino
+	Word inode_size
+	Word block_group_nr
+	int feature_compat, feature_incompat, feature_ro_compat
+	char uuid[16]
+	char volume_name[16]
+	char last_mounted[64]
+	char _filler_[1024-200]
+
+class Ext2BlockGroupDescriptor
+	int block_bitmap
+	int inode_bitmap
+	int inode_table
+	Word free_blocks_count, free_inodes_count
+	Word used_dirs_count
+	Word flags
+	int exclude_bitmap
+	Word block_bitmap_csum, inode_bitmap_csum
+	Word itable_unused
+	Word checksum
+
+class Ext2DirEntryHeader
+	int inode
+	Word rec_len
+	char name_len
+	char file_type
+
+class FileSystemTypeExt2 : FileSystemType
+	int inodes_per_block
+	Ext2SuperBlock sb
+	Ext2BlockGroupDescriptor bg
+	char buf[4096]
+	bool readable, writable
+	int block_size
+	int block_offset
+	MountPoint *_mp
+	
+	bool mount(MountPoint *mp)
+		_mp = mp
+		mp.update(1024, 0) // temp
+		
+		mp.readBlock(1, &sb)
+		
+		block_size = 1 << (sb.log_block_size + 10)
+		inodes_per_block = block_size / sizeof(Ext2Inode) //128
+		block_offset = 1024
+		if block_size == 1024
+			block_offset = 0
+	
+		//f.seek(1024 + block_size, true)
+		//f.xread(&bg, sizeof(BlockGroupDescriptor))
+		mp.readBlock(1 + block_size / 1024, &bg)
+		
+		mp.update(block_size, block_offset)
+		
+		
+		//showMetaData()
+		testCompatibility()
+		if readable
+			loadInodeRecursive(2, mp.dest)
+			
+	
+	void testCompatibility()
+		readable = false
+		writable = false
+		if (sb.feature_incompat & 0xfffffffd) > 0
+			return
+		readable = true
+		if (sb.feature_ro_compat & 0xfffffffe) > 0
+			return
+		writable = true
+	
+	void readInode(int index, Ext2Inode inode, FileEntry *e)
+		int group_no = (index - 1) / sb.inodes_per_group // 0...
+		int offset = (index - 1) % sb.inodes_per_group
+		// group_no!!!!!!!!!!!!!!
+		_mp.readBlock(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, &buf)
+		memcpy(&inode, &buf[(offset % block_size) * sizeof(Ext2Inode)], sizeof(Ext2Inode))
+		
+		e.type = FILE_TYPE_FILE
+		if inode.isDir()
+			e.type = FILE_TYPE_DIR
+		
+		e.num_blocks = (inode.size-1) / block_size + 1
+		cstring *buf = malloc(e.num_blocks * block_size)
+		int num_direct = e.num_blocks
+		if num_direct > 12
+			num_direct = 12
+			
+		e.size = inode.size
+		e.blocks = malloc(e.num_blocks * sizeof(int))
+		for int i, 0, num_direct
+			e.blocks[i] = inode.iblock[i]
+		
+	
+	Ext2Inode inode
+	
+	cstring *readInodeContents(FileEntry *e)
+		cstring *buf = malloc(e.num_blocks * block_size)
+		for int i, 0, e.num_blocks
+			_mp.readBlock(e.blocks[i], &buf[i * block_size])
+		
+		return buf
+	
+	void loadInodeRecursive(int index, FileEntry *dir)
+		readInode(index, inode, dir)
+		if !inode.isDir()
+			return
+		cstring *cont = readInodeContents(dir)
+		int p = 0
+		while p < dir.size
+			Ext2DirEntryHeader *d = &cont[p]
+			if d.rec_len.int() == 0
+				break
+			cstring name
+			int len = d.name_len
+			memcpy(&name, &cont[p + 8], len)
+			name[len] = 0
+			p += d.rec_len.int()
+			if d.name_len == 0 or d.inode == 0
+				continue
+				
+		
+			if strcmp(&name, &".") != 0 and strcmp(&name, &"..") != 0
+				int type = FILE_TYPE_FILE
+				if d.file_type == 2
+					type = FILE_TYPE_DIR
+				FileEntry *e = FileSystem.add(name, type, _mp, dir)
+				loadInodeRecursive(d.inode, e)
+		free(cont)
+
 FileSystemTypeMichiFS FSTMichiFS
+FileSystemTypeExt2 FSTExt2

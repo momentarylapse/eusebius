@@ -70,6 +70,7 @@ bochs/c.img: img.mfs loader_fake.o
 	if [ -f Experimente/ext2/img2 ]; \
 	then \
 	    dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc; \
+	    dd if=Experimente/ext2/img2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc; \
 	else \
 	    dd if=bochs/mbr0 of=bochs/c.img conv=notrunc; \
 	fi
