@@ -43,6 +43,7 @@ void *malloc(int size)
 			memcheck()
 			return hh.payload()
 		cur = cur.next
+	panic "malloc: fail"
 	return nil
 
 void _cleanup(MallocHeader *h)
@@ -77,6 +78,7 @@ void free(void *p)
 			memcheck()
 			return
 		cur = cur.next
+	panic "free: fail"
 
 
 

@@ -299,7 +299,7 @@ class FileSystemTypeExt2 : FileSystemType
 	int inodes_per_block
 	Ext2SuperBlock sb
 	Ext2BlockGroupDescriptor bg
-	char buf[4096]
+	char _buf[4096]
 	bool readable, writable
 	int block_size
 	int block_offset
@@ -342,25 +342,29 @@ class FileSystemTypeExt2 : FileSystemType
 	
 	void readInode(int index, Ext2Inode inode, FileEntry *e)
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
-		int offset = (index - 1) % sb.inodes_per_group
+		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
 		// group_no!!!!!!!!!!!!!!
-		_mp.readBlock(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, &buf)
-		memcpy(&inode, &buf[(offset % block_size) * sizeof(Ext2Inode)], sizeof(Ext2Inode))
+		_mp.readBlock(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, &_buf)
+		memcpy(&inode, &_buf[offset % block_size], sizeof(Ext2Inode))
 		
 		e.type = FILE_TYPE_FILE
 		if inode.isDir()
 			e.type = FILE_TYPE_DIR
 		
+		e.size = inode.size
 		e.num_blocks = (inode.size-1) / block_size + 1
-		cstring *buf = malloc(e.num_blocks * block_size)
+		e.blocks = malloc(e.num_blocks * sizeof(int))
 		int num_direct = e.num_blocks
 		if num_direct > 12
 			num_direct = 12
-			
-		e.size = inode.size
-		e.blocks = malloc(e.num_blocks * sizeof(int))
+	
 		for int i, 0, num_direct
 			e.blocks[i] = inode.iblock[i]
+		if e.num_blocks > 12
+			_mp.readBlock(inode.iblock[12], &_buf)
+			int p[0]* = &_buf
+			for int i, 12, e.num_blocks
+				e.blocks[i] = p[i - 12]
 		
 	
 	Ext2Inode inode

@@ -4,79 +4,80 @@ FLAGS =  --x86 --no-std-lib
 PFLAGS =  --x86 --no-std-lib --import-symbols kalib_symbols
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
+BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/kalib
 
 all : bochs/c.img
 
-test.o : test.kaba
-	$(KABA) --x86 -o test.o test.kaba
+test : test.kaba
+	$(KABA) --x86 -o test test.kaba
 
-init.o : init.kaba
-	$(KABA) --x86 -o init.o init.kaba
+init : init.kaba
+	$(KABA) --x86 -o init init.kaba
 
-kernel/kernel.o : kernel/kernel.kaba kernel/base.kaba
-	$(KABA) --x86 -o kernel/kernel.o kernel/kernel.kaba
+kernel/kernel : kernel/kernel.kaba kernel/base.kaba
+	$(KABA) --x86 -o kernel/kernel kernel/kernel.kaba
  
-loader_fake.o : loader_fake.kaba
-	$(KABA) --x86 -o loader_fake.o loader_fake.kaba
+loader_fake : loader_fake.kaba
+	$(KABA) --x86 -o loader_fake loader_fake.kaba
  
-loader_br.o : loader_br.kaba
-	$(KABA) --x86 -o loader_br.o loader_br.kaba
+loader_br : loader_br.kaba
+	$(KABA) --x86 -o loader_br loader_br.kaba
 
-Programme/hello.o: Programme/hello.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/hello.o Programme/hello.kaba
+bin/hello: bin/hello.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/hello bin/hello.kaba
 
-Programme/shell.o: Programme/shell.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/shell.o Programme/shell.kaba
+bin/shell: bin/shell.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/shell bin/shell.kaba
 
-Programme/cat.o: Programme/cat.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/cat.o Programme/cat.kaba
+bin/cat: bin/cat.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/cat bin/cat.kaba
 
-Programme/hd.o: Programme/hd.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/hd.o Programme/hd.kaba
+bin/hd: bin/hd.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/hd bin/hd.kaba
 
-Programme/echo.o: Programme/echo.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/echo.o Programme/echo.kaba
+bin/echo: bin/echo.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/echo bin/echo.kaba
 
-Programme/kill.o: Programme/kill.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/kill.o Programme/kill.kaba
+bin/kill: bin/kill.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/kill bin/kill.kaba
 
-Programme/ls.o: Programme/ls.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/ls.o Programme/ls.kaba
+bin/ls: bin/ls.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/ls bin/ls.kaba
 
-Programme/top.o: Programme/top.kaba kalib_symbols
-	$(KABA) $(PFLAGS) -o Programme/top.o Programme/top.kaba
+bin/top: bin/top.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/top bin/top.kaba
 
-Programme/kalib.o: Programme/kalib.kaba
-	$(KABA) --x86 -o Programme/kalib.o --export-symbols kalib_symbols Programme/kalib.kaba
+bin/kalib: bin/kalib.kaba
+	$(KABA) --x86 -o bin/kalib --export-symbols kalib_symbols bin/kalib.kaba
 
-kalib_symbols : Programme/kalib.o
+kalib_symbols : bin/kalib
 
-img.mfs: init.o kernel/kernel.o Programme/hello.o Programme/shell.o Programme/cat.o Programme/echo.o Programme/kill.o Programme/top.o Programme/ls.o Programme/hd.o Programme/kalib.o
-	cp init.o mfs/000-init
-	cp kernel/kernel.o mfs/001-kernel
-	cp Programme/hello.o mfs/hello
-	cp Programme/shell.o mfs/shell
-	cp Programme/cat.o mfs/cat
-	cp Programme/hd.o mfs/hd
-	cp Programme/ls.o mfs/ls
-	cp Programme/top.o mfs/top
-	cp Programme/echo.o mfs/echo
-	cp Programme/kill.o mfs/kill
-	cp Programme/kalib.o mfs/kalib
+img.mfs: init kernel/kernel $(BINS)
+	mkdir -p mfs
+	cp init mfs/000-init
+	cp kernel/kernel mfs/001-kernel
+	cp $(BINS) mfs
+	echo "aaa" > mfs/a
+	echo "bbbb" > mfs/b
+	echo "hallo\nkleiner Test" > mfs/test.txt
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
-bochs/c.img: img.mfs loader_fake.o
+img.ext2: $(BINS) img.mfs
+	mkdir -p img-src
+	mkdir -p img-src/dev
+	mkdir -p img-src/bin
+	echo "hallo" > img-src/a
+	cp -r kernel img-src
+	cp -r $(BINS) img-src/bin
+	genext2fs -b 1024 -d img-src img.ext2 
+
+bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160
-	if [ -f Experimente/ext2/img2 ]; \
-	then \
-	    dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc; \
-	    dd if=Experimente/ext2/img2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc; \
-	else \
-	    dd if=bochs/mbr0 of=bochs/c.img conv=notrunc; \
-	fi
-	dd if=loader_fake.o of=bochs/c.img conv=notrunc
-	dd if=img.mfs of=bochs/c.img bs=512 seek=16 conv=notrunc
+	dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc
+	dd if=loader_fake of=bochs/c.img conv=notrunc
+	dd if=img.mfs of=bochs/c.img bs=1024 seek=8 conv=notrunc
+	dd if=img.ext2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc
 
 clean:
-	rm -f *.o kernel/*.o Programme/*.o bochs/c.img img.mfs
+	rm -rf init loader_fake kernel/kernel $(BINS) bochs/c.img img.mfs img.ext2 img-src mfs
 

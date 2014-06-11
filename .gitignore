@@ -6,9 +6,17 @@ image.mfs
 bochs/bochsout.txt
 message.txt
 mfs
+img-src
 *.mfs
+*.ext2
 temp
 tools/compiler/compiler
 tools/compiler/temp
 *~
 *.o
+init
+loader_fake
+kernel/kernel
+bin/*
+!bin/*.kaba
+
