@@ -1,0 +1,21 @@
+#define __OS__
+use "prog_header.kaba"
+
+
+void touch(string filename)
+	int h = create(filename)
+	if h < 0
+		print("touch: kann Datei nicht anlegen: " + filename + "\n")
+		exit(-1)
+	close(h)
+
+
+void main()
+	init_lib()
+	string arg[]
+	get_args(arg)
+	
+	for int i, 1, arg.num
+		touch(arg[i])
+	
+	exit(0)

@@ -15,6 +15,8 @@ const int MAX_OPEN_FILES = 128
 
 class OpenFileData
 	bool used
+	bool reading
+	bool writing
 	FileEntry *entry
 	int pos_in_block
 	int block_no
@@ -24,6 +26,9 @@ class OpenFileData
 
 	int read(PageDirectory *page_dir, int addr, int size)
 		int r=0
+		
+		if !reading
+			return -3
 		
 		if entry.type == FILE_TYPE_CHAR
 			__temp_p__ = entry.op._read
@@ -76,6 +81,9 @@ class OpenFileData
 		if !used
 			return -1
 		
+		if !writing
+			return -2
+		
 		if entry.type == FILE_TYPE_CHAR
 			__temp_p__ = entry.op._write
 			__temp_p2__ = entry
@@ -101,6 +109,9 @@ class OpenFileData
 
 		if entry.type != FILE_TYPE_DIR
 			return -2
+		
+		if !reading
+			return -3
 	
 		FileEntry *e = entry.first_sub
 		for int i, 0, pos_in_block
@@ -139,17 +150,19 @@ class OpenFileData
 
 OpenFileData OpenFile[MAX_OPEN_FILES]
 
-OpenFileData *get_handle()
+OpenFileData *get_handle(bool reading, bool writing)
 	for int i, 0, MAX_OPEN_FILES
 		if !OpenFile[i].used
 			OpenFile[i].used = true
+			OpenFile[i].reading = reading
+			OpenFile[i].writing = writing
 			return &OpenFile[i]
 	return nil
 
 
 
 OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
-	OpenFileData *of = get_handle()
+	OpenFileData *of = get_handle(true, true)
 	if !of
 		return nil
 	of.entry = FileSystem.get(filename, cur_dir)
@@ -172,6 +185,29 @@ OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
 			sub esp, 0x04
 		}
 	return of
+
+OpenFileData *kernel_create(cstring filename, int flags, FileEntry *cur_dir)
+	OpenFileData *of = get_handle(false, true)
+	if !of
+		return nil
+	of.entry = FileSystem.get(filename, cur_dir)
+	if !of.entry
+		of.entry = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
+	if !of.entry
+		of.used = false
+		return nil
+	of.block_no = 0
+	of.pos_in_block = 0
+	of.block_size = of.entry.mount.block_size
+	of.buffer = malloc(of.block_size)
+	return of
+
+int kernel_mkdir(cstring filename, FileEntry *cur_dir)
+	if FileSystem.get(filename, cur_dir)
+		return -1
+	if !FileSystem.add(filename, FILE_TYPE_DIR, cur_dir.mount, cur_dir)
+		return -2
+	return 0
 
 
 class dirent_struct

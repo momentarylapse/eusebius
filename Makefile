@@ -4,7 +4,7 @@ FLAGS =  --x86 --no-std-lib
 PFLAGS =  --x86 --no-std-lib --import-symbols kalib_symbols
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
-BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/kalib
+BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/kalib
 
 all : bochs/c.img
 
@@ -46,6 +46,12 @@ bin/ls: bin/ls.kaba kalib_symbols
 
 bin/top: bin/top.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o bin/top bin/top.kaba
+
+bin/touch: bin/touch.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/touch bin/touch.kaba
+
+bin/mkdir: bin/mkdir.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/mkdir bin/mkdir.kaba
 
 bin/kalib: bin/kalib.kaba
 	$(KABA) --x86 -o bin/kalib --export-symbols kalib_symbols bin/kalib.kaba

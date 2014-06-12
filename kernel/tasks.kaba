@@ -191,6 +191,16 @@ class TaskData
 		return index
 
 
+	int sys_create(cstring filename, int flags)
+		OpenFileData *of = kernel_create(filename, flags, cur_dir)
+		if !of
+			return -1
+		int index = add_handle(of)
+		if index < 0
+			of.close()
+		return index
+
+
 	int sys_read(int handle, int addr, int size)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
 			return -1
@@ -227,6 +237,9 @@ class TaskData
 			return
 		of.close()
 		handles[handle] = nil
+		
+	int sys_mkdir(cstring filename)
+		return kernel_mkdir(filename, cur_dir)
 	
 	int sys_execute(cstring filename)
 		int h = sys_open(filename)

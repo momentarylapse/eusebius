@@ -89,6 +89,19 @@ int open(string filename)
 		mov __temp_i__, eax
 	}
 	return __temp_i__
+
+int create(string filename)
+	cstring tt
+	s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x00000008
+		mov ebx, __temp_p__
+		mov ecx, 0x00000000
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
 	
 void close(int h)
 	__temp_i__ = h
@@ -125,6 +138,19 @@ int write(int h, void *buf, int size)
 		mov __temp_i3__, eax
 	}
 	return __temp_i3__
+
+
+int mkdir(string filename)
+	cstring tt
+	s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x00000027
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
 
 int getdents(int h, void *buf)//lib__DirEntry)
 	__temp_i__ = h

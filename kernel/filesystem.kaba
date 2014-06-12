@@ -173,6 +173,7 @@ class FileSystemData
 		else if strcmp(&fs_name, &"ext2") == 0
 			mp.type = &FSTExt2
 			FSTExt2.mount(mp)
+		dir.mount = mp
 		if VerbosityLevel >= 1
 			prints(" ok\n")
 
