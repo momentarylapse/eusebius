@@ -8,10 +8,42 @@ use "paging.kaba"
 
 
 const int MAX_OPEN_FILES = 128
+const int MAX_PIPES = 64
+const int PIPE_BUFFER_SIZE = 1024
 
 
 //--------------------------------------------------------------
 // Dateizugriff
+
+class PipeData
+	bool used
+	FileEntry *e
+	int ref_count
+	char buffer[0]*
+
+PipeData Pipe[MAX_PIPES]
+
+
+
+PipeData *create_pipe(FileEntry *e)
+	for int i, 0, MAX_PIPES
+		if !Pipe[i].used
+			Pipe[i].used = true
+			Pipe[i].e = e
+			Pipe[i].ref_count = 0
+			Pipe[i].buffer = malloc(PIPE_BUFFER_SIZE)
+			return &Pipe[i]
+	return nil
+
+void delete_pipe(PipeData *p)
+	free(p.buffer)
+	p.used = false
+
+PipeData *get_pipe(FileEntry *e)
+	for int i, 0, MAX_PIPES
+		if Pipe[i].e == e
+			return &Pipe[i]
+	return nil
 
 class OpenFileData
 	bool used
@@ -22,6 +54,7 @@ class OpenFileData
 	int block_no
 	int block_size
 	char buffer[0]*
+	PipeData *pipe
 	
 
 	int read(PageDirectory *page_dir, int addr, int size)
@@ -31,22 +64,7 @@ class OpenFileData
 			return -3
 		
 		if entry.type == FILE_TYPE_CHAR
-			__temp_p__ = entry.op._read
-			__temp_p2__ = entry
-			__temp_p3__ = page_dir
-			__temp_i__ = addr
-			__temp_i2__ = size
-			asm{
-				mov eax, __temp_p__
-				push __temp_i2__
-				push __temp_i__
-				push __temp_p3__
-				push __temp_p2__
-				call eax
-				mov __temp_i__, eax
-				sub esp, 0x12
-			}
-			return __temp_i__
+			return call_ppii(entry.op._read, entry, page_dir, addr, size)
 		
 		if size > entry.size - block_no * block_size - pos_in_block
 			size = entry.size - block_no * block_size - pos_in_block
@@ -85,22 +103,7 @@ class OpenFileData
 			return -2
 		
 		if entry.type == FILE_TYPE_CHAR
-			__temp_p__ = entry.op._write
-			__temp_p2__ = entry
-			__temp_p3__ = page_dir
-			__temp_i__ = addr
-			__temp_i2__ = size
-			asm{
-				mov eax, __temp_p__
-				push __temp_i2__
-				push __temp_i__
-				push __temp_p3__
-				push __temp_p2__
-				call eax
-				mov __temp_i__, eax
-				sub esp, 0x12
-			}
-			return __temp_i__
+			return call_ppii(entry.op._write, entry, page_dir, addr, size)
 		return 0
 
 	int getdents(PageDirectory *page_dir, int addr, int num)
@@ -133,17 +136,10 @@ class OpenFileData
 	void close()
 		if !used
 			return
-		if entry.type == FILE_TYPE_FILE
+		if buffer
 			free(buffer)
-		else if entry.type == FILE_TYPE_CHAR
-			__temp_p__ = entry.op._close
-			__temp_p2__ = entry
-			asm{
-				mov eax, __temp_p__
-				push __temp_p2__
-				call eax
-				sub esp, 0x04
-			}
+		if entry.type == FILE_TYPE_CHAR
+			call_p(entry.op._close, entry)
 		used = false
 		entry = nil
 
@@ -156,6 +152,7 @@ OpenFileData *get_handle(bool reading, bool writing)
 			OpenFile[i].used = true
 			OpenFile[i].reading = reading
 			OpenFile[i].writing = writing
+			OpenFile[i].buffer = nil
 			return &OpenFile[i]
 	return nil
 
@@ -174,16 +171,15 @@ OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
 	of.block_size = of.entry.mount.block_size
 	if of.entry.type == FILE_TYPE_FILE
 		of.buffer = malloc(of.block_size)
-		of.entry.mount.readBlock(of.entry.blocks[0], of.buffer)
+		if of.entry.num_blocks > 0
+			of.entry.mount.readBlock(of.entry.blocks[0], of.buffer)
+	else if of.entry.type == FILE_TYPE_PIPE
+		of.pipe = get_pipe(of.entry)
+		if !of.pipe
+			of.used = false
+			return nil
 	else if of.entry.type == FILE_TYPE_CHAR
-		__temp_p__ = of.entry.op._open
-		__temp_p2__ = of.entry
-		asm{
-			mov eax, __temp_p__
-			push __temp_p2__
-			call eax
-			sub esp, 0x04
-		}
+		call_p(of.entry.op._open, of.entry)
 	return of
 
 OpenFileData *kernel_create(cstring filename, int flags, FileEntry *cur_dir)
@@ -206,6 +202,13 @@ int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -1
 	if !FileSystem.add(filename, FILE_TYPE_DIR, cur_dir.mount, cur_dir)
+		return -2
+	return 0
+
+int kernel_mknod(cstring filename, int flags, FileEntry *cur_dir)
+	if FileSystem.get(filename, cur_dir)
+		return -1
+	if !FileSystem.add(filename, FILE_TYPE_PIPE, cur_dir.mount, cur_dir)
 		return -2
 	return 0
 

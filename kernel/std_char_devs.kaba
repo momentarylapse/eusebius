@@ -12,10 +12,10 @@ use "paging.kaba"
 // Gerätedateien
 
 FileOperations dev_zero_ops
-void dev_zero_open(FileEntry *f)
-	nil
-void dev_zero_close(FileEntry *f)
-	nil
+int dev_zero_open(FileEntry *f)
+	return 0
+int dev_zero_close(FileEntry *f)
+	return 0
 int dev_zero_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	int zero = 0
 	for int i, 0, size
@@ -25,10 +25,10 @@ int dev_zero_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return 0
 
 FileOperations dev_null_ops
-void dev_null_open(FileEntry *f)
-	nil
-void dev_null_close(FileEntry *f)
-	nil
+int dev_null_open(FileEntry *f)
+	return 0
+int dev_null_close(FileEntry *f)
+	return 0
 int dev_null_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return 0
 int dev_null_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
@@ -36,10 +36,10 @@ int dev_null_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 
 FileOperations dev_rand_ops
 int dev_rand_state
-void dev_rand_open(FileEntry *f)
-	nil
-void dev_rand_close(FileEntry *f)
-	nil
+int dev_rand_open(FileEntry *f)
+	return 0
+int dev_rand_close(FileEntry *f)
+	return 0
 int dev_rand_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	for int i, 0, size
 		dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
@@ -52,10 +52,10 @@ int dev_rand_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 FileOperations dev_key_ops
 cstring dev_key_buf
 int dev_key_num
-void dev_key_open(FileEntry *f)
-	nil
-void dev_key_close(FileEntry *f)
-	nil
+int dev_key_open(FileEntry *f)
+	return 0
+int dev_key_close(FileEntry *f)
+	return 0
 int dev_key_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	if size > dev_key_num
 		size = dev_key_num
@@ -67,10 +67,10 @@ int dev_key_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return 0
 
 FileOperations dev_tty_ops
-void dev_tty_open(FileEntry *f)
-	nil
-void dev_tty_close(FileEntry *f)
-	nil
+int dev_tty_open(FileEntry *f)
+	return 0
+int dev_tty_close(FileEntry *f)
+	return 0
 int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return 0
 int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)

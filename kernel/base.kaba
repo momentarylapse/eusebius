@@ -118,3 +118,34 @@ class PointerWrapper
 void *_i2p(int i)
 	PointerWrapper *p = &i
 	return p.p
+
+
+int call_ppii(void *f, void *a, void *b, int c, int d)
+	__temp_p__ = f
+	__temp_p2__ = a
+	__temp_p3__ = b
+	__temp_i__ = c
+	__temp_i2__ = d
+	asm{
+		mov eax, __temp_p__
+		push __temp_i2__
+		push __temp_i__
+		push __temp_p3__
+		push __temp_p2__
+		call eax
+		mov __temp_i__, eax
+		sub esp, 0x12
+	}
+	return __temp_i__
+
+int call_p(void *f, void *a)
+	__temp_p__ = f
+	__temp_p2__ = a
+	asm{
+		mov eax, __temp_p__
+		push __temp_p2__
+		call eax
+		mov __temp_i__, eax
+		sub esp, 0x04
+	}
+	return __temp_i__

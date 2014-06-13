@@ -11,6 +11,7 @@ use "text_mode.kaba"
 
 const int FILE_TYPE_FILE = 0
 const int FILE_TYPE_DIR = 1
+const int FILE_TYPE_PIPE = 2
 const int FILE_TYPE_CHAR = 8
 const int FILE_TYPE_BLOCK = 16
 

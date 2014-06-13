@@ -97,6 +97,9 @@ void int_syscall()
 		else if index == 12 // chdir
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.set_cur_dir(filename)
+		else if index == 14 // mknod
+			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
+			r = caller.sys_mknod(filename, param2)
 		else if index == 20 // getpid
 			r = pid
 		else if index == 37 // kill
