@@ -83,14 +83,14 @@ void int_syscall()
 		else if index == 5 // open
 			cstring filename
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
-			r = caller.sys_open(filename)
+			r = caller.sys_open(filename, param2)
 		else if index == 6 // close
 			caller.sys_close(param1)
 		else if index == 7 // waitpid
 			r = caller.sys_waitpid(param1, param2, param3)
 		else if index == 8 // create
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
-			r = caller.sys_create(filename, param2)
+			r = caller.sys_open(filename, O_CREATE | O_WRONLY | O_TRUNC)
 		else if index == 11 // exec
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.sys_execute(filename)

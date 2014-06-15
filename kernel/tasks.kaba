@@ -181,18 +181,8 @@ class TaskData
 // Dateizugriff
 
 
-	int sys_open(cstring filename)
-		OpenFileData *of = kernel_open(filename, cur_dir)
-		if !of
-			return -1
-		int index = add_handle(of)
-		if index < 0
-			of.close()
-		return index
-
-
-	int sys_create(cstring filename, int flags)
-		OpenFileData *of = kernel_create(filename, flags, cur_dir)
+	int sys_open(cstring filename, int flags)
+		OpenFileData *of = kernel_open(filename, flags, cur_dir)
 		if !of
 			return -1
 		int index = add_handle(of)
@@ -245,7 +235,7 @@ class TaskData
 		return kernel_mknod(filename, flags, cur_dir)
 	
 	int sys_execute(cstring filename)
-		int h = sys_open(filename)
+		int h = sys_open(filename, O_RDONLY)
 		if h < 0
 			return -1
 		TaskData *t = AddTask(filename, _i2p(0x00a00000), false, self)

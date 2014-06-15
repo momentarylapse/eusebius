@@ -30,7 +30,7 @@ void show_pvl()
 	prints("]")
 
 void LoadKaLib()
-	int h = KernelTask.sys_open("/bin/kalib")
+	int h = KernelTask.sys_open("/bin/kalib", O_RDONLY)
 	if h < 0
 		panic("kann KaLib-Datei nicht lesen!")
 		return

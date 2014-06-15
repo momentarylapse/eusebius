@@ -11,6 +11,14 @@ const int MAX_OPEN_FILES = 128
 const int MAX_PIPES = 64
 const int PIPE_BUFFER_SIZE = 1024
 
+const int O_RDONLY = 1
+const int O_WRONLY = 2
+const int O_RDWR = 3
+const int O_APPEND = 16
+const int O_CREATE = 32
+const int O_NONBLOCK = 64
+const int O_TRUNC = 128
+
 
 //--------------------------------------------------------------
 // Dateizugriff
@@ -158,11 +166,16 @@ OpenFileData *get_handle(bool reading, bool writing)
 
 
 
-OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
-	OpenFileData *of = get_handle(true, true)
+OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
+	bool reading = (flags & O_RDONLY) > 0
+	bool writing = (flags & O_WRONLY) > 0
+	bool creating = (flags & O_CREATE) > 0
+	OpenFileData *of = get_handle(reading, writing)
 	if !of
 		return nil
 	of.entry = FileSystem.get(filename, cur_dir)
+	if !of.entry and creating
+		of.entry = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
 	if !of.entry
 		of.used = false
 		return nil
@@ -182,7 +195,7 @@ OpenFileData *kernel_open(cstring filename, FileEntry *cur_dir)
 		call_p(of.entry.op._open, of.entry)
 	return of
 
-OpenFileData *kernel_create(cstring filename, int flags, FileEntry *cur_dir)
+/*OpenFileData *kernel_create(cstring filename, int flags, FileEntry *cur_dir)
 	OpenFileData *of = get_handle(false, true)
 	if !of
 		return nil
@@ -196,7 +209,7 @@ OpenFileData *kernel_create(cstring filename, int flags, FileEntry *cur_dir)
 	of.pos_in_block = 0
 	of.block_size = of.entry.mount.block_size
 	of.buffer = malloc(of.block_size)
-	return of
+	return of*/
 
 int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)

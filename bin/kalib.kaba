@@ -5,6 +5,14 @@
 
 const int MALLOC_OFFSET = 0x00b00000
 
+const int O_RDONLY = 1
+const int O_WRONLY = 2
+const int O_RDWR = 3
+const int O_APPEND = 16
+const int O_CREATE = 32
+const int O_NONBLOCK = 64
+const int O_TRUNC = 128
+
 int stdin, stdout, lib_error
 bool __free_error__
 
@@ -50,6 +58,10 @@ void sa2cs(string a[], cstring cs)
 		n ++
 	cs[n] = 0
 
+
+//--------------------------------------------------------------------------
+// system calls
+
 int exit(int r)
 	__temp_i__ = r
 	asm{
@@ -75,16 +87,18 @@ int fork()
 		mov __temp_i__, eax
 	}
 	if __temp_i__ == 0
-		stdout = open("/dev/tty")
+		stdout = open("/dev/tty", O_RDONLY)
 	return __temp_i__
 
-int open(string filename)
+int open(string filename, int flags)
 	cstring tt
 	s2cs(filename, tt)
 	__temp_p__ = &tt
+	__temp_i__ = flags
 	asm{
 		mov eax, 0x00000005
 		mov ebx, __temp_p__
+		mov ecx, __temp_i__
 		int 0x80
 		mov __temp_i__, eax
 	}
@@ -268,6 +282,10 @@ void get_args(lib__string@list arg)
 		else
 			s.add(cs[i])
 
+
+//--------------------------------------------------------------------------
+// lib
+
 int lib__clampi(int i, int min, int max)
 	if i > max
 		return max
@@ -289,6 +307,10 @@ float lib__max(float a, float b)
 	if a > b
 		return a
 	return b
+
+//--------------------------------------------------------------------------
+// memory management
+
 
 void memcpy(char dest[0]*, char source[0]*, int size)
 	for int i, 0, size
@@ -390,6 +412,10 @@ void *lib__@realloc(void *p, int size)
 	memcpy(pp, p, old_size)
 	lib__@free(p)
 	return pp
+
+
+//--------------------------------------------------------------------------
+// arrays
 
 class lib__@DynamicArray
 	cstring *data
@@ -774,6 +800,10 @@ void lib__print(lib__string s)
 
 
 
+//--------------------------------------------------------------------------
+// dir entry
+
+
 class lib__DirEntry
 	lib__string name
 	int dddd, eee
@@ -832,7 +862,7 @@ class dirent_struct
 
 lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs)
 	lib__DirEntry@list l
-	int h = open(dirname)
+	int h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
 		return l
@@ -860,6 +890,10 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 				l.swap(i, j)
 	return l
 
+
+//--------------------------------------------------------------------------
+// start
+
 void init_lib()
 	__free_error__ = false
 	malloc_first_free = _i2p(0x00b00000)
@@ -867,7 +901,7 @@ void init_lib()
 	malloc_first_free.next = nil
 	malloc_first_free.prev = nil
 	
-	stdout = open("/dev/tty")
+	stdout = open("/dev/tty", O_WRONLY)
 	stdin = -1
 	//stdin = open("/dev/keyboard")
 

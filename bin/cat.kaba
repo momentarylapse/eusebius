@@ -3,7 +3,7 @@ use "prog_header.kaba"
 
 
 void cat(string filename)
-	int h = open(filename)
+	int h = open(filename, O_RDONLY)
 	if h < 0
 		print("cat: kann Datei nicht oeffnen: " + filename + "\n")
 		exit(-1)

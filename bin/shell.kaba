@@ -421,7 +421,7 @@ void main()
 	vars.__init__()
 	vars.get("PATH").value = "/bin/"
 	jobs.__init__()
-	stdin = open("/dev/keyboard")
+	stdin = open("/dev/keyboard", O_RDONLY)
 	
 	shift = false
 	if stdin < 0
