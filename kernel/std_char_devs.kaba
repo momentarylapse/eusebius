@@ -52,6 +52,8 @@ int dev_rand_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 FileOperations dev_key_ops
 cstring dev_key_buf
 int dev_key_num
+bool dev_key_escaped
+bool dev_key_shift, dev_key_control
 int dev_key_open(FileEntry *f)
 	return 0
 int dev_key_close(FileEntry *f)
@@ -67,12 +69,19 @@ int dev_key_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return 0
 
 FileOperations dev_tty_ops
+cstring dev_tty_key_buf
+int dev_tty_key_num
 int dev_tty_open(FileEntry *f)
 	return 0
 int dev_tty_close(FileEntry *f)
 	return 0
 int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return 0
+	if size > dev_tty_key_num
+		size = dev_tty_key_num
+	page_dir.memcpy2task(addr, &dev_tty_key_buf, size)
+	dev_tty_key_num -= size
+	memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
+	return size
 int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	for int i, 0, size
 		cstring *buf = _i2p(page_dir.addr2kernel(addr + i))
@@ -80,6 +89,11 @@ int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 
 void InitDrivers()
+	dev_key_escaped = false
+	dev_key_shift = false
+	dev_key_control = false
+	dev_tty_key_num = 0
+	
 	//FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
 	FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
 	
@@ -123,6 +137,174 @@ void InitDrivers()
 	dev_tty.op = &dev_tty_ops
 	
 
+int getchar(int k)
+	if k == 0x1c
+		return 0x0a // '\n'
+	if k == 0x39
+		return 0x20 // ' '
+	if k == 0x0e
+		return 0x7f // BACKSPACE
+	if dev_key_shift
+		if k == 0x0b
+			return 0x3d // '='
+		if k == 0x02
+			return 0x21 // '!'
+		if k == 0x03
+			return 0x22 // '"'
+		//if k == 0x04
+		//	return 0x00 // '§'
+		if k == 0x05
+			return 0x24 // '$'
+		if k == 0x06
+			return 0x25 // '%'
+		if k == 0x07
+			return 0x26 // '&'
+		if k == 0x08
+			return 0x2f // '/'
+		if k == 0x09
+			return 0x28 // '('
+		if k == 0x0a
+			return 0x29 // ')'
+		if k == 0x0c
+			return 0x5f // '_'
+		if k == 0x34
+			return 0x3a // ':'
+		if k == 0x33
+			return 0x3b // ';'
+			
+		if k == 0x1e
+			return 0x41 // 'A'
+		if k == 0x30
+			return 0x42
+		if k == 0x2e
+			return 0x43
+		if k == 0x20
+			return 0x44
+		if k == 0x12
+			return 0x45
+		if k == 0x21
+			return 0x46
+		if k == 0x22
+			return 0x47 // 'G'
+		if k == 0x23
+			return 0x48
+		if k == 0x17
+			return 0x49
+		if k == 0x24
+			return 0x4a
+		if k == 0x25
+			return 0x4b
+		if k == 0x26
+			return 0x4c
+		if k == 0x32
+			return 0x4d // 'M'
+		if k == 0x31
+			return 0x4e
+		if k == 0x18
+			return 0x4f
+		if k == 0x19
+			return 0x50
+		if k == 0x10
+			return 0x51
+		if k == 0x13
+			return 0x52 // 'R'
+		if k == 0x1f
+			return 0x53
+		if k == 0x14
+			return 0x54
+		if k == 0x16
+			return 0x55
+		if k == 0x2f
+			return 0x56
+		if k == 0x11
+			return 0x57
+		if k == 0x2d
+			return 0x58 // 'X'
+		if k == 0x15
+			return 0x59
+		if k == 0x2c
+			return 0x5a
+	else
+		if k == 0x0b
+			return 0x30 // '0'
+		if k == 0x02
+			return 0x31
+		if k == 0x03
+			return 0x32
+		if k == 0x04
+			return 0x33
+		if k == 0x05
+			return 0x34
+		if k == 0x06
+			return 0x35
+		if k == 0x07
+			return 0x36
+		if k == 0x08
+			return 0x37
+		if k == 0x09
+			return 0x38
+		if k == 0x0a
+			return 0x39
+		if k == 0x0c
+			return 0x2d // '-'
+		if k == 0x34
+			return 0x2e // '.'
+		if k == 0x33
+			return 0x2c // ','
+			
+		if k == 0x1e
+			return 0x61 // 'a'
+		if k == 0x30
+			return 0x62
+		if k == 0x2e
+			return 0x63
+		if k == 0x20
+			return 0x64
+		if k == 0x12
+			return 0x65
+		if k == 0x21
+			return 0x66
+		if k == 0x22
+			return 0x67 // 'g'
+		if k == 0x23
+			return 0x68
+		if k == 0x17
+			return 0x69
+		if k == 0x24
+			return 0x6a
+		if k == 0x25
+			return 0x6b
+		if k == 0x26
+			return 0x6c
+		if k == 0x32
+			return 0x6d // 'm'
+		if k == 0x31
+			return 0x6e
+		if k == 0x18
+			return 0x6f
+		if k == 0x19
+			return 0x70
+		if k == 0x10
+			return 0x71
+		if k == 0x13
+			return 0x72 // 'r'
+		if k == 0x1f
+			return 0x73
+		if k == 0x14
+			return 0x74
+		if k == 0x16
+			return 0x75
+		if k == 0x2f
+			return 0x76
+		if k == 0x11
+			return 0x77
+		if k == 0x2d
+			return 0x78 // 'x'
+		if k == 0x15
+			return 0x79
+		if k == 0x2c
+			return 0x7a
+	return -1
 
 void int_key()
 	while true
@@ -131,9 +313,30 @@ void int_key()
 		/*prints("<IRQ ")
 		printi(k)
 		prints(">")*/
+		
+		// add to low level device buffer
 		if dev_key_num < 64
 			dev_key_buf[dev_key_num] = k
 			dev_key_num ++
+		
+		if k == 0xe0
+			dev_key_escaped = true
+		else
+			if dev_key_escaped
+				k += 0xe000
+			dev_key_escaped = false
+		
+			if (k & 0x80) > 0
+				if k == 0xaa or k == 0xb6
+					dev_key_shift = false
+			if k == 0x2a or k == 0x36
+				dev_key_shift = true
+	
+			k = getchar(k)
+			if k >= 0 and dev_tty_key_num < 64
+				dev_tty_key_buf[dev_tty_key_num] = k
+				dev_tty_key_num ++
+			
 		asm{
 			iret
 		}
