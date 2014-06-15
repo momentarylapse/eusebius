@@ -11,6 +11,8 @@ void cat(string filename)
 	while true
 		s.resize(128)
 		int r = read(h, &s[0], 128)
+		if r < 0
+			print("Fehler beim Lesen...\n")
 		if r <= 0
 			break
 		s.resize(r)
@@ -25,5 +27,6 @@ void main()
 	
 	for int i, 1, arg.num
 		cat(arg[i])
+		//print FileRead(arg[i])
 	
 	exit(0)

@@ -891,6 +891,25 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 	return l
 
 
+lib__string lib__FileRead(string filename)
+	lib__string content
+	int h = open(filename, O_RDONLY)
+	if h < 0
+		//print("kann Datei nicht oeffnen: " + filename + "\n")
+		return content
+	int size = 0
+	while true
+		content.resize(size + 128)
+		int r = read(h, &content.data[size], 128)
+		//if r < 0
+			//print("Fehler beim Lesen...\n")
+		if r <= 0
+			break
+		size += r
+	content.resize(size)
+	close(h)
+	return content
+
 //--------------------------------------------------------------------------
 // start
 
