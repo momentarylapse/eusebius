@@ -57,6 +57,7 @@ class OpenFileData
 	bool used
 	bool reading
 	bool writing
+	bool blocking
 	FileEntry *entry
 	int pos_in_block
 	int block_no
@@ -154,12 +155,13 @@ class OpenFileData
 
 OpenFileData OpenFile[MAX_OPEN_FILES]
 
-OpenFileData *get_handle(bool reading, bool writing)
+OpenFileData *get_handle(bool reading, bool writing, bool blocking)
 	for int i, 0, MAX_OPEN_FILES
 		if !OpenFile[i].used
 			OpenFile[i].used = true
 			OpenFile[i].reading = reading
 			OpenFile[i].writing = writing
+			OpenFile[i].blocking = blocking
 			OpenFile[i].buffer = nil
 			return &OpenFile[i]
 	return nil
@@ -170,7 +172,8 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 	bool reading = (flags & O_RDONLY) > 0
 	bool writing = (flags & O_WRONLY) > 0
 	bool creating = (flags & O_CREATE) > 0
-	OpenFileData *of = get_handle(reading, writing)
+	bool blocking = (flags & O_NONBLOCK) == 0
+	OpenFileData *of = get_handle(reading, writing, blocking)
 	if !of
 		return nil
 	of.entry = FileSystem.get(filename, cur_dir)

@@ -14,6 +14,8 @@ void int_timer()
 	while true
 		if SchedulerEnabled
 		
+			ProcessWaitingTasks()
+		
 			int pid_cur = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 			int pid_next = GetNextTask(pid_cur)
 			GlobalDescriptorTable[Task[pid_cur].desc].set_busy(false)

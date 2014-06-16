@@ -12,7 +12,7 @@ void cat(string filename)
 		s.resize(128)
 		int r = read(h, &s[0], 128)
 		if r < 0
-			print("Fehler beim Lesen...\n")
+			print("\nFehler beim Lesen...\n")
 		if r <= 0
 			break
 		s.resize(r)

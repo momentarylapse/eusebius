@@ -87,6 +87,7 @@ int TaskCallData[2]
 enum
 	WAITING_MODE_TASK_EXIT
 	WAITING_MODE_FILE_READ
+	WAITING_MODE_FILE_WRITE
 
 class TaskData
 	TaskStateSegment tss
@@ -95,8 +96,9 @@ class TaskData
 	int desc // Index in GDT
 	int pid, status
 	int return_status
-	int *wait_target
-	int waiting_mode, waiting_param
+	int waiting_mode
+	int waiting_param_i1, waiting_param_i2, waiting_param_i3
+	int *waiting_param_p
 	TaskData *parent
 	cstring name
 	cstring arg
@@ -174,7 +176,14 @@ class TaskData
 		
 	void *get_initial_stack_pos()
 		return _i2p(_p2i(stack) + stack_size)
-		
+	
+	void set_wait(int mode, void *param_p, int param_i1, int param_i2, int param_i3)
+		status = TASK_STATUS_WAITING
+		waiting_mode = mode
+		waiting_param_p = param_p
+		waiting_param_i1 = param_i1
+		waiting_param_i2 = param_i2
+		waiting_param_i3 = param_i3
 		
 
 //--------------------------------------------------------------
@@ -198,7 +207,10 @@ class TaskData
 		OpenFileData *of = handles[handle]
 		if !of
 			return -1
-		return of.read(page_dir, addr, size)
+		int r = of.read(page_dir, addr, size)
+		if r == E_WOULD_BLOCK and of.blocking
+			set_wait(WAITING_MODE_FILE_READ, nil, handle, addr, size)
+		return r
 
 
 	int sys_write(int handle, int addr, int size)
@@ -258,9 +270,9 @@ class TaskData
 		make_zombie()
 		for int i, 0, MAX_TASKS
 			if Task[i].status == TASK_STATUS_WAITING
-				if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param == pid
+				if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param_i1 == pid
 					Task[i].tss.eax = 0// // return waitpid()
-					*Task[i].wait_target = r
+					*Task[i].waiting_param_p = r
 					clean_up_deep()
 					Task[i].start()
 
@@ -278,10 +290,7 @@ class TaskData
 			return 0
 		if (options & 1) > 0
 			return -2
-		wait_target = _status
-		status = TASK_STATUS_WAITING
-		waiting_mode = WAITING_MODE_TASK_EXIT
-		waiting_param = _pid
+		set_wait(WAITING_MODE_TASK_EXIT, _status, _pid, 0, 0)
 		return 0
 
 	int sys_kill(int _pid, int signal)
@@ -404,9 +413,25 @@ int GetNextTask(int pid)
 			return i
 	return IdleTask.pid
 
+void ProcessWaitingTasks()
+	for int i, 0, MAX_TASKS
+		if Task[i].status == TASK_STATUS_WAITING
+			if Task[i].waiting_mode == WAITING_MODE_FILE_READ
+				int r = Task[i].sys_read(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
+				if r >= 0
+					Task[i].tss.eax = r // return r
+					Task[i].start()
+			else if Task[i].waiting_mode == WAITING_MODE_FILE_WRITE
+				int r = Task[i].sys_write(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
+				if r >= 0
+					Task[i].tss.eax = r // return r
+					Task[i].start()
+
 void idle_func()
 	while true
-		//prints("-idle-")
+		/*for int i, 0, 1000000
+			nil
+		prints("-idle-")*/
 		asm{
 			hlt
 		}

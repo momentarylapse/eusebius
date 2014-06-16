@@ -15,6 +15,8 @@ const int FILE_TYPE_PIPE = 2
 const int FILE_TYPE_CHAR = 8
 const int FILE_TYPE_BLOCK = 16
 
+const int E_WOULD_BLOCK = 0-128
+
 
 class FileOperations
 	void *_open
@@ -44,21 +46,7 @@ class FileEntry
 			i.next = e
 		else
 			first_sub = e
-	void _show()
-		printi(type)
-		prints(" ")
-		printi(size)
-		prints(" ")
-		prints(name)
-		prints("\n")
 	
-	void show()
-		_show()
-		FileEntry *e = first_sub
-		while e
-			prints("    ")
-			e._show()
-			e = e.next
 	FileEntry *get_sub(cstring sname)
 		if strcmp(&sname, &"..") == 0
 			return parent

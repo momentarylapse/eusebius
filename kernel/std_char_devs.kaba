@@ -59,6 +59,8 @@ int dev_key_open(FileEntry *f)
 int dev_key_close(FileEntry *f)
 	return 0
 int dev_key_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	if dev_key_num == 0
+		return E_WOULD_BLOCK
 	if size > dev_key_num
 		size = dev_key_num
 	page_dir.memcpy2task(addr, &dev_key_buf, size)
@@ -76,6 +78,8 @@ int dev_tty_open(FileEntry *f)
 int dev_tty_close(FileEntry *f)
 	return 0
 int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	if dev_tty_key_num == 0
+		return E_WOULD_BLOCK
 	if size > dev_tty_key_num
 		size = dev_tty_key_num
 	page_dir.memcpy2task(addr, &dev_tty_key_buf, size)
