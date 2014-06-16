@@ -156,6 +156,14 @@ int getchar(int k)
 		return 0x20 // ' '
 	if k == 0x0e
 		return 0x7f // BACKSPACE
+	if k == 0xe048
+		return 0x1b5b41 // ^[A up
+	if k == 0xe050
+		return 0x1b5b42 // ^[B down
+	if k == 0xe04b
+		return 0x1b5b43 // ^[C left
+	if k == 0xe04d
+		return 0x1b5b44 // ^[D right
 	if dev_key_shift
 		if k == 0x0b
 			return 0x3d // '='
@@ -350,8 +358,18 @@ void int_key()
 	
 			k = getchar(k)
 			if k >= 0 and dev_tty_key_num < 64
-				dev_tty_key_buf[dev_tty_key_num] = k
-				dev_tty_key_num ++
+				if (k & 0xffffff00) == 0
+					dev_tty_key_buf[dev_tty_key_num] = k
+					dev_tty_key_num ++
+				else if (k & 0xffff0000) == 0
+					dev_tty_key_buf[dev_tty_key_num] = k >> 8
+					dev_tty_key_buf[dev_tty_key_num + 1] = k
+					dev_tty_key_num += 2
+				else
+					dev_tty_key_buf[dev_tty_key_num] = k >> 16
+					dev_tty_key_buf[dev_tty_key_num + 1] = k >> 8
+					dev_tty_key_buf[dev_tty_key_num + 2] = k
+					dev_tty_key_num += 3
 			
 		asm{
 			iret
