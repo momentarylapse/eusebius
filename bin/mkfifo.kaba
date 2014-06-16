@@ -1,0 +1,20 @@
+#define __OS__
+use "prog_header.kaba"
+
+
+void _mkfifo(string filename)
+	int r = mkfifo(filename)
+	if r < 0
+		print("mkfifo: kann FIFO nicht anlegen: " + filename + "\n")
+		exit(-1)
+
+
+void main()
+	init_lib()
+	string arg[]
+	get_args(arg)
+	
+	for int i, 1, arg.num
+		_mkfifo(arg[i])
+	
+	exit(0)

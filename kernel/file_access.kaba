@@ -26,8 +26,26 @@ const int O_TRUNC = 128
 class PipeData
 	bool used
 	FileEntry *e
-	int ref_count
+	int read_ref_count
+	int write_ref_count
 	char buffer[0]*
+	int buffer_used
+	int write(PageDirectory *page_dir, int addr, int size)
+		if buffer_used + size > PIPE_BUFFER_SIZE
+			return E_WOULD_BLOCK
+		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
+		buffer_used += size
+		return size
+	int read(PageDirectory *page_dir, int addr, int size)
+		if buffer_used == 0
+			return E_WOULD_BLOCK
+		if size > buffer_used
+			size = buffer_used
+		page_dir.memcpy2task(addr, buffer, size)
+		buffer_used -= size
+		for int i, 0, buffer_used
+			buffer[i] = buffer[i + size]
+		return size
 
 PipeData Pipe[MAX_PIPES]
 
@@ -38,7 +56,9 @@ PipeData *create_pipe(FileEntry *e)
 		if !Pipe[i].used
 			Pipe[i].used = true
 			Pipe[i].e = e
-			Pipe[i].ref_count = 0
+			Pipe[i].read_ref_count = 0
+			Pipe[i].write_ref_count = 0
+			Pipe[i].buffer_used = 0
 			Pipe[i].buffer = malloc(PIPE_BUFFER_SIZE)
 			return &Pipe[i]
 	return nil
@@ -74,6 +94,8 @@ class OpenFileData
 		
 		if entry.type == FILE_TYPE_CHAR
 			return call_ppii(entry.op._read, entry, page_dir, addr, size)
+		else if entry.type == FILE_TYPE_PIPE
+			return pipe.read(page_dir, addr, size)
 		
 		if size > entry.size - block_no * block_size - pos_in_block
 			size = entry.size - block_no * block_size - pos_in_block
@@ -113,6 +135,8 @@ class OpenFileData
 		
 		if entry.type == FILE_TYPE_CHAR
 			return call_ppii(entry.op._write, entry, page_dir, addr, size)
+		else if entry.type == FILE_TYPE_PIPE
+			return pipe.write(page_dir, addr, size)
 		return 0
 
 	int getdents(PageDirectory *page_dir, int addr, int num)
@@ -149,6 +173,11 @@ class OpenFileData
 			free(buffer)
 		if entry.type == FILE_TYPE_CHAR
 			call_p(entry.op._close, entry)
+		if entry.type == FILE_TYPE_PIPE
+			if reading
+				pipe.read_ref_count --
+			else
+				pipe.read_ref_count --
 		used = false
 		entry = nil
 
@@ -190,29 +219,19 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 		if of.entry.num_blocks > 0
 			of.entry.mount.readBlock(of.entry.blocks[0], of.buffer)
 	else if of.entry.type == FILE_TYPE_PIPE
+		if reading == writing
+			return nil
 		of.pipe = get_pipe(of.entry)
 		if !of.pipe
 			of.used = false
 			return nil
+		if reading
+			of.pipe.read_ref_count ++
+		else
+			of.pipe.write_ref_count ++
 	else if of.entry.type == FILE_TYPE_CHAR
 		call_p(of.entry.op._open, of.entry)
 	return of
-
-/*OpenFileData *kernel_create(cstring filename, int flags, FileEntry *cur_dir)
-	OpenFileData *of = get_handle(false, true)
-	if !of
-		return nil
-	of.entry = FileSystem.get(filename, cur_dir)
-	if !of.entry
-		of.entry = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
-	if !of.entry
-		of.used = false
-		return nil
-	of.block_no = 0
-	of.pos_in_block = 0
-	of.block_size = of.entry.mount.block_size
-	of.buffer = malloc(of.block_size)
-	return of*/
 
 int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
@@ -224,8 +243,11 @@ int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 int kernel_mknod(cstring filename, int flags, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -1
-	if !FileSystem.add(filename, FILE_TYPE_PIPE, cur_dir.mount, cur_dir)
+	FileEntry *e = FileSystem.add(filename, FILE_TYPE_PIPE, cur_dir.mount, cur_dir)
+	if !e
 		return -2
+	if !create_pipe(e)
+		return -3
 	return 0
 
 
