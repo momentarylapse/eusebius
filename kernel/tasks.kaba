@@ -261,6 +261,9 @@ class TaskData
 				break
 			addr += r
 		sys_close(h)
+		
+		t.sys_open("/dev/tty", O_RDONLY)
+		t.sys_open("/dev/tty", O_WRONLY)
 	
 		t.start()
 		return t.pid

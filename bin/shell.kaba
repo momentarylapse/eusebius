@@ -244,9 +244,11 @@ void main()
 	vars.__init__()
 	vars.get("PATH").value = "/bin/"
 	jobs.__init__()
-	stdin = open("/dev/tty", O_RDONLY | O_NONBLOCK)
 	
-	if stdin < 0
+	close(stdin)
+	int new_stdin = open("/dev/tty", O_RDONLY | O_NONBLOCK)
+	
+	if new_stdin < 0
 		print("## kann Tastatur nicht auslesen ##\n")
 	else if stdout < 0
 		// ... :P

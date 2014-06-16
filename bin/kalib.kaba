@@ -13,7 +13,9 @@ const int O_CREATE = 32
 const int O_NONBLOCK = 64
 const int O_TRUNC = 128
 
-int stdin, stdout, lib_error
+int stdin, stdout
+
+int lib_error
 bool __free_error__
 
 int __temp_i__, __temp_i2__, __temp_i3__
@@ -920,7 +922,8 @@ void init_lib()
 	malloc_first_free.next = nil
 	malloc_first_free.prev = nil
 	
-	stdout = open("/dev/tty", O_WRONLY)
-	stdin = -1
-	//stdin = open("/dev/keyboard")
+	stdin = 0
+	stdout = 1
+	
+	//stdout = open("/dev/tty", O_WRONLY)
 
