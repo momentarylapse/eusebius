@@ -138,6 +138,14 @@ void InitDrivers()
 	
 
 int getchar(int k)
+	if dev_key_control
+		if k == 0x2e // 'C'
+			return 0x03
+		if k == 0x20 // 'D'
+			return 0x04
+		if k == 0x2c // 'Z'
+			return 0x1a
+		return -1
 	if k == 0x1c
 		return 0x0a // '\n'
 	if k == 0x39
@@ -329,8 +337,12 @@ void int_key()
 			if (k & 0x80) > 0
 				if k == 0xaa or k == 0xb6
 					dev_key_shift = false
+				if k == 0x9d or k == 0xe09d
+					dev_key_control = false
 			if k == 0x2a or k == 0x36
 				dev_key_shift = true
+			if k == 0x1d or k == 0xe01d
+				dev_key_control = true
 	
 			k = getchar(k)
 			if k >= 0 and dev_tty_key_num < 64

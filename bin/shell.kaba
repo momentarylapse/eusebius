@@ -207,12 +207,12 @@ void exec(string cmd)
 void process(int k)
 	int c = k
 	if jobs.fg
-		if c == 0x5a // 'Z'
+		if c == 0x1a // 'Z'
 			kill(jobs.fg.pid, 19)
 			jobs.fg = nil
 			print "angehalten\n"
 			prompt()
-		if c == 0x43 // 'C'
+		if c == 0x03 // 'C'
 			kill(jobs.fg.pid, 9)
 			jobs.test_all()
 			prompt()
