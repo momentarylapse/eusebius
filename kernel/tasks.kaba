@@ -247,7 +247,7 @@ class TaskData
 	int sys_mknod(cstring filename, int flags)
 		return kernel_mknod(filename, flags, cur_dir)
 	
-	int sys_execute(cstring filename)
+	int sys_execute(cstring filename, int fd_in, int fd_out)
 		int h = sys_open(filename, O_RDONLY)
 		if h < 0
 			return -1
@@ -263,8 +263,10 @@ class TaskData
 			addr += r
 		sys_close(h)
 		
-		t.sys_open("/dev/tty", O_RDONLY)
-		t.sys_open("/dev/tty", O_WRONLY)
+		OpenFileData *of_in = get_handle(fd_in)
+		OpenFileData *of_out = get_handle(fd_out)
+		t.add_handle(of_in)
+		t.add_handle(of_out)
 	
 		t.start()
 		return t.pid

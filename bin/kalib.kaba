@@ -274,13 +274,17 @@ lib__string getcwd()
 	cs2s(tt, r)
 	return r
 
-int execute(string arg[])
+int execute(string arg[], int fd_in, int fd_out)
 	cstring tt_arg
 	sa2cs(arg, tt_arg)
 	__temp_p__ = &tt_arg
+	__temp_i__ = fd_in
+	__temp_i2__ = fd_out
 	asm{
 		mov eax, 0x0000000b
 		mov ebx, __temp_p__
+		mov ecx, __temp_i__
+		mov edx, __temp_i2__
 		int 0x80
 		mov __temp_i__, eax
 	}

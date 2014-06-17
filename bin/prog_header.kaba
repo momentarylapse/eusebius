@@ -24,7 +24,7 @@ extern int lib_error
 extern void cs2s(cstring cs, string s)
 
 extern void exit(int r)
-extern int execute(string arg[])
+extern int execute(string arg[], int fd_in, int fd_out)
 extern int open(string filename, int flags)
 extern int create(string filename)
 extern void close(int h)

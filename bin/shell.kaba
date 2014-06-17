@@ -147,7 +147,7 @@ class JobManager
 		if as_bg
 			c.remove(c.num - 1)
 		int id = get_next_id()
-		int pid = execute(c)
+		int pid = execute(c, stdin, stdout)
 		if as_bg
 			print "[" + id + "]: "
 			//print pid

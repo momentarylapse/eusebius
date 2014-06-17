@@ -77,7 +77,7 @@ void main()
 	mem_init()
 	etm_init()
 	
-	prints("Willkommen zu Eusebius 0.2.7   (c) by MichiSoft TM 2014\n")
+	prints("Willkommen zu Eusebius 0.2.8   (c) by MichiSoft TM 2014\n")
 	prints("Speicher: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
@@ -107,7 +107,10 @@ void main()
 	
 	LoadKaLib()
 	
-	if KernelTask.sys_execute("/bin/shell") < 0
+	int stdin = KernelTask.sys_open("/dev/tty", O_RDONLY)
+	int stdout = KernelTask.sys_open("/dev/tty", O_WRONLY)
+	
+	if KernelTask.sys_execute("/bin/shell", stdin, stdout) < 0
 		panic("kann /bin/shell-Datei nicht lesen!")
 	//sys_execute(KernelTask, "/hello")
 	//sys_execute(KernelTask, "/hello")

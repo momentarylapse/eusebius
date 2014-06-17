@@ -93,7 +93,7 @@ void int_syscall()
 			r = caller.sys_open(filename, O_CREATE | O_WRONLY | O_TRUNC)
 		else if index == 11 // exec
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
-			r = caller.sys_execute(filename)
+			r = caller.sys_execute(filename, param2, param3)
 		else if index == 12 // chdir
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.set_cur_dir(filename)
