@@ -156,6 +156,7 @@ class TaskData
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
 			if !handles[i]
 				handles[i] = h
+				h.ref_count ++
 				return i
 		return -1
 
@@ -188,7 +189,11 @@ class TaskData
 
 //--------------------------------------------------------------
 // Dateizugriff
-
+	
+	OpenFileData *get_handle(int handle)
+		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+			return nil
+		return handles[handle]
 
 	int sys_open(cstring filename, int flags)
 		OpenFileData *of = kernel_open(filename, flags, cur_dir)
@@ -201,10 +206,7 @@ class TaskData
 
 
 	int sys_read(int handle, int addr, int size)
-		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-			return -1
-
-		OpenFileData *of = handles[handle]
+		OpenFileData *of = get_handle(handle)
 		if !of
 			return -1
 		int r = of.read(page_dir, addr, size)
@@ -214,31 +216,30 @@ class TaskData
 
 
 	int sys_write(int handle, int addr, int size)
-		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-			return -1
-
-		OpenFileData *of = handles[handle]
+		OpenFileData *of = get_handle(handle)
 		if !of
 			return -1
 		return of.write(page_dir, addr, size)
 
 	int sys_getdents(int handle, int addr, int num)
-		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-			return -1
-
-		OpenFileData *of = handles[handle]
+		OpenFileData *of = get_handle(handle)
 		if !of
 			return -1
 		return of.getdents(page_dir, addr, num)
 
 	void sys_close(int handle)
-		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-			return
-		OpenFileData *of = handles[handle]
+		OpenFileData *of = get_handle(handle)
 		if !of
 			return
 		of.close()
 		handles[handle] = nil
+	
+	int sys_dup(int fd)
+		OpenFileData *of = get_handle(fd)
+		if !of
+			return -1
+		int index = add_handle(of)
+		return index
 		
 	int sys_mkdir(cstring filename)
 		return kernel_mkdir(filename, cur_dir)

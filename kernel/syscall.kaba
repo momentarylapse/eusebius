@@ -107,6 +107,8 @@ void int_syscall()
 		else if index == 39 // mkdir
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.sys_mkdir(filename)
+		else if index == 41 // dup
+			r = caller.sys_dup(param1)
 		else if index == 45 // brk
 			r = caller.sys_brk(param1)
 		else if index == 141 // getdents
