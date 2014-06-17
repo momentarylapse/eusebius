@@ -240,6 +240,19 @@ class TaskData
 			return -1
 		int index = add_handle(of)
 		return index
+	
+	int sys_pipe(int addr)
+		FileEntry *e = FileSystem.add(":pipe:", FILE_TYPE_PIPE, nil, nil)
+		if !e
+			return -2
+		if !create_pipe(e)
+			return -3
+		OpenFileData *of_in = kernel_open_entry(e, O_RDONLY)
+		OpenFileData *of_out = kernel_open_entry(e, O_WRONLY)
+		int fd[2]
+		fd[0] = add_handle(of_in)
+		fd[1] = add_handle(of_out)
+		page_dir.memcpy2task(addr, &fd, 8)
 		
 	int sys_mkdir(cstring filename)
 		return kernel_mkdir(filename, cur_dir)
@@ -319,6 +332,17 @@ class TaskData
 			return cur_size
 		Paging.page_dir_grow(page_dir, size, true)
 		return size
+	
+	int sys_fcntl(int fd, int op, int param)
+		OpenFileData *of = get_handle(fd)
+		if !of
+			return -1
+		if op == 1
+			return of.get_flags()
+		if op == 2
+			of.set_flags(param)
+			return 0
+		return -2
 	
 	int sys_fork()
 		TaskData *t = AddTask("-fork-", _i2p(0x00a00000), false, self)

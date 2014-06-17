@@ -107,12 +107,42 @@ class Job
 	string cmd
 	int pid, id
 	bool done
-	void __init__(int _pid, int _id, string _cmd)
-		pid = _pid
-		id = _id
+	int pipe_in[2], pipe_out[2] // from job's point of view
+	bool as_bg
+	void __init__(int _id, string c[], string _cmd)
 		cmd = _cmd
 		done = false
+		pipe(pipe_in)
+		pipe(pipe_out)
+		
+		as_bg = (c[c.num - 1] == "&")
+		if as_bg
+			c.remove(c.num - 1)
+		id = _id
+		//pid = execute(c, stdin, stdout)
+		pid = execute(c, pipe_in[0], pipe_out[1])
+		if as_bg
+			print "[" + id + "]: "
+			//print pid
+			print "\n"
+		fcntl(pipe_out[0], 2, O_RDONLY | O_NONBLOCK)
+	
+	void __delete__()
+		close(pipe_in[0])
+		close(pipe_in[1])
+		close(pipe_out[0])
+		close(pipe_out[1])
+	
 	void test()
+		string s
+		s.resize(512)
+		int r = read(pipe_out[0], &s[0], s.num)
+		if r > 0
+			s.resize(r)
+			print s
+			return
+		
+	
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
@@ -143,20 +173,12 @@ class JobManager
 				return j
 		return nil
 	Job *create(string c[], string cmd)
-		bool as_bg = (c[c.num - 1] == "&")
-		if as_bg
-			c.remove(c.num - 1)
-		int id = get_next_id()
-		int pid = execute(c, stdin, stdout)
-		if as_bg
-			print "[" + id + "]: "
-			//print pid
-			print "\n"
-		if pid < 0
+		Job *j = new Job(get_next_id(), c, cmd)
+		if j.pid < 0
+			delete j
 			return nil
-		Job *j = new Job(pid, id, cmd)
 		job.add(j)
-		if !as_bg
+		if !j.as_bg
 			fg = j
 		return j
 	void test_all()

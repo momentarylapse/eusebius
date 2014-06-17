@@ -86,6 +86,19 @@ class OpenFileData
 	PipeData *pipe
 	int ref_count
 	
+	int get_flags()
+		int flags = 0
+		if reading
+			flags += O_RDONLY
+		if writing
+			flags += O_WRONLY
+		if !blocking
+			flags += O_NONBLOCK
+		return flags
+	void set_flags(int flags)
+		reading = (flags & O_RDONLY) > 0
+		writing = (flags & O_WRONLY) > 0
+		blocking = (flags & O_NONBLOCK) == 0
 
 	int read(PageDirectory *page_dir, int addr, int size)
 		int r=0
@@ -189,13 +202,11 @@ class OpenFileData
 
 OpenFileData OpenFile[MAX_OPEN_FILES]
 
-OpenFileData *create_handle(bool reading, bool writing, bool blocking)
+OpenFileData *create_handle(int flags)
 	for int i, 0, MAX_OPEN_FILES
 		if !OpenFile[i].used
 			OpenFile[i].used = true
-			OpenFile[i].reading = reading
-			OpenFile[i].writing = writing
-			OpenFile[i].blocking = blocking
+			OpenFile[i].set_flags(flags)
 			OpenFile[i].buffer = nil
 			OpenFile[i].ref_count = 0
 			return &OpenFile[i]
@@ -203,20 +214,11 @@ OpenFileData *create_handle(bool reading, bool writing, bool blocking)
 
 
 
-OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
-	bool reading = (flags & O_RDONLY) > 0
-	bool writing = (flags & O_WRONLY) > 0
-	bool creating = (flags & O_CREATE) > 0
-	bool blocking = (flags & O_NONBLOCK) == 0
-	OpenFileData *of = create_handle(reading, writing, blocking)
+OpenFileData *kernel_open_entry(FileEntry *e, int flags)
+	OpenFileData *of = create_handle(flags)
 	if !of
 		return nil
-	of.entry = FileSystem.get(filename, cur_dir)
-	if !of.entry and creating
-		of.entry = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
-	if !of.entry
-		of.used = false
-		return nil
+	of.entry = e
 	of.block_no = 0
 	of.pos_in_block = 0
 	of.block_size = of.entry.mount.block_size
@@ -225,19 +227,28 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 		if of.entry.num_blocks > 0
 			of.entry.mount.readBlock(of.entry.blocks[0], of.buffer)
 	else if of.entry.type == FILE_TYPE_PIPE
-		if reading == writing
+		if of.reading == of.writing
 			return nil
 		of.pipe = get_pipe(of.entry)
 		if !of.pipe
 			of.used = false
 			return nil
-		if reading
+		if of.reading
 			of.pipe.read_ref_count ++
 		else
 			of.pipe.write_ref_count ++
 	else if of.entry.type == FILE_TYPE_CHAR
 		call_p(of.entry.op._open, of.entry)
 	return of
+
+OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
+	bool creating = (flags & O_CREATE) > 0
+	FileEntry *e = FileSystem.get(filename, cur_dir)
+	if !e and creating
+		e = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
+	if !e
+		return nil
+	return kernel_open_entry(e, flags)
 
 int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)

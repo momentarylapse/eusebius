@@ -109,8 +109,12 @@ void int_syscall()
 			r = caller.sys_mkdir(filename)
 		else if index == 41 // dup
 			r = caller.sys_dup(param1)
+		else if index == 42 // pipe
+			r = caller.sys_pipe(param1)
 		else if index == 45 // brk
 			r = caller.sys_brk(param1)
+		else if index == 51 // fcntl
+			r = caller.sys_fcntl(param1, param2, param3)
 		else if index == 141 // getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 183 // getcwd

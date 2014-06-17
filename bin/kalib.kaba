@@ -182,7 +182,6 @@ int getdents(int h, void *buf)//lib__DirEntry)
 	}
 	return __temp_i3__
 
-	
 int dup(int h)
 	__temp_i__ = h
 	asm{
@@ -193,6 +192,29 @@ int dup(int h)
 	}
 	return __temp_i__
 
+int pipe(int h[2])
+	__temp_p__ = &h
+	asm{
+		mov eax, 0x0000002a
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
+int fcntl(int h, int op, int param)
+	__temp_i__ = h
+	__temp_i2__ = op
+	__temp_i3__ = param
+	asm{
+		mov eax, 0x00000033
+		mov ebx, __temp_i__
+		mov ecx, __temp_i2__
+		mov edx, __temp_i3__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
 
 int mkfifo(string filename)
 	cstring tt
