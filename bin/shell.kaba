@@ -49,10 +49,12 @@ class Prompt
 				jobs.fg = nil
 				print "angehalten\n"
 				show()
-			if c == 0x03 // 'C'
+			else if c == 0x03 // 'C'
 				kill(jobs.fg.pid, 9)
 				jobs.test_all()
 				show()
+			else
+				write(jobs.fg.pipe_in[1], &c, 1)
 			return
 		
 		if c == 0x0a // '\n'

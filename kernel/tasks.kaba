@@ -164,7 +164,7 @@ class TaskData
 		status = TASK_STATUS_ZOMBIE
 		for int i, 0, MAX_OPEN_FILES_PER_TASK
 			if handles[i]
-				handles[i].close()
+				handles[i].unref()
 				handles[i] = nil
 		if !kernel_mode
 			if page_dir
@@ -201,7 +201,7 @@ class TaskData
 			return -1
 		int index = add_handle(of)
 		if index < 0
-			of.close()
+			of.unref()
 		return index
 
 
@@ -231,7 +231,7 @@ class TaskData
 		OpenFileData *of = get_handle(handle)
 		if !of
 			return
-		of.close()
+		of.unref()
 		handles[handle] = nil
 	
 	int sys_dup(int fd)

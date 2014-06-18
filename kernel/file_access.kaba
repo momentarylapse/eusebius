@@ -46,6 +46,14 @@ class PipeData
 		for int i, 0, buffer_used
 			buffer[i] = buffer[i + size]
 		return size
+	void unref(OpenFileData *of)
+		if of.reading
+			read_ref_count --
+		else
+			write_ref_count --
+		if read_ref_count <= 0 and write_ref_count <= 0
+			free(buffer)
+			used = false
 
 PipeData Pipe[MAX_PIPES]
 
@@ -180,7 +188,7 @@ class OpenFileData
 		return 1
 
 
-	void close()
+	void unref()
 		if !used
 			return
 		ref_count --
@@ -192,10 +200,8 @@ class OpenFileData
 		if entry.type == FILE_TYPE_CHAR
 			call_p(entry.op._close, entry)
 		if entry.type == FILE_TYPE_PIPE
-			if reading
-				pipe.read_ref_count --
-			else
-				pipe.read_ref_count --
+			pipe.unref(self)
+		
 		used = false
 		entry = nil
 
