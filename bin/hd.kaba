@@ -2,10 +2,7 @@
 use "prog_header.kaba"
 
 
-void hd(string filename)
-	int h = open(filename, O_RDONLY)
-	if h < 0
-		print("hd: kann Datei nicht oeffnen: " + filename + "\n")
+void hd(int h)
 	string s
 	while true
 		s.resize(128)
@@ -16,7 +13,6 @@ void hd(string filename)
 			break
 		s.resize(r)
 		print(s.hex(false))
-	close(h)
 	print("\n")
 
 
@@ -25,7 +21,14 @@ void main()
 	string arg[]
 	get_args(arg)
 	
+	if arg.num == 1
+		hd(stdin)
+	
 	for int i, 1, arg.num
-		hd(arg[i])
+		int h = open(arg[i], O_RDONLY)
+		if h < 0
+			print("hd: kann Datei nicht oeffnen: " + arg[i] + "\n")
+		hd(h)
+		close(h)
 	
 	exit(0)

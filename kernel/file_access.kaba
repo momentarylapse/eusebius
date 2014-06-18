@@ -51,7 +51,11 @@ class PipeData
 			read_ref_count --
 		else
 			write_ref_count --
-		if read_ref_count <= 0 and write_ref_count <= 0
+		/*if read_ref_count < 0
+			panic("Pipe.read_ref_count < 0")
+		if write_ref_count < 0
+			panic("Pipe.write_ref_count < 0")*/
+		if read_ref_count <= 0 and write_ref_count <= 0 and !e
 			free(buffer)
 			used = false
 
@@ -194,6 +198,9 @@ class OpenFileData
 		ref_count --
 		if ref_count > 0
 			return
+		
+		/*if ref_count < 0
+			panic("OpenFileData.ref_count < 0")*/
 			
 		if buffer
 			free(buffer)
