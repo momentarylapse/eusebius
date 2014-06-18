@@ -53,7 +53,7 @@ FileOperations dev_key_ops
 cstring dev_key_buf
 int dev_key_num
 bool dev_key_escaped
-bool dev_key_shift, dev_key_control
+bool dev_key_shift, dev_key_control, dev_key_altgr
 int dev_key_open(FileEntry *f)
 	return 0
 int dev_key_close(FileEntry *f)
@@ -96,6 +96,7 @@ void InitDrivers()
 	dev_key_escaped = false
 	dev_key_shift = false
 	dev_key_control = false
+	dev_key_altgr = false
 	dev_tty_key_num = 0
 	
 	//FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
@@ -147,7 +148,7 @@ int getchar(int k)
 			return 0x03
 		if k == 0x20 // 'D'
 			return 0x04
-		if k == 0x2c // 'Z'
+		if k == 0x15 // 'Z'
 			return 0x1a
 		return -1
 	if k == 0x1c
@@ -164,7 +165,24 @@ int getchar(int k)
 		return 0x1b5b43 // ^[C left
 	if k == 0xe04d
 		return 0x1b5b44 // ^[D right
-	if dev_key_shift
+	if dev_key_altgr
+		if k == 0x1b
+			return 0x7e // '~'
+		if k == 0x56
+			return 0x7c // '|'
+		if k == 0x08
+			return 0x7b // '{'
+		if k == 0x09
+			return 0x5b // '['
+		if k == 0x0a
+			return 0x5d // ']'
+		if k == 0x0b
+			return 0x7d // '}'
+		if k == 0x10
+			return 0x40 // '@'
+		if k == 0x0c
+			return 0x5c // '\'
+	else if dev_key_shift
 		if k == 0x0b
 			return 0x3d // '='
 		if k == 0x02
@@ -185,12 +203,24 @@ int getchar(int k)
 			return 0x28 // '('
 		if k == 0x0a
 			return 0x29 // ')'
-		if k == 0x0c
+		if k == 0x35
 			return 0x5f // '_'
 		if k == 0x34
 			return 0x3a // ':'
 		if k == 0x33
 			return 0x3b // ';'
+		if k == 0x56
+			return 0x3e // '>'
+		if k == 0x2b
+			return 0x27 // '''
+		if k == 0x1b
+			return 0x2a // '*'
+		//if k == 0x29
+		//	return 0x // '°'
+		if k == 0x0c
+			return 0x3f // '?'
+		if k == 0x0d
+			return 0x60 // '`'
 			
 		if k == 0x1e
 			return 0x41 // 'A'
@@ -240,9 +270,9 @@ int getchar(int k)
 			return 0x57
 		if k == 0x2d
 			return 0x58 // 'X'
-		if k == 0x15
-			return 0x59
 		if k == 0x2c
+			return 0x59
+		if k == 0x15
 			return 0x5a
 	else
 		if k == 0x0b
@@ -265,12 +295,24 @@ int getchar(int k)
 			return 0x38
 		if k == 0x0a
 			return 0x39
-		if k == 0x0c
+		if k == 0x35
 			return 0x2d // '-'
 		if k == 0x34
 			return 0x2e // '.'
 		if k == 0x33
 			return 0x2c // ','
+		if k == 0x56
+			return 0x3c // '<'
+		if k == 0x2b
+			return 0x23 // '#'
+		if k == 0x1b
+			return 0x2b // '+'
+		if k == 0x29
+			return 0x5e // '^'
+		//if k == 0x0c
+		//	return ... // 'ß'
+		//if k == 0x0d
+		//	return ... // '´'
 			
 		if k == 0x1e
 			return 0x61 // 'a'
@@ -320,9 +362,9 @@ int getchar(int k)
 			return 0x77
 		if k == 0x2d
 			return 0x78 // 'x'
-		if k == 0x15
-			return 0x79
 		if k == 0x2c
+			return 0x79
+		if k == 0x15
 			return 0x7a
 	return -1
 
@@ -351,10 +393,14 @@ void int_key()
 					dev_key_shift = false
 				if k == 0x9d or k == 0xe09d
 					dev_key_control = false
+				if k == 0xe0b8
+					dev_key_altgr = false
 			if k == 0x2a or k == 0x36
 				dev_key_shift = true
 			if k == 0x1d or k == 0xe01d
 				dev_key_control = true
+			if k == 0xe038
+				dev_key_altgr = true
 	
 			k = getchar(k)
 			if k >= 0 and dev_tty_key_num < 64

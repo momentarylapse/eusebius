@@ -148,7 +148,7 @@ class Job
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
-		vars.get("QM").value = status
+		vars.get("?").value = status
 		if self != jobs.fg
 			print "[" + id + "] Fertig: " + cmd + "\n"
 		if status < -600//-652

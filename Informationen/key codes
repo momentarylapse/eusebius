@@ -22,8 +22,8 @@ u	16
 v	2f
 w	11
 x	2d
-y	15
-z	2c
+y	15	2c
+z	2c	15
 leer	39
 tab	0f
 return	1c
@@ -33,10 +33,16 @@ shiftr	36
 ctrl	1d
 ctrlr	e0.1d
 altl	38
--	0c
+altgr	-	e0.38
+-	0c	35
 .	34
 ,	33
-<	
+<	-	56
+#	-	2b
++	-	1b
+^	-	29
+ß	-	0c
+´	-	0d
 bcksp	0e
 lösch	e0.53
 0	0b
