@@ -51,8 +51,12 @@ void prints_low(cstring *str, int size)
 			d[-2] = 0x20
 			TextPos --
 			if TextPos < 0
-				TextPos = SCREEN_WIDTH - 1
-				TextLine --
+				if TextLine > 0
+					TextPos = SCREEN_WIDTH - 1
+					TextLine --
+				else
+					TextPos = 0
+					TextLine = 0
 			continue
 		if str[i] != 0x0a
 			d[0] = str[i]

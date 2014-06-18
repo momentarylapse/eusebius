@@ -1,0 +1,78 @@
+#define __OS__
+use "prog_header.kaba"
+
+string lines[]
+int cur_line
+
+const int WIDTH = 80
+const int HEIGHT = 25
+
+void clear()
+	string s
+	s.add(0x7f)
+	for int y, 0, HEIGHT
+		for int x, 0, WIDTH
+			print s
+
+void show()
+	clear()
+	for int y, 0, HEIGHT
+		int l = cur_line + y
+		string line = "~~~"
+		if l < lines.num
+			line = lines[l].replace("\t", "    ")
+		if line.num >= WIDTH
+			line.resize(WIDTH)
+		else if y < HEIGHT-1
+			line += "\n"
+		print line
+	
+	
+
+
+void main()
+	init_lib()
+	string arg[]
+	get_args(arg)
+	
+	lines.__init__()
+	cur_line = 0
+	
+	if arg.num < 2
+		print "less: Datei?\n"
+		exit(1)
+	int h = open(arg[1], O_RDONLY)
+	if h < 0
+		print("less: kann Datei nicht oeffnen: " + arg[1] + "\n")
+		exit(-1)
+	
+	string cont
+	string s
+	while true
+		s.resize(128)
+		int r = read(h, &s[0], 128)
+		if r < 0
+			print("\nFehler beim Lesen...\n")
+		if r <= 0
+			break
+		s.resize(r)
+		cont += s
+	lines = cont.explode("\n")
+	close(h)
+	
+	while true
+		show()
+		
+		s.resize(1)
+		int r = read(stdin, &s[0], 1)
+		if s == "w"
+			cur_line --
+		if s == "s"
+			cur_line ++
+		if s == "q"
+			exit(0)
+		if cur_line < 0
+			cur_line = 0
+	
+	
+	exit(0)

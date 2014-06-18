@@ -4,7 +4,7 @@ FLAGS =  --x86 --no-std-lib
 PFLAGS =  --x86 --no-std-lib --import-symbols kalib_symbols
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
-BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/pipetest bin/kalib
+BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/pipetest bin/less bin/kalib
 
 all : bochs/c.img
 
@@ -62,6 +62,9 @@ bin/pipetest: bin/pipetest.kaba kalib_symbols
 bin/tr: bin/tr.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o bin/tr bin/tr.kaba
 
+bin/less: bin/less.kaba kalib_symbols
+	$(KABA) $(PFLAGS) -o bin/less bin/less.kaba
+
 bin/kalib: bin/kalib.kaba
 	$(KABA) --x86 -o bin/kalib --export-symbols kalib_symbols bin/kalib.kaba
 
@@ -79,10 +82,12 @@ img.ext2: $(BINS) img.mfs
 	mkdir -p img-src/bin
 	mkdir -p img-src/boot
 	mkdir -p img-src/home
+	mkdir -p img-src/src
 	echo "aaa" > img-src/home/a
 	echo "bbbb" > img-src/home/b
 	echo "hallo\nkleiner Test" > img-src/home/test.txt
 	cp -r $(BINS) img-src/bin
+	cp kernel/*.kaba img-src/src
 	genext2fs -b 1024 -d img-src img.ext2 
 
 bochs/c.img: img.mfs img.ext2 loader_fake
