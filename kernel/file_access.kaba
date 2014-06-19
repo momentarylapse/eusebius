@@ -38,7 +38,11 @@ class PipeData
 		return size
 	int read(PageDirectory *page_dir, int addr, int size)
 		if buffer_used == 0
-			return E_WOULD_BLOCK
+			// no data... block if we have a writer
+			if write_ref_count > 0
+				return E_WOULD_BLOCK
+			// else "empty"
+			return 0
 		if size > buffer_used
 			size = buffer_used
 		page_dir.memcpy2task(addr, buffer, size)

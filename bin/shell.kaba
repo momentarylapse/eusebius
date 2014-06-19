@@ -359,25 +359,16 @@ void main()
 	vars.get("PATH").value = "/bin/"
 	jobs.__init__()
 	
-	close(stdin)
-	int new_stdin = open("/dev/tty", O_RDONLY | O_NONBLOCK)
+	fcntl(stdin, 2, O_RDONLY | O_NONBLOCK)
 	
-	if new_stdin < 0
-		print("## kann Tastatur nicht auslesen ##\n")
-	else if stdout < 0
-		// ... :P
-		print("## kann stdout nicht oeffnen ##\n")
-	else
-		prompt.show()
-		while true
-			for int i, 0, 10000
-				nil
-			if jobs.fg
-				jobs.test_all()
-			int key = getkey()
-			prompt.process(key)
-	close(stdin)
-	close(stdout)
+	prompt.show()
+	while true
+		for int i, 0, 10000
+			nil
+		if jobs.fg
+			jobs.test_all()
+		int key = getkey()
+		prompt.process(key)
 	
 	while true
 		nil
