@@ -12,6 +12,7 @@ const int O_APPEND = 16
 const int O_CREATE = 32
 const int O_NONBLOCK = 64
 const int O_TRUNC = 128
+const int E_WOULD_BLOCK = 0-128
 
 int stdin, stdout
 
@@ -848,7 +849,8 @@ void lib__print(lib__string s)
 	for int i, 0, s.num
 		ss[0] = s.data[i]
 		prints(ss)*/
-	write(stdout, s.data, s.num)
+	while write(stdout, s.data, s.num) == E_WOULD_BLOCK
+		nil
 
 
 

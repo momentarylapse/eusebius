@@ -21,7 +21,11 @@ class Prompt
 			print s
 		cur.clear()
 	void add_to_history()
-		history[history_pos] = cur
+		if history.num > 1
+			if history[history.num - 2] == cur
+				history_pos = history.num - 1
+				return
+		history[history.num - 1] = cur
 		history.add("")
 		history_pos = history.num - 1
 	void history_jump(int pos)
@@ -151,7 +155,7 @@ class Job
 			print "[" + id + "]: "
 			//print pid
 			print "\n"
-		fcntl(pipe_out[0], 2, O_RDONLY | O_NONBLOCK)
+		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	void __delete__()
 		close(pipe_in[0])
@@ -359,7 +363,7 @@ void main()
 	vars.get("PATH").value = "/bin/"
 	jobs.__init__()
 	
-	fcntl(stdin, 2, O_RDONLY | O_NONBLOCK)
+	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	prompt.show()
 	while true
