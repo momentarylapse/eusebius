@@ -48,13 +48,17 @@ class Prompt
 			return
 		int c = k
 		if jobs.fg
-			if c == 0x1a // 'Z'
+			if c == 0x1a // '^Z'
 				kill(jobs.fg.pid, 19)
 				jobs.fg = nil
 				print "angehalten\n"
 				show()
-			else if c == 0x03 // 'C'
+			else if c == 0x03 // '^C'
 				kill(jobs.fg.pid, 9)
+				jobs.test_all()
+				show()
+			else if c == 0x04 // '^D'
+				close(jobs.fg.pipe_in[1])
 				jobs.test_all()
 				show()
 			else

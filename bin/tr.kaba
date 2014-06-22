@@ -13,7 +13,7 @@ void main()
 		s.resize(128)
 		int r = read(stdin, &s[0], s.num)
 		if r <= 0
-			return
+			break
 		s.resize(r)
 		print "<"
 		print s
