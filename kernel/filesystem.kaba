@@ -37,6 +37,7 @@ class FileEntry
 	FileEntry *next
 	FileEntry *first_sub
 	FileOperations *op
+	bool meta_dirty
 	
 	void add(FileEntry *e)
 		e.parent = self
@@ -72,6 +73,8 @@ class MountPoint
 	int dev_blocks_per_block
 	int dev_block_offset
 	
+	void *saveInode // int f(FileSystemType*, FileEntry*)
+	
 	void update(int _bs, int _bo)
 		block_size = _bs
 		dev_blocks_per_block = _bs / 512
@@ -103,6 +106,7 @@ class FileSystemData
 		e.next = nil
 		e.first_sub = nil
 		e.op = nil
+		e.meta_dirty = false
 		if parent
 			parent.add(e)
 		return e
@@ -192,6 +196,7 @@ class FileSystemTypeMichiFS : FileSystemType
 		buf_used += l
 		s[l] = 0
 	bool mount(MountPoint *mp)
+		mp.saveInode = nil
 		mp.update(2048, 0)
 		mp.readBlock(1, &buf)
 		buf_used = 0
@@ -294,6 +299,7 @@ class FileSystemTypeExt2 : FileSystemType
 	MountPoint *_mp
 	
 	bool mount(MountPoint *mp)
+		mp.saveInode = &saveInode
 		_mp = mp
 		mp.update(1024, 0) // temp
 		
@@ -338,6 +344,18 @@ class FileSystemTypeExt2 : FileSystemType
 		if (sb.feature_ro_compat & 0xfffffffe) > 0
 			return
 		writable = true
+	
+	int saveInode(FileEntry *e)
+		prints("save Inode")
+		int index = e.mp_inode
+		int group_no = (index - 1) / sb.inodes_per_group // 0...
+		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
+		_mp.readBlock(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, &_buf)
+		memcpy(&inode, &_buf[offset % block_size], sizeof(Ext2Inode))
+		inode.size = e.size
+		memcpy(&_buf[offset % block_size], &inode, sizeof(Ext2Inode))
+		_mp.writeBlock(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, &_buf)
+		return 0
 	
 	void readInode(int index, Ext2Inode inode, FileEntry *e)
 		int group_no = (index - 1) / sb.inodes_per_group // 0...

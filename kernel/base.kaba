@@ -138,6 +138,21 @@ int call_ppii(void *f, void *a, void *b, int c, int d)
 	}
 	return __temp_i__
 
+
+int call_pp(void *f, void *a, void *b)
+	__temp_p__ = f
+	__temp_p2__ = a
+	__temp_p3__ = b
+	asm{
+		mov eax, __temp_p__
+		push __temp_p3__
+		push __temp_p2__
+		call eax
+		mov __temp_i__, eax
+		sub esp, 0x12
+	}
+	return __temp_i__
+
 int call_p(void *f, void *a)
 	__temp_p__ = f
 	__temp_p2__ = a

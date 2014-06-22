@@ -159,6 +159,7 @@ class OpenFileData
 
 	void truncate()
 		entry.size = offset
+		entry.meta_dirty = true
 
 	int write(PageDirectory *page_dir, int addr, int size)
 		int r=0
@@ -192,6 +193,7 @@ class OpenFileData
 			size -= cur_size
 			addr += cur_size
 			entry.size += cur_size
+			entry.meta_dirty = true
 			
 			// write cur block
 			int cl = entry.blocks[block_no]
@@ -244,6 +246,12 @@ class OpenFileData
 		
 		/*if ref_count < 0
 			panic("OpenFileData.ref_count < 0")*/
+			
+		if entry.meta_dirty
+			prints "-dirty- "
+			if entry.mount.saveInode
+				call_pp(entry.mount.saveInode, entry.mount.type, entry)
+				entry.meta_dirty = false
 			
 		if buffer
 			free(buffer)
@@ -307,6 +315,7 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e and creating
 		e = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
+		prints("kernel Warnung: neue Datei...\n")
 	if !e
 		return nil
 	return kernel_open_entry(e, flags)
