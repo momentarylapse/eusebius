@@ -31,6 +31,7 @@ class FileEntry
 	int num_blocks
 	int blocks[0]*
 	int inode
+	int mp_inode
 	MountPoint *mount
 	FileEntry *parent
 	FileEntry *next
@@ -80,6 +81,9 @@ class MountPoint
 	void readBlock(int block_no, cstring *buf)
 		for int i, 0, dev_blocks_per_block
 			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+	void writeBlock(int block_no, cstring *buf)
+		for int i, 0, dev_blocks_per_block
+			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
 
 
 
@@ -321,7 +325,8 @@ class FileSystemTypeExt2 : FileSystemType
 			loadInodeRecursive(2, mp.dest)
 	
 	void saveMetaData()
-		//Ata.WriteSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+		Ata.writeSector(_mp.dev.disk_no, _mp.dev.offset + 2    , 1, &sb)
+		_mp.writeBlock(1 + block_size / 1024, &bg)
 			
 	
 	void testCompatibility()
@@ -347,7 +352,7 @@ class FileSystemTypeExt2 : FileSystemType
 		
 		e.size = inode.size
 		e.num_blocks = (inode.size-1) / block_size + 1
-		e.blocks = malloc(e.num_blocks * sizeof(int))
+		e.blocks = malloc((e.num_blocks + 8) * sizeof(int))
 		int num_direct = e.num_blocks
 		if num_direct > 12
 			num_direct = 12
@@ -394,6 +399,7 @@ class FileSystemTypeExt2 : FileSystemType
 				if d.file_type == 2
 					type = FILE_TYPE_DIR
 				FileEntry *e = FileSystem.add(name, type, _mp, dir)
+				e.mp_inode = d.inode
 				loadInodeRecursive(d.inode, e)
 		free(cont)
 

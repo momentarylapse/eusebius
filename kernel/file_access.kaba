@@ -95,8 +95,7 @@ class OpenFileData
 	bool writing
 	bool blocking
 	FileEntry *entry
-	int pos_in_block
-	int block_no
+	int offset
 	int block_size
 	char buffer[0]*
 	PipeData *pipe
@@ -127,8 +126,12 @@ class OpenFileData
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.read(page_dir, addr, size)
 		
-		if size > entry.size - block_no * block_size - pos_in_block
-			size = entry.size - block_no * block_size - pos_in_block
+		int pos_in_block = offset % block_size
+		int block_no = offset / block_size
+		
+		int size_max = entry.size - offset
+		if size > size_max
+			size = size_max
 		
 		while size > 0
 	
@@ -140,6 +143,7 @@ class OpenFileData
 			// direkt lesen (aus dem Lese-Puffer kopieren)
 			page_dir.memcpy2task(addr, &buffer[pos_in_block], cur_size)
 			pos_in_block += cur_size
+			offset += cur_size
 			r += cur_size
 			size -= cur_size
 			addr += cur_size
@@ -153,6 +157,8 @@ class OpenFileData
 		
 		return r
 
+	void truncate()
+		entry.size = offset
 
 	int write(PageDirectory *page_dir, int addr, int size)
 		int r=0
@@ -167,6 +173,39 @@ class OpenFileData
 			return call_ppii(entry.op._write, entry, page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.write(page_dir, addr, size)
+		
+		int pos_in_block = offset % block_size
+		int block_no = offset / block_size
+		
+		while size > 0
+	
+			// wieviel kann in den Puffer geschrieben werden?
+			int cur_size = size
+			if cur_size > block_size - pos_in_block
+				cur_size = block_size - pos_in_block
+
+			// direkt lesen (aus dem Lese-Puffer kopieren)
+			page_dir.memcpy2kernel(&buffer[pos_in_block], addr, cur_size)
+			pos_in_block += cur_size
+			offset += cur_size
+			r += cur_size
+			size -= cur_size
+			addr += cur_size
+			entry.size += cur_size
+			
+			// write cur block
+			int cl = entry.blocks[block_no]
+			entry.mount.writeBlock(cl, buffer)
+		
+			if pos_in_block >= block_size
+				// next block
+				pos_in_block = 0
+				block_no ++
+		
+		return r
+		
+		entry.size += size
+		return size
 		return E_WOULD_BLOCK
 
 	int getdents(PageDirectory *page_dir, int addr, int num)
@@ -180,7 +219,7 @@ class OpenFileData
 			return -3
 	
 		FileEntry *e = entry.first_sub
-		for int i, 0, pos_in_block
+		for int i, 0, offset
 			e = e.next
 			if !e
 				return 0
@@ -192,7 +231,7 @@ class OpenFileData
 		r.type = e.type
 		strcpy(&r.name, &e.name)
 		page_dir.memcpy2task(addr, &r, r.struct_size)
-		pos_in_block ++
+		offset ++
 		return 1
 
 
@@ -232,17 +271,22 @@ OpenFileData *create_handle(int flags)
 
 
 OpenFileData *kernel_open_entry(FileEntry *e, int flags)
+	bool truncating = (flags & O_TRUNC) > 0
 	OpenFileData *of = create_handle(flags)
 	if !of
 		return nil
 	of.entry = e
-	of.block_no = 0
-	of.pos_in_block = 0
+	of.offset = 0
 	of.block_size = of.entry.mount.block_size
 	if of.entry.type == FILE_TYPE_FILE
 		of.buffer = malloc(of.block_size)
 		if of.entry.num_blocks > 0
 			of.entry.mount.readBlock(of.entry.blocks[0], of.buffer)
+		if of.writing
+			if truncating
+				of.truncate()
+			else
+				of.offset = e.size
 	else if of.entry.type == FILE_TYPE_PIPE
 		if of.reading == of.writing
 			return nil

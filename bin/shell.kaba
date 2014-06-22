@@ -125,11 +125,14 @@ class Job
 		pid = -1
 		
 		for int i, 0, c.num
-			if c[i] == ">"
+			if c[i] == ">" or c[i] == ">>"
 				if i == c.num - 1
 					print "Dateiname nach > erwartet"
 					return
-				pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
+				if c[i] == ">"
+					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY | O_TRUNC)
+				else
+					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
 				c.remove(i+1)
 				c.remove(i)
 		for int i, 0, c.num
