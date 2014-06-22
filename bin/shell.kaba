@@ -115,7 +115,7 @@ class Job
 	bool done
 	int pipe_in[2], pipe_out[2] // from job's point of view
 	bool as_bg
-	void __init__(int _id, string c[], string _cmd)
+	void __init__(string c[], string _cmd)
 		cmd = _cmd
 		done = false
 		pipe_in[0] = -1
@@ -148,9 +148,11 @@ class Job
 		as_bg = (c[c.num - 1] == "&")
 		if as_bg
 			c.remove(c.num - 1)
-		id = _id
+		id = -1
 		//pid = execute(c, stdin, stdout)
 		pid = execute(c, pipe_in[0], pipe_out[1])
+		close(pipe_in[0])
+		close(pipe_out[1])
 		if as_bg
 			print "[" + id + "]: "
 			//print pid
@@ -158,10 +160,8 @@ class Job
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	void __delete__()
-		close(pipe_in[0])
 		close(pipe_in[1])
 		close(pipe_out[0])
-		close(pipe_out[1])
 	
 	void test()
 		string s
@@ -203,10 +203,11 @@ class JobManager
 				return j
 		return nil
 	Job *create(string c[], string cmd)
-		Job *j = new Job(get_next_id(), c, cmd)
+		Job *j = new Job(c, cmd)
 		if j.pid < 0
 			delete j
 			return nil
+		j.id = get_next_id()
 		job.add(j)
 		if !j.as_bg
 			fg = j

@@ -12,6 +12,9 @@ use "paging.kaba"
 
 const int MAX_OPEN_FILES_PER_TASK = 16
 
+const int SIGKILL = 9
+const int SIGCONT = 18
+const int SIGSTOP = 19
 
 
 //--------------------------------------------------------------
@@ -318,12 +321,14 @@ class TaskData
 		TaskData *t = &Task[_pid]
 		if t.status == TASK_STATUS_UNUSED
 			return -1
-		if signal == 9
+		if signal == SIGKILL
 			t.clean_up_deep()
-		else if signal == 19
-			t.status = TASK_STATUS_SLEEPING
-		else if signal == 18
-			t.status = TASK_STATUS_RUNNING
+		else if signal == SIGSTOP
+			if t.status == TASK_STATUS_RUNNING
+				t.status = TASK_STATUS_SLEEPING
+		else if signal == SIGCONT
+			if t.status == TASK_STATUS_SLEEPING
+				t.status = TASK_STATUS_RUNNING
 		return 0
 
 	int sys_brk(int size)
