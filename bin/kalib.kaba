@@ -422,10 +422,7 @@ void _cleanup(MallocHeader *h)
 
 void __lib_free_error__()
 	__free_error__ = true
-	for int i, 0, 31
-		int c = "\n\nkalib: invalid call to free()"[i]
-		write(stdout, &c, 1)
-	//lib__print "kalib: invalid call to free()"
+	lib__print "\n\nkalib: invalid call to free()"
 	exit(-1)
 
 void lib__@free(void *p)
@@ -843,14 +840,14 @@ lib__string lib__@ia2s(lib__int@list a)
 	r.add(']')
 	return r
 
-void lib__print(lib__string s)
-	/*cstring ss
-	ss[1] = 0
-	for int i, 0, s.num
-		ss[0] = s.data[i]
-		prints(ss)*/
-	while write(stdout, s.data, s.num) == E_WOULD_BLOCK
-		nil
+void lib__print(string s)
+	int done = 0
+	while done < s.num
+		int r = write(stdout, &s[done], s.num - done)
+		if r == E_WOULD_BLOCK
+			continue
+		if r > 0
+			done += r
 
 
 
@@ -949,14 +946,16 @@ lib__string lib__FileRead(string filename)
 	lib__string content
 	int h = open(filename, O_RDONLY)
 	if h < 0
-		//print("kann Datei nicht oeffnen: " + filename + "\n")
+		lib__print("kann Datei nicht oeffnen: ")
+		lib__print(filename)
+		lib__print("\n")
 		return content
 	int size = 0
 	while true
 		content.resize(size + 128)
 		int r = read(h, &content.data[size], 128)
-		//if r < 0
-			//print("Fehler beim Lesen...\n")
+		if r < 0
+			lib__print("Fehler beim Lesen...\n")
 		if r <= 0
 			break
 		size += r
@@ -976,6 +975,4 @@ void init_lib()
 	
 	stdin = 0
 	stdout = 1
-	
-	//stdout = open("/dev/tty", O_WRONLY)
 

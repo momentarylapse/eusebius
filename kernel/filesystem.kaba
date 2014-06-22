@@ -346,7 +346,7 @@ class FileSystemTypeExt2 : FileSystemType
 		writable = true
 	
 	int saveInode(FileEntry *e)
-		prints("save Inode")
+		//prints("save Inode")
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
