@@ -82,15 +82,15 @@ void main()
 	printi(MemorySize / 1024)
 	prints("k\n")
 	
-	Ata.Init()
+	Ata.init()
 	ReadPartitions(0)
 	ShowPartitions()
 	
-	FileSystem.Init()
+	FileSystem.init()
 	
-	FileSystem.Mount(&Partition[2], FileSystem.root, "ext2")
+	FileSystem.mount(&Partition[2], FileSystem.root, "ext2")
 	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
-	FileSystem.Mount(&Partition[1], boot, "michifs")
+	FileSystem.mount(&Partition[1], boot, "michifs")
 	
 	Paging.init()
 	

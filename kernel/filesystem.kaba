@@ -79,7 +79,7 @@ class MountPoint
 	
 	void readBlock(int block_no, cstring *buf)
 		for int i, 0, dev_blocks_per_block
-			Ata.ReadSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
 
 
 
@@ -103,7 +103,7 @@ class FileSystemData
 			parent.add(e)
 		return e
 	
-	void Init()
+	void init()
 		num_mounts = 0
 		root = add("-root-", FILE_TYPE_DIR, nil, nil)
 	
@@ -143,7 +143,7 @@ class FileSystemData
 		else
 			strcpy(&path, &"/")
 		
-	void Mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
+	void mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
 		if VerbosityLevel >= 1
 			prints("mounte...")
 		MountPoint *mp = &mounts[num_mounts]

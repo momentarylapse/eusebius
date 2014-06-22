@@ -46,7 +46,7 @@ class AtaData
 			n--
 		return n >= 0
 
-	void SetDiskAdd(int disk_no)
+	void setDiskAdd(int disk_no)
 		ide_no = (disk_no/2)
 		ide_ms = (disk_no%2)
 		// Adressierungs-Daten
@@ -59,8 +59,8 @@ class AtaData
 		if ide_ms == 1
 			MSMask = 0x10
 
-	bool TestDisk(int disk_no)
-		SetDiskAdd(disk_no)
+	bool testDisk(int disk_no)
+		setDiskAdd(disk_no)
 		DiskInfo[disk_no].isAvailable = false
 
 		// generell ansprechbar?
@@ -178,11 +178,11 @@ class AtaData
 
 		return true
 
-	bool Reset(int disk_no)
+	bool reset(int disk_no)
 		if !DiskInfo[disk_no].isAvailable
 			return false
 		prints("AtaReset ")
-		SetDiskAdd(disk_no)
+		setDiskAdd(disk_no)
 	
 		char status
 		status=inportb(IOBase+7)
@@ -200,7 +200,7 @@ class AtaData
 		printh(&status,1)
 		prints("\n")
 
-	void Init()
+	void init()
 		NumPartitions = 0
 		prints("ATA Geraete:\n")
 	
@@ -209,16 +209,16 @@ class AtaData
 		outportb(0x376, 0x0a)
 
 		for int n, 0, 4
-			TestDisk(n)
+			testDisk(n)
 			
 	// 1 Sektor = 512 b
-	bool ReadSector(int disk_no, int sector_offset, int num_sectors, char *buf)
+	bool readSector(int disk_no, int sector_offset, int num_sectors, char *buf)
 		if !DiskInfo[disk_no].isAvailable
 			return false
 		if DiskInfo[disk_no].isAtapi
 			return false
 		//DrawString(0,24,"MAtaRead")
-		SetDiskAdd(disk_no)
+		setDiskAdd(disk_no)
 		//printh(&IOBase,2)
 		// num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
@@ -259,13 +259,13 @@ class AtaData
 		return true
 		
 	// 1 Sektor = 512 b
-	bool WriteSector(int disk_no, int sector_offset, int num_sectors, char *buf)
+	bool writeSector(int disk_no, int sector_offset, int num_sectors, char *buf)
 		if !DiskInfo[disk_no].isAvailable
 			return false
 		if DiskInfo[disk_no].isAtapi
 			return false
 		//prints "write "
-		SetDiskAdd(disk_no)
+		setDiskAdd(disk_no)
 		//printh(&IOBase,2)
 		// num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
@@ -332,7 +332,7 @@ void ReadPartitions(int disk_no)
 	strcpy(&p.name, &"hda")
 	p.name[2] = 'a' + disk_no
 	// mbr lesen
-	Ata.ReadSector(disk_no, 0, 1, &Ata.Buffer)
+	Ata.readSector(disk_no, 0, 1, &Ata.Buffer)
 	//MountPartition=false
 	for int n, 0, 4
 		int *offset = &Ata.Buffer[454+n*16]
