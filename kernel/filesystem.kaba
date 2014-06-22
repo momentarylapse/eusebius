@@ -143,12 +143,6 @@ class FileSystemData
 		else
 			strcpy(&path, &"/")
 		
-	void __Read(int disk_no, int cluster_offset, char buffer[0]*)
-		Ata.ReadSector(disk_no, cluster_offset * 4    , 1, &buffer[0])
-		Ata.ReadSector(disk_no, cluster_offset * 4 + 1, 1, &buffer[512])
-		Ata.ReadSector(disk_no, cluster_offset * 4 + 2, 1, &buffer[1024])
-		Ata.ReadSector(disk_no, cluster_offset * 4 + 3, 1, &buffer[1536])
-		
 	void Mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
 		if VerbosityLevel >= 1
 			prints("mounte...")
@@ -314,10 +308,20 @@ class FileSystemTypeExt2 : FileSystemType
 		mp.update(block_size, block_offset)
 		
 		
+		/*printi sb.inodes_per_group
+		prints " "
+		printi bg.free_inodes_count.int()
+		prints " "
+		printi bg.free_blocks_count.int()*/
+		
+		
 		//showMetaData()
 		testCompatibility()
 		if readable
 			loadInodeRecursive(2, mp.dest)
+	
+	void saveMetaData()
+		//Ata.WriteSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
 			
 	
 	void testCompatibility()

@@ -88,7 +88,7 @@ img.ext2: $(BINS) img.mfs
 	echo "hallo\nkleiner Test" > img-src/home/test.txt
 	cp -r $(BINS) img-src/bin
 	cp kernel/*.kaba img-src/src
-	genext2fs -b 1024 -d img-src img.ext2 
+	genext2fs -b 4096 -N 256 -d img-src img.ext2 
 
 bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160
