@@ -298,6 +298,11 @@ class FileSystemTypeExt2 : FileSystemType
 	int block_offset
 	MountPoint *_mp
 	
+	bool dirty
+	
+	int inode_bitmap[0]*
+	int block_bitmap[0]*
+	
 	bool mount(MountPoint *mp)
 		mp.saveInode = &saveInode
 		_mp = mp
@@ -310,6 +315,9 @@ class FileSystemTypeExt2 : FileSystemType
 		block_offset = 1024
 		if block_size == 1024
 			block_offset = 0
+		
+		inode_bitmap = malloc(block_size)
+		block_bitmap = malloc(block_size)
 	
 		//f.seek(1024 + block_size, true)
 		//f.xread(&bg, sizeof(BlockGroupDescriptor))
@@ -318,11 +326,10 @@ class FileSystemTypeExt2 : FileSystemType
 		mp.update(block_size, block_offset)
 		
 		
-		/*printi sb.inodes_per_group
-		prints " "
-		printi bg.free_inodes_count.int()
-		prints " "
-		printi bg.free_blocks_count.int()*/
+		mp.readBlock(bg.block_bitmap, block_bitmap)
+		mp.readBlock(bg.inode_bitmap, inode_bitmap)
+		
+		dirty = false
 		
 		
 		//showMetaData()
@@ -420,6 +427,38 @@ class FileSystemTypeExt2 : FileSystemType
 				e.mp_inode = d.inode
 				loadInodeRecursive(d.inode, e)
 		free(cont)
+	
+	int allocInode()
+		int n = sb.inodes_per_group / 32
+		for int i, 0, n
+			int b = inode_bitmap[i]
+			if b == 0xffffffff
+				continue
+			for int j, 0, 32
+				int m = 1 << j
+				if (b & m) == 0
+					inode_bitmap[i] += m
+					sb.free_inodes_count --
+					//bg.free_inodes_count
+					dirty = true
+					return i * 32 + j
+		return -1
+	
+	int allocBlock()
+		int n = sb.blocks_per_group / 32
+		for int i, 0, n
+			int b = block_bitmap[i]
+			if b == 0xffffffff
+				continue
+			for int j, 0, 32
+				int m = 1 << j
+				if (b & m) == 0
+					block_bitmap[i] += m
+					sb.free_blocks_count --
+					//bg.free_blocks_count
+					dirty = true
+					return i * 32 + j
+		return -1
 
 FileSystemTypeMichiFS FSTMichiFS
 FileSystemTypeExt2 FSTExt2
