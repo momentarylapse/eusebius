@@ -28,6 +28,7 @@ void main()
 		int h = open(arg[i], O_RDONLY)
 		if h < 0
 			print("hd: kann Datei nicht oeffnen: " + arg[i] + "\n")
+			exit(-1)
 		hd(h)
 		close(h)
 	
