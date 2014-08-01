@@ -815,6 +815,11 @@ lib__string lib__@i2s(int i)
 		s.add('-')
 	return s.reverse()
 
+class lib__int
+	int i
+	lib__string str()
+		return lib__@i2s(i)
+
 lib__string lib__p2s(void *p)
 	lib__string r
 	r.resize(sizeof(p))
@@ -913,6 +918,7 @@ class dirent_struct
 
 lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs)
 	lib__DirEntry@list l
+	lib__print("") // ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
