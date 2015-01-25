@@ -94,6 +94,9 @@ bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=img.mfs of=bochs/c.img bs=1024 seek=8 conv=notrunc
 	dd if=img.ext2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc
 
+run: all
+	cd bochs; yes c | bochs -qf f.txt
+
 clean:
 	rm -rf init loader_fake kernel/kernel $(BINS) bochs/c.img img.mfs img.ext2 img-src mfs
 
