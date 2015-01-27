@@ -17,7 +17,7 @@ const int F_GETFL = 1
 const int F_SETFL = 2
 
 extern void init_lib()
-extern void get_args(string arg[])
+extern void get_args(string[] arg)
 
 extern int *malloc_first_free
 
@@ -27,7 +27,7 @@ extern int lib_error
 extern void cs2s(cstring cs, string s)
 
 extern void exit(int r)
-extern int execute(string arg[], int fd_in, int fd_out)
+extern int execute(string[] arg, int fd_in, int fd_out)
 extern int open(string filename, int flags)
 extern int create(string filename)
 extern void close(int h)
@@ -36,7 +36,7 @@ extern int write(int h, cstring *buf, int size)
 extern int mkdir(string filename)
 extern int mkfifo(string filename)
 extern int dup(int h)
-extern int pipe(int h[2])
+extern int pipe(int[2] h)
 extern int fcntl(int h, int op, int param)
 extern int getpid()
 extern string getcwd()

@@ -7,7 +7,7 @@ use "base.kaba"
 //--------------------------------------------------------------
 // Text Modus
 
-void *VideoMemory
+void* VideoMemory
 char TextColor, TextColor2
 int TextPos, TextLine
 
@@ -86,7 +86,7 @@ void _i2s(int i, cstring *s)
 	bool sign = (i >= 0)
 	if !sign
 		i = -i
-	char ttt[16]
+	char[16] ttt
 	ttt[15] = 0
 	int offset = 14
 	while true

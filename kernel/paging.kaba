@@ -16,7 +16,7 @@ int ceil_quot(int n, int m)
 	return (n + m - 1) / m
 
 class PageTable
-	int e[PAGE_TABLE_ENTRIES]
+	int[PAGE_TABLE_ENTRIES] e
 	
 	void init()
 		for int i, 0, PAGE_TABLE_ENTRIES
@@ -129,7 +129,7 @@ class PageDirectory : PageTable
 			prints("...\n")
 
 class PageController
-	int mask[MAX_PAGE_MASKS]
+	int[MAX_PAGE_MASKS] mask
 	int num_masks
 	int mask_occupation
 	int alloc_count, free_count

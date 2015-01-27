@@ -3,11 +3,11 @@ use "prog_header.kaba"
 
 void main()
 	init_lib()
-	string arg[]
+	string[] arg
 	get_args(arg)
 	
 	int signal = 9
-	int pid[]
+	int[] pid
 	
 	if arg.num > 1
 		for int i, 1, arg.num

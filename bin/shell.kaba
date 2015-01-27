@@ -4,7 +4,7 @@ use "prog_header.kaba"
 
 class Prompt
 	string cur
-	string history[]
+	string[] history
 	int history_pos
 	void __init__()
 		history_pos = 0
@@ -99,7 +99,7 @@ Prompt prompt
 class Variable
 	string name, value
 class VariableSet
-	Variable *var[]
+	Variable*[] var
 	Variable *get(string name)
 		for v in var
 			if v.name == name
@@ -117,9 +117,9 @@ class Job
 	string cmd
 	int pid, id
 	bool done
-	int pipe_in[2], pipe_out[2] // from job's point of view
+	int[2] pipe_in, pipe_out // from job's point of view
 	bool as_bg
-	void __init__(string c[], string _cmd)
+	void __init__(string[] c, string _cmd)
 		cmd = _cmd
 		done = false
 		pipe_in[0] = -1
@@ -192,7 +192,7 @@ class Job
 		done = true
 
 class JobManager
-	Job *job[]
+	Job*[] job
 	Job *fg
 	void __init__()
 		fg = nil
@@ -209,7 +209,7 @@ class JobManager
 			if j.id == id
 				return j
 		return nil
-	Job *create(string c[], string cmd)
+	Job *create(string[] c, string cmd)
 		Job *j = new Job(c, cmd)
 		if j.pid < 0
 			delete j
@@ -263,7 +263,7 @@ string parse_single(string cmd, int *pos)
 		*pos = j
 	return t
 
-void parse(string cmd0, string c[])
+void parse(string cmd0, string[] c)
 	string cmd = cmd0
 	for int i, 0, cmd.num
 		if cmd[i] == ' '
@@ -275,15 +275,15 @@ void parse(string cmd0, string c[])
 		c.add(t)
 
 void execute_assign(string cmd)
-	string a[] = cmd.explode("=")
+	string[] a = cmd.explode("=")
 	if a.num == 2
 		vars.get(a[0]).value = a[1]
 
-bool execute_job(string c[], string cmd)
+bool execute_job(string[] c, string cmd)
 	Job *j = jobs.create(c, cmd)
 	return j
 
-void do_fg(string c[])
+void do_fg(string[] c)
 	int id = -1
 	if c.num >= 2
 		id = c[1].int()
@@ -295,7 +295,7 @@ void do_fg(string c[])
 	else
 		print "kein Job\n"
 
-void do_bg(string c[])
+void do_bg(string[] c)
 	int id = -1
 	if c.num >= 2
 		id = c[1].int()
@@ -306,7 +306,7 @@ void do_bg(string c[])
 	else
 		print "kein Job\n"
 
-void do_cd(string c[])
+void do_cd(string[] c)
 	if c.num > 1
 		if chdir(c[1]) != 0
 			print "kein gueltiges Verzeichnis: " + c[1] + "\n"
@@ -315,7 +315,7 @@ void do_cd(string c[])
 
 void exec(string cmd)
 	string cmd0 = cmd
-	string c[]
+	string[] c
 	parse(cmd, c)
 	if c.num == 0
 		return

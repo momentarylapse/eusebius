@@ -20,9 +20,9 @@ int lib_error
 bool __free_error__
 
 int __temp_i__, __temp_i2__, __temp_i3__
-void *__temp_p__, *__temp_p2__
+void* __temp_p__, __temp_p2__
 int _p2i(void *p)
-	int *i = &p
+	int* i = &p
 	return *i
 
 //class PointerWrapper
@@ -51,7 +51,7 @@ void cs2s(cstring cs, lib__string s)
 			return
 		s.add(cs[i])
 
-void sa2cs(string a[], cstring cs)
+void sa2cs(string[] a, cstring cs)
 	int n = 0
 	for int k, 0, a.num
 		for int i, 0, a[k].num
@@ -193,7 +193,7 @@ int dup(int h)
 	}
 	return __temp_i__
 
-int pipe(int h[2])
+int pipe(int[2] h)
 	__temp_p__ = &h
 	asm{
 		mov eax, 0x0000002a
@@ -297,7 +297,7 @@ lib__string getcwd()
 	cs2s(tt, r)
 	return r
 
-int execute(string arg[], int fd_in, int fd_out)
+int execute(string[] arg, int fd_in, int fd_out)
 	cstring tt_arg
 	sa2cs(arg, tt_arg)
 	__temp_p__ = &tt_arg
@@ -365,7 +365,7 @@ float lib__max(float a, float b)
 // memory management
 
 
-void memcpy(char dest[0]*, char source[0]*, int size)
+void memcpy(char[0]* dest, char[0]* source, int size)
 	for int i, 0, size
 		dest[i] = source[i]
 		
@@ -382,10 +382,10 @@ class MallocHeader
 	MallocHeader *next
 	MallocHeader *prev
 	void *after()
-		char pp[0]* = self
+		char[0]* pp = self
 		return &pp[size]
 	void *payload()
-		char pp[0]* = self
+		char[0]* pp = self
 		return &pp[sizeof(MallocHeader)]
 MallocHeader *malloc_first_free
 
@@ -434,7 +434,7 @@ void lib__@free(void *p)
 		__lib_free_error__()
 	while cur
 		if (_p2i(p) < _p2i(cur.next)) or !cur.next
-			char pp[0]* = p
+			char[0]* pp = p
 			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
 			
 			if hh.size < 0
@@ -455,7 +455,7 @@ void lib__@free(void *p)
 	__lib_free_error__()
 
 void *lib__@realloc(void *p, int size)
-	MallocHeader hp[0]* = p
+	MallocHeader[0]* hp = p
 	MallocHeader *h = &hp[-1]
 	int old_size = h.size
 	void *pp = lib__@malloc(size)
@@ -515,7 +515,7 @@ class lib__@DynamicArray
 		num = 0
 
 class lib__string : lib__@DynamicArray
-	overwrite char data[0]*
+	overwrite char[0]* data
 	void __init__()
 		__mem_init__(1)
 	void __delete__()
@@ -742,7 +742,7 @@ int string::icompare(const string &s) const
 		return r
 
 class lib__int@list : lib__@DynamicArray
-	overwrite int data[0]*
+	overwrite int[0]* data
 	void __init__()
 		__mem_init__(sizeof(int))
 	void resize(int size)
@@ -760,7 +760,7 @@ class lib__int@list : lib__@DynamicArray
 		resize(num - 1)
 
 class lib__string@list : lib__@DynamicArray
-	overwrite lib__string data[0]*
+	overwrite lib__string[0]* data
 	void __init__()
 		__mem_init__(sizeof(lib__string))
 	/*overwrite*/ void __delete__()
@@ -874,7 +874,7 @@ class lib__DirEntry
 
 
 class lib__DirEntry@list : lib__@DynamicArray
-	overwrite lib__DirEntry data[0]*
+	overwrite lib__DirEntry[0]* data
 	void __init__()
 		__mem_init__(sizeof(lib__DirEntry))
 	/*overwrite*/ void __delete__()

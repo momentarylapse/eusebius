@@ -29,7 +29,7 @@ class FileEntry
 	int type
 	int size
 	int num_blocks
-	int blocks[0]*
+	int[0]* blocks
 	int inode
 	int mp_inode
 	MountPoint *mount
@@ -91,7 +91,7 @@ class MountPoint
 
 
 class FileSystemData
-	MountPoint mounts[16]
+	MountPoint[16] mounts
 	int num_mounts
 	FileEntry *root
 	
@@ -171,7 +171,7 @@ class FileSystemData
 FileSystemData FileSystem
 
 class Word
-	char c[2]
+	char[2] c
 	int int()
 		int a = c[0]
 		int b = c[1]
@@ -181,7 +181,7 @@ class FileSystemType
 	int dummy
 
 class FileSystemTypeMichiFS : FileSystemType
-	char buf[2048]
+	char[2048] buf
 	int buf_used
 	
 	int read_int()
@@ -228,12 +228,12 @@ class Ext2Inode
 	int blocks
 	int flags
 	int version
-	int iblock[15]
+	int[15] iblock
 	int file_version
 	int acl
 	int size_high
 	int dummy
-	int xx_high[3]
+	int[3] xx_high
 	bool isDir()
 		return (rights.int() & 0xf000) == 0x4000
 	bool isFile()
@@ -265,10 +265,10 @@ class Ext2SuperBlock
 	Word inode_size
 	Word block_group_nr
 	int feature_compat, feature_incompat, feature_ro_compat
-	char uuid[16]
-	char volume_name[16]
-	char last_mounted[64]
-	char _filler_[1024-200]
+	char[16] uuid
+	char[16] volume_name
+	char[64] last_mounted
+	char[1024-200] _filler_
 
 class Ext2BlockGroupDescriptor
 	int block_bitmap
@@ -292,7 +292,7 @@ class FileSystemTypeExt2 : FileSystemType
 	int inodes_per_block
 	Ext2SuperBlock sb
 	Ext2BlockGroupDescriptor bg
-	char _buf[4096]
+	char[4096] _buf
 	bool readable, writable
 	int block_size
 	int block_offset
@@ -300,8 +300,8 @@ class FileSystemTypeExt2 : FileSystemType
 	
 	bool dirty
 	
-	int inode_bitmap[0]*
-	int block_bitmap[0]*
+	int[0]* inode_bitmap
+	int[0]* block_bitmap
 	
 	bool mount(MountPoint *mp)
 		mp.saveInode = &saveInode
@@ -386,7 +386,7 @@ class FileSystemTypeExt2 : FileSystemType
 			e.blocks[i] = inode.iblock[i]
 		if e.num_blocks > 12
 			_mp.readBlock(inode.iblock[12], &_buf)
-			int p[0]* = &_buf
+			int[0]* p = &_buf
 			for int i, 12, e.num_blocks
 				e.blocks[i] = p[i - 12]
 		

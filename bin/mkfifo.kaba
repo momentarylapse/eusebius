@@ -11,7 +11,7 @@ void _mkfifo(string filename)
 
 void main()
 	init_lib()
-	string arg[]
+	string[] arg
 	get_args(arg)
 	
 	for int i, 1, arg.num

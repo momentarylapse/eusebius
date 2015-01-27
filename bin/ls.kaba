@@ -11,7 +11,7 @@ string i2s2(int i, int n)
 
 
 void ls(string dirname)
-	DirEntry l[] = DirSearch(dirname, "", true)
+	DirEntry[] l = DirSearch(dirname, "", true)
 	if lib_error != 0
 		print("ls: kann Verzeichnis nicht oeffnen: " + dirname + "\n")
 	
@@ -26,7 +26,7 @@ void ls(string dirname)
 
 void main()
 	init_lib()
-	string arg[]
+	string[] arg
 	get_args(arg)
 	
 	for int i, 1, arg.num

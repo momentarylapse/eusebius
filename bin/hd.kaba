@@ -18,7 +18,7 @@ void hd(int h)
 
 void main()
 	init_lib()
-	string arg[]
+	string[] arg
 	get_args(arg)
 	
 	if arg.num == 1

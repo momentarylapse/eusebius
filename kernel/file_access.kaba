@@ -28,7 +28,7 @@ class PipeData
 	FileEntry *e
 	int read_ref_count
 	int write_ref_count
-	char buffer[0]*
+	char[0]* buffer
 	int buffer_used
 	int write(PageDirectory *page_dir, int addr, int size)
 		if buffer_used + size > PIPE_BUFFER_SIZE
@@ -63,7 +63,7 @@ class PipeData
 			free(buffer)
 			used = false
 
-PipeData Pipe[MAX_PIPES]
+PipeData[MAX_PIPES] Pipe
 
 
 
@@ -97,7 +97,7 @@ class OpenFileData
 	FileEntry *entry
 	int offset
 	int block_size
-	char buffer[0]*
+	char[0]* buffer
 	PipeData *pipe
 	int ref_count
 	
@@ -264,7 +264,7 @@ class OpenFileData
 		entry = nil
 
 
-OpenFileData OpenFile[MAX_OPEN_FILES]
+OpenFileData[MAX_OPEN_FILES] OpenFile
 
 OpenFileData *create_handle(int flags)
 	for int i, 0, MAX_OPEN_FILES

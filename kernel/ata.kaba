@@ -26,13 +26,13 @@ class AtaData
 	int IOBase, IOCtrl, ide_no, ide_ms
 	char MSMask
 
-	char Buffer[512]
-	int BufferDW[0]*
+	char[512] Buffer
+	int[0]* BufferDW
 	int Size
 
-	char atapi_buffer[16]
+	char[16] atapi_buffer
 	
-	AtaDiskInfo DiskInfo[4]
+	AtaDiskInfo[4] DiskInfo
 
 	void wait_400_ns()
 		for int i, 0, 100
@@ -317,7 +317,7 @@ class PartitionData
 	cstring name
 	void *readFileBlock // (int inode, int block, cstring *buf)
 	
-PartitionData Partition[8]
+PartitionData[8] Partition
 int NumPartitions
 
 void ReadPartitions(int disk_no)

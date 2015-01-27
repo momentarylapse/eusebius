@@ -18,10 +18,10 @@ class MallocHeader
 	MallocHeader *next
 	MallocHeader *prev
 	void *after()
-		char pp[0]* = self
+		char[0]* pp = self
 		return &pp[size]
 	void *payload()
-		char pp[0]* = self
+		char[0]* pp = self
 		return &pp[sizeof(MallocHeader)]
 MallocHeader *malloc_first_free
 
@@ -65,7 +65,7 @@ void free(void *p)
 	MallocHeader *cur = malloc_first_free
 	while cur
 		if (_p2i(p) < _p2i(cur.next)) or !cur.next
-			char pp[0]* = p
+			char[0]* pp = p
 			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
 			MemHeapAllocated -= hh.size
 			

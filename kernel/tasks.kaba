@@ -85,7 +85,7 @@ class TaskStateSegment
 		x = 0
 		y = 0
 
-int TaskCallData[2]
+int[2] TaskCallData
 
 enum
 	WAITING_MODE_TASK_EXIT
@@ -94,7 +94,7 @@ enum
 
 class TaskData
 	TaskStateSegment tss
-	int stack[0]*
+	int[0]* stack
 	int stack_size
 	int desc // Index in GDT
 	int pid, status
@@ -109,7 +109,7 @@ class TaskData
 	PageDirectory *page_dir
 	//int mem_offset, mem_size
 	bool kernel_mode
-	OpenFileData *handles[MAX_OPEN_FILES_PER_TASK]
+	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
 	void __assign__(TaskData o)
 		nil
 	
@@ -252,7 +252,7 @@ class TaskData
 			return -3
 		OpenFileData *of_in = kernel_open_entry(e, O_RDONLY)
 		OpenFileData *of_out = kernel_open_entry(e, O_WRONLY)
-		int fd[2]
+		int[2] fd
 		fd[0] = add_handle(of_in)
 		fd[1] = add_handle(of_out)
 		page_dir.memcpy2task(addr, &fd, 8)
@@ -365,7 +365,7 @@ class TaskData
 		t.start()
 		return t.pid
 	
-TaskData Task[MAX_TASKS]
+TaskData[MAX_TASKS] Task
 TaskData *KernelTask
 TaskData *IdleTask
 TaskData *TimerTask
@@ -397,7 +397,7 @@ class GlobalDescriptorData
 		else
 			b = b & 0xfffffdff
 
-GlobalDescriptorData GlobalDescriptorTable[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
+GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] GlobalDescriptorTable
 
 int get_next_pid()
 	for int i, CurPid, MAX_TASKS

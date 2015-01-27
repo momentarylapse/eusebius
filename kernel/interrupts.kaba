@@ -132,7 +132,7 @@ class InterruptDescriptor
 			return t
 		return nil
 
-InterruptDescriptor InterruptDescriptorTable[256]
+InterruptDescriptor[256] InterruptDescriptorTable
 
 
 
