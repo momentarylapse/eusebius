@@ -18,7 +18,7 @@ const int SCREEN_HEIGHT = 25
 
 void clrscr()
 	cstring *d = VideoMemory
-	for int i, 0, SCREEN_WIDTH * SCREEN_HEIGHT
+	for i in 0:SCREEN_WIDTH * SCREEN_HEIGHT
 		d[i * 2] = ' '
 		d[1 * 2 + 1] = 0
 	TextLine = 0
@@ -36,17 +36,17 @@ void etm_init()
 void etm_shift()
 	cstring *d = VideoMemory
 	cstring *d2 = &d[SCREEN_WIDTH * 2]
-	for int i, 0, SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
+	for i in 0:SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
 		d[i] = d2[i]
 	d2 = &d[SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2]
-	for int i, 0, SCREEN_WIDTH
+	for i in 0:SCREEN_WIDTH
 		d2[i * 2] = ' '
 		d2[i * 2 + 1] = 0
 
 void prints_low(cstring *str, int size)
 	cstring *d = VideoMemory
 	d = &d[2*(SCREEN_WIDTH * TextLine + TextPos)]
-	for int i, 0, size
+	for i in 0:size
 		if str[i] == 0x7f or str[i] == 0x08 // BACKSPACE
 			d[-2] = 0x20
 			TextPos --
@@ -107,7 +107,7 @@ void printi(int i)
 
 int printh(cstring *data,int size)
 	cstring ttt
-	for int i, 0, size
+	for i in 0:size
 		int d = data[i]
 		int d1 = (d>>4)
 		int d2 = (d&15)

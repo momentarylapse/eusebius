@@ -10,7 +10,7 @@ void main()
 	int[] pid
 	
 	if arg.num > 1
-		for int i, 1, arg.num
+		for i in 1:arg.num
 			int n = arg[i].int()
 			if n < 0
 				signal = -n

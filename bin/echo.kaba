@@ -6,7 +6,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	for int i, 1, arg.num
+	for i in 1:arg.num
 		if i > 1
 			print " "
 		print(arg[i])

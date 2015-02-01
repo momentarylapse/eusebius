@@ -156,7 +156,7 @@ class TaskData
 		return FileSystem.get(path, cur_dir)
 		
 	int add_handle(OpenFileData *h)
-		for int i, 0, MAX_OPEN_FILES_PER_TASK
+		for i in 0:MAX_OPEN_FILES_PER_TASK
 			if !handles[i]
 				handles[i] = h
 				h.ref_count ++
@@ -165,7 +165,7 @@ class TaskData
 
 	void make_zombie()
 		status = TASK_STATUS_ZOMBIE
-		for int i, 0, MAX_OPEN_FILES_PER_TASK
+		for i in 0:MAX_OPEN_FILES_PER_TASK
 			if handles[i]
 				handles[i].unref()
 				handles[i] = nil
@@ -290,7 +290,7 @@ class TaskData
 	void sys_exit(int r)
 		return_status = r
 		make_zombie()
-		for int i, 0, MAX_TASKS
+		for i in 0:MAX_TASKS
 			if Task[i].status == TASK_STATUS_WAITING
 				if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param_i1 == pid
 					Task[i].tss.eax = 0// // return waitpid()
@@ -400,11 +400,11 @@ class GlobalDescriptorData
 GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] GlobalDescriptorTable
 
 int get_next_pid()
-	for int i, CurPid, MAX_TASKS
+	for i in CurPid:MAX_TASKS
 		if Task[i].status == TASK_STATUS_UNUSED
 			CurPid = i + 1
 			return i
-	for int i, 0, CurPid
+	for i in 0:CurPid
 		if Task[i].status == TASK_STATUS_UNUSED
 			CurPid = i + 1
 			return i
@@ -440,16 +440,16 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 
 // Scheduler
 int GetNextTask(int pid)
-	for int i, pid + 1, MAX_TASKS
+	for i in pid + 1:MAX_TASKS
 		if Task[i].status == TASK_STATUS_RUNNING
 			return i
-	for int i, 0, pid+1
+	for i in 0:pid+1
 		if Task[i].status == TASK_STATUS_RUNNING
 			return i
 	return IdleTask.pid
 
 void ProcessWaitingTasks()
-	for int i, 0, MAX_TASKS
+	for i in 0:MAX_TASKS
 		if Task[i].status == TASK_STATUS_WAITING
 			if Task[i].waiting_mode == WAITING_MODE_FILE_READ
 				int r = Task[i].sys_read(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
@@ -477,7 +477,7 @@ void InitTasks()
 	InterruptsEnabled = false
 	
 	// null descriptor
-	for int i, 0, NUM_PRE_GDT_ENTRIES + MAX_TASKS
+	for i in 0:NUM_PRE_GDT_ENTRIES + MAX_TASKS
 		GlobalDescriptorTable[i].a = 0x00000000
 		GlobalDescriptorTable[i].b = 0x00000000
 	// kernel code
@@ -489,9 +489,9 @@ void InitTasks()
 	// user data
 	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
 
-	for int i, 0, MAX_TASKS
+	for i in 0:MAX_TASKS
 		Task[i].status = TASK_STATUS_UNUSED
-		for int j, 0, MAX_OPEN_FILES_PER_TASK
+		for j in 0:MAX_OPEN_FILES_PER_TASK
 			Task[i].handles[j] = nil
 
 	CurPid = 0

@@ -40,21 +40,21 @@ void *_i2p(int i)
 
 
 void s2cs(string s, cstring cs)
-	for int i, 0, s.num
+	for i in 0:s.num
 		cs[i] = s[i]
 	cs[s.num] = 0
 
 void cs2s(cstring cs, lib__string s)
 	s.clear()
-	for int i, 0, 255
+	for i in 0:255
 		if cs[i] == 0
 			return
 		s.add(cs[i])
 
 void sa2cs(string[] a, cstring cs)
 	int n = 0
-	for int k, 0, a.num
-		for int i, 0, a[k].num
+	for k in 0:a.num
+		for i in 0:a[k].num
 			cs[n] = a[k][i]
 			n ++
 		cs[n] = 0
@@ -325,7 +325,7 @@ void get_args(lib__string@list arg)
 	
 	int p = 0
 	lib__string s
-	for int i, 0, 250
+	for i in 0:250
 		if cs[i] == 0
 			if s.num == 0
 				break
@@ -366,7 +366,7 @@ float lib__max(float a, float b)
 
 
 void memcpy(char[0]* dest, char[0]* source, int size)
-	for int i, 0, size
+	for i in 0:size
 		dest[i] = source[i]
 		
 void prints(cstring s)
@@ -505,7 +505,7 @@ class lib__@DynamicArray
 	void __mem_remove__(int index)
 		if index < 0 or index >= num
 			return
-		for int i, index*element_size, (num-1)*element_size
+		for i in index*element_size : (num-1)*element_size
 			data[i] = data[i+element_size]
 		__mem_resize__(num - 1)
 		
@@ -565,9 +565,9 @@ class lib__string : lib__@DynamicArray
 		return substr(num - size, size)
 
 	int find(lib__string s, int start)
-		for int i, start, num - s.num
+		for i in start : num - s.num
 			bool ok = true
-			for int j, 0, s.num
+			for j in 0:s.num
 				if data[i + j] != s.data[j]
 					ok = false
 					break
@@ -579,7 +579,7 @@ class lib__string : lib__@DynamicArray
 		int n = num
 		if s.num < num
 			n = s.num
-		for int i, 0, n
+		for i in 0:n
 			int a = data[i]
 			int b = s.data[i]
 			if a != b
@@ -646,7 +646,7 @@ int string::icompare(const string &s) const
 	lib__string reverse()
 		lib__string r
 		r.resize(num)
-		for int i, 0, num
+		for i in 0:num
 			r.data[num - i - 1] = data[i]
 		return r
 
@@ -663,7 +663,7 @@ int string::icompare(const string &s) const
 				j --
 		memcpy(&data[start], str.data, str.num)
 		if d < 0
-			for int i, start + str.num, num + d
+			for i in start + str.num : num + d
 				data[i] = data[i - d]
 			resize(num + d)
 
@@ -677,14 +677,14 @@ int string::icompare(const string &s) const
 
 	lib__string lower()
 		lib__string r = *self
-		for int i, 0, num
+		for i in 0:num
 			if (data[i] >= 'A') and (data[i] <= 'Z')
 				r.data[i] += 'a' - 'A'
 		return r
 
 	lib__string upper()
 		lib__string r = *self
-		for int i, 0, num
+		for i in 0:num
 			if (data[i] >= 'a') and (data[i] <= 'z')
 				r.data[i] += 'A' - 'a'
 		return r
@@ -708,7 +708,7 @@ int string::icompare(const string &s) const
 		
 	lib__string hex(bool inverted)
 		lib__string ttt
-		for int i, 0, num
+		for i in 0:num
 			int d = data[i]
 			int d1 = (d>>4)
 			int d2 = (d&15)
@@ -734,7 +734,7 @@ int string::icompare(const string &s) const
 		int i0 = 0
 		if !sign
 			i0 = 1
-		for int i, i0, num
+		for i in i0:num
 			int c = data[i]
 			r = r * 10 + c - 48
 		if !sign
@@ -755,7 +755,7 @@ class lib__int@list : lib__@DynamicArray
 	void remove(int index)
 		if (index < 0) or (index >= num)
 			return
-		for int i, index, num - 1
+		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
 
@@ -764,17 +764,17 @@ class lib__string@list : lib__@DynamicArray
 	void __init__()
 		__mem_init__(sizeof(lib__string))
 	/*overwrite*/ void __delete__()
-		for int i, 0, num
+		for i in 0:num
 			data[i].__delete__()
 		//clear()
 	void resize(int size)
 		if size < num
 			// shrink -> destruct
-			for int i, size, num
+			for i in size:num
 				data[i].__delete__()
 		else if size > num
 			reserve(size)
-			for int i, num, size
+			for i in num:size
 				data[i].__init__()
 		num = size
 	void add(lib__string s)
@@ -782,12 +782,12 @@ class lib__string@list : lib__@DynamicArray
 		data[num - 1] = s
 	void __assign__(lib__string@list o)
 		resize(o.num)
-		for int i, 0, num
+		for i in 0:num
 			data[i] = o.data[i]
 	void remove(int index)
 		if (index < 0) or (index >= num)
 			return
-		for int i, index, num - 1
+		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
 		//data[index].__clear__()
@@ -795,7 +795,7 @@ class lib__string@list : lib__@DynamicArray
 
 	lib__string join(lib__string glue)
 		lib__string r
-		for int i, 0, num
+		for i in 0:num
 			if i > 0
 				r += glue
 			r += data[i]
@@ -838,7 +838,7 @@ lib__string lib__@b2s(bool b)
 lib__string lib__@ia2s(lib__int@list a)
 	lib__string r
 	r.add('[')
-	for int i, 0, a.num
+	for i in 0:a.num
 		if i > 0
 			r.add(',')
 		r += lib__@i2s(a.data[i])
@@ -878,17 +878,17 @@ class lib__DirEntry@list : lib__@DynamicArray
 	void __init__()
 		__mem_init__(sizeof(lib__DirEntry))
 	/*overwrite*/ void __delete__()
-		for int i, 0, num
+		for i in 0:num
 			data[i].__delete__()
 		//clear()
 	void resize(int size)
 		if size < num
 			// shrink -> destruct
-			for int i, size, num
+			for i in size:num
 				data[i].__delete__()
 		else if size > num
 			reserve(size)
-			for int i, num, size
+			for i in num:size
 				data[i].__init__()
 		num = size
 	void add(lib__DirEntry s)
@@ -896,7 +896,7 @@ class lib__DirEntry@list : lib__@DynamicArray
 		data[num - 1] = s
 	void __assign__(lib__DirEntry@list o)
 		resize(o.num)
-		for int i, 0, num
+		for i in 0:num
 			data[i] = o.data[i]
 	void swap(int i, int j)
 		lib__DirEntry e = data[i]
@@ -935,12 +935,12 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 	close(h)
 	lib_error = 0
 	
-	for int i, 0, l.num-1
-		for int j, i+1, l.num
+	for i in 0:l.num-1
+		for j in i+1:l.num
 			if !l.data[i].is_dir and l.data[j].is_dir
 				l.swap(i, j)
-	for int i, 0, l.num-1
-		for int j, i+1, l.num
+	for i in 0:l.num-1
+		for j in i+1:l.num
 			if l.data[i].is_dir != l.data[j].is_dir
 				nil
 			else if (l.data[i].name.compare(l.data[j].name) > 0)

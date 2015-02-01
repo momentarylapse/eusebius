@@ -82,10 +82,10 @@ class MountPoint
 		dev_block_offset = _bo / 512
 	
 	void readBlock(int block_no, cstring *buf)
-		for int i, 0, dev_blocks_per_block
+		for i in 0:dev_blocks_per_block
 			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
 	void writeBlock(int block_no, cstring *buf)
-		for int i, 0, dev_blocks_per_block
+		for i in 0:dev_blocks_per_block
 			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
 
 
@@ -130,7 +130,7 @@ class FileSystemData
 		while has_more
 			strcpy(&sub, &path[ppos])
 			cstring name
-			for int i, 0, 256
+			for i in 0:256
 				if (sub[i] == '/') or (sub[i] == 0)
 					has_more = (sub[i] == '/')
 					ppos += i + 1
@@ -191,7 +191,7 @@ class FileSystemTypeMichiFS : FileSystemType
 	void read_str(cstring s)
 		int l = buf[buf_used] + buf[buf_used+1]*256
 		buf_used += 2
-		for int i, 0, l
+		for i in 0:l
 			s[i] = buf[buf_used + i]
 		buf_used += l
 		s[l] = 0
@@ -201,7 +201,7 @@ class FileSystemTypeMichiFS : FileSystemType
 		mp.readBlock(1, &buf)
 		buf_used = 0
 		int NumFiles = read_int()
-		for int n, 0, NumFiles
+		for n in 0:NumFiles
 			cstring name
 			read_str(name)
 			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, mp, mp.dest)
@@ -212,7 +212,7 @@ class FileSystemTypeMichiFS : FileSystemType
 			int first_block = read_int()
 			e.num_blocks = read_int()
 			e.blocks = malloc(e.num_blocks * sizeof(int))
-			for int i, 0, e.num_blocks
+			for i in 0:e.num_blocks
 				e.blocks[i] = first_block + i
 	
 	//void readBlock(int no, cstring *buf)
@@ -382,12 +382,12 @@ class FileSystemTypeExt2 : FileSystemType
 		if num_direct > 12
 			num_direct = 12
 	
-		for int i, 0, num_direct
+		for i in 0:num_direct
 			e.blocks[i] = inode.iblock[i]
 		if e.num_blocks > 12
 			_mp.readBlock(inode.iblock[12], &_buf)
 			int[0]* p = &_buf
-			for int i, 12, e.num_blocks
+			for i in 12:e.num_blocks
 				e.blocks[i] = p[i - 12]
 		
 	
@@ -395,7 +395,7 @@ class FileSystemTypeExt2 : FileSystemType
 	
 	cstring *readInodeContents(FileEntry *e)
 		cstring *buf = malloc(e.num_blocks * block_size)
-		for int i, 0, e.num_blocks
+		for i in 0:e.num_blocks
 			_mp.readBlock(e.blocks[i], &buf[i * block_size])
 		
 		return buf
@@ -430,11 +430,11 @@ class FileSystemTypeExt2 : FileSystemType
 	
 	int allocInode()
 		int n = sb.inodes_per_group / 32
-		for int i, 0, n
+		for i in 0:n
 			int b = inode_bitmap[i]
 			if b == 0xffffffff
 				continue
-			for int j, 0, 32
+			for j in 0:32
 				int m = 1 << j
 				if (b & m) == 0
 					inode_bitmap[i] += m
@@ -446,11 +446,11 @@ class FileSystemTypeExt2 : FileSystemType
 	
 	int allocBlock()
 		int n = sb.blocks_per_group / 32
-		for int i, 0, n
+		for i in 0:n
 			int b = block_bitmap[i]
 			if b == 0xffffffff
 				continue
-			for int j, 0, 32
+			for j in 0:32
 				int m = 1 << j
 				if (b & m) == 0
 					block_bitmap[i] += m

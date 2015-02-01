@@ -140,7 +140,7 @@ void InitInterrupts()
 	if VerbosityLevel >= 1
 		prints("lade Interrupt-Tabelle")
 
-	for int i, 0, 256
+	for i in 0:256
 		InterruptDescriptorTable[i].set(nil)
 
 	InterruptDescriptorTable[ 0].set(&int_00)

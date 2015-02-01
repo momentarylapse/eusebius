@@ -19,12 +19,12 @@ class PageTable
 	int[PAGE_TABLE_ENTRIES] e
 	
 	void init()
-		for int i, 0, PAGE_TABLE_ENTRIES
+		for i in 0:PAGE_TABLE_ENTRIES
 			e[i] = 0
 	
 	int count_entries()
 		int num_entries = 0
-		for int i, 0, PAGE_TABLE_ENTRIES
+		for i in 0:PAGE_TABLE_ENTRIES
 			if e[i] == 0
 				return i
 		return PAGE_TABLE_ENTRIES
@@ -37,11 +37,11 @@ class PageDirectory : PageTable
 		int flags = 5
 		if writable
 			flags = 7
-		for int i, 0, nmax
+		for i in 0:nmax
 			int pos = Paging.alloc_page()
 			PageTable *pt = _i2p(pos)
 			e[i] = pos + flags
-			for int j, 0, PAGE_TABLE_ENTRIES
+			for j in 0:PAGE_TABLE_ENTRIES
 				pt.e[j] = PAGE_SIZE * (j + i * PAGE_TABLE_ENTRIES) + flags
 
 	int addr2kernel(int addr)
@@ -65,7 +65,7 @@ class PageDirectory : PageTable
 			int num = PAGE_SIZE - c
 			if num > size
 				num = size
-			for int i, 0, num
+			for i in 0:num
 				o[i] = pp[i]
 			addr += num
 			size -= num
@@ -83,14 +83,14 @@ class PageDirectory : PageTable
 			int num = PAGE_SIZE - c
 			if num > size
 				num = size
-			for int i, 0, num
+			for i in 0:num
 				pp[i] = p[i]
 			addr += num
 			size -= num
 	
 	int get_last_table()
 		int last_table = -1
-		for int i, 0, PAGE_TABLE_ENTRIES
+		for i in 0:PAGE_TABLE_ENTRIES
 			if e[i] == 0
 				last_table = i - 1
 				break
@@ -109,12 +109,12 @@ class PageDirectory : PageTable
 	void clone(PageDirectory *pd2, int above)
 		int mem = (pd2.count_pages() - count_pages()) * PAGE_SIZE
 		Paging.page_dir_grow(self, mem, true)
-		for int i, 0, PAGE_TABLE_ENTRIES
+		for i in 0:PAGE_TABLE_ENTRIES
 			if pd2.e[i] == 0
 				break
 			PageTable *pt = _i2p(e[i] & 0xfffff000)
 			PageTable *pt2 = _i2p(pd2.e[i] & 0xfffff000)
-			for int j, 0, PAGE_TABLE_ENTRIES
+			for j in 0:PAGE_TABLE_ENTRIES
 				if pt2.e[j] == 0
 					break
 				if pt2.e[j] >= above
@@ -123,7 +123,7 @@ class PageDirectory : PageTable
 	void show()
 		printh(self, 64)
 		prints("...\n")
-		for int i, 0, 4
+		for i in 0:4
 			PageTable *pt = _i2p(e[i] & 0xfffff000)
 			printh(pt, 64)
 			prints("...\n")
@@ -138,11 +138,11 @@ class PageController
 			prints("Paging")
 		num_masks = MemorySize / PAGE_SIZE / 32
 		MemorySize = num_masks * PAGE_SIZE * 32 // easier memory management...
-		for int i, 0, num_masks
+		for i in 0:num_masks
 			mask[i] = 0
 		
 		// reserve 8mb for kernel
-		for int i, 0, 64
+		for i in 0:64
 			mask[i] = 0xffffffff
 		mask_occupation = 64
 		
@@ -170,10 +170,10 @@ class PageController
 		
 	int alloc_page()
 		bool ok = true
-		for int i, mask_occupation, num_masks
+		for i in mask_occupation:num_masks
 			if mask[i] == 0xffffffff
 				continue
-			for int j, 0, 32
+			for j in 0:32
 				int m = 1 << j
 				if (mask[i] & m) == 0
 					mask_occupation = i
@@ -221,14 +221,14 @@ class PageController
 		//int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)
 		int num_pages_req = ceil_quot(size, PAGE_SIZE)
 		int num_masks_req = ceil_quot(num_pages_req, 32)
-		for int i, 0, num_masks-num_masks_req
+		for i in 0:num_masks-num_masks_req
 			bool ok = true
-			for int j, 0, num_masks_req
+			for j in 0:num_masks_req
 				if mask[i+j] != 0
 					ok = false
 					break
 			if ok
-				for int j, 0, num_masks_req
+				for j in 0:num_masks_req
 					mask[i+j] = 0xffffffff
 				return i * PAGE_SIZE * 32
 		return 0
@@ -237,18 +237,18 @@ class PageController
 		int offset = p / PAGE_SIZE / 32
 		int num_pages_req = (size - PAGE_SIZE + 1) / PAGE_SIZE//ceil_quot(size, PAGE_SIZE)
 		int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)
-		for int j, 0, num_masks_req
+		for j in 0:num_masks_req
 			mask[offset + j] = 0
 
 	int get_used()
 		int n = 0
-		for int i, 0, num_masks
+		for i in 0:num_masks
 			if mask[i] == 0
 				continue
 			if mask[i] == 0xffffffff
 				n += 32
 			else
-				for int j, 0, 32
+				for j in 0:32
 					int m = 1 << j
 					if (mask[i] & m) > 0
 						n ++
@@ -261,13 +261,13 @@ class PageController
 		return pd
 	
 	void free_page_directory(PageDirectory *pd, int keep_below)
-		for int i, 0, PAGE_TABLE_ENTRIES
+		for i in 0:PAGE_TABLE_ENTRIES
 			if pd.e[i] == 0
 				break
 			// free pages
 			int table_pos = pd.e[i] & 0xfffff000
 			PageTable *pt = _i2p(table_pos)
-			for int j, 0, PAGE_TABLE_ENTRIES
+			for j in 0:PAGE_TABLE_ENTRIES
 				if pt.e[j] == 0
 					break
 				int pos = pt.e[j] & 0xfffff000
@@ -291,7 +291,7 @@ class PageController
 			int num = PAGE_TABLE_ENTRIES - in_use
 			if num > req_num_pages
 				num = req_num_pages
-			for int i, 0, num
+			for i in 0:num
 				int pos = alloc_page()
 				pt.e[i + in_use] = pos + flags
 			req_num_pages -= num

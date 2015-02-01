@@ -35,7 +35,7 @@ class AtaData
 	AtaDiskInfo[4] DiskInfo
 
 	void wait_400_ns()
-		for int i, 0, 100
+		for i in 0:100
 			inportb(IOBase + 7)
 
 	bool wait_status(char mask, char value)
@@ -151,16 +151,13 @@ class AtaData
 		wait_400_ns()
 
 		BufferDW = &Buffer
-		int n
-		for n, 0, 128
+		for n in 0:128
 			BufferDW[n] = inportd(IOBase)
 		// die Bytes des Namens korregieren
 		//for n, 0, 40, 2
-		n=0
-		while n<40
+		for n in 0:40:2
 			DiskInfo[disk_no].name[n  ] = Buffer[55+n]
 			DiskInfo[disk_no].name[n+1] = Buffer[54+n]
-			n+=2
 		DiskInfo[disk_no].name[40] = 0
 		prints(DiskInfo[disk_no].name)
 		memcpy(&DiskInfo[disk_no].size, &Buffer[120], 4)
@@ -208,7 +205,7 @@ class AtaData
 		outportb(0x3f6, 0x0a)
 		outportb(0x376, 0x0a)
 
-		for int n, 0, 4
+		for n in 0:4
 			testDisk(n)
 			
 	// 1 Sektor = 512 b
@@ -246,7 +243,7 @@ class AtaData
 
 		BufferDW = buf
 	
-		for int n, 0, 128 // 512b
+		for n in 0:128 // 512b
 			BufferDW[n] = inportd(IOBase)
 
 		status=inportb(IOBase+7)
@@ -293,7 +290,7 @@ class AtaData
 
 		BufferDW = buf
 	
-		for int n, 0, 128 // 512b
+		for n in 0:128 // 512b
 			outportd(IOBase, BufferDW[n])
 
 		status=inportb(IOBase+7)
@@ -334,7 +331,7 @@ void ReadPartitions(int disk_no)
 	// mbr lesen
 	Ata.readSector(disk_no, 0, 1, &Ata.Buffer)
 	//MountPartition=false
-	for int n, 0, 4
+	for n in 0:4
 		int *offset = &Ata.Buffer[454+n*16]
 		int *size = &Ata.Buffer[458+n*16]
 		int type = Ata.Buffer[450+n*16]
@@ -355,7 +352,7 @@ void ReadPartitions(int disk_no)
 		
 void ShowPartitions()
 	prints("Primaere Partitionen:     Offset   Groesse\n")
-	for int n, 0, NumPartitions
+	for n in 0:NumPartitions
 		PartitionData *p = &Partition[n]
 		prints("/dev/")
 		prints(p.name)

@@ -47,7 +47,7 @@ class PipeData
 			size = buffer_used
 		page_dir.memcpy2task(addr, buffer, size)
 		buffer_used -= size
-		for int i, 0, buffer_used
+		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]
 		return size
 	void unref(OpenFileData *of)
@@ -68,7 +68,7 @@ PipeData[MAX_PIPES] Pipe
 
 
 PipeData *create_pipe(FileEntry *e)
-	for int i, 0, MAX_PIPES
+	for i in 0:MAX_PIPES
 		if !Pipe[i].used
 			Pipe[i].used = true
 			Pipe[i].e = e
@@ -84,7 +84,7 @@ void delete_pipe(PipeData *p)
 	p.used = false
 
 PipeData *get_pipe(FileEntry *e)
-	for int i, 0, MAX_PIPES
+	for i in 0:MAX_PIPES
 		if Pipe[i].e == e
 			return &Pipe[i]
 	return nil
@@ -221,7 +221,7 @@ class OpenFileData
 			return -3
 	
 		FileEntry *e = entry.first_sub
-		for int i, 0, offset
+		for i in 0:offset
 			e = e.next
 			if !e
 				return 0
@@ -267,7 +267,7 @@ class OpenFileData
 OpenFileData[MAX_OPEN_FILES] OpenFile
 
 OpenFileData *create_handle(int flags)
-	for int i, 0, MAX_OPEN_FILES
+	for i in 0:MAX_OPEN_FILES
 		if !OpenFile[i].used
 			OpenFile[i].used = true
 			OpenFile[i].set_flags(flags)

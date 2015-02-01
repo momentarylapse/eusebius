@@ -24,7 +24,7 @@ void main()
 	if arg.num == 1
 		hd(stdin)
 	
-	for int i, 1, arg.num
+	for i in 1:arg.num
 		int h = open(arg[i], O_RDONLY)
 		if h < 0
 			print("hd: kann Datei nicht oeffnen: " + arg[i] + "\n")

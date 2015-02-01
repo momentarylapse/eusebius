@@ -18,7 +18,7 @@ int dev_zero_close(FileEntry *f)
 	return 0
 int dev_zero_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	int zero = 0
-	for int i, 0, size
+	for i in 0:size
 		page_dir.memcpy2task(addr + i, &zero, 1)
 	return size
 int dev_zero_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
@@ -41,7 +41,7 @@ int dev_rand_open(FileEntry *f)
 int dev_rand_close(FileEntry *f)
 	return 0
 int dev_rand_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	for int i, 0, size
+	for i in 0:size
 		dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
 		page_dir.memcpy2task(addr + i, &dev_rand_state, 1)
 	return size
@@ -87,7 +87,7 @@ int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
 	return size
 int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	for int i, 0, size
+	for i in 0:size
 		cstring *buf = _i2p(page_dir.addr2kernel(addr + i))
 		prints_low(buf, 1)
 	return size

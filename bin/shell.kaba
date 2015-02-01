@@ -17,7 +17,7 @@ class Prompt
 	void clear()
 		string s
 		s.add(0x7f)
-		for int i, 0, cur.num
+		for i in 0:cur.num
 			print s
 		cur.clear()
 	void add_to_history()
@@ -128,7 +128,7 @@ class Job
 		pipe_out[1] = -1
 		pid = -1
 		
-		for int i, 0, c.num
+		for i in 0:c.num
 			if c[i] == ">" or c[i] == ">>"
 				if i == c.num - 1
 					print "Dateiname nach > erwartet"
@@ -139,7 +139,7 @@ class Job
 					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
 				c.remove(i+1)
 				c.remove(i)
-		for int i, 0, c.num
+		for i in 0:c.num
 			if c[i] == "<"
 				if i == c.num - 1
 					print "Dateiname nach < erwartet"
@@ -222,7 +222,7 @@ class JobManager
 	void test_all()
 		for j in job
 			j.test()
-		for int i, 0, job.num
+		for i in 0:job.num
 			if job[i].done
 				if job[i] == fg
 					fg = nil
@@ -239,7 +239,7 @@ JobManager jobs
 
 string parse_var_name(string cmd, int pos)
 	string name
-	for int i, pos, cmd.num
+	for i in pos:cmd.num
 		if cmd[i] == ' ' or cmd[i] == '"' or cmd[i] == '$' or cmd[i] == '.' or cmd[i] == ':' or cmd[i] == ',' or cmd[i] == '<' or cmd[i] == '>' or cmd[i] == '|'
 			break
 		name.add(cmd[i])
@@ -248,7 +248,7 @@ string parse_var_name(string cmd, int pos)
 string parse_single(string cmd, int *pos)
 	string t
 	bool in_string = false
-	for int j, *pos, cmd.num
+	for j in *pos:cmd.num
 		//if (cmd[j] == ' ' or cmd[j] == '<' or cmd[j] == '>' or cmd[j] == '|') and !in_string
 		if cmd[j] == ' ' and !in_string
 			break
@@ -265,7 +265,7 @@ string parse_single(string cmd, int *pos)
 
 void parse(string cmd0, string[] c)
 	string cmd = cmd0
-	for int i, 0, cmd.num
+	for i in 0:cmd.num
 		if cmd[i] == ' '
 			continue
 		string t = parse_single(cmd, &i)
@@ -375,7 +375,7 @@ void main()
 	
 	prompt.show()
 	while true
-		for int i, 0, 10000
+		for i in 0:10000
 			nil
 		if jobs.fg
 			jobs.test_all()
