@@ -64,7 +64,7 @@ void main()
 		show()
 		
 		s.resize(1)
-		int r = read(stdin, &s[0], 1)
+		r = read(stdin, &s[0], 1)
 		if s == "w"
 			cur_line --
 		if s == "s"

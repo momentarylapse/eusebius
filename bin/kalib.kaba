@@ -324,7 +324,6 @@ void get_args(lib__string@list arg)
 	lib__string s
 	
 	int p = 0
-	lib__string s
 	for i in 0:250
 		if cs[i] == 0
 			if s.num == 0
@@ -352,7 +351,7 @@ int lib__loopi(int i, int min, int max)
 		int n = ( (min-i-1) / d ) + 1
 		return i + d * n
 	if i > max
-		int n = ( (i-max-1) / d ) + 1
+		n = ( (i-max-1) / d ) + 1
 		return i - d * n
 	return i
 

@@ -457,7 +457,7 @@ void ProcessWaitingTasks()
 					Task[i].tss.eax = r // return r
 					Task[i].start()
 			else if Task[i].waiting_mode == WAITING_MODE_FILE_WRITE
-				int r = Task[i].sys_write(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
+				r = Task[i].sys_write(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
 				if r >= 0
 					Task[i].tss.eax = r // return r
 					Task[i].start()
