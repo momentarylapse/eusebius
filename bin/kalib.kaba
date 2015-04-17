@@ -834,6 +834,11 @@ lib__string lib__@b2s(bool b)
 		r.add('0')
 	return r
 
+class lib__bool
+	bool b
+	lib__string str()
+		return lib__@b2s(b)
+
 lib__string lib__@ia2s(lib__int@list a)
 	lib__string r
 	r.add('[')
