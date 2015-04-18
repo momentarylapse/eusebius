@@ -161,20 +161,21 @@ void InitInterrupts()
 	InterruptDescriptorTable[15].set(&int_15)
 	InterruptDescriptorTable[16].set(&int_16)
 	TimerTask = InterruptDescriptorTable[32].set_task("timer", &int_timer)
-	InterruptDescriptorTable[33].set_task("key", &int_key)
+	InterruptDescriptorTable[33].set_task("key", &int_key) // IRQ 1
+	InterruptDescriptorTable[44].set_task("mouse", &int_mouse) // IRQ 12
 	SysCallTask = InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
 	//InterruptDescriptorTable[0x80].set(&int_syscall)
 
 	// IRQs auf höhere Interrupts legen
-	outportb(0x20,0x11)
+	outportb(0x20,0x11) // init
 	outportb(0xa0,0x11)
-	outportb(0x21,0x20)
+	outportb(0x21,0x20) // offset 32
 	outportb(0xa1,0x28)
-	outportb(0x21,0x04)
+	outportb(0x21,0x04) // master/slave identity stuff?
 	outportb(0xa1,0x02)
-	outportb(0x21,0x01)
+	outportb(0x21,0x01) // 8086
 	outportb(0xa1,0x01)
-	outportb(0x21,0x00)
+	outportb(0x21,0x00) // masks
 	outportb(0xa1,0x00)
 	
 	__temp_p__ = &InterruptDescriptorTable

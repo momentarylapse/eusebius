@@ -141,6 +141,16 @@ void InitDrivers()
 	dev_tty_ops._write = &dev_tty_write
 	dev_tty.op = &dev_tty_ops
 	
+	
+
+	// Maus aktivieren
+	//   AUX aktivieren
+	outportb(064,0xa8)
+	//   Maus zum Sprechen bringen
+	outportb(064,0xd4) // an Maus senden (AUX)
+	outportb(060,0xff) // Reset
+	outportb(060,0xf4) // EnableReporting
+	
 
 int getchar(int k)
 	if dev_key_control
@@ -370,7 +380,6 @@ int getchar(int k)
 
 void int_key()
 	while true
-		outportb(0x20, 0x20)
 		int k = inportb(0x60)
 		/*prints("<IRQ ")
 		printi(k)
@@ -416,7 +425,31 @@ void int_key()
 					dev_tty_key_buf[dev_tty_key_num + 1] = k >> 8
 					dev_tty_key_buf[dev_tty_key_num + 2] = k
 					dev_tty_key_num += 3
+					
+		// allow more IRQs
+		outportb(0x20, 0x20)
 			
 		asm{
 			iret
 		}
+
+void try_read_mouse()
+	nil
+
+void int_mouse()
+	while true
+		//int k = inportb(0x60)
+		prints("<IRQ mouse>")
+		
+		try_read_mouse()
+		
+					
+		// allow more IRQs
+		outportb(0xa0, 0x20)
+		outportb(0x20, 0x20)
+			
+		asm{
+			iret
+		}
+
+
