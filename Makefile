@@ -14,7 +14,7 @@ test : test.kaba
 init : init.kaba
 	$(KABA) --x86 -o init init.kaba
 
-kernel/kernel : kernel/kernel.kaba kernel/base.kaba
+kernel/kernel : kernel/*.kaba
 	$(KABA) --x86 -o kernel/kernel kernel/kernel.kaba
  
 loader_fake : loader_fake.kaba

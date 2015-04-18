@@ -69,6 +69,28 @@ int dev_key_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 int dev_key_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return 0
+	
+FileOperations dev_mouse_ops
+cstring dev_mouse_buf
+int dev_mouse_num
+int dev_mouse_open(FileEntry *f)
+	return 0
+int dev_mouse_close(FileEntry *f)
+	return 0
+int dev_mouse_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	if dev_mouse_num == 0
+		return E_WOULD_BLOCK
+	if size < 16
+		return 0
+	size = 16
+	if size > dev_mouse_num
+		size = dev_mouse_num
+	page_dir.memcpy2task(addr, &dev_mouse_buf, size)
+	dev_mouse_num -= size
+	memcpy(&dev_mouse_buf, &dev_mouse_buf[size], dev_mouse_num)
+	return size
+int dev_mouse_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	return 0
 
 FileOperations dev_tty_ops
 cstring dev_tty_key_buf
@@ -142,14 +164,25 @@ void InitDrivers()
 	dev_tty.op = &dev_tty_ops
 	
 	
+	mouse_temp_no = 0
+	dev_mouse_num = 0
+	
+	FileEntry *dev_mouse = FileSystem.add("mouse", FILE_TYPE_CHAR, nil, dev)
+	dev_mouse_ops._open = &dev_mouse_open
+	dev_mouse_ops._close = &dev_mouse_close
+	dev_mouse_ops._read = &dev_mouse_read
+	dev_mouse_ops._write = &dev_mouse_write
+	dev_mouse.op = &dev_mouse_ops
 
 	// Maus aktivieren
 	//   AUX aktivieren
-	outportb(064,0xa8)
+	outportb(0x64,0xa8)
 	//   Maus zum Sprechen bringen
-	outportb(064,0xd4) // an Maus senden (AUX)
-	outportb(060,0xff) // Reset
-	outportb(060,0xf4) // EnableReporting
+	outportb(0x64,0xd4) // an Maus senden (AUX)
+	//outportb(0x60,0xff) // Reset
+	outportb(0x60,0xf4) // EnableReporting
+	
+	mouse_awaits_fa = true
 	
 
 int getchar(int k)
@@ -378,71 +411,125 @@ int getchar(int k)
 			return 0x7a
 	return -1
 
+void ps2_read_key(int k)
+		
+	// add to low level device buffer
+	if dev_key_num < 64
+		dev_key_buf[dev_key_num] = k
+		dev_key_num ++
+		
+	if k == 0xe0
+		dev_key_escaped = true
+	else
+		if dev_key_escaped
+			k += 0xe000
+		dev_key_escaped = false
+	
+		if (k & 0x80) > 0
+			if k == 0xaa or k == 0xb6
+				dev_key_shift = false
+			if k == 0x9d or k == 0xe09d
+				dev_key_control = false
+			if k == 0xe0b8
+				dev_key_altgr = false
+		if k == 0x2a or k == 0x36
+			dev_key_shift = true
+		if k == 0x1d or k == 0xe01d
+			dev_key_control = true
+		if k == 0xe038
+			dev_key_altgr = true
+	
+		k = getchar(k)
+		if k >= 0 and dev_tty_key_num < 64
+			if (k & 0xffffff00) == 0
+				dev_tty_key_buf[dev_tty_key_num] = k
+				dev_tty_key_num ++
+			else if (k & 0xffff0000) == 0
+				dev_tty_key_buf[dev_tty_key_num] = k >> 8
+				dev_tty_key_buf[dev_tty_key_num + 1] = k
+				dev_tty_key_num += 2
+			else
+				dev_tty_key_buf[dev_tty_key_num] = k >> 16
+				dev_tty_key_buf[dev_tty_key_num + 1] = k >> 8
+				dev_tty_key_buf[dev_tty_key_num + 2] = k
+				dev_tty_key_num += 3
+
+int[4] mouse_temp
+int mouse_temp_no
+bool mouse_awaits_fa
+
+void ps2_read_mouse(int d)
+	if d == 0xfa and mouse_awaits_fa
+		mouse_awaits_fa = false
+		return
+	mouse_temp[mouse_temp_no] = d & 0x000000ff
+	mouse_temp_no ++
+	
+	if mouse_temp_no >= 3
+		mouse_temp_no = 0
+	else
+		return
+	d = mouse_temp[0]
+	bool MYOverflow = ((d & 0x80) > 0)
+	bool MXOverflow = ((d & 0x40) > 0)
+	bool MYNegative = ((d & 0x20) > 0)
+	bool MXNegative = ((d & 0x10) > 0)
+	bool mbut = ((d & 0x04) > 0)
+	bool rbut = ((d & 0x02) > 0)
+	bool lbut = ((d & 0x01) > 0)
+	mouse_temp[0] = 0
+	if lbut
+		mouse_temp[0] += 0x1
+	if mbut
+		mouse_temp[0] += 0x2
+	if rbut
+		mouse_temp[0] += 0x3
+	if MXNegative
+		mouse_temp[1] -= 256
+	if MYNegative
+		mouse_temp[2] -= 256
+	if MXOverflow
+		mouse_temp[1] = 0
+	if MYOverflow
+		mouse_temp[2] = 0
+	mouse_temp[3] = 0
+	
+	if dev_mouse_num < 200
+		memcpy(&dev_mouse_buf[dev_mouse_num], &mouse_temp, 4*4)
+		dev_mouse_num += 4*4
+
+void ps2_try_read()
+	int k = inportb(0x64)
+	if (k & 0x01) == 0
+		return
+	int d = inportb(0x60)
+	if (k & 0x20) > 0
+		ps2_read_mouse(d)
+	else
+		ps2_read_key(d)
+	ps2_try_read()
+
+
+
 void int_key()
 	while true
-		int k = inportb(0x60)
-		/*prints("<IRQ ")
-		printi(k)
-		prints(">")*/
+		//prints("<key>")
 		
-		// add to low level device buffer
-		if dev_key_num < 64
-			dev_key_buf[dev_key_num] = k
-			dev_key_num ++
-		
-		if k == 0xe0
-			dev_key_escaped = true
-		else
-			if dev_key_escaped
-				k += 0xe000
-			dev_key_escaped = false
-		
-			if (k & 0x80) > 0
-				if k == 0xaa or k == 0xb6
-					dev_key_shift = false
-				if k == 0x9d or k == 0xe09d
-					dev_key_control = false
-				if k == 0xe0b8
-					dev_key_altgr = false
-			if k == 0x2a or k == 0x36
-				dev_key_shift = true
-			if k == 0x1d or k == 0xe01d
-				dev_key_control = true
-			if k == 0xe038
-				dev_key_altgr = true
-	
-			k = getchar(k)
-			if k >= 0 and dev_tty_key_num < 64
-				if (k & 0xffffff00) == 0
-					dev_tty_key_buf[dev_tty_key_num] = k
-					dev_tty_key_num ++
-				else if (k & 0xffff0000) == 0
-					dev_tty_key_buf[dev_tty_key_num] = k >> 8
-					dev_tty_key_buf[dev_tty_key_num + 1] = k
-					dev_tty_key_num += 2
-				else
-					dev_tty_key_buf[dev_tty_key_num] = k >> 16
-					dev_tty_key_buf[dev_tty_key_num + 1] = k >> 8
-					dev_tty_key_buf[dev_tty_key_num + 2] = k
-					dev_tty_key_num += 3
+		ps2_try_read()
 					
 		// allow more IRQs
 		outportb(0x20, 0x20)
 			
 		asm{
 			iret
-		}
-
-void try_read_mouse()
-	nil
+		}		
 
 void int_mouse()
 	while true
 		//int k = inportb(0x60)
 		prints("<IRQ mouse>")
 		
-		try_read_mouse()
-		
+		ps2_try_read()
 					
 		// allow more IRQs
 		outportb(0xa0, 0x20)

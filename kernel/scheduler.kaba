@@ -2,6 +2,7 @@
 use "base.kaba"
 use "text_mode.kaba"
 use "tasks.kaba"
+use "std_char_devs.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -9,10 +10,14 @@ const int TASK_SWITCH_DT = 20 // ms
 
 bool SchedulerEnabled
 
+int _nnn
 
 void int_timer()
 	while true
 		if SchedulerEnabled
+			_nnn ++
+			if (_nnn & 0x3) == 0
+				ps2_try_read()
 		
 			ProcessWaitingTasks()
 		
@@ -39,6 +44,8 @@ void int_timer()
 		}
 
 void InitTimer()
+	_nnn = 0
+	
 	// ticks/s: 1193180
 	// 100Hz:   11932 = 0x2e9c
 	int ticks_per_sec = 1193180

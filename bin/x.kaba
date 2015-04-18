@@ -23,6 +23,8 @@ const int VBE_DISPI_INDEX_VIRT_HEIGHT = 7
 const int VBE_DISPI_INDEX_X_OFFSET = 8
 const int VBE_DISPI_INDEX_Y_OFFSET = 9
 
+int mouse
+
 int _temp_port_no_
 int _temp_port_data_
 
@@ -220,96 +222,37 @@ void scan_pci()
 		for dev in 0:32
 			checkDevice(bus, dev)
 
-bool WaitingForMouseFA
-int MouseNo
-
-void init_mouse()
-	mx = 0
-	my = 0
-	lbut = false
-	mbut = false
-	rbut = false
-
-	// Maus aktivieren
-	//   AUX aktivieren
-	outportb(064,0xa8)
-	//   Maus zum Sprechen bringen
-	outportb(064,0xd4) // an Maus senden (AUX)
-	outportb(060,0xf4) // EnableReporting
-
-	WaitingForMouseFA = true
-	MouseNo = 0
-
-bool KBCMouse
-int mdx, mdy
-int[3] InputMouse
-bool lbut, mbut, rbut
 int mx, my
 
-void UpdateInput()
-	KBCMouse=false
-	mdx=0
-	mdy=0
-
-	char data = inportb(0x64)
-	// generell Daten?
-	bool KBCData=((data&0x01)==0x01)
-	if KBCData
-		print "data"
-		// Tastatur/Maus
-		KBCMouse=((data&0x20)==0x20)
-		//TempInputChar=
-		int TempInput=inportb(0x60)//c2i(TempInputChar)
-
-	if KBCMouse
-		KBCData=false
-		KBCMouse=false
-		if WaitingForMouseFA and TempInput==0xfa
-			WaitingForMouseFA=false
-		else
-			InputMouse[MouseNo]=TempInput
-			TempInput=InputMouse[0]
-			MouseNo++
-			if MouseNo>=3
-				bool MYOverflow=((TempInput&0x80)>0)
-				bool MXOverflow=((TempInput&0x40)>0)
-				bool MYNegative=((TempInput&0x20)>0)
-				bool MXNegative=((TempInput&0x10)>0)
-				mbut=((TempInput&0x04)>0)
-				rbut=((TempInput&0x02)>0)
-				lbut=((TempInput&0x01)>0)
-				KBCData=true
-				KBCMouse=true
-				MouseNo=0
-				if MXNegative
-					InputMouse[1]-=256
-				if MYNegative
-					InputMouse[2]-=256
-				if MXOverflow
-					InputMouse[1]=0
-				if MYOverflow
-					InputMouse[2]=0
-				mdx+=InputMouse[1]
-				mdy+=InputMouse[2]
-
-	// noch mehr Daten?
-
-	mx += mdx
-	my -= mdy
-	if mx > screen_width
-		mx = screen_width -1
+void update_mouse()
+	int[4] m
+	if read(mouse, &m, 4*4) < 16
+		return
+	mx += m[1]
+	my += m[2]
 	if mx < 0
 		mx = 0
-	if my > screen_height
-		my = screen_height -1
+	if mx >= screen_width
+		mx = screen_width - 1
 	if my < 0
 		my = 0
-
-//	MouseNo=0
+	if my >= screen_height
+		my = screen_height - 1
+	print mx
+	print " "
+	print my
+	print "\n"
 
 
 void main()
 	init_lib()
+	
+	mx = 0
+	my = 0
+	mouse = open("/dev/mouse", O_RDONLY)
+	fcntl(mouse, F_SETFL, O_RDONLY | O_NONBLOCK)
+	screen_width = 800
+	screen_height = 600
 	
 	scan_pci()
 	
@@ -318,7 +261,7 @@ void main()
 	//	nil
 	
 	//print BgaReadRegister(VBE_DISPI_INDEX_ID)
-	if BgaIsAvailable()
+	/*if BgaIsAvailable()
 		print "ja"
 	else
 		print "nein"
@@ -332,15 +275,10 @@ void main()
 	//init_mouse()
 	
 	while true
-		nil
+		nil*/
 	
 	
 	while true
-		//UpdateInput()
-		print mx
-		print " / "
-		print my
-		print "\n"
-		nil
+		update_mouse()
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
 	exit(0)
