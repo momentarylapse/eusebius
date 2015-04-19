@@ -376,23 +376,32 @@ void prints(cstring s)
 		int 0x80
 	}
 
+
+// double-linked list of free fields
+
 class MallocHeader
 	int size // header + payload
-	MallocHeader *next
-	MallocHeader *prev
-	void *after()
+	MallocHeader* next
+	MallocHeader* prev
+	void* after()
 		char[0]* pp = self
 		return &pp[size]
-	void *payload()
+	void* payload()
 		char[0]* pp = self
 		return &pp[sizeof(MallocHeader)]
-MallocHeader *malloc_first_free
+MallocHeader* malloc_first_free
+int malloc_after_all // free AND used
 
+MallocHeader* _malloc_last_()
+	MallocHeader* cur = malloc_first_free
+	while cur.next
+		cur = cur.next
+	return cur
 
-void *lib__@malloc(int size)
+void* lib__@malloc(int size)
 	if size <= 0
 		return nil
-	MallocHeader *cur = malloc_first_free
+	MallocHeader* cur = malloc_first_free
 	size += sizeof(MallocHeader)
 	while cur
 		if size <= cur.size - sizeof(MallocHeader)
@@ -403,8 +412,17 @@ void *lib__@malloc(int size)
 			hh.prev = nil
 			return hh.payload()
 		cur = cur.next
-	return nil
+	
+	//exit(-1)
+	// request more memory from kernel
+	hh = _i2p(malloc_after_all)
+	brk(malloc_after_all + size + sizeof(MallocHeader))
+	hh.size = size
+	hh.next = nil
+	hh.prev = nil
+	return hh.payload()
 
+// merge with neighbors
 void _cleanup(MallocHeader *h)
 	if h.next
 		if h.after() == h.next
@@ -432,7 +450,10 @@ void lib__@free(void *p)
 	if _p2i(p) < _p2i(cur)
 		__lib_free_error__()
 	while cur
-		if (_p2i(p) < _p2i(cur.next)) or !cur.next
+		int end = _p2i(cur.next)
+		if !cur.next
+			end = malloc_after_all
+		if _p2i(p) < end
 			char[0]* pp = p
 			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
 			
@@ -978,8 +999,11 @@ lib__string lib__FileRead(string filename)
 
 void init_lib()
 	__free_error__ = false
-	malloc_first_free = _i2p(0x00b00000)
-	malloc_first_free.size = 0x00200000 - sizeof(MallocHeader)
+	int malloc_begin = 0x00b00000
+	malloc_after_all = brk(-1)
+	int malloc_size_all = malloc_after_all - malloc_begin // 0x00200000
+	malloc_first_free = _i2p(malloc_begin)
+	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader)
 	malloc_first_free.next = nil
 	malloc_first_free.prev = nil
 	

@@ -238,44 +238,109 @@ void update_mouse()
 		my = 0
 	if my >= screen_height
 		my = screen_height - 1
-	print mx
+	/*print mx
 	print " "
 	print my
+	print "\n"*/
+
+class XRect
+	int x, y, w, h
+	bool inside(int _x, int _y)
+		return _x >= x and _x < x+w and _y >= y and _y <= y+h
+
+class XWindow
+	XRect r
+	int[] buf
+	
+	//void draw_rect(int x, int y, int w, int h, int c)
+	void fill(int c)
+		int n = r.w * r.h
+		for b in buf
+			b = c
+
+XWindow*[] windows
+XWindow* bg, cursor
+
+XRect[] invalidated
+
+XWindow* create_win(int x, int y, int w, int h)
+	XWindow *win = new XWindow
+	win.r.x = x
+	win.r.y = y
+	win.r.w = w
+	win.r.h = h
+	win.buf.resize(w * h)
+	//print p2s(&win.buf[0])
+	windows.add(win)
+	invalidated.add(win.r)
+	return win
+
+// brute force :P
+void draw(XRect r)
+	int x2 = r.x+r.w
+	int y2 = r.y+r.h
+	print "draw "
+	print r.x
+	print " "
+	print r.y
+	print " "
+	print r.w
+	print " "
+	print r.h
 	print "\n"
+	for x in r.x:x2
+		for y in r.y:y2
+			int c = 0xffffffff
+			for w,n in windows
+				if w.r.inside(x, y)
+					int dx = x-w.r.x
+					int dy = y-w.r.y
+					x = 0xff0000 + n * 0xffff
+					//c = w.buf[dx + dy*w.r.w]
+			setPixel(x, y, c)
+	
+
+void draw_all()
+	print "draw all"
+	for r in invalidated
+		draw(r)
+	invalidated.clear()
 
 
 void main()
 	init_lib()
 	
-	mx = 0
-	my = 0
+	mx = 400
+	my = 300
 	mouse = open("/dev/mouse", O_RDONLY)
 	fcntl(mouse, F_SETFL, O_RDONLY | O_NONBLOCK)
 	screen_width = 800
 	screen_height = 600
 	
-	scan_pci()
-	
-	print "ok\n"
-	//while true
-	//	nil
+//	scan_pci()
 	
 	//print BgaReadRegister(VBE_DISPI_INDEX_ID)
 	/*if BgaIsAvailable()
 		print "ja"
 	else
-		print "nein"
+		print "nein"*/
 	
 	//BgaSetVideoMode(800, 600, 32, true, false)
-	BgaSetVideoMode(1024, 768, 32, true, false)
+	BgaSetVideoMode(1024, 768, 32, false, false)
 	
-	for x in 0:100
+	/*for x in 0:100
 		for y in 0:100
 			setPixel(x, y, 0xffffffff)
-	//init_mouse()
 	
 	while true
 		nil*/
+	
+	bg = create_win(0, 0, screen_width, screen_height)
+	bg.fill(0xff402040)
+	cursor = create_win(mx, my, 32, 32)
+	cursor.fill(0xffc0c0c0)
+	
+	draw_all()
 	
 	
 	while true

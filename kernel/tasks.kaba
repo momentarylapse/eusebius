@@ -335,6 +335,7 @@ class TaskData
 		int cur_size = page_dir.count_pages() * PAGE_SIZE
 		if size <= cur_size
 			return cur_size
+		//prints("<brk>")
 		Paging.page_dir_grow(page_dir, size, true)
 		return size
 	
