@@ -238,23 +238,26 @@ void update_mouse()
 		my = 0
 	if my >= screen_height
 		my = screen_height - 1
-	/*print mx
-	print " "
-	print my
-	print "\n"*/
+	
+	cursor.move(mx, my)
 
 class XRect
 	int x, y, w, h
 	bool inside(int _x, int _y)
-		return _x >= x and _x < x+w and _y >= y and _y <= y+h
+		return _x >= x and _x < x+w and _y >= y and _y < y+h
 
 class XWindow
 	XRect r
 	int[] buf
 	
+	void move(int _x, int _y)
+		invalidated.add(r)
+		r.x = _x
+		r.y = _y
+		invalidated.add(r)
+	
 	//void draw_rect(int x, int y, int w, int h, int c)
 	void fill(int c)
-		int n = r.w * r.h
 		for b in buf
 			b = c
 
@@ -270,7 +273,6 @@ XWindow* create_win(int x, int y, int w, int h)
 	win.r.w = w
 	win.r.h = h
 	win.buf.resize(w * h)
-	//print p2s(&win.buf[0])
 	windows.add(win)
 	invalidated.add(win.r)
 	return win
@@ -279,29 +281,19 @@ XWindow* create_win(int x, int y, int w, int h)
 void draw(XRect r)
 	int x2 = r.x+r.w
 	int y2 = r.y+r.h
-	print "draw "
-	print r.x
-	print " "
-	print r.y
-	print " "
-	print r.w
-	print " "
-	print r.h
-	print "\n"
-	for x in r.x:x2
-		for y in r.y:y2
+	for y in r.y:y2
+		for x in r.x:x2
 			int c = 0xffffffff
 			for w,n in windows
 				if w.r.inside(x, y)
 					int dx = x-w.r.x
 					int dy = y-w.r.y
-					x = 0xff0000 + n * 0xffff
-					//c = w.buf[dx + dy*w.r.w]
+					c = 0xff0000 + n * 0xffff
+					c = w.buf[dx + dy*w.r.w]
 			setPixel(x, y, c)
 	
 
-void draw_all()
-	print "draw all"
+void draw_invalidated()
 	for r in invalidated
 		draw(r)
 	invalidated.clear()
@@ -309,6 +301,9 @@ void draw_all()
 
 void main()
 	init_lib()
+	
+	windows.__init__()
+	invalidated.__init__()
 	
 	mx = 400
 	my = 300
@@ -325,8 +320,7 @@ void main()
 	else
 		print "nein"*/
 	
-	//BgaSetVideoMode(800, 600, 32, true, false)
-	BgaSetVideoMode(1024, 768, 32, false, false)
+	BgaSetVideoMode(640, 480, 32, false, false)
 	
 	/*for x in 0:100
 		for y in 0:100
@@ -340,10 +334,12 @@ void main()
 	cursor = create_win(mx, my, 32, 32)
 	cursor.fill(0xffc0c0c0)
 	
-	draw_all()
 	
+	draw_invalidated()
 	
 	while true
 		update_mouse()
+		draw_invalidated()
+		
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
 	exit(0)

@@ -392,12 +392,6 @@ class MallocHeader
 MallocHeader* malloc_first_free
 int malloc_after_all // free AND used
 
-MallocHeader* _malloc_last_()
-	MallocHeader* cur = malloc_first_free
-	while cur.next
-		cur = cur.next
-	return cur
-
 void* lib__@malloc(int size)
 	if size <= 0
 		return nil
@@ -413,10 +407,10 @@ void* lib__@malloc(int size)
 			return hh.payload()
 		cur = cur.next
 	
-	//exit(-1)
 	// request more memory from kernel
 	hh = _i2p(malloc_after_all)
-	brk(malloc_after_all + size + sizeof(MallocHeader))
+	malloc_after_all = size + sizeof(MallocHeader)
+	brk(malloc_after_all)
 	hh.size = size
 	hh.next = nil
 	hh.prev = nil
