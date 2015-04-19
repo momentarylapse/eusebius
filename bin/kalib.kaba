@@ -989,6 +989,51 @@ lib__string lib__FileRead(string filename)
 	return content
 
 //--------------------------------------------------------------------------
+// images
+
+class lib__Image
+	int width, height
+	int mode, __align__
+	lib__int@list data
+	bool alpha_used
+	bool error
+	void __init__(int w, int h, color c)
+		data.resize(w * h)
+		width = w
+		height = h
+		error = false
+
+lib__Image* lib__LoadImage(string filename)
+	lib__string temp
+	int h = open(filename, O_RDONLY)
+	if h < 0
+		return nil
+	temp.resize(32)
+	int r = read(h, &temp.data[0], 18)
+	if r < 0
+		close(h)
+		return nil
+	lib__Image* im = lib__@malloc(sizeof(Image))
+	int offset = temp.data[0]
+	int width = temp.data[12] + (temp.data[13]<<8)
+	int height = temp.data[14] + (temp.data[15]<<8)
+	
+	im.__init__(width, height, Black)
+	
+	for i in 0:offset
+		read(h, &temp.data[0], 1)
+	
+	for y in 0:height
+		for x in 0:width
+			int c
+			read(h, &c, 4)
+			im.data.data[x + y * width] = c
+			
+	close(h)
+	return im
+		
+
+//--------------------------------------------------------------------------
 // start
 
 void init_lib()

@@ -124,6 +124,8 @@ int[0]* vga_mem2
 void BgaSetVideoMode(int width, int height, int depth, bool UseLinearFrameBuffer, bool ClearVideoMemory)
 	screen_width = width
 	screen_height = height
+	mx = width / 2
+	my = height / 2
 	cur_bank = -1
 	vga_mem = _i2p(0xa0000)
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
@@ -229,7 +231,7 @@ void update_mouse()
 	if read(mouse, &m, 4*4) < 16
 		return
 	mx += m[1]
-	my += m[2]
+	my -= m[2]
 	if mx < 0
 		mx = 0
 	if mx >= screen_width
@@ -239,7 +241,9 @@ void update_mouse()
 	if my >= screen_height
 		my = screen_height - 1
 	
-	cursor.move(mx, my)
+	//update_mouse()
+	
+	cursor.move(mx - cursor.r.w/2, my - cursor.r.h/2)
 
 class XRect
 	int x, y, w, h
@@ -249,6 +253,21 @@ class XRect
 class XWindow
 	XRect r
 	int[] buf
+	
+	void __init__(int x, int y, int w, int h)
+		r.x = x
+		r.y = y
+		r.w = w
+		r.h = h
+		buf.resize(w * h)
+		windows.add(self)
+		invalidated.add(r)
+		
+	void __delete__()
+		invalidated.add(r)
+		for ww,n in windows
+			if ww == self
+				windows.remove(n)
 	
 	void move(int _x, int _y)
 		invalidated.add(r)
@@ -260,36 +279,46 @@ class XWindow
 	void fill(int c)
 		for b in buf
 			b = c
+	void fill_image(int dx, int dy, Image *im)
+		/*int x1 = dx
+		if x1 < 0
+			x1 = 0
+			
+		for y in y1:y2
+			for x in x1:x2*/
+		for y in 0:r.h
+			for x in 0:r.w
+				buf[x + y*r.w] = im.data[x + y*r.w]
 
 XWindow*[] windows
-XWindow* bg, cursor
+XWindow* desktop, cursor
 
 XRect[] invalidated
 
-XWindow* create_win(int x, int y, int w, int h)
-	XWindow *win = new XWindow
-	win.r.x = x
-	win.r.y = y
-	win.r.w = w
-	win.r.h = h
-	win.buf.resize(w * h)
-	windows.add(win)
-	invalidated.add(win.r)
-	return win
-
 // brute force :P
 void draw(XRect r)
+	int x1 = r.x
+	int y1 = r.y
 	int x2 = r.x+r.w
 	int y2 = r.y+r.h
-	for y in r.y:y2
-		for x in r.x:x2
-			int c = 0xffffffff
-			for w,n in windows
+	if x1 < 0
+		x1 = 0
+	if x2 >= screen_width
+		x2 = screen_width-1
+	if y1 < 0
+		y1 = 0
+	if y2 >= screen_height
+		y2 = screen_height-1
+	for y in y1:y2
+		for x in x1:x2
+			int c = 0
+			for w in windows
 				if w.r.inside(x, y)
 					int dx = x-w.r.x
 					int dy = y-w.r.y
-					c = 0xff0000 + n * 0xffff
-					c = w.buf[dx + dy*w.r.w]
+					int cc = w.buf[dx + dy*w.r.w]
+					if (cc & 0xff000000) != 0
+						c = cc
 			setPixel(x, y, c)
 	
 
@@ -304,6 +333,9 @@ void main()
 	
 	windows.__init__()
 	invalidated.__init__()
+	
+
+	Image *im = LoadImage("/images/cursor.tga")
 	
 	mx = 400
 	my = 300
@@ -322,18 +354,15 @@ void main()
 	
 	BgaSetVideoMode(640, 480, 32, false, false)
 	
-	/*for x in 0:100
-		for y in 0:100
-			setPixel(x, y, 0xffffffff)
+	desktop = new XWindow(0, 0, screen_width, screen_height)
+	desktop.fill(0xff402040)
 	
-	while true
-		nil*/
-	
-	bg = create_win(0, 0, screen_width, screen_height)
-	bg.fill(0xff402040)
-	cursor = create_win(mx, my, 32, 32)
-	cursor.fill(0xffc0c0c0)
-	
+	if im
+		cursor = new XWindow(mx - im.width/2, my - im.height/2, im.width, im.height)
+		cursor.fill_image(0, 0, im)
+	else
+		cursor = new XWindow(mx-16, my-16, 32, 32)
+		cursor.fill(0xffc0c0c0)
 	
 	draw_invalidated()
 	

@@ -68,7 +68,7 @@ bin/x: bin/x.kaba kalib_symbols
 bin/kalib: bin/kalib.kaba
 	$(KABA) --x86 -o bin/kalib --export-symbols kalib_symbols bin/kalib.kaba
 
-kalib_symbols : bin/kalib
+kalib_symbols : bin/kalib bin/kalib.kaba
 
 img.mfs: init kernel/kernel $(BINS)
 	mkdir -p mfs
@@ -83,11 +83,13 @@ img.ext2: $(BINS) img.mfs
 	mkdir -p img-src/boot
 	mkdir -p img-src/home
 	mkdir -p img-src/src
+	mkdir -p img-src/images
 	echo "aaa" > img-src/home/a
 	echo "bbbb" > img-src/home/b
 	echo "hallo\nkleiner Test" > img-src/home/test.txt
 	cp -r $(BINS) img-src/bin
 	cp kernel/*.kaba img-src/src
+	cp data/images/cursor.tga img-src/images
 	genext2fs -b 4096 -N 256 -d img-src img.ext2 
 
 bochs/c.img: img.mfs img.ext2 loader_fake
