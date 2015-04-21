@@ -4,6 +4,22 @@
 #define __ADD_ENTRY_POINT__
 #define __STRING_CONST_AS_CSTRING__
 
+const int EWOULDBLOCK = 128
+const int ENOSPC = 127
+const int EACCES = 126
+const int EEXIST = 125
+const int EINVAL = 124
+const int ENOENT = 123
+const int ENOMEM = 122
+const int ESRCH = 121
+const int ECHILD = 120
+const int EBADF = 119
+const int ENFILE = 118
+const int EFAULT = 117
+
+const int F_GETFL = 1
+const int F_SETFL = 2
+
 
 int MemorySize // in bytes
 

@@ -85,7 +85,7 @@ void int_syscall()
 			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
 			r = caller.sys_open(filename, param2)
 		else if index == 6 // close
-			caller.sys_close(param1)
+			r = caller.sys_close(param1)
 		else if index == 7 // waitpid
 			r = caller.sys_waitpid(param1, param2, param3)
 		else if index == 8 // create

@@ -1,0 +1,39 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "base_mem.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+const int MAX_SEMAPHORES_PER_SET = 32
+const int MAX_SEMAPHORE_SETS = 64
+
+class Semaphore
+	int value
+
+class SemaphoreSet
+	int key
+	int pid
+	int num
+	Semaphore[MAX_SEMAPHORES_PER_SET] sem
+
+class SemaphoreController
+	SemaphoreSet[MAX_SEMAPHORE_SETS] sets
+	
+	void init()
+		for s in sets
+			s.key = -1
+	
+	int create(int key, int num, int pid)
+		if num > MAX_SEMAPHORES_PER_SET
+			return -1
+		for s,i in sets
+			if s.key < 0
+				s.key = key
+				s.num = num
+				s.pid = pid
+				for j in 0:num
+					s.sem[j].value = 0
+				return i
+		return -ENOSPC
+	
+	

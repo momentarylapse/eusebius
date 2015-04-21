@@ -211,7 +211,7 @@ class TaskData
 	int sys_read(int handle, int addr, int size)
 		OpenFileData *of = get_handle(handle)
 		if !of
-			return -1
+			return -EBADF
 		int r = of.read(page_dir, addr, size)
 		if r == E_WOULD_BLOCK and of.blocking
 			set_wait(WAITING_MODE_FILE_READ, nil, handle, addr, size)
@@ -221,33 +221,34 @@ class TaskData
 	int sys_write(int handle, int addr, int size)
 		OpenFileData *of = get_handle(handle)
 		if !of
-			return -1
+			return -EBADF
 		return of.write(page_dir, addr, size)
 
 	int sys_getdents(int handle, int addr, int num)
 		OpenFileData *of = get_handle(handle)
 		if !of
-			return -1
+			return -EBADF
 		return of.getdents(page_dir, addr, num)
 
-	void sys_close(int handle)
+	int sys_close(int handle)
 		OpenFileData *of = get_handle(handle)
 		if !of
-			return
+			return -EBADF
 		of.unref()
 		handles[handle] = nil
+		return 0
 	
 	int sys_dup(int fd)
 		OpenFileData *of = get_handle(fd)
 		if !of
-			return -1
+			return -EBADF
 		int index = add_handle(of)
 		return index
 	
 	int sys_pipe(int addr)
 		FileEntry *e = FileSystem.add(":pipe:", FILE_TYPE_PIPE, nil, nil)
 		if !e
-			return -2
+			return -ENFILE
 		if !create_pipe(e)
 			return -3
 		OpenFileData *of_in = kernel_open_entry(e, O_RDONLY)
@@ -266,8 +267,11 @@ class TaskData
 	int sys_execute(cstring filename, int fd_in, int fd_out)
 		int h = sys_open(filename, O_RDONLY)
 		if h < 0
-			return -1
+			return -ENOENT
 		TaskData *t = AddTask(filename, _i2p(0x00a00000), false, self)
+		if !t
+			sys_close(h)
+			return -ENOMEM
 		memcpy(&t.arg, &filename, sizeof(cstring))
 		int addr = 0x00200000 + KERNEL_MEM // task space...
 		OpenFileData *of = handles[h]
@@ -300,10 +304,10 @@ class TaskData
 
 	int sys_waitpid(int _pid, int status_addr, int options)
 		if _pid < 0 or _pid >= MAX_TASKS
-			return -1
+			return -ECHILD
 		TaskData *t = &Task[_pid]
 		if t.status == TASK_STATUS_UNUSED
-			return -1
+			return -ECHILD
 		int *_status = _i2p(addr2kernel(status_addr))
 		if t.status == TASK_STATUS_ZOMBIE
 			*_status = t.return_status
@@ -317,10 +321,10 @@ class TaskData
 
 	int sys_kill(int _pid, int signal)
 		if _pid < 0 or _pid >= MAX_TASKS
-			return -1
+			return -ESRCH
 		TaskData *t = &Task[_pid]
 		if t.status == TASK_STATUS_UNUSED
-			return -1
+			return -ESRCH
 		if signal == SIGKILL
 			t.clean_up_deep()
 		else if signal == SIGSTOP
@@ -342,10 +346,10 @@ class TaskData
 	int sys_fcntl(int fd, int op, int param)
 		OpenFileData *of = get_handle(fd)
 		if !of
-			return -1
-		if op == 1
+			return -EBADF
+		if op == F_GETFL
 			return of.get_flags()
-		if op == 2
+		if op == F_SETFL
 			of.set_flags(param)
 			return 0
 		return -2
@@ -353,7 +357,7 @@ class TaskData
 	int sys_fork()
 		TaskData *t = AddTask("-fork-", _i2p(0x00a00000), false, self)
 		if !t
-			return -1
+			return -ENOMEM
 		t.page_dir.clone(page_dir, KERNEL_MEM)
 		memcpy(&t.arg, &arg, sizeof(cstring))
 		strcpy(&t.name, &name)
@@ -413,6 +417,8 @@ int get_next_pid()
 
 TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	int pid = get_next_pid()
+	if pid < 0
+		return nil
 	TaskData *t = &Task[pid]
 	t.pid = pid
 

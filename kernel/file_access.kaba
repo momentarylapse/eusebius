@@ -322,14 +322,14 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 
 int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
-		return -1
+		return -EEXIST
 	if !FileSystem.add(filename, FILE_TYPE_DIR, cur_dir.mount, cur_dir)
 		return -2
 	return 0
 
 int kernel_mknod(cstring filename, int flags, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
-		return -1
+		return -EEXIST
 	FileEntry *e = FileSystem.add(filename, FILE_TYPE_PIPE, cur_dir.mount, cur_dir)
 	if !e
 		return -2
