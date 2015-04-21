@@ -20,6 +20,14 @@ const int EFAULT = 117
 const int F_GETFL = 1
 const int F_SETFL = 2
 
+const int SHMAT = 9
+const int SHMDT = 10
+const int SHMGET = 11
+
+const int SHM_DEST = 1<<11
+const int IPC_CREAT = 1<<12
+const int IPC_EXCL = 1<<13
+
 
 int MemorySize // in bytes
 

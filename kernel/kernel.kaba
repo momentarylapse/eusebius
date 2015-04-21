@@ -11,6 +11,7 @@ use "interrupts.kaba"
 use "syscall.kaba"
 use "scheduler.kaba"
 use "paging.kaba"
+use "shared_memory.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 const int KALIB_LOCATION = 0x00030000
@@ -77,7 +78,7 @@ void main()
 	mem_init()
 	etm_init()
 	
-	prints("Willkommen zu Eusebius 0.2.9   (c) by MichiSoft TM 2015\n")
+	prints("Willkommen zu Eusebius 0.2.10   (c) by MichiSoft TM 2015\n")
 	prints("Speicher: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
@@ -99,6 +100,8 @@ void main()
 	InitInterrupts()
 	
 	InitDrivers()
+	
+	SharedMem.init()
 	
 	//PagingTest()
 

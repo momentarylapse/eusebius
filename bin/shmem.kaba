@@ -1,0 +1,28 @@
+#define __OS__
+use "prog_header.kaba"
+
+
+void main()
+	init_lib()
+	print "shmget: "
+	int id = shmget(13, 1024, IPC_CREAT)
+	print id
+	print "\n"
+	
+	print "shmat: "
+	void *p = shmat(id, 0)
+	print p2s(p)
+	print "\n"
+	
+	int[0]* ip = p
+	
+	print "lese: "
+	print ip[0]
+	print "\n"
+	
+	print "schreibe: "
+	ip[0] = 13
+	print "ok\n"
+	
+	
+	exit(0)

@@ -5,12 +5,14 @@ use "filesystem.kaba"
 use "file_access.kaba"
 use "base_mem.kaba"
 use "paging.kaba"
+use "shared_memory.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
 
 
 const int MAX_OPEN_FILES_PER_TASK = 16
+const int MAX_SHARED_MEMS_PER_TASK = 1
 
 const int SIGKILL = 9
 const int SIGCONT = 18
@@ -92,6 +94,10 @@ enum
 	WAITING_MODE_FILE_READ
 	WAITING_MODE_FILE_WRITE
 
+class TaskSharedMemRef
+	int id
+	int pos
+
 class TaskData
 	TaskStateSegment tss
 	int[0]* stack
@@ -110,6 +116,8 @@ class TaskData
 	//int mem_offset, mem_size
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
+	TaskSharedMemRef[MAX_SHARED_MEMS_PER_TASK] shmem
+	
 	void __assign__(TaskData o)
 		nil
 	
@@ -155,20 +163,20 @@ class TaskData
 	FileEntry *get_file(cstring path)
 		return FileSystem.get(path, cur_dir)
 		
-	int add_handle(OpenFileData *h)
-		for i in 0:MAX_OPEN_FILES_PER_TASK
-			if !handles[i]
-				handles[i] = h
-				h.ref_count ++
+	int add_handle(OpenFileData *oh)
+		for h,i in handles
+			if !h
+				h = oh
+				oh.ref_count ++
 				return i
 		return -1
 
 	void make_zombie()
 		status = TASK_STATUS_ZOMBIE
-		for i in 0:MAX_OPEN_FILES_PER_TASK
-			if handles[i]
-				handles[i].unref()
-				handles[i] = nil
+		for h in handles
+			if h
+				h.unref()
+				h = nil
 		if !kernel_mode
 			if page_dir
 				Paging.free_page_directory(page_dir, KERNEL_MEM)
@@ -201,7 +209,7 @@ class TaskData
 	int sys_open(cstring filename, int flags)
 		OpenFileData *of = kernel_open(filename, flags, cur_dir)
 		if !of
-			return -1
+			return -ENOENT
 		int index = add_handle(of)
 		if index < 0
 			of.unref()
@@ -294,13 +302,13 @@ class TaskData
 	void sys_exit(int r)
 		return_status = r
 		make_zombie()
-		for i in 0:MAX_TASKS
-			if Task[i].status == TASK_STATUS_WAITING
-				if Task[i].waiting_mode == WAITING_MODE_TASK_EXIT and Task[i].waiting_param_i1 == pid
-					Task[i].tss.eax = 0// // return waitpid()
-					*Task[i].waiting_param_p = r
+		for t in Task
+			if t.status == TASK_STATUS_WAITING
+				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
+					t.tss.eax = 0// // return waitpid()
+					*t.waiting_param_p = r
 					clean_up_deep()
-					Task[i].start()
+					t.start()
 
 	int sys_waitpid(int _pid, int status_addr, int options)
 		if _pid < 0 or _pid >= MAX_TASKS
@@ -340,7 +348,7 @@ class TaskData
 		if size <= cur_size
 			return cur_size
 		//prints("<brk>")
-		Paging.page_dir_grow(page_dir, size, true)
+		page_dir.grow(size, true)
 		return size
 	
 	int sys_fcntl(int fd, int op, int param)
@@ -352,7 +360,7 @@ class TaskData
 		if op == F_SETFL
 			of.set_flags(param)
 			return 0
-		return -2
+		return -EINVAL
 	
 	int sys_fork()
 		TaskData *t = AddTask("-fork-", _i2p(0x00a00000), false, self)
@@ -369,6 +377,26 @@ class TaskData
 	
 		t.start()
 		return t.pid
+	
+	int sys_ipc(int cmd, int p1, int p2, int p3)
+		if cmd == SHMGET
+			prints "<SHMGET>"
+			return SharedMem.shm_get(p1, p2, p3, pid)
+		if cmd == SHMAT
+			prints "<SHMAT>"
+			for r in shmem
+				if r.id < 0
+					SharedMemory *s = SharedMem.get(p1)
+					if !s
+						return -ENOENT
+					r.id = s.id
+					r.pos = 0xa0000000
+					s.refcount ++
+					page_dir.map_lin(r.pos, s.p, s.size, true)
+					page_dir.memcpy2task(p2, &r.pos, 4)
+					return 0
+			return -1
+		return -EINVAL
 	
 TaskData[MAX_TASKS] Task
 TaskData *KernelTask
@@ -439,7 +467,7 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	else
 		t.stack = _i2p(0x00c00000)
 		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
-		Paging.page_dir_grow(t.page_dir, INITIAL_TASK_MEM, true)
+		t.page_dir.grow(INITIAL_TASK_MEM, true)
 		t.tss.set(t.get_initial_stack_pos(), 3, 4, /*3*/ 0, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
@@ -456,18 +484,18 @@ int GetNextTask(int pid)
 	return IdleTask.pid
 
 void ProcessWaitingTasks()
-	for i in 0:MAX_TASKS
-		if Task[i].status == TASK_STATUS_WAITING
-			if Task[i].waiting_mode == WAITING_MODE_FILE_READ
-				int r = Task[i].sys_read(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
+	for t in Task
+		if t.status == TASK_STATUS_WAITING
+			if t.waiting_mode == WAITING_MODE_FILE_READ
+				int r = t.sys_read(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
 				if r >= 0
-					Task[i].tss.eax = r // return r
-					Task[i].start()
-			else if Task[i].waiting_mode == WAITING_MODE_FILE_WRITE
-				r = Task[i].sys_write(Task[i].waiting_param_i1, Task[i].waiting_param_i2, Task[i].waiting_param_i3)
+					t.tss.eax = r // return r
+					t.start()
+			else if t.waiting_mode == WAITING_MODE_FILE_WRITE
+				r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
 				if r >= 0
-					Task[i].tss.eax = r // return r
-					Task[i].start()
+					t.tss.eax = r // return r
+					t.start()
 
 void idle_func()
 	while true
@@ -496,10 +524,12 @@ void InitTasks()
 	// user data
 	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
 
-	for i in 0:MAX_TASKS
-		Task[i].status = TASK_STATUS_UNUSED
-		for j in 0:MAX_OPEN_FILES_PER_TASK
-			Task[i].handles[j] = nil
+	for t in Task
+		t.status = TASK_STATUS_UNUSED
+		for h in t.handles
+			h = nil
+		for sm in t.shmem
+			sm.id = -1
 
 	CurPid = 0
 	//UserMemMask = 0

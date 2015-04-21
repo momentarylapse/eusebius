@@ -313,6 +313,50 @@ int execute(string[] arg, int fd_in, int fd_out)
 	}
 	return __temp_i__
 
+int shmget(int key, int size, int flags)
+	__temp_i__ = key
+	__temp_i2__ = size
+	__temp_i3__ = flags
+	asm{
+		mov eax, 0x00000075 // ipc
+		mov ebx, 0x0000000b
+		mov ecx, __temp_i__
+		mov edx, __temp_i2__
+		mov esi, __temp_i3__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+void* shmat(int id, int flags)
+	void *p
+	__temp_i__ = id
+	__temp_p__ = &p
+	__temp_i2__ = flags
+	asm{
+		mov eax, 0x00000075 // ipc
+		mov ebx, 0x00000009
+		mov ecx, __temp_i__
+		mov edx, __temp_p__
+		mov esi, __temp_i2__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	if __temp_i3__ < 0
+		return _i2p(__temp_i3__)
+	return p
+	
+int shmdt(void* addr)
+	__temp_p__ = addr
+	asm{
+		mov eax, 0x00000075 // ipc
+		mov ebx, 0x0000000a
+		mov ecx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
 void get_args(lib__string@list arg)
 	cstring cs
 	__temp_p__ = &cs

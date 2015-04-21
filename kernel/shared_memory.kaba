@@ -1,0 +1,69 @@
+#define __OS__
+use "base.kaba"
+use "text_mode.kaba"
+use "base_mem.kaba"
+use "paging.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+const int MAX_SHARED_MEMORY_BLOCKS = 64
+
+class SharedMemory
+	int id
+	int key
+	int pid
+	int size
+	int p
+	int refcount
+	int flags
+
+class SharedMemoryController
+	SharedMemory[MAX_SHARED_MEMORY_BLOCKS] blocks
+	
+	void init()
+		for b,i in blocks
+			b.id = i
+			b.key = -1
+	
+	int create(int key, int size, int flags, int pid)
+		if key < 0
+			return -EINVAL
+		for b,i in blocks
+			if b.key < 0
+				b.p = Paging.alloc_chunk(size)
+				if b.p == 0
+					return -ENOMEM
+				b.size = size
+				b.key = key
+				b.pid = pid
+				b.refcount = 0
+				b.flags = flags
+				return i
+		return -ENOSPC
+		
+	SharedMemory* get_by_key(int key)
+		if key < 0
+			return nil
+		for b,i in blocks
+			if b.key == key
+				// test access rights
+				return &b
+		return nil
+		
+	SharedMemory* get(int id)
+		if id < 0 or id >= MAX_SHARED_MEMORY_BLOCKS
+			return nil
+		if blocks[id].key < 0
+			return nil
+		return &blocks[id]
+		
+	int shm_get(int key, int size, int flags, int pid)
+		SharedMemory* s = get_by_key(key)
+		if s
+			if (flags & IPC_CREAT) > 0 and (flags & IPC_EXCL) > 0
+				return -EEXIST
+			return s.id
+		if (flags & IPC_CREAT) == 0
+			return -ENOENT
+		return create(key, size, flags, pid)
+	
+SharedMemoryController SharedMem	

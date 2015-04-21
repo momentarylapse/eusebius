@@ -13,8 +13,27 @@ const int O_CREATE = 32
 const int O_NONBLOCK = 64
 const int O_TRUNC = 128
 
+
+const int EWOULDBLOCK = 128
+const int ENOSPC = 127
+const int EACCES = 126
+const int EEXIST = 125
+const int EINVAL = 124
+const int ENOENT = 123
+const int ENOMEM = 122
+const int ESRCH = 121
+const int ECHILD = 120
+const int EBADF = 119
+const int ENFILE = 118
+const int EFAULT = 117
+
 const int F_GETFL = 1
 const int F_SETFL = 2
+
+
+const int SHM_DEST = 1<<11
+const int IPC_CREAT = 1<<12
+const int IPC_EXCL = 1<<13
 
 extern void init_lib()
 extern void get_args(string[] arg)
@@ -43,5 +62,8 @@ extern string getcwd()
 extern int chdir(string dir)
 extern int waitpid(int pid, void *status, bool block)
 extern int kill(int pid, int signal)
+extern int shmget(int key, int size, int flags)
+extern void* shmat(int id, int flags)
+extern int shmdt(void* p)
 
 extern void showstats()
