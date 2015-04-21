@@ -8,7 +8,32 @@ use "tasks.kaba"
 use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
-
+class SysInfo
+	int uptime
+	int[3] loads
+	int totalram, freeram, sharedram, bufferram
+	int totalswap, freeswap
+	int procs
+	int totalhigh, freehigh
+	int mem_unit
+	int[2] pad
+	void get()
+		uptime = 0
+		for l in loads
+			l = 0
+		mem_unit = 4096
+		totalram = MemorySize / mem_unit
+		freeram = (Paging.get_used() - MemorySize) / mem_unit
+		sharedram = 0
+		bufferram = 0
+		totalswap = 0
+		freeswap = 0
+		procs = 0
+		for t in Task
+			if t.status != TASK_STATUS_UNUSED
+				procs ++
+		totalhigh = 0
+		freehigh = 0
 
 void sys_showstats()
 	prints("Paging:  ")
@@ -115,6 +140,10 @@ void int_syscall()
 			r = caller.sys_brk(param1)
 		else if index == 51 // fcntl
 			r = caller.sys_fcntl(param1, param2, param3)
+		else if index == 116 // sysinfo
+			SysInfo si
+			si.get()
+			caller.page_dir.memcpy2task(param1, &si, sizeof(si))
 		else if index == 141 // getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 183 // getcwd
