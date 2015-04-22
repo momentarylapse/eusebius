@@ -383,10 +383,26 @@ class TaskData
 		return -EINVAL
 	
 	int sys_fork()
-		TaskData *t = AddTask("-fork-", _i2p(0x00a00000), false, self)
+		TaskData *t = AddTask("-fork-", _i2p(TASK_IMAGE_POS), false, self)
 		if !t
 			return -ENOMEM
-		t.page_dir.clone(page_dir, KERNEL_MEM)
+		
+		// copy "normal" memory
+		t.sys_brk(mem_bottom + mem_size)
+		page_dir.copy_pages_to(t.page_dir, mem_bottom, mem_bottom, mem_size)
+		
+		// link shared memory
+		for r,i in shmem
+			if !r.s
+				t.shmem[i].s = r.s
+				t.shmem[i].dest = r.dest
+				r.s.refcount ++
+				t.page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
+		
+		// open files...
+		// TODO
+		
+		// data
 		memcpy(&t.arg, &arg, sizeof(cstring))
 		strcpy(&t.name, &name)
 		strcpy(&t.cur_dir, &cur_dir)
@@ -403,7 +419,6 @@ class TaskData
 			return SharedMem.shm_get(p1, p2, p3, pid)
 		if cmd == SHMAT
 			for r in shmem
-				void *p = &r
 				if !r.s
 					r.s = SharedMem.get(p1)
 					if !r.s

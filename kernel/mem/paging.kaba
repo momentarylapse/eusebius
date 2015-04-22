@@ -29,15 +29,20 @@ class PageTable
 				num_entries ++
 		return num_entries
 
+void page_params(int addr, int* dir_no, int* page_no, int* offset)
+	*dir_no = addr >> 22
+	*page_no = (addr >> 12) & 0x000003ff
+	*offset = addr & 0x00000fff
+
 class PageDirectory : PageTable
 
 	// source = task-space
 	// dest = kernel-space
 	void map_lin(int source, int dest, int size, bool writable)
 		source = source & 0xfffff000
-		int dir_no = source >> 22
-		int page_no = (source >> 12) & 0x000003ff
 		dest = dest & 0xfffff000
+		int dir_no, page_no, offset
+		page_params(source, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		int flags = 5
 		if writable
@@ -65,8 +70,8 @@ class PageDirectory : PageTable
 	// start = task-space
 	bool map_by_alloc(int start, int size, bool writable)
 		start = start & 0xfffff000
-		int dir_no = start >> 22
-		int page_no = (start >> 12) & 0x000003ff
+		int dir_no, page_no, offset
+		page_params(start, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		int flags = 5
 		if writable
@@ -95,8 +100,8 @@ class PageDirectory : PageTable
 	
 	void unmap(int start, int size, bool dealloc)
 		start = start & 0xfffff000
-		int dir_no = start >> 22
-		int page_no = (start >> 12) & 0x000003ff
+		int dir_no, page_no, offset
+		page_params(start, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		while npages > 0
 			int pt_pos = e[dir_no] & 0xfffff000
@@ -118,8 +123,8 @@ class PageDirectory : PageTable
 	
 	int find_free_space(int start, int size)
 		start = (start & 0xfffff000)
-		int dir_no = start >> 22
-		int page_no = (start >> 12) & 0x000003ff
+		int dir_no, page_no, offset
+		page_params(start, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		int still_need = npages
 		int pos = start
@@ -149,23 +154,21 @@ class PageDirectory : PageTable
 		return -1
 
 	int addr2kernel(int addr)
-		int dir_no = addr >> 22
-		int page_no = (addr >> 12) & 0x000003ff
-		int offset = addr & 0x00000fff
+		int dir_no, page_no, offset
+		page_params(addr, &dir_no, &page_no, &offset)
 		PageTable *pt = _i2p(e[dir_no] & 0xfffff000)
 		int n = pt.e[page_no] & 0xfffff000
 		return n + offset
 
 	void memcpy2kernel(cstring *o, int addr, int size)
 		while size > 0
-			int dir_no = addr >> 22
-			int page_no = (addr >> 12) & 0x000003ff
-			int c = addr & 0x00000fff
+			int dir_no, page_no, offset
+			page_params(addr, &dir_no, &page_no, &offset)
 			int n = e[dir_no] & 0xfffff000
 			PageTable *pt = _i2p(n)
 			n = pt.e[page_no] & 0xfffff000
-			cstring *pp = _i2p( n + c)
-			int num = PAGE_SIZE - c
+			cstring *pp = _i2p( n + offset)
+			int num = PAGE_SIZE - offset
 			if num > size
 				num = size
 			for i in 0:num
@@ -176,14 +179,13 @@ class PageDirectory : PageTable
 
 	void memcpy2task(int addr, cstring *p, int size)
 		while size > 0
-			int dir_no = addr >> 22
-			int page_no = (addr >> 12) & 0x000003ff
-			int c = addr & 0x00000fff
+			int dir_no, page_no, offset
+			page_params(addr, &dir_no, &page_no, &offset)
 			int n = e[dir_no] & 0xfffff000
 			PageTable *pt = _i2p(n)
 			n = pt.e[page_no] & 0xfffff000
-			cstring *pp = _i2p( n + c)
-			int num = PAGE_SIZE - c
+			cstring *pp = _i2p( n + offset)
+			int num = PAGE_SIZE - offset
 			if num > size
 				num = size
 			for i in 0:num
@@ -191,61 +193,29 @@ class PageDirectory : PageTable
 			addr += num
 			size -= num
 	
-	int get_last_table()
-		int last_table = -1
-		for i in 0:PAGE_TABLE_ENTRIES
-			if e[i] == 0
-				last_table = i - 1
-				break
-		if last_table < 0
-			return 0
-		return last_table
-	
-	int count_pages()
-		int last_table = get_last_table()
-		//return last_table
-		int pos = (e[last_table] & 0xfffff000)
-		PageTable *pt = _i2p(pos)
-		int num_entries = pt.count_entries()
-		return last_table * PAGE_TABLE_ENTRIES + num_entries
-	
-	void clone(PageDirectory *pd2, int above)
-		int mem = (pd2.count_pages() - count_pages()) * PAGE_SIZE
-		grow(mem, true)
-		for i in 0:PAGE_TABLE_ENTRIES
-			if pd2.e[i] == 0
-				break
-			PageTable *pt = _i2p(e[i] & 0xfffff000)
-			PageTable *pt2 = _i2p(pd2.e[i] & 0xfffff000)
-			for j in 0:PAGE_TABLE_ENTRIES
-				if pt2.e[j] == 0
-					break
-				if pt2.e[j] >= above
-					memcpy(_i2p(pt.e[j] & 0xfffff000), _i2p(pt2.e[j] & 0xfffff000), PAGE_SIZE)
-	
-	void grow(int req_size, bool writable)
-		int req_num_pages = ceil_quot(req_size, PAGE_SIZE)
-		int last_table = get_last_table()
-		int flags = 5
-		if writable
-			flags = 7
-		PageTable *pt = _i2p(e[last_table] & 0xfffff000)
-		while req_num_pages > 0
-			int in_use = pt.count_entries()
-			int num = PAGE_TABLE_ENTRIES - in_use
-			if num > req_num_pages
-				num = req_num_pages
-			for i in 0:num
-				int pos = Paging.alloc_page()
-				pt.e[i + in_use] = pos + flags
-			req_num_pages -= num
-			
-			if req_num_pages > 0
-				last_table ++
-				pos = Paging.alloc_page()
-				pt = _i2p(pos)
-				pt.init()
-				e[last_table] = pos + 7
+	void copy_pages_to(PageDirectory* dest, int start1, int start2, int size)
+		int dir_no1, page_no1, offset1
+		page_params(start1, &dir_no1, &page_no1, &offset1)
+		int dir_no2, page_no2, offset2
+		page_params(start2, &dir_no2, &page_no2, &offset2)
+		int npages = ceil_quot(size, PAGE_SIZE)
+		PageTable *pt1 = _i2p(e[dir_no1] & 0xfffff000)
+		//int n = pt.e[page_no] & 0xfffff000
+		PageTable *pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
+		//int n = pt.e[page_no] & 0xfffff000
+		while npages > 0
+			memcpy(_i2p(pt2.e[page_no2] & 0xfffff000), _i2p(pt1.e[page_no1] & 0xfffff000), PAGE_SIZE)
+			page_no1 ++
+			if page_no1 >= PAGE_SIZE
+				page_no1 = 0
+				dir_no1 ++
+				pt1 = _i2p(e[dir_no1] & 0xfffff000)
+			page_no2 ++
+			if page_no2 >= PAGE_SIZE
+				page_no2 = 0
+				dir_no2 ++
+				pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
+			npages --
 	
 	void show()
 		printh(self, 64)
