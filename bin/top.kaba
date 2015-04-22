@@ -18,6 +18,9 @@ void main()
 	
 	SysInfo s
 	if sysinfo(&s) == 0
+		print "uptime: "
+		print s.uptime
+		print "\n"
 		print "free: "
 		print (s.freeram * s.mem_unit) / 1024
 		print "k  "

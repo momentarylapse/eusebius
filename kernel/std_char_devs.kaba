@@ -2,7 +2,7 @@
 use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
-use "paging.kaba"
+use "mem/paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 

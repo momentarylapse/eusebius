@@ -2,8 +2,8 @@
 use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
-use "base_mem.kaba"
-use "paging.kaba"
+use "mem/heap.kaba"
+use "mem/paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 

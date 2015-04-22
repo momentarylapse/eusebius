@@ -1,7 +1,7 @@
 #define __OS__
-use "base.kaba"
-use "text_mode.kaba"
-use "base_mem.kaba"
+use "../base.kaba"
+use "../text_mode.kaba"
+use "heap.kaba"
 use "paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
@@ -51,7 +51,7 @@ class SharedMemoryController
 				b.p = Paging.alloc_chunk(size)
 				if b.p == 0
 					return -ENOMEM
-				b.size = ceil_quot(size, PAGE_SIZE)
+				b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
 				b.key = key
 				b.pid = pid
 				b.refcount = 0

@@ -3,11 +3,11 @@ use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
 use "file_access.kaba"
-use "base_mem.kaba"
-use "tasks.kaba"
+use "mem/heap.kaba"
+use "task/tasks.kaba"
+use "task/scheduler.kaba"
 use "std_char_devs.kaba"
 use "syscall.kaba"
-use "scheduler.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -17,7 +17,7 @@ use "scheduler.kaba"
 
 
 void int_handler(int i)
-	if !Task[RunningPid].kernel_mode
+	if !Tasks[RunningPid].kernel_mode
 		__temp_i__ = i - 666
 		asm{
 			mov eax, 0x00000001 // sys_exit

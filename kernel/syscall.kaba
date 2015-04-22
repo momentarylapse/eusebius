@@ -3,10 +3,11 @@ use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
 use "file_access.kaba"
-use "base_mem.kaba"
-use "tasks.kaba"
-use "paging.kaba"
-use "shared_memory.kaba"
+use "mem/heap.kaba"
+use "mem/paging.kaba"
+use "mem/shared.kaba"
+use "task/tasks.kaba"
+use "timer.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 class SysInfo
@@ -19,7 +20,9 @@ class SysInfo
 	int mem_unit
 	int[2] pad
 	void get()
-		uptime = 0
+		TimeValue tv
+		timer.get(tv)
+		uptime = tv.sec
 		for l in loads
 			l = 0
 		mem_unit = PAGE_SIZE
@@ -30,11 +33,13 @@ class SysInfo
 		totalswap = 0
 		freeswap = 0
 		procs = 0
-		for t in Task
+		for t in Tasks
 			if t.status != TASK_STATUS_UNUSED
 				procs ++
 		totalhigh = 0
 		freehigh = 0
+
+SysInfo _sys_info
 
 void sys_showstats()
 	prints("Paging:  ")
@@ -56,7 +61,7 @@ void sys_showstats()
 	prints("  ")
 	printi(__temp_i__)
 	prints("\n---------------------------------\n")
-	for t in Task
+	for t in Tasks
 		if t.status != TASK_STATUS_UNUSED
 			printi(t.pid)
 			TextPos = 3
@@ -91,7 +96,7 @@ void int_syscall()
 		int r = 0
 		
 		int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		TaskData *caller = &Task[pid]
+		TaskData *caller = &Tasks[pid]
 		//printi(pid)
 		int index = caller.tss.eax
 		int param1 = caller.tss.ebx
@@ -143,9 +148,8 @@ void int_syscall()
 		else if index == 51 // fcntl
 			r = caller.sys_fcntl(param1, param2, param3)
 		else if index == 116 // sysinfo
-			SysInfo si
-			si.get()
-			caller.page_dir.memcpy2task(param1, &si, sizeof(si))
+			_sys_info.get()
+			caller.page_dir.memcpy2task(param1, &_sys_info, sizeof(_sys_info))
 		else if index == 117 // ipc
 			r = caller.sys_ipc(param1, param2, param3, param4)
 		else if index == 141 // getdents
@@ -160,9 +164,7 @@ void int_syscall()
 		else if index == 0x2003 // showstats
 			sys_showstats()
 		else
-			prints("<<")
-			printi(index)
-			prints(">>")
+			r = -ENOSYS
 		/*TextColor = 4
 		prints("<<")
 		prints(caller.name)
@@ -180,7 +182,7 @@ void int_syscall()
 			/*prints("<<")
 			printi(pid_next)
 			prints(">>")*/
-			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
 			SysCallTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
 			RunningPid = pid_next
 

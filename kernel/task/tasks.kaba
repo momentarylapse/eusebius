@@ -1,11 +1,11 @@
 #define __OS__
-use "base.kaba"
-use "text_mode.kaba"
-use "filesystem.kaba"
-use "file_access.kaba"
-use "base_mem.kaba"
-use "paging.kaba"
-use "shared_memory.kaba"
+use "../base.kaba"
+use "../text_mode.kaba"
+use "../filesystem.kaba"
+use "../file_access.kaba"
+use "../mem/heap.kaba"
+use "../mem/paging.kaba"
+use "../mem/shared.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -23,10 +23,12 @@ const int SIGSTOP = 19
 // Tasks
 
 const int MAX_TASKS = 256
-const int TASK_STACK_SIZE = 40960
-const int TASK_STACK_POS = 0x00c00000
+const int TASK_IMAGE_POS = KERNEL_MEM
+const int TASK_STACK_SIZE = 0x00080000 // 512k
+const int TASK_STACK_POS = 0x00880000
+const int KERNEL_STACK_SIZE = 0x00020000 // 128k
 const int NUM_PRE_GDT_ENTRIES = 5
-const int INITIAL_TASK_MEM = 0x00800000
+const int INITIAL_TASK_MEM = 0x00800000 // 8m
 
 enum
 	TASK_STATUS_UNUSED
@@ -59,14 +61,14 @@ class TaskStateSegment
 	int x, y
 	
 	
-	void set(void *stack_pos, int _cs, int _ds, int pvl, PageDirectory *page_dir, void *task)
+	void set(void *stack_pointer, int _cs, int _ds, int pvl, PageDirectory *page_dir, void *task)
 		int _ss = _ds
 		prev = 0 // previous TSS (dynamisch)
-		esp0 = stack_pos
+		esp0 = stack_pointer
 		ss0 = _ss * 8
-		esp1 = stack_pos
+		esp1 = stack_pointer
 		ss1 = _ss * 8
-		esp2 = stack_pos
+		esp2 = stack_pointer
 		ss2 = _ss * 8
 		cr3 = page_dir
 		eip = task
@@ -75,8 +77,8 @@ class TaskStateSegment
 		ecx = 0
 		edx = 0
 		ebx = 0
-		esp = stack_pos
-		ebp = stack_pos
+		esp = stack_pointer
+		ebp = stack_pointer
 		esi = 0
 		edi = 0
 		es = _ds * 8
@@ -291,12 +293,12 @@ class TaskData
 		int h = sys_open(filename, O_RDONLY)
 		if h < 0
 			return -ENOENT
-		TaskData *t = AddTask(filename, _i2p(0x00a00000), false, self)
+		int addr = TASK_IMAGE_POS // task space...
+		TaskData *t = AddTask(filename, _i2p(addr), false, self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
 		memcpy(&t.arg, &filename, sizeof(cstring))
-		int addr = 0x00200000 + KERNEL_MEM // task space...
 		OpenFileData *of = handles[h]
 		while true
 			//int r = sys_read(caller, h, addr, 1024)
@@ -319,7 +321,7 @@ class TaskData
 		clean_up_resources()
 		status = TASK_STATUS_ZOMBIE
 		
-		for t in Task
+		for t in Tasks
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
 					t.tss.eax = 0// // return waitpid()
@@ -330,7 +332,7 @@ class TaskData
 	int sys_waitpid(int _pid, int status_addr, int options)
 		if _pid < 0 or _pid >= MAX_TASKS
 			return -ECHILD
-		TaskData *t = &Task[_pid]
+		TaskData *t = &Tasks[_pid]
 		if t.status == TASK_STATUS_UNUSED
 			return -ECHILD
 		int *_status = _i2p(addr2kernel(status_addr))
@@ -347,7 +349,7 @@ class TaskData
 	int sys_kill(int _pid, int signal)
 		if _pid < 0 or _pid >= MAX_TASKS
 			return -ESRCH
-		TaskData *t = &Task[_pid]
+		TaskData *t = &Tasks[_pid]
 		if t.status == TASK_STATUS_UNUSED
 			return -ESRCH
 		if signal == SIGKILL
@@ -413,7 +415,7 @@ class TaskData
 			return -1
 		return -EINVAL
 	
-TaskData[MAX_TASKS] Task
+TaskData[MAX_TASKS] Tasks
 TaskData *KernelTask
 TaskData *IdleTask
 TaskData *TimerTask
@@ -449,11 +451,11 @@ GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] GlobalDescriptorTable
 
 int get_next_pid()
 	for i in CurPid:MAX_TASKS
-		if Task[i].status == TASK_STATUS_UNUSED
+		if Tasks[i].status == TASK_STATUS_UNUSED
 			CurPid = i + 1
 			return i
 	for i in 0:CurPid
-		if Task[i].status == TASK_STATUS_UNUSED
+		if Tasks[i].status == TASK_STATUS_UNUSED
 			CurPid = i + 1
 			return i
 	return -1
@@ -462,7 +464,7 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
-	TaskData *t = &Task[pid]
+	TaskData *t = &Tasks[pid]
 	t.pid = pid
 
 	strcpy(&t.name, &name)
@@ -474,14 +476,51 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 		t.cur_dir = FileSystem.root
 	t.parent = parent
 	t.kernel_mode = kernel_mode
-	t.stack_size = TASK_STACK_SIZE
 	if kernel_mode
-		t.stack = malloc(TASK_STACK_SIZE)
+		t.stack_size = KERNEL_STACK_SIZE
+		t.stack = malloc(KERNEL_STACK_SIZE)
 		t.page_dir = KernelPageDir
 		t.mem_bottom = 0
 		t.mem_size = 0
 		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
 	else
+		t.stack_size = TASK_STACK_SIZE
+		t.stack = _i2p(TASK_STACK_POS)
+		t.mem_bottom = KERNEL_MEM
+		t.mem_size = INITIAL_TASK_MEM
+		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
+		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+			nil // ...
+		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+	GlobalDescriptorTable[t.desc].set_task(t)
+
+	return t
+
+TaskData *AddTaskKernel(cstring name, void *func, bool kernel_mode, TaskData *parent)
+	int pid = get_next_pid()
+	if pid < 0
+		return nil
+	TaskData *t = &Tasks[pid]
+	t.pid = pid
+
+	strcpy(&t.name, &name)
+	t.desc = NUM_PRE_GDT_ENTRIES + pid
+	t.status = TASK_STATUS_SLEEPING
+	if parent
+		t.cur_dir = parent.cur_dir
+	else
+		t.cur_dir = FileSystem.root
+	t.parent = parent
+	t.kernel_mode = kernel_mode
+	if kernel_mode
+		t.stack_size = KERNEL_STACK_SIZE
+		t.stack = malloc(KERNEL_STACK_SIZE)
+		t.page_dir = KernelPageDir
+		t.mem_bottom = 0
+		t.mem_size = MemorySize
+		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
+	else
+		t.stack_size = TASK_STACK_SIZE
 		t.stack = _i2p(TASK_STACK_POS)
 		t.mem_bottom = KERNEL_MEM
 		t.mem_size = INITIAL_TASK_MEM
@@ -496,15 +535,15 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 // Scheduler
 int GetNextTask(int pid)
 	for i in pid + 1:MAX_TASKS
-		if Task[i].status == TASK_STATUS_RUNNING
+		if Tasks[i].status == TASK_STATUS_RUNNING
 			return i
 	for i in 0:pid+1
-		if Task[i].status == TASK_STATUS_RUNNING
+		if Tasks[i].status == TASK_STATUS_RUNNING
 			return i
 	return IdleTask.pid
 
 void ProcessWaitingTasks()
-	for t in Task
+	for t in Tasks
 		if t.status == TASK_STATUS_WAITING
 			if t.waiting_mode == WAITING_MODE_FILE_READ
 				int r = t.sys_read(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
@@ -544,7 +583,7 @@ void InitTasks()
 	// user data
 	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
 
-	for t in Task
+	for t in Tasks
 		t.status = TASK_STATUS_UNUSED
 		for h in t.handles
 			h = nil

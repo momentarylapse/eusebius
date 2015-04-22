@@ -4,7 +4,8 @@ FLAGS =  --x86 --no-std-lib
 PFLAGS =  --x86 --no-std-lib --import-symbols kalib_symbols
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
-BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/kalib
+BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem
+LIBS = lib/kalib
 
 all : bochs/c.img
 
@@ -14,7 +15,7 @@ test : test.kaba
 init : init.kaba
 	$(KABA) --x86 -o init init.kaba
 
-kernel/kernel : kernel/*.kaba
+kernel/kernel : kernel/*.kaba kernel/mem/*.kaba kernel/task/*.kaba
 	$(KABA) --x86 -o kernel/kernel kernel/kernel.kaba
  
 loader_fake : loader_fake.kaba
@@ -68,10 +69,10 @@ bin/x: bin/x.kaba kalib_symbols
 bin/shmem: bin/shmem.kaba kalib_symbols
 	$(KABA) $(PFLAGS) -o bin/shmem bin/shmem.kaba
 
-bin/kalib: bin/kalib.kaba
-	$(KABA) --x86 -o bin/kalib --export-symbols kalib_symbols bin/kalib.kaba
+lib/kalib: lib/kalib.kaba
+	$(KABA) --x86 -o lib/kalib --export-symbols kalib_symbols lib/kalib.kaba
 
-kalib_symbols : bin/kalib bin/kalib.kaba
+kalib_symbols : lib/kalib lib/kalib.kaba
 
 img.mfs: init kernel/kernel $(BINS)
 	mkdir -p mfs
@@ -83,6 +84,7 @@ img.ext2: $(BINS) img.mfs
 	mkdir -p img-src
 	mkdir -p img-src/dev
 	mkdir -p img-src/bin
+	mkdir -p img-src/lib
 	mkdir -p img-src/boot
 	mkdir -p img-src/home
 	mkdir -p img-src/src
@@ -91,7 +93,8 @@ img.ext2: $(BINS) img.mfs
 	echo "bbbb" > img-src/home/b
 	echo "hallo\nkleiner Test" > img-src/home/test.txt
 	cp -r $(BINS) img-src/bin
-	cp kernel/*.kaba img-src/src
+	cp -r $(LIBS) img-src/lib
+	cp -r kernel/*.kaba img-src/src
 	cp data/images/cursor.tga img-src/images
 	genext2fs -b 4096 -N 256 -d img-src img.ext2 
 
@@ -106,5 +109,5 @@ run: all
 	cd bochs; yes c | bochs -qf f.txt
 
 clean:
-	rm -rf init loader_fake kernel/kernel $(BINS) bochs/c.img img.mfs img.ext2 img-src mfs
+	rm -rf init loader_fake kernel/kernel $(BINS) $(LIBS) bochs/c.img img.mfs img.ext2 img-src mfs
 

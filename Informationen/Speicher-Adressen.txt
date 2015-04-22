@@ -1,18 +1,22 @@
 0x00.5100 - 0x00.5103	4	Speicher Menge
 0x00.7c00 - 0x00.7dff	512	MBR beim Start
-0x01.0000 - 0x01.ffff	64k	Kernel Image
-0x03.0000 - 0x04.ffff	64k	Lib Image
+0x01.0000 - 0x02.ffff	128k	Kernel Image
+0x03.0000 - 0x03.ffff	64k	Lib Image
 0x0b.8000 - 0x0b.8fff	4k	Bildschirmpuffer
-0x10.0000 - 0x11.0000	64k	Kernel Stack
-0x11.0010 - ?????????	??	Kernel Var (statisch)
-0x40.0000 - ?????????	??	Kernel Heap
+0x10.0000 - 0x1f.ffff	1m	Kernel Var (statisch)
+0x20.0000 - 0x27.ffff	512k	Kernel Stack (vor task.init)
+0x28.0000 - 0x7f.ffff	5.5m	Kernel Heap
+
+	Kernel Stack 512k im Heap
+
 -------------------------------------------------
 0x80.0000 - ?????????	??	Prozess-Speicher
-0x81.0000 - ?????????	??	Prozess Page Directory
-0xa0.0000 - ?????????	??	Prozess Image
+0x80.0000 - 0x87.ffff	512k	Prozess Image
+0x88.0000 - 0x8f.ffff	512k	Prozess-Stack
 0xa3.f000 - 0xa3.ffff	64k	Lib Var
 0xa4.0000 - ?????????	??	Prozess Var
 0xb0.0000 - ?????????	??	malloc
+0xc0.
 
 
 

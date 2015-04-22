@@ -1,8 +1,8 @@
 #define __OS__
-use "base.kaba"
-use "text_mode.kaba"
+use "../base.kaba"
+use "../text_mode.kaba"
 use "tasks.kaba"
-use "std_char_devs.kaba"
+use "../std_char_devs.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -23,8 +23,8 @@ void int_timer()
 		
 			int pid_cur = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 			int pid_next = GetNextTask(pid_cur)
-			GlobalDescriptorTable[Task[pid_cur].desc].set_busy(false)
-			GlobalDescriptorTable[Task[pid_next].desc].set_busy(true)
+			GlobalDescriptorTable[Tasks[pid_cur].desc].set_busy(false)
+			GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
 			TimerTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
 			RunningPid = pid_next
 	/*		if next != last

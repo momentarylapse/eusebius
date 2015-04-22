@@ -101,7 +101,7 @@ void main()	//-------------------------------------------------------------	// R
 		mov ss, ax
 
 		// Stack initialisieren
-		mov esp, 0x00110000
+		mov esp, 0x0027fff8
 
 		// in den 32bit ProtectedMode springen
 		db 0x66 // weil im 16:32 Format...

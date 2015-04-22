@@ -1,6 +1,6 @@
 #define __OS__
-#define __CODE_ORIGIN__ 0x10000
-#define __VARIABLE_OFFSET__ 0x110010 // > ~1mb, wegen Stack!
+#define __CODE_ORIGIN__ 0x00010000
+#define __VARIABLE_OFFSET__ 0x00100000
 #define __ADD_ENTRY_POINT__
 #define __STRING_CONST_AS_CSTRING__
 
@@ -16,6 +16,7 @@ const int ECHILD = 120
 const int EBADF = 119
 const int ENFILE = 118
 const int EFAULT = 117
+const int ENOSYS = 116
 
 const int F_GETFL = 1
 const int F_SETFL = 2
@@ -30,6 +31,8 @@ const int IPC_EXCL = 1<<13
 
 
 int MemorySize // in bytes
+
+const int KERNEL_MEM = 0x00800000 // 8mb
 
 
 //--------------------------------------------------------------

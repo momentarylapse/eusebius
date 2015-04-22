@@ -1,7 +1,7 @@
 
 #define __OS__
-#define __CODE_ORIGIN__ 0x00a00000
-#define __VARIABLE_OFFSET__ 0x00a40000
+#define __CODE_ORIGIN__ 0x00800000
+#define __VARIABLE_OFFSET__ 0x00880000
 #define __ADD_ENTRY_POINT__
 
 
@@ -26,6 +26,7 @@ const int ECHILD = 120
 const int EBADF = 119
 const int ENFILE = 118
 const int EFAULT = 117
+const int ENOSYS = 116
 
 const int F_GETFL = 1
 const int F_SETFL = 2

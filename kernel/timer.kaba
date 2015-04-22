@@ -1,0 +1,30 @@
+#define __OS__
+use "base.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+const int CPU_FREQ = 1 << 20 // 1 MHz
+
+class TimeValue
+	int sec
+	int nanosec
+
+class KernelTimer
+	int[2] state
+	
+	void update_state()
+		asm{
+			db 0x0f
+			db 0x31
+			mov __temp_i__, eax
+			mov __temp_i2__, edx
+		}
+		state[0] = __temp_i2__
+		state[1] = __temp_i__
+	
+	void get(TimeValue t)
+		update_state()
+		// TODO   :P
+		t.sec = (state[0] << 8) + (state[1] >> 24)
+		//t.nanosec = (state[0] >> 22) + (state[1] << 10)
+
+KernelTimer timer
