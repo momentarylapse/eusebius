@@ -6,6 +6,7 @@ use "file_access.kaba"
 use "base_mem.kaba"
 use "tasks.kaba"
 use "paging.kaba"
+use "shared_memory.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 class SysInfo
@@ -21,10 +22,10 @@ class SysInfo
 		uptime = 0
 		for l in loads
 			l = 0
-		mem_unit = 4096
+		mem_unit = PAGE_SIZE
 		totalram = MemorySize / mem_unit
-		freeram = (Paging.get_used() - MemorySize) / mem_unit
-		sharedram = 0
+		freeram = (MemorySize - Paging.get_used()) / mem_unit
+		sharedram = SharedMem.get_used() / mem_unit
 		bufferram = 0
 		totalswap = 0
 		freeswap = 0
@@ -55,29 +56,29 @@ void sys_showstats()
 	prints("  ")
 	printi(__temp_i__)
 	prints("\n---------------------------------\n")
-	for i in 0:MAX_TASKS
-		if Task[i].status != TASK_STATUS_UNUSED
-			printi(i)
+	for t in Task
+		if t.status != TASK_STATUS_UNUSED
+			printi(t.pid)
 			TextPos = 3
-			prints(Task[i].name)
+			prints(t.name)
 			TextPos = 20
-			if Task[i].kernel_mode
+			if t.kernel_mode
 				prints("K")
 			else
 				prints("U")
 			TextPos = 23
-			if Task[i].status == TASK_STATUS_RUNNING
+			if t.status == TASK_STATUS_RUNNING
 				prints("R")
-			else if Task[i].status == TASK_STATUS_SLEEPING
+			else if t.status == TASK_STATUS_SLEEPING
 				prints("S")
-			else if Task[i].status == TASK_STATUS_WAITING
+			else if t.status == TASK_STATUS_WAITING
 				prints("W")
-			else if Task[i].status == TASK_STATUS_ZOMBIE
+			else if t.status == TASK_STATUS_ZOMBIE
 				prints("Z")
 			else
-				printi(Task[i].status)
+				printi(t.status)
 			TextPos = 27
-			printi(Task[i].page_dir.count_pages())
+			printi(t.pages_alloced())
 			prints("\n")
 
 	

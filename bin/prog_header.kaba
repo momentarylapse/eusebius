@@ -65,5 +65,6 @@ extern int kill(int pid, int signal)
 extern int shmget(int key, int size, int flags)
 extern void* shmat(int id, int flags)
 extern int shmdt(void* p)
+extern int sysinfo(void *buf)
 
 extern void showstats()

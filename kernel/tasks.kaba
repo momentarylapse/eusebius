@@ -24,6 +24,7 @@ const int SIGSTOP = 19
 
 const int MAX_TASKS = 256
 const int TASK_STACK_SIZE = 40960
+const int TASK_STACK_POS = 0x00c00000
 const int NUM_PRE_GDT_ENTRIES = 5
 const int INITIAL_TASK_MEM = 0x00800000
 
@@ -94,9 +95,9 @@ enum
 	WAITING_MODE_FILE_READ
 	WAITING_MODE_FILE_WRITE
 
-class TaskSharedMemRef
-	int id
-	int pos
+class TaskSharedMemoryRef
+	SharedMemory *s
+	int dest // task space
 
 class TaskData
 	TaskStateSegment tss
@@ -113,10 +114,11 @@ class TaskData
 	cstring arg
 	FileEntry *cur_dir
 	PageDirectory *page_dir
-	//int mem_offset, mem_size
+	int mem_bottom, mem_size
+	
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
-	TaskSharedMemRef[MAX_SHARED_MEMS_PER_TASK] shmem
+	TaskSharedMemoryRef*[MAX_SHARED_MEMS_PER_TASK] shmem
 	
 	void __assign__(TaskData o)
 		nil
@@ -171,19 +173,27 @@ class TaskData
 				return i
 		return -1
 
-	void make_zombie()
-		status = TASK_STATUS_ZOMBIE
+	void clean_up_resources()
 		for h in handles
 			if h
 				h.unref()
 				h = nil
+		
+		for s in shmem
+			if s.s
+				page_dir.unmap(s.dest, s.s.size, false)
+				s.s.unref()
+				s.s = nil
+				
 		if !kernel_mode
 			if page_dir
-				Paging.free_page_directory(page_dir, KERNEL_MEM)
+				page_dir.unmap(0, KERNEL_MEM, false)
+				page_dir.unmap(mem_bottom, mem_size, true)
+				Paging.free_page(_p2i(page_dir))
 				page_dir = nil
 
 	void clean_up_deep()
-		make_zombie()
+		clean_up_resources()
 		status = TASK_STATUS_UNUSED
 		
 	void *get_initial_stack_pos()
@@ -196,7 +206,12 @@ class TaskData
 		waiting_param_i1 = param_i1
 		waiting_param_i2 = param_i2
 		waiting_param_i3 = param_i3
-		
+	
+	int pages_alloced()
+		int n = mem_size / PAGE_SIZE
+		n += page_dir.count_entries() // all page tables
+		n ++ // page_dir itself
+		return n
 
 //--------------------------------------------------------------
 // Dateizugriff
@@ -301,7 +316,9 @@ class TaskData
 
 	void sys_exit(int r)
 		return_status = r
-		make_zombie()
+		clean_up_resources()
+		status = TASK_STATUS_ZOMBIE
+		
 		for t in Task
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
@@ -343,13 +360,14 @@ class TaskData
 				t.status = TASK_STATUS_RUNNING
 		return 0
 
-	int sys_brk(int size)
-		int cur_size = page_dir.count_pages() * PAGE_SIZE
-		if size <= cur_size
-			return cur_size
-		//prints("<brk>")
-		page_dir.grow(size, true)
-		return size
+	int sys_brk(int new_top)
+		int cur_top = mem_bottom + mem_size
+		if new_top <= cur_top
+			return cur_top
+		if !page_dir.map_by_alloc(mem_bottom, new_top - cur_top, true)
+			return -ENOMEM
+		mem_size = new_top - mem_bottom
+		return new_top
 	
 	int sys_fcntl(int fd, int op, int param)
 		OpenFileData *of = get_handle(fd)
@@ -383,15 +401,14 @@ class TaskData
 			return SharedMem.shm_get(p1, p2, p3, pid)
 		if cmd == SHMAT
 			for r in shmem
-				if r.id < 0
-					SharedMemory *s = SharedMem.get(p1)
-					if !s
+				if !r.s
+					r.s = SharedMem.get(p1)
+					if !r.s
 						return -ENOENT
-					r.id = s.id
-					r.pos = 0xa0000000
-					s.refcount ++
-					page_dir.map_lin(r.pos, s.p, s.size, true)
-					page_dir.memcpy2task(p2, &r.pos, 4)
+					r.dest = 0xa0000000
+					r.s.refcount ++
+					page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
+					page_dir.memcpy2task(p2, &r.dest, 4)
 					return 0
 			return -1
 		return -EINVAL
@@ -461,11 +478,16 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	if kernel_mode
 		t.stack = malloc(TASK_STACK_SIZE)
 		t.page_dir = KernelPageDir
+		t.mem_bottom = 0
+		t.mem_size = 0
 		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
 	else
-		t.stack = _i2p(0x00c00000)
+		t.stack = _i2p(TASK_STACK_POS)
+		t.mem_bottom = KERNEL_MEM
+		t.mem_size = INITIAL_TASK_MEM
 		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
-		t.page_dir.grow(INITIAL_TASK_MEM, true)
+		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+			nil // ...
 		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
@@ -527,7 +549,7 @@ void InitTasks()
 		for h in t.handles
 			h = nil
 		for sm in t.shmem
-			sm.id = -1
+			sm.s = nil
 
 	CurPid = 0
 	//UserMemMask = 0

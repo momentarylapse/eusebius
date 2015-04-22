@@ -357,6 +357,16 @@ int shmdt(void* addr)
 	}
 	return __temp_i3__
 
+int sysinfo(void *buf)
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x00000074
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
 void get_args(lib__string@list arg)
 	cstring cs
 	__temp_p__ = &cs

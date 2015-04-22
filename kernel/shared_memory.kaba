@@ -15,6 +15,18 @@ class SharedMemory
 	int p
 	int refcount
 	int flags
+	
+	void unref()
+		refcount --
+		
+		if refcount == 0 and (flags & SHM_DEST) > 0
+			clean_up()
+		if refcount < 0
+			panic("SharedMem.refcount < 0")
+	
+	void clean_up()
+		free(_i2p(p))
+		key = -1
 
 class SharedMemoryController
 	SharedMemory[MAX_SHARED_MEMORY_BLOCKS] blocks
@@ -24,6 +36,13 @@ class SharedMemoryController
 			b.id = i
 			b.key = -1
 	
+	int get_used()
+		int size = 0
+		for b in blocks
+			if b.key >= 0
+				size += b.size
+		return size
+	
 	int create(int key, int size, int flags, int pid)
 		if key < 0
 			return -EINVAL
@@ -32,7 +51,7 @@ class SharedMemoryController
 				b.p = Paging.alloc_chunk(size)
 				if b.p == 0
 					return -ENOMEM
-				b.size = size
+				b.size = ceil_quot(size, PAGE_SIZE)
 				b.key = key
 				b.pid = pid
 				b.refcount = 0
