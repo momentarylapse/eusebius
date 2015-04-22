@@ -55,38 +55,41 @@ class PipeData
 			read_ref_count --
 		else
 			write_ref_count --
-		/*if read_ref_count < 0
+		if read_ref_count < 0
 			panic("Pipe.read_ref_count < 0")
 		if write_ref_count < 0
-			panic("Pipe.write_ref_count < 0")*/
-		if read_ref_count <= 0 and write_ref_count <= 0 and !e
-			free(buffer)
-			used = false
+			panic("Pipe.write_ref_count < 0")
+		if read_ref_count == 0 and write_ref_count == 0
+			clean_up()
+	
+	void clean_up()
+		if !e.parent
+			// anonymous pipe
+			FileSystem.del(e)
+			
+		free(buffer)
+		used = false
 
-PipeData[MAX_PIPES] Pipe
+PipeData[MAX_PIPES] Pipes
 
 
 
 PipeData *create_pipe(FileEntry *e)
-	for i in 0:MAX_PIPES
-		if !Pipe[i].used
-			Pipe[i].used = true
-			Pipe[i].e = e
-			Pipe[i].read_ref_count = 0
-			Pipe[i].write_ref_count = 0
-			Pipe[i].buffer_used = 0
-			Pipe[i].buffer = malloc(PIPE_BUFFER_SIZE)
-			return &Pipe[i]
+	for p in Pipes
+		if !p.used
+			p.used = true
+			p.e = e
+			p.read_ref_count = 0
+			p.write_ref_count = 0
+			p.buffer_used = 0
+			p.buffer = malloc(PIPE_BUFFER_SIZE)
+			return &p
 	return nil
 
-void delete_pipe(PipeData *p)
-	free(p.buffer)
-	p.used = false
-
 PipeData *get_pipe(FileEntry *e)
-	for i in 0:MAX_PIPES
-		if Pipe[i].e == e
-			return &Pipe[i]
+	for p in Pipes
+		if p.e == e
+			return &p
 	return nil
 
 class OpenFileData
@@ -241,11 +244,12 @@ class OpenFileData
 		if !used
 			return
 		ref_count --
-		if ref_count > 0
-			return
-		
-		/*if ref_count < 0
-			panic("OpenFileData.ref_count < 0")*/
+		if ref_count < 0
+			panic("OpenFileData.ref_count < 0")
+		if ref_count == 0
+			clean_up()
+			
+	void clean_up()
 			
 		if entry.meta_dirty
 			//prints "-dirty- "
@@ -264,16 +268,16 @@ class OpenFileData
 		entry = nil
 
 
-OpenFileData[MAX_OPEN_FILES] OpenFile
+OpenFileData[MAX_OPEN_FILES] OpenFiles
 
 OpenFileData *create_handle(int flags)
-	for i in 0:MAX_OPEN_FILES
-		if !OpenFile[i].used
-			OpenFile[i].used = true
-			OpenFile[i].set_flags(flags)
-			OpenFile[i].buffer = nil
-			OpenFile[i].ref_count = 0
-			return &OpenFile[i]
+	for o in OpenFiles
+		if !o.used
+			o.used = true
+			o.set_flags(flags)
+			o.buffer = nil
+			o.ref_count = 0
+			return &o
 	return nil
 
 
@@ -343,3 +347,9 @@ class dirent_struct
 	int size
 	int type
 	cstring name
+
+void InitFileAccessData()
+	for o in OpenFiles
+		o.used = false
+	for p in Pipes
+		p.used = false

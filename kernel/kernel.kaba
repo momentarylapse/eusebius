@@ -87,6 +87,8 @@ void main()
 	ReadPartitions(0)
 	ShowPartitions()
 	
+	InitFileAccessData()
+	
 	FileSystem.init()
 	
 	FileSystem.mount(&Partition[2], FileSystem.root, "ext2")

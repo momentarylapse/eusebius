@@ -380,10 +380,8 @@ class TaskData
 	
 	int sys_ipc(int cmd, int p1, int p2, int p3)
 		if cmd == SHMGET
-			prints "<SHMGET>"
 			return SharedMem.shm_get(p1, p2, p3, pid)
 		if cmd == SHMAT
-			prints "<SHMAT>"
 			for r in shmem
 				if r.id < 0
 					SharedMemory *s = SharedMem.get(p1)
@@ -468,7 +466,7 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 		t.stack = _i2p(0x00c00000)
 		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
 		t.page_dir.grow(INITIAL_TASK_MEM, true)
-		t.tss.set(t.get_initial_stack_pos(), 3, 4, /*3*/ 0, t.page_dir, func)
+		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
 	return t

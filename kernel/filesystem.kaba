@@ -95,6 +95,10 @@ class FileSystemData
 	int num_mounts
 	FileEntry *root
 	
+	void init()
+		num_mounts = 0
+		root = add("-root-", FILE_TYPE_DIR, nil, nil)
+	
 	FileEntry *add(cstring name, int type, MountPoint *mount, FileEntry *parent)
 		FileEntry *e = malloc(sizeof(FileEntry))
 		e.num_blocks = 0
@@ -111,9 +115,11 @@ class FileSystemData
 			parent.add(e)
 		return e
 	
-	void init()
-		num_mounts = 0
-		root = add("-root-", FILE_TYPE_DIR, nil, nil)
+	void del(FileEntry *e)
+		if e.parent
+			prints("--[del e.parent]---\n")
+		else
+			free(e)
 	
 	FileEntry *get(cstring path, FileEntry *cur_dir)
 		int ppos = 0
