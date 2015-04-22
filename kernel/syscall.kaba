@@ -50,16 +50,6 @@ void sys_showstats()
 	printi(MemHeapAllocated / 1024)
 	prints("k von ")
 	printi(MEM_HEAP_SIZE / 1024)
-	prints("k\nZeit:    ")
-	asm{
-		db 0x0f
-		db 0x31
-		mov __temp_i__, eax
-		mov __temp_i2__, edx
-	}
-	printi(__temp_i2__)
-	prints("  ")
-	printi(__temp_i__)
 	prints("\n---------------------------------\n")
 	for t in Tasks
 		if t.status != TASK_STATUS_UNUSED

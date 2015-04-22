@@ -342,7 +342,7 @@ void* shmat(int id, int flags)
 		int 0x80
 		mov __temp_i3__, eax
 	}
-	if __temp_i3__ < 0
+	if __temp_i3__ < 0 and __temp_i3__ > - 1024
 		return _i2p(__temp_i3__)
 	return p
 	

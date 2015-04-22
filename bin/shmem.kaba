@@ -14,6 +14,16 @@ void main()
 	print p2s(p)
 	print "\n"
 	
+	print "shmat: "
+	p = shmat(id, 0)
+	print p2s(p)
+	print "\n"
+	
+	print "shmat: "
+	p = shmat(id, 0)
+	print p2s(p)
+	print "\n"
+	
 	int[0]* ip = p
 	
 	print "lese: "

@@ -24,10 +24,10 @@ class PageTable
 	
 	int count_entries()
 		int num_entries = 0
-		for i in 0:PAGE_TABLE_ENTRIES
-			if e[i] == 0
-				return i
-		return PAGE_TABLE_ENTRIES
+		for ee in e
+			if ee != 0
+				num_entries ++
+		return num_entries
 
 class PageDirectory : PageTable
 
@@ -54,6 +54,8 @@ class PageDirectory : PageTable
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
+				if pt.e[i] != 0
+					panic("double map")
 				pt.e[i] = dest + flags
 				dest += PAGE_SIZE
 			npages -= i1-i0
@@ -113,6 +115,38 @@ class PageDirectory : PageTable
 			npages -= i1-i0
 			dir_no ++
 			page_no = 0
+	
+	int find_free_space(int start, int size)
+		start = (start & 0xfffff000)
+		int dir_no = start >> 22
+		int page_no = (start >> 12) & 0x000003ff
+		int npages = ceil_quot(size, PAGE_SIZE)
+		int still_need = npages
+		int pos = start
+		while page_no < PAGE_TABLE_ENTRIES
+			int pt_pos = e[dir_no] & 0xfffff000
+			PageTable *pt = _i2p(pt_pos)
+			int i0 = page_no
+			if pt
+				for i in i0:PAGE_TABLE_ENTRIES
+					if pt.e[i] == 0
+						still_need --
+						if still_need == 0
+							return start
+					else
+						// restart search
+						still_need = npages
+						start = pos + PAGE_SIZE
+					pos += PAGE_SIZE
+			else
+				int n = PAGE_TABLE_ENTRIES - i0
+				still_need -= n
+				pos += n * PAGE_SIZE
+				if still_need <= 0
+					return start
+			dir_no ++
+			page_no = 0
+		return -1
 
 	int addr2kernel(int addr)
 		int dir_no = addr >> 22

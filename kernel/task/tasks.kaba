@@ -12,7 +12,7 @@ use "../mem/shared.kaba"
 
 
 const int MAX_OPEN_FILES_PER_TASK = 16
-const int MAX_SHARED_MEMS_PER_TASK = 1
+const int MAX_SHARED_MEMS_PER_TASK = 16
 
 const int SIGKILL = 9
 const int SIGCONT = 18
@@ -120,7 +120,7 @@ class TaskData
 	
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
-	TaskSharedMemoryRef*[MAX_SHARED_MEMS_PER_TASK] shmem
+	TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK] shmem
 	
 	void __assign__(TaskData o)
 		nil
@@ -403,11 +403,14 @@ class TaskData
 			return SharedMem.shm_get(p1, p2, p3, pid)
 		if cmd == SHMAT
 			for r in shmem
+				void *p = &r
 				if !r.s
 					r.s = SharedMem.get(p1)
 					if !r.s
 						return -ENOENT
-					r.dest = 0xa0000000
+					r.dest = page_dir.find_free_space(0xe0000000, r.s.size) //0xa0000000
+					if r.dest == -1
+						return -ENOMEM
 					r.s.refcount ++
 					page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
 					page_dir.memcpy2task(p2, &r.dest, 4)
@@ -496,7 +499,7 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 
 	return t
 
-TaskData *AddTaskKernel(cstring name, void *func, bool kernel_mode, TaskData *parent)
+/*TaskData *AddTaskKernel(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
@@ -515,6 +518,7 @@ TaskData *AddTaskKernel(cstring name, void *func, bool kernel_mode, TaskData *pa
 	if kernel_mode
 		t.stack_size = KERNEL_STACK_SIZE
 		t.stack = malloc(KERNEL_STACK_SIZE)
+		// could use single stack... but multi-core...
 		t.page_dir = KernelPageDir
 		t.mem_bottom = 0
 		t.mem_size = MemorySize
@@ -530,7 +534,7 @@ TaskData *AddTaskKernel(cstring name, void *func, bool kernel_mode, TaskData *pa
 		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
-	return t
+	return t*/
 
 // Scheduler
 int GetNextTask(int pid)
