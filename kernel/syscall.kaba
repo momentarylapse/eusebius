@@ -21,9 +21,8 @@ class SysInfo
 	int mem_unit
 	int[2] pad
 	void get()
-		TimeValue tv
-		timer.get(tv)
-		uptime = tv.sec
+		kernel_timer.update()
+		uptime = kernel_timer.tv.sec
 		for l in loads
 			l = 0
 		mem_unit = PAGE_SIZE
@@ -142,6 +141,9 @@ void int_syscall()
 			r = caller.sys_mknod(filename, param2)
 		else if index == 20 // getpid
 			r = RunningPid
+		else if index == 25 // stime
+			kernel_timer.update()
+			caller.page_dir.memcpy2task(param1, &kernel_timer.tv, sizeof(TimeValue))
 		else if index == 37 // kill
 			r = caller.sys_kill(param1, param2)
 		else if index == 39 // mkdir
@@ -168,9 +170,10 @@ void int_syscall()
 		else if index == 141 // getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 158 // sched_yield
-			nil
+			int pid_next = GetNextTask(RunningPid)
+			ReconnectTasks(pid_next, SysCallTask)
 		else if index == 162 // nanosleep
-			nil
+			caller.sys_nanosleep(param1, param2)
 			// p1 = &duration
 			// p2 = &duration_more
 		else if index == 183 // getcwd
@@ -196,7 +199,7 @@ void int_syscall()
 		
 		// task switch?
 		if caller.status != TASK_STATUS_RUNNING
-			int pid_next = GetNextTask(RunningPid)
+			pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, SysCallTask)
 
 		// zurück

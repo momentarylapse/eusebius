@@ -93,7 +93,12 @@ void main()
 		w.invalidate()
 	
 	while true
-		nil
+		TimeValue tv, xxx
+		tv.sec = 10
+		tv.nanosec = 0
+		nanosleep(tv, xxx)
+		
+		w.move(randi(500), randi(400))
 	
 	xcon.send_exit()
 	

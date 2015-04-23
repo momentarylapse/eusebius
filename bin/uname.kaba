@@ -1,0 +1,36 @@
+#define __OS__
+use "prog_header.kaba"
+
+class UTSName
+	char[65] sysname
+	char[65] nodename
+	char[65] release
+	char[65] version
+	char[65] machine
+	char[65] domainname
+
+extern void cs2s(char* p, string s)
+
+void main()
+	init_lib()
+	
+	UTSName u
+	if uname(&u) == 0
+		string s
+		cs2s(&u.sysname, s)
+		print s
+		print "  "
+		cs2s(&u.nodename, s)
+		print s
+		print "  "
+		cs2s(&u.release, s)
+		print s
+		print "  "
+		cs2s(&u.version, s)
+		print s
+		print "  "
+		cs2s(&u.machine, s)
+		print s
+		print "\n"
+	
+	exit(0)

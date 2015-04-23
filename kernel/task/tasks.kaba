@@ -6,6 +6,7 @@ use "../file_access.kaba"
 use "../mem/heap.kaba"
 use "../mem/paging.kaba"
 use "../mem/shared.kaba"
+use "../timer.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -96,6 +97,7 @@ enum
 	WAITING_MODE_TASK_EXIT
 	WAITING_MODE_FILE_READ
 	WAITING_MODE_FILE_WRITE
+	WAITING_MODE_TIME
 
 class TaskSharedMemoryRef
 	SharedMemory *s
@@ -360,6 +362,14 @@ class TaskData
 		else if signal == SIGCONT
 			if t.status == TASK_STATUS_SLEEPING
 				t.status = TASK_STATUS_RUNNING
+		return 0
+	
+	int sys_nanosleep(int p1, int p2)
+		kernel_timer.update()
+		TimeValue tv
+		page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
+		tv.add(kernel_timer.tv)
+		set_wait(WAITING_MODE_TIME, nil, tv.sec, tv.nanosec, 0)
 		return 0
 
 	int sys_brk(int new_top)

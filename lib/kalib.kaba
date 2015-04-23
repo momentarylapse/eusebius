@@ -367,6 +367,46 @@ int sysinfo(void *buf)
 	}
 	return __temp_i3__
 
+int uname(void *buf)
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x0000007a
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int time(void *buf)
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x00000074
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int nanosleep(void *buf, void *buf2)
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x000000a2
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int sched_yield(int pid)
+	__temp_i__ = pid
+	asm{
+		mov eax, 0x0000009e
+		mov ebx, __temp_i__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
 void get_args(lib__string@list arg)
 	cstring cs
 	__temp_p__ = &cs

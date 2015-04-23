@@ -3,6 +3,7 @@ use "../base.kaba"
 use "../text_mode.kaba"
 use "tasks.kaba"
 use "../std_char_devs.kaba"
+use "../timer.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -89,6 +90,12 @@ void ProcessWaitingTasks()
 			else if t.waiting_mode == WAITING_MODE_FILE_WRITE
 				r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
 				if r >= 0
+					t.tss.eax = r // return r
+					t.activate()
+			else if t.waiting_mode == WAITING_MODE_TIME
+				kernel_timer.update()
+				TimeValue *till = &t.waiting_param_i1
+				if !kernel_timer.tv.is_before(*till)
 					t.tss.eax = r // return r
 					t.activate()
 

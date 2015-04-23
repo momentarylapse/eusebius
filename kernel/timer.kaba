@@ -2,14 +2,29 @@
 use "base.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
-const int CPU_FREQ = 1 << 20 // 1 MHz
+const int CPU_FREQ = 1 << 24 // 16 MHz
 
 class TimeValue
 	int sec
 	int nanosec
+	bool is_before(TimeValue t)
+		if sec < t.sec
+			return true
+		if sec > t.sec
+			return false
+		if nanosec < t.nanosec
+			return true
+		return false
+	void add(TimeValue t)
+		sec += t.sec
+		nanosec += t.nanosec
+		if nanosec > 1000000000
+			sec ++
+			nanosec -= 1000000000
 
 class KernelTimer
 	int[2] state
+	TimeValue tv
 	
 	void update_state()
 		asm{
@@ -21,10 +36,11 @@ class KernelTimer
 		state[0] = __temp_i2__
 		state[1] = __temp_i__
 	
-	void get(TimeValue t)
+	void update()
 		update_state()
 		// TODO   :P
-		t.sec = (state[0] << 8) + (state[1] >> 24)
-		//t.nanosec = (state[0] >> 22) + (state[1] << 10)
+		tv.sec = (state[0] << 8) + (state[1] >> 24)
+		//tv.nanosec = 0
+		tv.nanosec = (state[1] << 10)
 
-KernelTimer timer
+KernelTimer kernel_timer

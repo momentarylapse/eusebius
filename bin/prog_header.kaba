@@ -36,6 +36,19 @@ const int SHM_DEST = 1<<11
 const int IPC_CREAT = 1<<12
 const int IPC_EXCL = 1<<13
 
+class TimeValue
+	int sec, nanosec
+
+class SysInfo
+	int uptime
+	int[3] loads
+	int totalram, freeram, sharedram, bufferram
+	int totalswap, freeswap
+	int procs
+	int totalhigh, freehigh
+	int mem_unit
+	int[64] pad
+
 extern void init_lib()
 extern void get_args(string[] arg)
 
@@ -66,6 +79,10 @@ extern int kill(int pid, int signal)
 extern int shmget(int key, int size, int flags)
 extern void* shmat(int id, int flags)
 extern int shmdt(void* p)
-extern int sysinfo(void *buf)
+extern int sysinfo(SysInfo s)
+extern int sched_yield(int pid)
+extern int uname(void *buf)
+extern int time(TimeValue t)
+extern int nanosleep(TimeValue a, TimeValue b)
 
 extern void showstats()

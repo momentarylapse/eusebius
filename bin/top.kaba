@@ -2,22 +2,12 @@
 use "prog_header.kaba"
 
 
-class SysInfo
-	int uptime
-	int[3] loads
-	int totalram, freeram, sharedram, bufferram
-	int totalswap, freeswap
-	int procs
-	int totalhigh, freehigh
-	int mem_unit
-	int[64] pad
-
 
 void main()
 	init_lib()
 	
 	SysInfo s
-	if sysinfo(&s) == 0
+	if sysinfo(s) == 0
 		print "uptime: "
 		print s.uptime
 		print "\n"
