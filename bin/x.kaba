@@ -294,6 +294,7 @@ class XWindow
 	int[0]* buf
 	
 	void __init__(int x, int y, int w, int h)
+		print "x: new win\n"
 		r.x = x
 		r.y = y
 		r.w = w
@@ -307,6 +308,7 @@ class XWindow
 		invalidated.add(r)
 		
 	void __delete__()
+		print "x: del win\n"
 		invalidated.add(r)
 		shmdt(buf)
 		for ww,n in windows
@@ -373,29 +375,54 @@ void draw_invalidated()
 		draw(r)
 	invalidated.clear()
 
+const int XCMD_KILL = 666
+const int XCMD_NEW_WINDOW = 1024
+const int XCMD_DEL_WINDOW = 1025
+const int XCMD_MOVE_WINDOW = 1026
+const int XCMD_INVALIDATE_WINDOW = 1027
+
 class Client
 	int[0]* buf
 	bool kill_me
+	XWindow*[] win
 	
 	void __init__(int key)
 		kill_me = false
-		print "x: new client "
+		print "x: new client\n"
 		int id = shmget(key, 0, 0)
 		buf = shmat(id, 0)
-		print p2s(buf)
-		print "\n"
 	
 	void __delete__()
 		print "x: del client\n"
 		shmdt(buf)
+		for w in win
+			delete w
 	
 	void update()
 		if buf[0] == 1
+			buf[32] = -1
 			print "x: empfange "
 			print buf[1]
 			print "\n"
-			if buf[1] == 666
+			if buf[1] == XCMD_KILL
+				buf[32] = 0
 				kill_me = true
+			else if buf[1] == XCMD_NEW_WINDOW
+				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5])
+				win.add(ww)
+				buf[32] = ww.id
+				buf[33] = ww.shm_key
+				print "x: key="
+				print ww.shm_key
+				print "\n"
+			else if buf[1] == XCMD_INVALIDATE_WINDOW
+				for w in win
+					if w.id == buf[2]
+						invalidated.add(w.r)
+			else if buf[1] == XCMD_MOVE_WINDOW
+				for w in win
+					if w.id == buf[2]
+						w.move(buf[3], buf[4])
 			buf[0] = 0
 		
 
@@ -409,18 +436,12 @@ class CommandController
 		//mkfifo("/tmp/x")
 		//connection = open("/tmp/x", O_RDONLY)
 		int id = shmget(0x7bcd0123, 1024, SHM_DEST | IPC_CREAT)
-		print id
-		print " "
 		buf = shmat(id, 0)
-		print p2s(buf)
 		
 		buf[0] = 0
 	
 	void update()
 		if buf[0] == 1
-			print "x: [empfange0] "
-			print buf[1]
-			print "\n"
 			clients.add(new Client(buf[1]))
 			buf[0] = 0
 		for c in clients
@@ -443,9 +464,7 @@ void main()
 	screen_width = 800
 	screen_height = 600
 	
-	print "a\n"
 	cmds = new CommandController
-	print "b\n"
 	mouse = new MouseController
 	
 //	scan_pci()
@@ -456,19 +475,24 @@ void main()
 	else
 		print "nein"*/
 	
-	//BgaSetVideoMode(640, 480, 32, false, false)
+	BgaSetVideoMode(640, 480, 32, false, false)
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height)
 	desktop.fill(0xff402040)
 	
 	mouse.create()
 	
-	//draw_invalidated()
+	draw_invalidated()
 	
-	print "x: loop\n"
+	string[] arg
+	arg.add("/bin/client")
+	execute(arg, -1, -1)
+	execute(arg, -1, -1)
+	
+	print "x: running\n"
 	while true
 		cmds.update()
 		mouse.update()
-	//	draw_invalidated()
+		draw_invalidated()
 		
 	XExit()

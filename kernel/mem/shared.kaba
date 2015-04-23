@@ -50,6 +50,9 @@ class SharedMemoryController
 			if b.key < 0
 				b.p = Paging.alloc_chunk(size)
 				if b.p == 0
+					prints("<E1 ")
+					printi(size)
+					prints(">")
 					return -ENOMEM
 				b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
 				b.key = key
