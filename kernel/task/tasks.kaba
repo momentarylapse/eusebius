@@ -431,6 +431,12 @@ class TaskData
 					page_dir.memcpy2task(p2, &r.dest, 4)
 					return 0
 			return -1
+		if cmd == SHMDT
+			for r in shmem
+				if r.s and r.dest == p1
+					page_dir.unmap(r.dest, r.s.size, false)
+					r.s.unref()
+					r.s = nil
 		return -EINVAL
 	
 TaskData[MAX_TASKS] Tasks

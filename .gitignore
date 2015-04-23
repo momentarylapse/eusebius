@@ -19,4 +19,6 @@ loader_fake
 kernel/kernel
 bin/*
 !bin/*.kaba
+lib/*
+!lib/*.kaba
 

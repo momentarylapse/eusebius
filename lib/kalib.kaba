@@ -883,6 +883,19 @@ lib__string lib__@i2s(int i)
 		s.add('-')
 	return s.reverse()
 
+int rand_state
+
+int rand_next()
+	rand_state = rand_state * 1664525 + 1013904223
+	return rand_state & 0x00ffffff
+
+void lib__rand_seed(int s)
+	rand_state = s
+
+int lib__randi(int m)
+	return rand_next() % m // terrible!
+	//return f2i(i2f(rand_next()) * i2f(m) / i2f(0x00ffffff))
+
 class lib__int
 	int i
 	lib__string str()
@@ -1099,6 +1112,8 @@ void init_lib()
 	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader)
 	malloc_first_free.next = nil
 	malloc_first_free.prev = nil
+	
+	rand_state = 0
 	
 	stdin = 0
 	stdout = 1

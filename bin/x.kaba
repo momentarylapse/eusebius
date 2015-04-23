@@ -23,7 +23,6 @@ const int VBE_DISPI_INDEX_VIRT_HEIGHT = 7
 const int VBE_DISPI_INDEX_X_OFFSET = 8
 const int VBE_DISPI_INDEX_Y_OFFSET = 9
 
-int mouse
 
 int _temp_port_no_
 int _temp_port_data_
@@ -124,8 +123,8 @@ int[0]* vga_mem2
 void BgaSetVideoMode(int width, int height, int depth, bool UseLinearFrameBuffer, bool ClearVideoMemory)
 	screen_width = width
 	screen_height = height
-	mx = width / 2
-	my = height / 2
+	mouse.x = width / 2
+	mouse.y = height / 2
 	cur_bank = -1
 	vga_mem = _i2p(0xa0000)
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
@@ -224,26 +223,63 @@ void scan_pci()
 		for dev in 0:32
 			checkDevice(bus, dev)
 
-int mx, my
+class MouseController
+	int x, y
+	XWindow* cursor
+	
+	int dev
+	
+	void __init__()
+	
+		x = screen_width / 2
+		y = screen_height / 2
+		dev = open("/dev/mouse", O_RDONLY | O_NONBLOCK)
+		//fcntl(dev, F_SETFL, O_RDONLY | O_NONBLOCK)
+		
+	void create()
 
-void update_mouse()
-	int[4] m
-	if read(mouse, &m, 4*4) < 16
-		return
-	mx += m[1]
-	my -= m[2]
-	if mx < 0
-		mx = 0
-	if mx >= screen_width
-		mx = screen_width - 1
-	if my < 0
-		my = 0
-	if my >= screen_height
-		my = screen_height - 1
+		Image *im = LoadImage("/images/cursor.tga")
 	
-	//update_mouse()
+		if im
+			cursor = new XWindow(x - im.width/2, y - im.height/2, im.width, im.height)
+			cursor.fill_image(0, 0, im)
+		
+			delete im
+		else
+			cursor = new XWindow(x-16, y-16, 32, 32)
+			cursor.fill(0xffc0c0c0)
+
+	bool update_single()
+		int[4] m
+		if read(dev, &m, 4*4) < 16
+			return false
+		x += m[1]
+		y -= m[2]
+		if x < 0
+			x = 0
+		if x >= screen_width
+			x = screen_width - 1
+		if y < 0
+			y = 0
+		if y >= screen_height
+			y = screen_height - 1
 	
-	cursor.move(mx - cursor.r.w/2, my - cursor.r.h/2)
+		return true
+
+	void update()
+		bool need_update = false
+		for i in 0:8
+			if !update_single()
+				break
+			need_update = true
+		if need_update
+			cursor.move(x - cursor.r.w/2, y - cursor.r.h/2)
+
+MouseController *mouse
+
+void XExit()
+	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
+	exit(0)
 
 class XRect
 	int x, y, w, h
@@ -251,20 +287,28 @@ class XRect
 		return _x >= x and _x < x+w and _y >= y and _y < y+h
 
 class XWindow
+	int id
 	XRect r
-	int[] buf
+	int shm_key
+	int shm_id
+	int[0]* buf
 	
 	void __init__(int x, int y, int w, int h)
 		r.x = x
 		r.y = y
 		r.w = w
 		r.h = h
-		buf.resize(w * h)
+		id = next_window_id
+		next_window_id ++
+		shm_key = next_window_id + 0x0f810000 // randi()
+		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
+		buf = shmat(shm_id, 0)
 		windows.add(self)
 		invalidated.add(r)
 		
 	void __delete__()
 		invalidated.add(r)
+		shmdt(buf)
 		for ww,n in windows
 			if ww == self
 				windows.remove(n)
@@ -277,8 +321,9 @@ class XWindow
 	
 	//void draw_rect(int x, int y, int w, int h, int c)
 	void fill(int c)
-		for b in buf
-			b = c
+		int n = r.w * r.h
+		for i in 0:n
+			buf[i] = c
 	void fill_image(int dx, int dy, Image *im)
 		/*int x1 = dx
 		if x1 < 0
@@ -290,8 +335,9 @@ class XWindow
 			for x in 0:r.w
 				buf[x + y*r.w] = im.data[x + y*r.w]
 
+int next_window_id
 XWindow*[] windows
-XWindow* desktop, cursor
+XWindow* desktop
 
 XRect[] invalidated
 
@@ -327,22 +373,80 @@ void draw_invalidated()
 		draw(r)
 	invalidated.clear()
 
+class Client
+	int[0]* buf
+	bool kill_me
+	
+	void __init__(int key)
+		kill_me = false
+		print "x: new client "
+		int id = shmget(key, 0, 0)
+		buf = shmat(id, 0)
+		print p2s(buf)
+		print "\n"
+	
+	void __delete__()
+		print "x: del client\n"
+		shmdt(buf)
+	
+	void update()
+		if buf[0] == 1
+			print "x: empfange "
+			print buf[1]
+			print "\n"
+			if buf[1] == 666
+				kill_me = true
+			buf[0] = 0
+		
+
+class CommandController
+	int[0]* buf
+	//int connection
+	Client*[] clients
+	
+	void __init__()
+	
+		//mkfifo("/tmp/x")
+		//connection = open("/tmp/x", O_RDONLY)
+		int id = shmget(0x7bcd0123, 1024, SHM_DEST | IPC_CREAT)
+		print id
+		print " "
+		buf = shmat(id, 0)
+		print p2s(buf)
+		
+		buf[0] = 0
+	
+	void update()
+		if buf[0] == 1
+			print "x: [empfange0] "
+			print buf[1]
+			print "\n"
+			clients.add(new Client(buf[1]))
+			buf[0] = 0
+		for c in clients
+			c.update()
+		for i in 0:clients.num
+			if clients[i].kill_me
+				delete clients[i]
+				clients.remove(i)
+				i --
+
+CommandController *cmds
 
 void main()
 	init_lib()
-	
+
+	next_window_id = 0
 	windows.__init__()
 	invalidated.__init__()
 	
-
-	Image *im = LoadImage("/images/cursor.tga")
-	
-	mx = 400
-	my = 300
-	mouse = open("/dev/mouse", O_RDONLY)
-	fcntl(mouse, F_SETFL, O_RDONLY | O_NONBLOCK)
 	screen_width = 800
 	screen_height = 600
+	
+	print "a\n"
+	cmds = new CommandController
+	print "b\n"
+	mouse = new MouseController
 	
 //	scan_pci()
 	
@@ -352,23 +456,19 @@ void main()
 	else
 		print "nein"*/
 	
-	BgaSetVideoMode(640, 480, 32, false, false)
+	//BgaSetVideoMode(640, 480, 32, false, false)
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height)
 	desktop.fill(0xff402040)
 	
-	if im
-		cursor = new XWindow(mx - im.width/2, my - im.height/2, im.width, im.height)
-		cursor.fill_image(0, 0, im)
-	else
-		cursor = new XWindow(mx-16, my-16, 32, 32)
-		cursor.fill(0xffc0c0c0)
+	mouse.create()
 	
-	draw_invalidated()
+	//draw_invalidated()
 	
+	print "x: loop\n"
 	while true
-		update_mouse()
-		draw_invalidated()
+		cmds.update()
+		mouse.update()
+	//	draw_invalidated()
 		
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
-	exit(0)
+	XExit()
