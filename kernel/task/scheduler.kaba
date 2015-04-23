@@ -15,18 +15,18 @@ int _nnn
 void int_timer()
 	while true
 		if SchedulerEnabled
+		
+			// FIXME handle mouse... IRQ does not seem to work...
 			_nnn ++
 			if (_nnn & 0x3) == 0
 				ps2_try_read()
 		
+			// IO-waits
 			ProcessWaitingTasks()
 		
-			int pid_cur = (TimerTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-			int pid_next = GetNextTask(pid_cur)
-			GlobalDescriptorTable[Tasks[pid_cur].desc].set_busy(false)
-			GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
-			TimerTask.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
-			RunningPid = pid_next
+			int pid_next = GetNextTask(RunningPid)
+			ReconnectTasks(pid_next, TimerTask)
+			
 	/*		if next != last
 				prints("<")
 				prints(Task[pid_cur].name)
@@ -43,7 +43,7 @@ void int_timer()
 			iret
 		}
 
-void InitTimer()
+void InitTimerInterrupt()
 	_nnn = 0
 	
 	// ticks/s: 1193180
@@ -59,9 +59,43 @@ void InitTimer()
 
 void StartScheduler()
 	SchedulerEnabled = false
+	RunningPid = 0
 	if VerbosityLevel >= 1
 		prints("starte Scheduler\n")
-	InitTimer()
+	InitTimerInterrupt()
 	SchedulerEnabled = true
 	TimerTask.run_forced()
 
+
+
+// Scheduler
+int GetNextTask(int pid)
+	for i in pid + 1:MAX_TASKS
+		if Tasks[i].status == TASK_STATUS_RUNNING
+			return i
+	for i in 0:pid+1
+		if Tasks[i].status == TASK_STATUS_RUNNING
+			return i
+	return IdleTask.pid
+
+void ProcessWaitingTasks()
+	for t in Tasks
+		if t.status == TASK_STATUS_WAITING
+			if t.waiting_mode == WAITING_MODE_FILE_READ
+				int r = t.sys_read(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
+				if r >= 0
+					t.tss.eax = r // return r
+					t.activate()
+			else if t.waiting_mode == WAITING_MODE_FILE_WRITE
+				r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
+				if r >= 0
+					t.tss.eax = r // return r
+					t.activate()
+
+
+void ReconnectTasks(int pid_next, TaskData *irq_task)
+	//int pid_cur = (irq_task.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+	GlobalDescriptorTable[Tasks[RunningPid].desc].set_busy(false)
+	GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
+	irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+	RunningPid = pid_next

@@ -125,7 +125,7 @@ class TaskData
 	void __assign__(TaskData o)
 		nil
 	
-	void start()
+	void activate()
 		status = TASK_STATUS_RUNNING
 	
 	// nur um einmalig den Scheduler zu starten
@@ -313,7 +313,7 @@ class TaskData
 		t.add_handle(of_in)
 		t.add_handle(of_out)
 	
-		t.start()
+		t.activate()
 		return t.pid
 
 	void sys_exit(int r)
@@ -327,7 +327,7 @@ class TaskData
 					t.tss.eax = 0// // return waitpid()
 					*t.waiting_param_p = r
 					clean_up_deep()
-					t.start()
+					t.activate()
 
 	int sys_waitpid(int _pid, int status_addr, int options)
 		if _pid < 0 or _pid >= MAX_TASKS
@@ -339,7 +339,7 @@ class TaskData
 		if t.status == TASK_STATUS_ZOMBIE
 			*_status = t.return_status
 			t.clean_up_deep()
-			start()
+			activate()
 			return 0
 		if (options & 1) > 0
 			return -2
@@ -411,7 +411,7 @@ class TaskData
 		t.tss.cr3 = t.page_dir
 		t.tss.eax = 0 // fork() return for child
 	
-		t.start()
+		t.activate()
 		return t.pid
 	
 	int sys_ipc(int cmd, int p1, int p2, int p3)
@@ -444,7 +444,7 @@ TaskData *KernelTask
 TaskData *IdleTask
 TaskData *TimerTask
 TaskData *SysCallTask
-int CurPid
+int NextPidToAssign
 int RunningPid
 bool InterruptsEnabled
 
@@ -474,13 +474,13 @@ class GlobalDescriptorData
 GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] GlobalDescriptorTable
 
 int get_next_pid()
-	for i in CurPid:MAX_TASKS
+	for i in NextPidToAssign:MAX_TASKS
 		if Tasks[i].status == TASK_STATUS_UNUSED
-			CurPid = i + 1
+			NextPidToAssign = i + 1
 			return i
-	for i in 0:CurPid
+	for i in 0:NextPidToAssign
 		if Tasks[i].status == TASK_STATUS_UNUSED
-			CurPid = i + 1
+			NextPidToAssign = i + 1
 			return i
 	return -1
 
@@ -557,30 +557,6 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 
 	return t*/
 
-// Scheduler
-int GetNextTask(int pid)
-	for i in pid + 1:MAX_TASKS
-		if Tasks[i].status == TASK_STATUS_RUNNING
-			return i
-	for i in 0:pid+1
-		if Tasks[i].status == TASK_STATUS_RUNNING
-			return i
-	return IdleTask.pid
-
-void ProcessWaitingTasks()
-	for t in Tasks
-		if t.status == TASK_STATUS_WAITING
-			if t.waiting_mode == WAITING_MODE_FILE_READ
-				int r = t.sys_read(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
-				if r >= 0
-					t.tss.eax = r // return r
-					t.start()
-			else if t.waiting_mode == WAITING_MODE_FILE_WRITE
-				r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
-				if r >= 0
-					t.tss.eax = r // return r
-					t.start()
-
 void idle_func()
 	while true
 		/*for int i, 0, 1000000
@@ -596,9 +572,9 @@ void InitTasks()
 	InterruptsEnabled = false
 	
 	// null descriptor
-	for i in 0:NUM_PRE_GDT_ENTRIES + MAX_TASKS
-		GlobalDescriptorTable[i].a = 0x00000000
-		GlobalDescriptorTable[i].b = 0x00000000
+	for g in GlobalDescriptorTable
+		g.a = 0x00000000
+		g.b = 0x00000000
 	// kernel code
 	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true, 0)
 	// kernel data
@@ -615,7 +591,7 @@ void InitTasks()
 		for sm in t.shmem
 			sm.s = nil
 
-	CurPid = 0
+	NextPidToAssign = 0
 	//UserMemMask = 0
 	RunningPid = 0
 

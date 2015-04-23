@@ -160,14 +160,18 @@ class PageDirectory : PageTable
 		int n = pt.e[page_no] & 0xfffff000
 		return n + offset
 
-	void memcpy2kernel(cstring *o, int addr, int size)
+	bool memcpy2kernel(cstring *o, int addr, int size)
 		while size > 0
 			int dir_no, page_no, offset
 			page_params(addr, &dir_no, &page_no, &offset)
+			if e[dir_no] == 0
+				return false
 			int n = e[dir_no] & 0xfffff000
 			PageTable *pt = _i2p(n)
+			if pt.e[page_no] == 0
+				return false
 			n = pt.e[page_no] & 0xfffff000
-			cstring *pp = _i2p( n + offset)
+			cstring *pp = _i2p(n + offset)
 			int num = PAGE_SIZE - offset
 			if num > size
 				num = size
@@ -176,13 +180,18 @@ class PageDirectory : PageTable
 			addr += num
 			size -= num
 			o = &o[num]
+		return true
 
-	void memcpy2task(int addr, cstring *p, int size)
+	bool memcpy2task(int addr, cstring *p, int size)
 		while size > 0
 			int dir_no, page_no, offset
 			page_params(addr, &dir_no, &page_no, &offset)
+			if e[dir_no] == 0
+				return false
 			int n = e[dir_no] & 0xfffff000
 			PageTable *pt = _i2p(n)
+			if pt.e[page_no] == 0
+				return false
 			n = pt.e[page_no] & 0xfffff000
 			cstring *pp = _i2p( n + offset)
 			int num = PAGE_SIZE - offset
@@ -192,6 +201,7 @@ class PageDirectory : PageTable
 				pp[i] = p[i]
 			addr += num
 			size -= num
+		return true
 	
 	void copy_pages_to(PageDirectory* dest, int start1, int start2, int size)
 		int dir_no1, page_no1, offset1
