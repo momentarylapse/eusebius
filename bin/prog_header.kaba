@@ -84,5 +84,7 @@ extern int sched_yield(int pid)
 extern int uname(void *buf)
 extern int time(TimeValue t)
 extern int nanosleep(TimeValue a, TimeValue b)
+extern int sleep(int sec)
+extern int usleep(int usec)
 
 extern void showstats()

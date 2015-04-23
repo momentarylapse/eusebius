@@ -41,6 +41,6 @@ class KernelTimer
 		// TODO   :P
 		tv.sec = (state[0] << 8) + (state[1] >> 24)
 		//tv.nanosec = 0
-		tv.nanosec = (state[1] << 10)
+		tv.nanosec = (state[1] << 6) & 0x3fffffff
 
 KernelTimer kernel_timer

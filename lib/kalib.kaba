@@ -380,7 +380,7 @@ int uname(void *buf)
 int time(void *buf)
 	__temp_p__ = buf
 	asm{
-		mov eax, 0x00000074
+		mov eax, 0x00000019
 		mov ebx, __temp_p__
 		int 0x80
 		mov __temp_i3__, eax
@@ -396,6 +396,18 @@ int nanosleep(void *buf, void *buf2)
 		mov __temp_i3__, eax
 	}
 	return __temp_i3__
+
+int sleep(int sec)
+	int[2] tv
+	tv[0] = sec
+	tv[1] = 0
+	return nanosleep(&tv, nil)
+
+int usleep(int usec)
+	int[2] tv
+	tv[0] = usec / 1000000
+	tv[1] = (usec % 1000000) * 1000
+	return nanosleep(&tv, nil)
 
 int sched_yield(int pid)
 	__temp_i__ = pid
