@@ -93,10 +93,7 @@ void main()
 		w.invalidate()
 	
 	while true
-		TimeValue tv, xxx
-		tv.sec = 10
-		tv.nanosec = 0
-		nanosleep(tv, xxx)
+		sleep(10)
 		
 		w.move(randi(500), randi(400))
 	

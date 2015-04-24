@@ -151,6 +151,8 @@ void BgaSetVideoMode(int width, int height, int depth, bool UseLinearFrameBuffer
 void BgaSetBank(int bank)
 	BgaWriteRegister(VBE_DISPI_INDEX_BANK, bank)
 	cur_bank = bank
+	for i in 0:1000
+		nil
 
 void setPixel(int x, int y, int col)
 	int p = x + y * screen_width
@@ -241,12 +243,12 @@ class MouseController
 		Image *im = LoadImage("/images/cursor.tga")
 	
 		if im
-			cursor = new XWindow(x - im.width/2, y - im.height/2, im.width, im.height)
+			cursor = new XWindow(x - im.width/2, y - im.height/2, im.width, im.height, WF_TRANSPARENT | 7)
 			cursor.fill_image(0, 0, im)
 		
 			delete im
 		else
-			cursor = new XWindow(x-16, y-16, 32, 32)
+			cursor = new XWindow(x-16, y-16, 32, 32, WF_TRANSPARENT | 7)
 			cursor.fill(0xffc0c0c0)
 
 	bool update_single()
@@ -273,7 +275,7 @@ class MouseController
 				break
 			need_update = true
 		if need_update
-			cursor.move(x - cursor.r.w/2, y - cursor.r.h/2)
+			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
 
 MouseController *mouse
 
@@ -282,9 +284,16 @@ void XExit()
 	exit(0)
 
 class XRect
-	int x, y, w, h
-	bool inside(int _x, int _y)
-		return _x >= x and _x < x+w and _y >= y and _y < y+h
+	int x0, y0, x1, y1
+	int w()
+		return x1 - x0
+	int h()
+		return y1 - y0
+	bool inside(int x, int y)
+		return x >= x0 and x < x1 and y >= y0 and y < y1
+
+const int WF_TRANSPARENT = 1024
+
 
 class XWindow
 	int id
@@ -292,19 +301,24 @@ class XWindow
 	int shm_key
 	int shm_id
 	int[0]* buf
+	bool transparent
+	int level
 	
-	void __init__(int x, int y, int w, int h)
+	void __init__(int x, int y, int w, int h, int flags)
 		print "x: new win\n"
-		r.x = x
-		r.y = y
-		r.w = w
-		r.h = h
+		r.x0 = x
+		r.y0 = y
+		r.x1 = x + w
+		r.y1 = y + h
+		level = flags & 0xf
+		transparent = ((flags & WF_TRANSPARENT) > 0)
 		id = next_window_id
 		next_window_id ++
 		shm_key = next_window_id + 0x0f810000 // randi()
 		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
 		buf = shmat(shm_id, 0)
 		windows.add(self)
+		sort_windows()
 		invalidated.add(r)
 		
 	void __delete__()
@@ -313,17 +327,21 @@ class XWindow
 		shmdt(buf)
 		for ww,n in windows
 			if ww == self
+				windows_r.remove(windows.num - n - 1)
 				windows.remove(n)
 	
-	void move(int _x, int _y)
+	void move(int x, int y)
+		XRect r0 = r
+		r.x1 += x - r.x0
+		r.y1 += y - r.y0
+		r.x0 = x
+		r.y0 = y
 		invalidated.add(r)
-		r.x = _x
-		r.y = _y
-		invalidated.add(r)
+		invalidated.add(r0)
 	
 	//void draw_rect(int x, int y, int w, int h, int c)
 	void fill(int c)
-		int n = r.w * r.h
+		int n = r.w() * r.h()
 		for i in 0:n
 			buf[i] = c
 	void fill_image(int dx, int dy, Image *im)
@@ -333,41 +351,87 @@ class XWindow
 			
 		for y in y1:y2
 			for x in x1:x2*/
-		for y in 0:r.h
-			for x in 0:r.w
-				buf[x + y*r.w] = im.data[x + y*r.w]
+		int w = r.w()
+		int h = r.h()
+		for y in 0:h
+			for x in 0:w
+				buf[x + y*w] = im.data[x + y*w]
 
 int next_window_id
-XWindow*[] windows
+XWindow*[] windows, windows_r
 XWindow* desktop
+
+void sort_windows()
+	for i in 0:windows.num
+		for j in i+1:windows.num
+			if windows[i].level > windows[j].level
+				XWindow *t = windows[i]
+				windows[i] = windows[j]
+				windows[j] = t
+	windows_r.resize(windows.num)
+	for w, i in windows
+		windows_r[windows.num - i - 1] = w
 
 XRect[] invalidated
 
-// brute force :P
-void draw(XRect r)
-	int x1 = r.x
-	int y1 = r.y
-	int x2 = r.x+r.w
-	int y2 = r.y+r.h
-	if x1 < 0
-		x1 = 0
-	if x2 >= screen_width
-		x2 = screen_width-1
-	if y1 < 0
-		y1 = 0
-	if y2 >= screen_height
-		y2 = screen_height-1
-	for y in y1:y2
-		for x in x1:x2
-			int c = 0
-			for w in windows
-				if w.r.inside(x, y)
-					int dx = x-w.r.x
-					int dy = y-w.r.y
-					int cc = w.buf[dx + dy*w.r.w]
-					if (cc & 0xff000000) != 0
-						c = cc
-			setPixel(x, y, c)
+void draw(XRect rr)
+	XRect r = rr
+	if r.x0 < 0
+		r.x0 = 0
+	if r.x1 >= screen_width
+		r.x1 = screen_width-1
+	if r.y0 < 0
+		r.y0 = 0
+	if r.y1 >= screen_height
+		r.y1 = screen_height-1
+	for y in r.y0:r.y1
+		int xs = r.x0
+		while xs < r.x1
+			int xe = r.x1
+			
+			// find the top most window at (x1,y)
+			XWindow *ww = nil
+			for w,i in windows_r
+				if w.r.inside(xs, y)
+					ww = w
+					if w.r.x1 < xe
+						xe = w.r.x1
+					// test for overlap in [y]*[xs:xe]
+					for j in 0:i
+						XWindow *v = windows_r[j]
+						if y < v.r.y0 or y >= v.r.y1
+							continue
+						if xe <= v.r.x0 or xs >= v.r.x1
+							continue
+						xe = v.r.x0
+					break
+			if !ww
+				xs = xe
+				continue
+			if ww.transparent
+				// brute force :P
+				for x in xs:xe
+					for w in windows_r
+						if w.r.inside(x, y)
+							int dx = x-w.r.x0
+							int dy = y-w.r.y0
+							int c = w.buf[dx + dy*w.r.w()]
+							if w.transparent
+								if (c & 0xff000000) != 0
+									setPixel(x, y, c)
+									break
+							else
+								setPixel(x, y, c)
+								break
+			else
+				dy = y-ww.r.y0
+				dx = xs-ww.r.x0
+				int index = dx + dy*ww.r.w()
+				for x in xs:xe
+					setPixel(x, y, ww.buf[index])
+					index ++
+			
+			xs = xe
 	
 
 void draw_invalidated()
@@ -408,7 +472,7 @@ class Client
 				buf[32] = 0
 				kill_me = true
 			else if buf[1] == XCMD_NEW_WINDOW
-				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5])
+				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2)
 				win.add(ww)
 				buf[32] = ww.id
 				buf[33] = ww.shm_key
@@ -477,7 +541,7 @@ void main()
 	
 	BgaSetVideoMode(640, 480, 32, false, false)
 	
-	desktop = new XWindow(0, 0, screen_width, screen_height)
+	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
 	desktop.fill(0xff402040)
 	
 	mouse.create()
