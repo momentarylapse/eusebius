@@ -133,6 +133,11 @@ int strcmp(cstring *a, cstring *b)
 			break
 	return 0
 
+
+
+int ceil_quot(int n, int m)
+	return (n + m - 1) / m
+
 int __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__
 void* __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__
 int _p2i(void* p)

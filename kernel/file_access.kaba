@@ -50,23 +50,34 @@ class PipeData
 		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]
 		return size
+	/*void show()
+		prints("  ")
+		printi(_p2i(self))
+		prints("  ")
+		printi read_ref_count
+		prints(":")
+		printi write_ref_count
+		prints("  ")*/
 	void unref(OpenFileData *of)
 		if of.reading
 			read_ref_count --
 		else
 			write_ref_count --
+			
 		if read_ref_count < 0
 			panic("Pipe.read_ref_count < 0")
 		if write_ref_count < 0
 			panic("Pipe.write_ref_count < 0")
-		if read_ref_count == 0 and write_ref_count == 0
+			
+		if read_ref_count == 0 and write_ref_count == 0 and !e.parent
+			// only auto-delete if anonymous
 			clean_up()
 	
 	void clean_up()
 		if !e.parent
 			// anonymous pipe
 			FileSystem.del(e)
-			
+
 		free(buffer)
 		used = false
 
@@ -301,6 +312,7 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 				of.offset = e.size
 	else if of.entry.type == FILE_TYPE_PIPE
 		if of.reading == of.writing
+			of.used = false
 			return nil
 		of.pipe = get_pipe(of.entry)
 		if !of.pipe
