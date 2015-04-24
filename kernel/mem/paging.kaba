@@ -15,12 +15,14 @@ PageDirectory *KernelPageDir
 int ceil_quot(int n, int m)
 	return (n + m - 1) / m
 
-class PageTable
+class Page
 	int[PAGE_TABLE_ENTRIES] e
 	
-	void init()
+	void clear()
 		for i in 0:PAGE_TABLE_ENTRIES
 			e[i] = 0
+
+class PageTable : Page
 	
 	int count_entries()
 		int num_entries = 0
@@ -51,6 +53,7 @@ class PageDirectory : PageTable
 			if e[dir_no] == 0
 				int pos = Paging.alloc_page()
 				PageTable *pt = _i2p(pos)
+				pt.clear()
 				e[dir_no] = pos + flags
 			else
 				pt = _i2p(e[dir_no] & 0xfffff000)
@@ -80,6 +83,7 @@ class PageDirectory : PageTable
 			if e[dir_no] == 0
 				int pos = Paging.alloc_page()
 				PageTable *pt = _i2p(pos)
+				pt.clear()
 				e[dir_no] = pos + flags
 			else
 				pt = _i2p(e[dir_no] & 0xfffff000)
@@ -274,7 +278,8 @@ class PageController
 		}
 		if VerbosityLevel >= 1
 			prints(" ok\n")
-		
+	
+	// does not clear
 	int alloc_page()
 		bool ok = true
 		for i in mask_occupation:num_masks
@@ -286,7 +291,8 @@ class PageController
 					mask_occupation = i
 					mask[i] = mask[i] | m
 					alloc_count ++
-					return (i * 32 + j) * PAGE_SIZE
+					int pos = (i * 32 + j) * PAGE_SIZE
+					return pos
 		return -1
 	
 	void free_page(int pos)
@@ -364,7 +370,7 @@ class PageController
 	PageDirectory *create_page_directory(int size, bool writable)
 		int pos = alloc_page()
 		PageDirectory *pd = _i2p(pos)
-		pd.init()
+		pd.clear()
 		pd.map_lin(0, 0, size, writable)
 		return pd
 			

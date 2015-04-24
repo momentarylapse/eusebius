@@ -543,7 +543,7 @@ void ps2_try_read()
 
 void int_key()
 	while true
-		//prints("<key>")
+		prints("<key>")
 		
 		ps2_try_read()
 					

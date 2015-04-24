@@ -18,42 +18,31 @@ void int_timer()
 	while true
 		if SchedulerEnabled
 			//prints "."
+			kernel_timer.tick()
 		
 			// IO-waits
 			ProcessWaitingTasks()
 		
+			// pick next task
 			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, TimerTask)
 
-		// weitere Aufrufe erlauben
+		// allow more timer IRQs
 		outportb(0x20,0x20)
 
-		// zurück
+		// return to (other) task
 		asm{
 			sti
 			iret
 			cli
 		}
 
-void InitTimerInterrupt()
-	
-	// ticks/s: 1193180
-	// 100Hz:   11932 = 0x2e9c
-	int ticks_per_sec = 1193180
-	int ticks_till_irq = (ticks_per_sec >> 10) * TASK_SWITCH_DT
-	if ticks_till_irq > 0xffff
-		ticks_till_irq = 0xffff
-	//1/0
-	outportb(0x43, 0x34)
-	outportb(0x40, ticks_till_irq) //0x9c)
-	outportb(0x40, ticks_till_irq >> 8) //0x2e)
-
 void StartScheduler()
 	SchedulerEnabled = false
 	RunningPid = 0
 	if VerbosityLevel >= 1
 		prints("starte Scheduler\n")
-	InitTimerInterrupt()
+	InitTimerInterrupt(TASK_SWITCH_DT)
 	SchedulerEnabled = true
 	TimerTask.run_forced()
 
@@ -83,9 +72,9 @@ void ProcessWaitingTasks()
 					t.tss.eax = r // return r
 					t.activate()
 			else if t.waiting_mode == WAITING_MODE_TIME
-				kernel_timer.update()
-				TimeValue *till = &t.waiting_param_i1
-				if !kernel_timer.tv.is_before(*till)
+				TimeValue *rem = &t.waiting_param_i1
+				rem.dec_nanosec(kernel_timer.dt_nanosec)
+				if rem.sec < 0
 					t.tss.eax = r // return r
 					t.activate()
 
@@ -96,3 +85,6 @@ void ReconnectTasks(int pid_next, TaskData *irq_task)
 	GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
 	irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
 	RunningPid = pid_next
+	/*prints("<rec ")
+	printi pid_next
+	prints(">")*/

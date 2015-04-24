@@ -2,7 +2,6 @@
 use "base.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
-const int CPU_FREQ = 1 << 24 // 16 MHz
 
 class TimeValue
 	int sec
@@ -14,19 +13,33 @@ class TimeValue
 			return false
 		if nanosec < t.nanosec
 			return true
-		return false
+		return nanosec < t.nanosec
+
+	bool is_valid()
+		return (nanosec >= 0) and (nanosec < 1000000000)
+	
+	void inc_nanosec(int ns)
+		nanosec += ns
+  		if nanosec > 1000000000
+  			sec ++
+  			nanosec -= 1000000000
+	
+	void dec_nanosec(int ns)
+		nanosec -= ns
+		if nanosec < 0
+			sec --
+			nanosec += 1000000000
+
 	void add(TimeValue t)
 		sec += t.sec
-		nanosec += t.nanosec
-		if nanosec > 1000000000
-			sec ++
-			nanosec -= 1000000000
+		inc_nanosec(t.nanosec)
 
 class KernelTimer
-	int[2] state
+	//int[2] state
 	TimeValue tv
+	int dt_nanosec
 	
-	void update_state()
+	/*void update_state()
 		asm{
 			db 0x0f
 			db 0x31
@@ -34,13 +47,33 @@ class KernelTimer
 			mov __temp_i2__, edx
 		}
 		state[0] = __temp_i2__
-		state[1] = __temp_i__
+		state[1] = __temp_i__*/
 	
 	void update()
-		update_state()
+		//update_state()
 		// TODO   :P
-		tv.sec = (state[0] << 8) + (state[1] >> 24)
+		//tv.sec = (state[0] << 8) + (state[1] >> 24)
 		//tv.nanosec = 0
-		tv.nanosec = (state[1] << 6) & 0x3fffffff
+		//tv.nanosec = (state[1] << 6) & 0x3fffffff
+	void tick()
+		tv.inc_nanosec(dt_nanosec)
 
 KernelTimer kernel_timer
+
+void InitTimerInterrupt(int dt_ms)
+	kernel_timer.tv.sec = 0
+	kernel_timer.tv.nanosec = 0
+	kernel_timer.dt_nanosec = dt_ms * 1000000
+	
+	// ticks/s: 1193180
+	// 100Hz:   11932 = 0x2e9c
+	int ticks_per_sec = 1193180
+	int ticks_till_irq = (ticks_per_sec >> 10) * dt_ms
+	if ticks_till_irq > 0xffff
+		ticks_till_irq = 0xffff
+
+	outportb(0x43, 0x34) // channel 0, rate generator
+	outportb(0x40, ticks_till_irq)
+	outportb(0x40, ticks_till_irq >> 8)
+
+
