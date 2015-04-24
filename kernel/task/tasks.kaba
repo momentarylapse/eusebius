@@ -234,8 +234,11 @@ class TaskData
 	void die(int r)
 		return_status = r
 		clean_up_resources()
-		/*status = TASK_STATUS_ZOMBIE
-		send_death_message()*/
+		status = TASK_STATUS_ZOMBIE
+		send_death_message()
+		
+	int get_prev_pid()
+		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 
 //--------------------------------------------------------------
 // Dateizugriff
@@ -316,7 +319,7 @@ class TaskData
 		if h < 0
 			return -ENOENT
 		int addr = TASK_IMAGE_POS // task space...
-		TaskData *t = AddTask(filename, _i2p(addr), false, self)
+		TaskData *t = AddTaskUser(filename, _i2p(addr), self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
@@ -401,7 +404,7 @@ class TaskData
 		return -EINVAL
 	
 	int sys_fork()
-		TaskData *t = AddTask("-fork-", _i2p(TASK_IMAGE_POS), false, self)
+		TaskData *t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), self)
 		if !t
 			return -ENOMEM
 		
@@ -502,7 +505,7 @@ int get_next_pid()
 			return i
 	return -1
 
-TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
+TaskData *AddTaskUser(cstring name, void *func, TaskData *parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
@@ -517,23 +520,16 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	else
 		t.cur_dir = FileSystem.root
 	t.parent = parent
-	t.kernel_mode = kernel_mode
-	if kernel_mode
-		t.stack_size = KERNEL_STACK_SIZE
-		t.stack = malloc(KERNEL_STACK_SIZE)
-		t.page_dir = KernelPageDir
-		t.mem_bottom = 0
-		t.mem_size = 0
-		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
-	else
-		t.stack_size = TASK_STACK_SIZE
-		t.stack = _i2p(TASK_STACK_POS)
-		t.mem_bottom = KERNEL_MEM
-		t.mem_size = INITIAL_TASK_MEM
-		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
-		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-			nil // ...
-		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+	t.kernel_mode = false
+	
+	t.stack_size = TASK_STACK_SIZE
+	t.stack = _i2p(TASK_STACK_POS)
+	t.mem_bottom = KERNEL_MEM
+	t.mem_size = INITIAL_TASK_MEM
+	t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
+	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+		panic("incomplete page dir") // ...
+	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 	
 	t.time_all.clear()
@@ -542,7 +538,7 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 
 	return t
 
-/*TaskData *AddTaskKernel(cstring name, void *func, bool kernel_mode, TaskData *parent)
+TaskData *AddTaskKernel(cstring name, void *func, TaskData *parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
@@ -557,27 +553,22 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 	else
 		t.cur_dir = FileSystem.root
 	t.parent = parent
-	t.kernel_mode = kernel_mode
-	if kernel_mode
-		t.stack_size = KERNEL_STACK_SIZE
-		t.stack = malloc(KERNEL_STACK_SIZE)
-		// could use single stack... but multi-core...
-		t.page_dir = KernelPageDir
-		t.mem_bottom = 0
-		t.mem_size = MemorySize
-		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
-	else
-		t.stack_size = TASK_STACK_SIZE
-		t.stack = _i2p(TASK_STACK_POS)
-		t.mem_bottom = KERNEL_MEM
-		t.mem_size = INITIAL_TASK_MEM
-		t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
-		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-			nil // ...
-		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+	t.kernel_mode = true
+	
+	t.stack_size = KERNEL_STACK_SIZE
+	t.stack = malloc(KERNEL_STACK_SIZE)
+	t.page_dir = KernelPageDir
+	t.mem_bottom = 0
+	t.mem_size = 0
+	t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
+	
 	GlobalDescriptorTable[t.desc].set_task(t)
+	
+	t.time_all.clear()
+	t.load = 0
+	t.time_temp.clear()
 
-	return t*/
+	return t
 
 void idle_func()
 	while true
@@ -615,8 +606,8 @@ void InitTasks()
 	//UserMemMask = 0
 	RunningPid = 0
 
-	KernelTask = AddTask("kernel", nil, true, nil)
-	IdleTask = AddTask("idle", &idle_func, true, KernelTask)
+	KernelTask = AddTaskKernel("kernel", nil, nil)
+	IdleTask = AddTaskKernel("idle", &idle_func, KernelTask)
 	
 	// GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1

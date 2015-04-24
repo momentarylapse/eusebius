@@ -84,7 +84,7 @@ void main()
 	etm_init()
 	SchedulerEnabled = false
 	
-	prints("Willkommen zu Eusebius 0.2.10   (c) by MichiSoft TM 2015\n")
+	prints("Willkommen zu Eusebius 0.2.11   (c) by MichiSoft TM 2015\n")
 	prints("Speicher: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
@@ -107,7 +107,7 @@ void main()
 	
 	InitTasks()
 	
-	InitInterrupts()
+	Interrupts.init()
 	
 	InitDrivers()
 	

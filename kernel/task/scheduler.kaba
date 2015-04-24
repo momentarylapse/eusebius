@@ -91,7 +91,7 @@ void ProcessWaitingTasks()
 
 
 void ReconnectTasks(int pid_next, TaskData *irq_task)
-	//int pid_cur = (irq_task.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+	//int pid_cur = irq_task.get_prev_task()
 	GlobalDescriptorTable[Tasks[RunningPid].desc].set_busy(false)
 	GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
 	irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3

@@ -169,6 +169,9 @@ void int_syscall()
 		else if index == 117 // ipc
 			r = caller.sys_ipc(param1, param2, param3, param4)
 		else if index == 122 // uname
+			int a = 1
+			int b = 0
+			a = a / b
 			_uts_name.get()
 			caller.page_dir.memcpy2task(param1, &_uts_name, sizeof(_uts_name))
 		else if index == 141 // getdents

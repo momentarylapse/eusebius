@@ -15,45 +15,30 @@ use "syscall.kaba"
 //--------------------------------------------------------------
 // Interrupts
 
+void handle_task_error(TaskData* t, TaskData* e, int i)
+	int pid = t.pid
+	prints("-- Interrupt #")
+	printi(i)
+	prints(" pid=")
+	printi(pid)
+	prints("--\n")
+	cstring s
+	get_error_text(i, s)
+	prints(s)
+	
+	t.die(i-666)
+	
+	int pid_next = GetNextTask(pid)
+	ReconnectTasks(pid_next, e)
+	
 
-void int_handler(int i)
-	asm{
-		cli
-	}
-	while true
-		prints("[int ")
-		printi(i)
-		prints(" ")
-		printi(RunningPid)
-		prints("]   ")
-		Tasks[RunningPid].die(i-666)
-		
-		int pid_next = GetNextTask(RunningPid)
-		printi pid_next
-		while true
-			nil
-		//ReconnectTasks(pid_next, ErrorTask)
-		
-		asm{
-			sti
-			iret
-			cli
-		}
-		
-	/*asm{
-		cli
-	}
-	if !Tasks[RunningPid].kernel_mode
-		prints("[int ")
-		printi(i)
-		prints(" ")
-		printi(RunningPid)
-		prints("]")
-		Tasks[RunningPid].die(i-666)
-		asm{
-			iret
-		}*/
-	cstring s, nn
+void handle_kernel_error(TaskData* t, int i)
+	cstring s
+	get_error_text(i, s)
+	panic(s)
+
+void get_error_text(int i, cstring s)
+	cstring nn
 	strcpy(&s, &"Int ")
 	_i2s(i, &nn)
 	strcat(&s, &nn)
@@ -88,10 +73,25 @@ void int_handler(int i)
 	if i==16
 		strcat(&s, &": Koprozessor-Fehler")
 	strcat(&s, &"  8-P")
-	//panic(s)
-	prints("\n\n")
-	prints(s)
-	return
+
+void int_handler(int i)
+	asm{
+		cli
+	}
+	while true
+		TaskData* e = Interrupts.tasks[i]
+		int prev_pid = e.get_prev_pid()
+		TaskData *prev = &Tasks[prev_pid]
+		if prev.kernel_mode
+			handle_kernel_error(prev, i)
+		else
+			handle_task_error(prev, e, i)
+		
+		asm{
+			sti
+			iret
+			cli
+		}
 
 void int_00()
 	int_handler(0)
@@ -134,109 +134,105 @@ class InterruptDescriptor
 	int a, b
 
 	void set(void *func)
-		if !func
-			a = 0
-			b = 0
-		else
+		a = 0
+		b = 0
+		if func
 			int addr = _p2i(func)
 			// Interrupt Gate
 			a = 0x00080000 + (addr & 0xffff) // desc[1],addr[15..0]
 			b = (addr & 0xffff0000) + 0x00008e00 // addr[31..16],typ
 
 	void set_task(TaskData *t)
-		if !t
-			a = 0
-			b = 0
-		else
+		a = 0
+		b = 0
+		if t
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 			// Interrupt Task Gate
 			a = 0x00080000*t.desc // desc,0[15..0]
 			b = 0x00008500 // 0[31..16],typ
 
-InterruptDescriptor[256] InterruptDescriptorTable
-
-TaskData *ErrorTask
-
-void InitInterrupts()
-	if VerbosityLevel >= 1
-		prints("lade Interrupt-Tabelle")
-
-	for i in InterruptDescriptorTable
-		i.set(nil)
+class InterruptController
+	InterruptDescriptor[256] idt
+	void*[16] handler
+	TaskData*[16] tasks
 	
-	ErrorTask = AddTask("irq-error", &int_handler, true, nil)
-	TimerTask = AddTask("irq-timer", &int_timer, true, nil)
-	SysCallTask = AddTask("irq-syscall", &int_syscall, true, nil)
-	TaskData *KeyTask = AddTask("irq-key", &int_key, true, nil)
-	TaskData *MouseTask = AddTask("irq-mouse", &int_mouse, true, nil)
-
-	/*InterruptDescriptorTable[ 0].set(&int_00)
-	InterruptDescriptorTable[ 1].set(&int_01)
-	InterruptDescriptorTable[ 2].set(&int_02)
-	InterruptDescriptorTable[ 3].set(&int_03)
-	InterruptDescriptorTable[ 4].set(&int_04)
-	InterruptDescriptorTable[ 5].set(&int_05)
-	InterruptDescriptorTable[ 6].set(&int_06)
-	InterruptDescriptorTable[ 7].set(&int_07)
-	InterruptDescriptorTable[ 8].set(&int_08)
-	InterruptDescriptorTable[ 9].set(&int_09)
-	InterruptDescriptorTable[10].set(&int_10)
-	InterruptDescriptorTable[11].set(&int_11)
-	InterruptDescriptorTable[12].set(&int_12)
-	InterruptDescriptorTable[13].set(&int_13)
-	InterruptDescriptorTable[14].set(&int_14)
-	InterruptDescriptorTable[15].set(&int_15)
-	InterruptDescriptorTable[16].set(&int_16)*/
-	for i in 0:16
-		InterruptDescriptorTable[i].set_task(ErrorTask)
+	void set(int id, void *func)
+		idt[id].set(func)
 	
-	InterruptDescriptorTable[32].set_task(TimerTask) // IRQ 0
-	InterruptDescriptorTable[33].set_task(KeyTask) // IRQ 1
-	InterruptDescriptorTable[44].set_task(MouseTask) // IRQ 12
-	InterruptDescriptorTable[0x80].set_task(SysCallTask)
+	void set_task(int id, TaskData *t)
+		idt[id].set_task(t)
 
-	// IRQs auf höhere Interrupts legen
-	outportb(0x20,0x11) // init
-	outportb(0xa0,0x11)
-	outportb(0x21,0x20) // offset 32
-	outportb(0xa1,0x28)
-	outportb(0x21,0x04) // master/slave identity stuff?
-	outportb(0xa1,0x02)
-	outportb(0x21,0x01) // 8086
-	outportb(0xa1,0x01)
-	outportb(0x21,0x00) // masks
-	outportb(0xa1,0x00)
+	void init()
+		if VerbosityLevel >= 1
+			prints("lade Interrupt-Tabelle")
+
+		for i in idt
+			i.set(nil)
 	
-	__temp_p__ = &InterruptDescriptorTable
+		//ErrorTask = AddTask("irq-error", &int_handler, KernelTask)
+		TimerTask = AddTaskKernel("irq-timer", &int_timer, KernelTask)
+		SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, KernelTask)
+		TaskData *KeyTask = AddTaskKernel("irq-key", &int_key, KernelTask)
+		TaskData *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, KernelTask)
 
-	asm{
-		jmp _after_idt_data
-		_idtr:
-		dw 0x07ff
-		_idtr_base:
-		dd 0x00000000
-		_after_idt_data:
-		mov eax, __temp_p__
-		mov [_idtr_base], eax
-		cli
-		lidt [_idtr]
-		sti
-	}
+		handler[ 0] = &int_00
+		handler[ 1] = &int_01
+		handler[ 2] = &int_02
+		handler[ 3] = &int_03
+		handler[ 4] = &int_04
+		handler[ 5] = &int_05
+		handler[ 6] = &int_06
+		handler[ 7] = &int_07
+		handler[ 8] = &int_08
+		handler[ 9] = &int_09
+		handler[10] = &int_10
+		handler[11] = &int_11
+		handler[12] = &int_12
+		handler[13] = &int_13
+		handler[14] = &int_14
+		handler[15] = &int_15
+		
+		for h,i in handler
+			//set(i, h)
+			tasks[i] = AddTaskKernel("error", h, KernelTask)
+			set_task(i, tasks[i])
 	
+		set_task(32, TimerTask) // IRQ 0
+		set_task(33, KeyTask) // IRQ 1
+		set_task(44, MouseTask) // IRQ 12
+		set_task(0x80, SysCallTask)
 
-	/*outportb(0x70,0x08)
-	char c=inportb(0x71)
-	outportb(0x71,c|0x40)*/
-
-	/*prints("versuche boese Speicher-Operation...")
-
-	int i = 0
-	1/i
-	asm{
-		mov [0x00000000], eax
-	}*/
+		// IRQs auf höhere Interrupts legen
+		outportb(0x20,0x11) // init
+		outportb(0xa0,0x11)
+		outportb(0x21,0x20) // offset 32
+		outportb(0xa1,0x28)
+		outportb(0x21,0x04) // master/slave identity stuff?
+		outportb(0xa1,0x02)
+		outportb(0x21,0x01) // 8086
+		outportb(0xa1,0x01)
+		outportb(0x21,0x00) // masks
+		outportb(0xa1,0x00)
 	
-	InterruptsEnabled = true
-	if VerbosityLevel >= 1
-		prints("   ok\n")
+		__temp_p__ = &idt
+
+		asm{
+			jmp _after_idt_data
+			_idtr:
+			dw 0x07ff
+			_idtr_base:
+			dd 0x00000000
+			_after_idt_data:
+			mov eax, __temp_p__
+			mov [_idtr_base], eax
+			cli
+			lidt [_idtr]
+			sti
+		}
+	
+		InterruptsEnabled = true
+		if VerbosityLevel >= 1
+			prints("   ok\n")
+
+InterruptController Interrupts
