@@ -6,6 +6,10 @@ use "base.kaba"
 class TimeValue
 	int sec
 	int nanosec
+	void clear()
+		sec = 0
+		nanosec = 0
+	
 	bool is_before(TimeValue t)
 		if sec < t.sec
 			return true
@@ -61,8 +65,12 @@ class KernelTimer
 KernelTimer kernel_timer
 
 void InitTimerInterrupt(int dt_ms)
-	kernel_timer.tv.sec = 0
-	kernel_timer.tv.nanosec = 0
+	// read year from CMOS
+	//outportb(0x70, 0x40 | 0x09)
+	//inportb(0x71)
+	// year=0x09 month=0x08 day=0x07 hours=0x04 min=0x02 sec=0x00
+
+	kernel_timer.tv.clear()
 	kernel_timer.dt_nanosec = dt_ms * 1000000
 	
 	// ticks/s: 1193180

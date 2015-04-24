@@ -91,6 +91,10 @@ void sys_showstats()
 				printi(t.status)
 			TextPos = 27
 			printi(t.pages_alloced())
+			TextPos = 35
+			printi(t.load)
+			TextPos = 40
+			printi(t.time_all.sec)
 			prints("\n")
 
 	

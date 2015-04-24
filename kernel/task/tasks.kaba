@@ -120,6 +120,9 @@ class TaskData
 	PageDirectory *page_dir
 	int mem_bottom, mem_size
 	
+	TimeValue time_all, time_temp
+	int load // 1/1000
+	
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
 	TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK] shmem
@@ -525,6 +528,10 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 			nil // ...
 		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
+	
+	t.time_all.clear()
+	t.load = 0
+	t.time_temp.clear()
 
 	return t
 
