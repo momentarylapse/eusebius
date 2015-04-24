@@ -26,9 +26,6 @@ void int_handler(int i)
 		}
 		// we won't reach this point...
 		//Task[RunningPid].sys_exit(i-666)
-		asm{
-			sti
-		}
 		while true
 			nil
 	cstring s, nn
@@ -133,7 +130,6 @@ class InterruptDescriptor
 		return nil
 
 InterruptDescriptor[256] InterruptDescriptorTable
-
 
 
 void InitInterrupts()

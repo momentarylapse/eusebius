@@ -11,41 +11,31 @@ const int TASK_SWITCH_DT = 20 // ms
 
 bool SchedulerEnabled
 
-int _nnn
-
 void int_timer()
+	asm{
+		cli
+	}
 	while true
 		if SchedulerEnabled
-		
-			// FIXME handle mouse... IRQ does not seem to work...
-			_nnn ++
-			if (_nnn & 0x3) == 0
-				ps2_try_read()
+			//prints "."
 		
 			// IO-waits
 			ProcessWaitingTasks()
 		
 			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, TimerTask)
-			
-	/*		if next != last
-				prints("<")
-				prints(Task[pid_cur].name)
-				prints(",")
-				prints(Task[pid_next].name)
-				//printi(pid_next)
-				prints(">")*/
 
 		// weitere Aufrufe erlauben
 		outportb(0x20,0x20)
 
 		// zurück
 		asm{
+			sti
 			iret
+			cli
 		}
 
 void InitTimerInterrupt()
-	_nnn = 0
 	
 	// ticks/s: 1193180
 	// 100Hz:   11932 = 0x2e9c

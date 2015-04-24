@@ -174,16 +174,50 @@ void InitDrivers()
 	dev_mouse_ops._write = &dev_mouse_write
 	dev_mouse.op = &dev_mouse_ops
 
-	// Maus aktivieren
-	//   AUX aktivieren
-	outportb(0x64,0xa8)
-	//   Maus zum Sprechen bringen
-	outportb(0x64,0xd4) // an Maus senden (AUX)
-	//outportb(0x60,0xff) // Reset
-	outportb(0x60,0xf4) // EnableReporting
-	
-	mouse_awaits_fa = true
-	
+	// Enable the auxiliary mouse device
+	mouse_wait_signal()
+	outportb(0x64, 0xa8)
+  
+	// Enable the interrupts
+	mouse_wait_signal()
+	outportb(0x64, 0x20)
+	mouse_wait_data()
+	int _status = (inportb(0x60) | 2)
+	mouse_wait_signal()
+	outportb(0x64, 0x60)
+	mouse_wait_signal()
+	outportb(0x60, _status)
+  
+	// Set Defaults
+	mouse_write(0xf6)
+	mouse_read() // acknowledge
+  
+	// Enable Packet Streaming
+	mouse_write(0xf4)
+	mouse_read() // acknowledge
+
+
+void mouse_wait_data()
+	for i in 0:100000
+		if ((inportb(0x64) & 1) == 1)
+			return
+
+void mouse_wait_signal()
+	for i in 0:100000
+		if ((inportb(0x64) & 2) == 0)
+			return
+
+
+void mouse_write(int data)
+	mouse_wait_signal()
+	outportb(0x64, 0xd4)
+	mouse_wait_signal()
+	outportb(0x60, data)
+
+int mouse_read()
+	mouse_wait_data()
+	return inportb(0x60)
+
 
 int getchar(int k)
 	if dev_key_control
@@ -456,12 +490,8 @@ void ps2_read_key(int k)
 
 int[4] mouse_temp
 int mouse_temp_no
-bool mouse_awaits_fa
 
 void ps2_read_mouse(int d)
-	if d == 0xfa and mouse_awaits_fa
-		mouse_awaits_fa = false
-		return
 	mouse_temp[mouse_temp_no] = d & 0x000000ff
 	mouse_temp_no ++
 	
@@ -507,7 +537,7 @@ void ps2_try_read()
 		ps2_read_mouse(d)
 	else
 		ps2_read_key(d)
-	ps2_try_read()
+	//ps2_try_read()
 
 
 
@@ -526,8 +556,7 @@ void int_key()
 
 void int_mouse()
 	while true
-		//int k = inportb(0x60)
-		prints("<IRQ mouse>")
+		//prints("<mouse>")
 		
 		ps2_try_read()
 					

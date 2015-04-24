@@ -117,8 +117,6 @@ void main()
 	
 	if KernelTask.sys_execute("/bin/shell", stdin, stdout) < 0
 		panic("kann /bin/shell-Datei nicht lesen!")
-	//sys_execute(KernelTask, "/hello")
-	//sys_execute(KernelTask, "/hello")
 	
 	StartScheduler()
 	
