@@ -7,6 +7,5 @@ void main()
 	print("Hallo Welt\n")
 	
 	while true
-		for i in 0:1000000
-			nil
+		usleep(100000)
 		print(".")

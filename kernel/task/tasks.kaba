@@ -567,12 +567,10 @@ TaskData *AddTask(cstring name, void *func, bool kernel_mode, TaskData *parent)
 
 void idle_func()
 	while true
-		for i in 0:1000000
-			nil
-		prints("<idle>")
-		/*asm{
+		//prints("<idle>")
+		asm{
 			hlt
-		}*/
+		}
 
 void InitTasks()
 	if VerbosityLevel >= 1

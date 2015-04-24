@@ -375,8 +375,7 @@ void main()
 	
 	prompt.show()
 	while true
-		for i in 0:10000
-			nil
+		usleep(10000)
 		if jobs.fg
 			jobs.test_all()
 		int key = getkey()

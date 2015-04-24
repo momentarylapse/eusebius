@@ -9,10 +9,6 @@ void main()
 	get_args(arg)
 	
 	if arg.num == 2
-		int n = arg[1].int()
-		TimeValue t, more
-		t.sec = n
-		t.nanosec = 0
-		nanosleep(t, more)
+		sleep(arg[1].int())
 	
 	exit(0)
