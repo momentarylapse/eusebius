@@ -115,6 +115,8 @@ int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 
 void InitDrivers()
+	if VerbosityLevel > 0
+		prints("init drivers... ")
 	dev_key_escaped = false
 	dev_key_shift = false
 	dev_key_control = false
@@ -163,7 +165,6 @@ void InitDrivers()
 	dev_tty_ops._write = &dev_tty_write
 	dev_tty.op = &dev_tty_ops
 	
-	
 	mouse_temp_no = 0
 	dev_mouse_num = 0
 	
@@ -195,6 +196,9 @@ void InitDrivers()
 	// Enable Packet Streaming
 	mouse_write(0xf4)
 	mouse_read() // acknowledge
+	
+	if VerbosityLevel > 0
+		prints("ok\n")
 
 
 void mouse_wait_data()

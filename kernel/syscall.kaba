@@ -208,6 +208,8 @@ void int_syscall()
 
 		// zurück
 		caller.tss.eax = r
+		
+		//prints(">")
 		if InterruptsEnabled
 			asm{
 				sti
@@ -216,3 +218,4 @@ void int_syscall()
 			iret
 			cli
 		}
+		//prints("<")

@@ -25,7 +25,7 @@ void clrscr()
 	TextPos = 0
 
 void etm_init()
-	VerbosityLevel = 0
+	VerbosityLevel = 10
 	asm{
 		mov eax, 0x000b8000
 		mov VideoMemory, eax

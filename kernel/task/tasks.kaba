@@ -203,6 +203,16 @@ class TaskData
 		clean_up_resources()
 		status = TASK_STATUS_UNUSED
 		
+	
+	void send_death_message()
+		for t in Tasks
+			if t.status == TASK_STATUS_WAITING
+				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
+					t.tss.eax = 0// // return waitpid()
+					*t.waiting_param_p = return_status
+					clean_up_deep()
+					t.activate()
+		
 	void *get_initial_stack_pos()
 		return _i2p(_p2i(stack) + stack_size)
 	
@@ -219,6 +229,13 @@ class TaskData
 		n += page_dir.count_entries() // all page tables
 		n ++ // page_dir itself
 		return n
+	
+	
+	void die(int r)
+		return_status = r
+		clean_up_resources()
+		/*status = TASK_STATUS_ZOMBIE
+		send_death_message()*/
 
 //--------------------------------------------------------------
 // Dateizugriff
@@ -322,17 +339,7 @@ class TaskData
 		return t.pid
 
 	void sys_exit(int r)
-		return_status = r
-		clean_up_resources()
-		status = TASK_STATUS_ZOMBIE
-		
-		for t in Tasks
-			if t.status == TASK_STATUS_WAITING
-				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
-					t.tss.eax = 0// // return waitpid()
-					*t.waiting_param_p = r
-					clean_up_deep()
-					t.activate()
+		die(r)
 
 	int sys_waitpid(int _pid, int status_addr, int options)
 		if _pid < 0 or _pid >= MAX_TASKS
@@ -358,7 +365,7 @@ class TaskData
 		if t.status == TASK_STATUS_UNUSED
 			return -ESRCH
 		if signal == SIGKILL
-			t.clean_up_deep()
+			t.die(0)
 		else if signal == SIGSTOP
 			if t.status == TASK_STATUS_RUNNING
 				t.status = TASK_STATUS_SLEEPING

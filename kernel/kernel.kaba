@@ -31,7 +31,10 @@ void show_pvl()
 	prints("]")
 
 void LoadKaLib()
+	if VerbosityLevel > 0
+		prints("loading kalib... ")
 	int h = KernelTask.sys_open("/lib/kalib", O_RDONLY)
+	printi(h)
 	if h < 0
 		panic("kann /lib/kalib nicht lesen!")
 		return
@@ -42,6 +45,8 @@ void LoadKaLib()
 			break
 		addr += r
 	KernelTask.sys_close(h)
+	if VerbosityLevel > 0
+		prints("ok\n")
 
 /*void FileTest()
 	int h = sys_open("/test.txt")
@@ -77,6 +82,7 @@ void main()
 	read_data_from_init()
 	mem_init()
 	etm_init()
+	SchedulerEnabled = false
 	
 	prints("Willkommen zu Eusebius 0.2.10   (c) by MichiSoft TM 2015\n")
 	prints("Speicher: ")
@@ -84,6 +90,8 @@ void main()
 	prints("k\n")
 	
 	Paging.init()
+	
+	SharedMem.init()
 	
 	Ata.init()
 	ReadPartitions(0)
@@ -103,8 +111,6 @@ void main()
 	
 	InitDrivers()
 	
-	SharedMem.init()
-	
 	//PagingTest()
 
 	//FileTest()
@@ -121,3 +127,4 @@ void main()
 	StartScheduler()
 	
 	panic("keine Tasks")
+

@@ -343,7 +343,7 @@ class PageController
 				return i * PAGE_SIZE * 32
 		return 0
 
-	void __free_chunk(int p, int size)
+	void free_chunk(int p, int size)
 		int offset = p / PAGE_SIZE / 32
 		int num_pages_req = (size - PAGE_SIZE + 1) / PAGE_SIZE//ceil_quot(size, PAGE_SIZE)
 		int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)

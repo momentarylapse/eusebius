@@ -25,7 +25,7 @@ class SharedMemory
 			panic("SharedMem.refcount < 0")
 	
 	void clean_up()
-		free(_i2p(p))
+		Paging.free_chunk(p, size)
 		key = -1
 
 class SharedMemoryController

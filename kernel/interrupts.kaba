@@ -17,17 +17,42 @@ use "syscall.kaba"
 
 
 void int_handler(int i)
-	if !Tasks[RunningPid].kernel_mode
-		__temp_i__ = i - 666
-		asm{
-			mov eax, 0x00000001 // sys_exit
-			mov ebx, __temp_i__
-			int 0x80
-		}
-		// we won't reach this point...
-		//Task[RunningPid].sys_exit(i-666)
+	asm{
+		cli
+	}
+	while true
+		prints("[int ")
+		printi(i)
+		prints(" ")
+		printi(RunningPid)
+		prints("]   ")
+		Tasks[RunningPid].die(i-666)
+		
+		int pid_next = GetNextTask(RunningPid)
+		printi pid_next
 		while true
 			nil
+		//ReconnectTasks(pid_next, ErrorTask)
+		
+		asm{
+			sti
+			iret
+			cli
+		}
+		
+	/*asm{
+		cli
+	}
+	if !Tasks[RunningPid].kernel_mode
+		prints("[int ")
+		printi(i)
+		prints(" ")
+		printi(RunningPid)
+		prints("]")
+		Tasks[RunningPid].die(i-666)
+		asm{
+			iret
+		}*/
 	cstring s, nn
 	strcpy(&s, &"Int ")
 	_i2s(i, &nn)
@@ -63,7 +88,10 @@ void int_handler(int i)
 	if i==16
 		strcat(&s, &": Koprozessor-Fehler")
 	strcat(&s, &"  8-P")
-	panic(s)
+	//panic(s)
+	prints("\n\n")
+	prints(s)
+	return
 
 void int_00()
 	int_handler(0)
@@ -115,31 +143,35 @@ class InterruptDescriptor
 			a = 0x00080000 + (addr & 0xffff) // desc[1],addr[15..0]
 			b = (addr & 0xffff0000) + 0x00008e00 // addr[31..16],typ
 
-	TaskData *set_task(cstring name, void *func)
-		if !func
+	void set_task(TaskData *t)
+		if !t
 			a = 0
 			b = 0
 		else
-			TaskData *t = AddTask(name, func, true, nil)
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
 
 			// Interrupt Task Gate
 			a = 0x00080000*t.desc // desc,0[15..0]
 			b = 0x00008500 // 0[31..16],typ
-			return t
-		return nil
 
 InterruptDescriptor[256] InterruptDescriptorTable
 
+TaskData *ErrorTask
 
 void InitInterrupts()
 	if VerbosityLevel >= 1
 		prints("lade Interrupt-Tabelle")
 
-	for i in 0:256
-		InterruptDescriptorTable[i].set(nil)
+	for i in InterruptDescriptorTable
+		i.set(nil)
+	
+	ErrorTask = AddTask("irq-error", &int_handler, true, nil)
+	TimerTask = AddTask("irq-timer", &int_timer, true, nil)
+	SysCallTask = AddTask("irq-syscall", &int_syscall, true, nil)
+	TaskData *KeyTask = AddTask("irq-key", &int_key, true, nil)
+	TaskData *MouseTask = AddTask("irq-mouse", &int_mouse, true, nil)
 
-	InterruptDescriptorTable[ 0].set(&int_00)
+	/*InterruptDescriptorTable[ 0].set(&int_00)
 	InterruptDescriptorTable[ 1].set(&int_01)
 	InterruptDescriptorTable[ 2].set(&int_02)
 	InterruptDescriptorTable[ 3].set(&int_03)
@@ -155,12 +187,14 @@ void InitInterrupts()
 	InterruptDescriptorTable[13].set(&int_13)
 	InterruptDescriptorTable[14].set(&int_14)
 	InterruptDescriptorTable[15].set(&int_15)
-	InterruptDescriptorTable[16].set(&int_16)
-	TimerTask = InterruptDescriptorTable[32].set_task("timer", &int_timer)
-	InterruptDescriptorTable[33].set_task("key", &int_key) // IRQ 1
-	InterruptDescriptorTable[44].set_task("mouse", &int_mouse) // IRQ 12
-	SysCallTask = InterruptDescriptorTable[0x80].set_task("syscall", &int_syscall)
-	//InterruptDescriptorTable[0x80].set(&int_syscall)
+	InterruptDescriptorTable[16].set(&int_16)*/
+	for i in 0:16
+		InterruptDescriptorTable[i].set_task(ErrorTask)
+	
+	InterruptDescriptorTable[32].set_task(TimerTask) // IRQ 0
+	InterruptDescriptorTable[33].set_task(KeyTask) // IRQ 1
+	InterruptDescriptorTable[44].set_task(MouseTask) // IRQ 12
+	InterruptDescriptorTable[0x80].set_task(SysCallTask)
 
 	// IRQs auf höhere Interrupts legen
 	outportb(0x20,0x11) // init
@@ -189,6 +223,7 @@ void InitInterrupts()
 		lidt [_idtr]
 		sti
 	}
+	
 
 	/*outportb(0x70,0x08)
 	char c=inportb(0x71)

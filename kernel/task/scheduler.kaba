@@ -19,6 +19,7 @@ void int_timer()
 		cli
 	}
 	while true
+		//prints("(")
 		if SchedulerEnabled
 			//prints "."
 			kernel_timer.tick()
@@ -31,6 +32,9 @@ void int_timer()
 			// pick next task
 			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, TimerTask)
+			//printi(pid_next)
+
+		//prints(")")
 
 		// allow more timer IRQs
 		outportb(0x20,0x20)

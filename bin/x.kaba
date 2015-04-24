@@ -115,6 +115,7 @@ int BgaReadRegister(int IndexValue)
 bool BgaIsAvailable()
 	return BgaReadRegister(VBE_DISPI_INDEX_ID) == VBE_DISPI_ID5
 
+bool graphics_enabled
 int screen_width, screen_height
 int cur_bank
 int[0]* vga_mem
@@ -137,6 +138,7 @@ void BgaSetVideoMode(int width, int height, int depth, bool UseLinearFrameBuffer
 	if ClearVideoMemory
 		x = x | VBE_DISPI_NOCLEARMEM
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, x)
+	graphics_enabled = true
 	
 	
 	
@@ -155,6 +157,8 @@ void BgaSetBank(int bank)
 		nil
 
 void setPixel(int x, int y, int col)
+	if !graphics_enabled
+		return
 	int p = x + y * screen_width
 	int b = p >> 14
 	int off = p & 0x3fff
@@ -252,8 +256,10 @@ class MouseController
 			cursor.fill(0xffc0c0c0)
 
 	bool update_single()
+		print "v"
 		int[4] m
 		if read(dev, &m, 4*4) < 16
+			print "x"
 			return false
 		x += m[1]
 		y -= m[2]
@@ -266,16 +272,21 @@ class MouseController
 		if y >= screen_height
 			y = screen_height - 1
 	
+		print "j"
 		return true
 
 	void update()
+		print "u"
 		bool need_update = false
 		for i in 0:8
 			if !update_single()
 				break
 			need_update = true
+		print "."
 		if need_update
+			print "+"
 			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
+		print "-"
 
 MouseController *mouse
 
@@ -501,6 +512,10 @@ class CommandController
 		//connection = open("/tmp/x", O_RDONLY)
 		int id = shmget(0x7bcd0123, 1024, SHM_DEST | IPC_CREAT)
 		buf = shmat(id, 0)
+		int a = 1
+		int b = 0
+		a = a / b
+		buf[-1] = 0
 		
 		buf[0] = 0
 	
@@ -520,6 +535,7 @@ CommandController *cmds
 
 void main()
 	init_lib()
+	graphics_enabled = false
 
 	next_window_id = 0
 	windows.__init__()
@@ -533,13 +549,7 @@ void main()
 	
 //	scan_pci()
 	
-	//print BgaReadRegister(VBE_DISPI_INDEX_ID)
-	/*if BgaIsAvailable()
-		print "ja"
-	else
-		print "nein"*/
-	
-	BgaSetVideoMode(640, 480, 32, false, false)
+	//BgaSetVideoMode(640, 480, 32, false, false)
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
 	desktop.fill(0xff402040)
@@ -548,15 +558,19 @@ void main()
 	
 	draw_invalidated()
 	
+	// make our debugging life easier...
 	string[] arg
 	arg.add("/bin/client")
-	execute(arg, -1, -1)
-	execute(arg, -1, -1)
+	//execute(arg, -1, -1)
+	//execute(arg, -1, -1)
 	
 	print "x: running\n"
 	while true
+		print "a"
 		cmds.update()
-		mouse.update()
+		print "b"
+		//mouse.update()
+		print "c"
 		draw_invalidated()
 		
 	XExit()
