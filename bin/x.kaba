@@ -142,7 +142,7 @@ void BgaSetVideoMode(int width, int height, int depth, bool UseLinearFrameBuffer
 	
 	
 	
-	vga_mem2 = _i2p(0xc0000000)
+	//vga_mem2 = _i2p(0xc0000000)
 	/*for d in pci_devices
 		if d.vendor == 0x1111 and d.device == 0x1234
 			print d.bar0
@@ -160,11 +160,14 @@ void setPixel(int x, int y, int col)
 	if !graphics_enabled
 		return
 	int p = x + y * screen_width
-	int b = p >> 14
-	int off = p & 0x3fff
-	if b != cur_bank
-		BgaSetBank(b)
-	vga_mem[off] = col
+	if vga_mem2
+		vga_mem2[p] = col
+	else
+		int b = p >> 14
+		int off = p & 0x3fff
+		if b != cur_bank
+			BgaSetBank(b)
+		vga_mem[off] = col
 
 void setPixel2(int x, int y, int col)
 	int p = x + y * screen_width
@@ -546,13 +549,27 @@ void main()
 	cmds = new CommandController
 	mouse = new MouseController
 	
-//	scan_pci()
+	//scan_pci()
+	
+	vga_mem2 = nil
+	int id = shmget(0xc0000000, 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
+	print id
+	print "\n"
+	if id >= 0
+		vga_mem2 = shmat(id, 0)
+		print p2s(vga_mem2)
 	
 	if arg.num == 1
-		BgaSetVideoMode(640, 480, 32, false, false)
+		if vga_mem2
+			BgaSetVideoMode(640, 480, 32, true, false)
+		else
+			BgaSetVideoMode(640, 480, 32, false, false)
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
-	desktop.fill(0xff402040)
+	if vga_mem2
+		desktop.fill(0xff402040)
+	else
+		desktop.fill(0xff000000)
 	
 	mouse.create()
 	

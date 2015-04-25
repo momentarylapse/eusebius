@@ -25,6 +25,7 @@ const int SHMAT = 9
 const int SHMDT = 10
 const int SHMGET = 11
 
+const int SHM_ABSOLUTE = 1 << 20
 const int SHM_DEST = 1<<11
 const int IPC_CREAT = 1<<12
 const int IPC_EXCL = 1<<13

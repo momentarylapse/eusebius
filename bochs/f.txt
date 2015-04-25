@@ -1,26 +1,25 @@
 megs: 256
 display_library: sdl
 
+#ne2k: enabled=1, ioaddr=0x300, irq=3, mac=b0:c4:20:00:00:00, ethmod=linux, ethdev=eth0
+ne2k: enabled=1, ioaddr=0x300, irq=3, mac=b0:c4:20:00:00:00, ethmod=vnet, ethdev=/tmp/bochsnet
+
 #romimage: file=BIOS-bochs-latest
 #, address=0xf0000
 #vgaromimage: file=VGABIOS-lgpl-latest
 #vga: extension=vbe
 #vgaromimage: file=VGABIOS-lgpl-latest.cirrus.bin
 #vga: extension=cirrus
-pci: enabled=1, chipset=i440fx, slot1=pcivga
+pci: enabled=1, chipset=i440fx, slot1=pcivga  , slot2=ne2k
 
 
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
-#ata0-master: type=disk, path="hd10meg.img", cylinders=306, heads=4, spt=17
 ata0-master: type=disk, path="c.img", mode=flat, cylinders=40, heads=16, spt=63
 
 #ata0-slave: type=disk, path="hdd_2.img", cylinders=10, heads=16, spt=63
 #ata1: enabled=0, ioaddr1=0x170, ioaddr2=0x370, irq=15
 #ata0-slave:  type=cdrom, path="d:\Projekte\Eusebius\eusebius.iso", status=inserted
 
-ata0-slave:  type=cdrom, path="/home/michi/Downloads/dsl-4.4.10-syslinux.iso", status=inserted
-
-#boot: cdrom
 boot: c
 
 

@@ -9,7 +9,7 @@ const int MAX_SHARED_MEMORY_BLOCKS = 64
 
 class SharedMemory
 	int id
-	int key
+	int key // -1 = unused
 	int pid
 	int size
 	int p
@@ -44,13 +44,19 @@ class SharedMemoryController
 		return size
 	
 	int create(int key, int size, int flags, int pid)
-		if key < 0
+		bool absolute = (flags & SHM_ABSOLUTE) != 0
+		if key < 0 and !absolute
 			return -EINVAL
 		for b,i in blocks
-			if b.key < 0
-				b.p = Paging.alloc_chunk(size)
-				if b.p == 0
-					return -ENOMEM
+			if b.key == -1
+				if absolute
+					if !Paging.alloc_chunk(key, size)
+						return -ENOMEM
+					b.p = key
+				else
+					b.p = Paging.find_and_alloc_chunk(size)
+					if b.p == -1
+						return -ENOMEM
 				b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
 				b.key = key
 				b.pid = pid
@@ -60,7 +66,7 @@ class SharedMemoryController
 		return -ENOSPC
 		
 	SharedMemory* get_by_key(int key)
-		if key < 0
+		if key == -1
 			return nil
 		for b,i in blocks
 			if b.key == key
@@ -71,7 +77,7 @@ class SharedMemoryController
 	SharedMemory* get(int id)
 		if id < 0 or id >= MAX_SHARED_MEMORY_BLOCKS
 			return nil
-		if blocks[id].key < 0
+		if blocks[id].key == -1
 			return nil
 		return &blocks[id]
 		

@@ -326,9 +326,7 @@ class PageController
 		alloc_count = 0
 		free_count = 0
 			
-	int alloc_chunk(int size)
-		//int num_pages_req = (size - PAGE_SIZE + 1) / PAGE_SIZE//ceil_quot(size, PAGE_SIZE)
-		//int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)
+	int find_and_alloc_chunk(int size)
 		int num_pages_req = ceil_quot(size, PAGE_SIZE)
 		int num_masks_req = ceil_quot(num_pages_req, 32)
 		for i in 0:num_masks-num_masks_req
@@ -342,6 +340,47 @@ class PageController
 					mask[i+j] = 0xffffffff
 				return i * PAGE_SIZE * 32
 		return 0
+	
+	bool alloc_chunk(int pos, int size)
+		if (pos & 0x00000fff) != 0
+			return false
+		int npages = ceil_quot(size, PAGE_SIZE)
+		
+		// which pages/masks?
+		int p0 = pos >> 12
+		int p1 = p0 + npages
+		int m0 = p0 >> 5
+		int m1 = p1 >> 5
+		p0 = p0 & 0x0000001f
+		p1 = p1 & 0x0000001f
+		
+		// boundary masks
+		int mask0 = 0xffffffff << p0
+		int mask1 = 0xffffffff >> (32 - p1)
+		
+		// special case
+		if m0 == m1
+			mask0 = mask0 & mask1
+			if (mask[m0] & mask0) != 0
+				return false
+			mask[m0] = mask[m0] | mask0
+			return true
+		
+		// free?
+		if (mask[m0] & mask0) != 0
+			return false
+		if (mask[m1] & mask1) != 0
+			return false
+		for m in m0+1:m1
+			if mask[m] != 0
+				return false
+		
+		// allocate
+		mask[m0] = mask[m0] | mask0
+		mask[m1] = mask[m1] | mask1
+		for m in m0+1:m1
+			mask[m] = 0xffffffff
+		return true
 
 	void free_chunk(int p, int size)
 		int offset = p / PAGE_SIZE / 32

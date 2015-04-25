@@ -4,6 +4,7 @@ hd_image
 image.mfs
 *.img
 bochs/bochsout.txt
+bochs/ne2k-pktlog.txt
 message.txt
 mfs
 img-src
