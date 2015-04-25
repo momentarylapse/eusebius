@@ -19,22 +19,22 @@ void int_timer()
 		cli
 	}
 	while true
-		//prints("(")
+		//prints "."
 		if SchedulerEnabled
-			//prints "."
+			//prints("(")
 			kernel_timer.tick()
 		
 			// IO-waits
 			ProcessWaitingTasks()
 			
 			UpdateTimes()
+			//prints(" ")
 		
 			// pick next task
 			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, TimerTask)
-			//printi(pid_next)
 
-		//prints(")")
+			//prints(")")
 
 		// allow more timer IRQs
 		outportb(0x20,0x20)
@@ -47,14 +47,13 @@ void int_timer()
 		}
 
 void StartScheduler()
-	SchedulerEnabled = false
 	RunningPid = 0
 	if VerbosityLevel >= 1
 		prints("starte Scheduler\n")
 	InitTimerInterrupt(TASK_SWITCH_DT)
-	SchedulerEnabled = true
 	next_perf_calc = kernel_timer.tv
 	next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
+	SchedulerEnabled = true
 	TimerTask.run_forced()
 
 

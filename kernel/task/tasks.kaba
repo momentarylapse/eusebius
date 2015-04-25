@@ -263,7 +263,7 @@ class TaskData
 		if !of
 			return -EBADF
 		int r = of.read(page_dir, addr, size)
-		if r == E_WOULD_BLOCK and of.blocking
+		if r == -EWOULDBLOCK and of.blocking
 			set_wait(WAITING_MODE_FILE_READ, nil, handle, addr, size)
 		return r
 
@@ -272,7 +272,10 @@ class TaskData
 		OpenFileData *of = get_handle(handle)
 		if !of
 			return -EBADF
-		return of.write(page_dir, addr, size)
+		int r = of.write(page_dir, addr, size)
+		if r == -EWOULDBLOCK and of.blocking
+			set_wait(WAITING_MODE_FILE_WRITE, nil, handle, addr, size)
+		return r
 
 	int sys_getdents(int handle, int addr, int num)
 		OpenFileData *of = get_handle(handle)

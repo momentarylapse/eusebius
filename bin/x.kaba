@@ -557,16 +557,16 @@ void main()
 	// make our debugging life easier...
 	string[] arg
 	arg.add("/bin/client")
-	//execute(arg, -1, -1)
-	//execute(arg, -1, -1)
+	execute(arg, -1, -1)
+	execute(arg, -1, -1)
 	
 	print "x: running\n"
 	while true
-		print "a"
+	//	print "a"
 		cmds.update()
-		print "b"
-		//mouse.update()
-		print "c"
+	//	print "b"
+		mouse.update()
+	//	print "c"
 		draw_invalidated()
 		
 	XExit()

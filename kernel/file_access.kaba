@@ -32,7 +32,7 @@ class PipeData
 	int buffer_used
 	int write(PageDirectory *page_dir, int addr, int size)
 		if buffer_used + size > PIPE_BUFFER_SIZE
-			return E_WOULD_BLOCK
+			return -EWOULDBLOCK
 		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
 		buffer_used += size
 		return size
@@ -40,7 +40,7 @@ class PipeData
 		if buffer_used == 0
 			// no data... block if we have a writer
 			if write_ref_count > 0
-				return E_WOULD_BLOCK
+				return -EWOULDBLOCK
 			// else "empty"
 			return 0
 		if size > buffer_used
@@ -222,7 +222,7 @@ class OpenFileData
 		
 		entry.size += size
 		return size
-		return E_WOULD_BLOCK
+		return -EWOULDBLOCK
 
 	int getdents(PageDirectory *page_dir, int addr, int num)
 		if !used

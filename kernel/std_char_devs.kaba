@@ -60,7 +60,7 @@ int dev_key_close(FileEntry *f)
 	return 0
 int dev_key_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	if dev_key_num == 0
-		return E_WOULD_BLOCK
+		return -EWOULDBLOCK
 	if size > dev_key_num
 		size = dev_key_num
 	page_dir.memcpy2task(addr, &dev_key_buf, size)
@@ -78,8 +78,13 @@ int dev_mouse_open(FileEntry *f)
 int dev_mouse_close(FileEntry *f)
 	return 0
 int dev_mouse_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	prints("[")
+	printi(size)
+	prints(":")
+	printi(dev_mouse_num)
+	prints("]")
 	if dev_mouse_num == 0
-		return E_WOULD_BLOCK
+		return -EWOULDBLOCK
 	if size < 16
 		return 0
 	size = 16
@@ -101,7 +106,7 @@ int dev_tty_close(FileEntry *f)
 	return 0
 int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	if dev_tty_key_num == 0
-		return E_WOULD_BLOCK
+		return -EWOULDBLOCK
 	if size > dev_tty_key_num
 		size = dev_tty_key_num
 	page_dir.memcpy2task(addr, &dev_tty_key_buf, size)

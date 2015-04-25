@@ -16,6 +16,7 @@ use "syscall.kaba"
 // Interrupts
 
 void handle_task_error(TaskData* t, TaskData* e, int i)
+	SchedulerEnabled = false
 	int pid = t.pid
 	prints("-- Interrupt #")
 	printi(i)
@@ -30,6 +31,9 @@ void handle_task_error(TaskData* t, TaskData* e, int i)
 	
 	int pid_next = GetNextTask(pid)
 	ReconnectTasks(pid_next, e)
+	prints("\nreturn")
+	printi(pid_next)
+	prints("\n")
 	
 
 void handle_kernel_error(TaskData* t, int i)
@@ -78,6 +82,7 @@ void int_handler(int i)
 	asm{
 		cli
 	}
+	SchedulerEnabled = false
 	while true
 		TaskData* e = Interrupts.tasks[i]
 		int prev_pid = e.get_prev_pid()

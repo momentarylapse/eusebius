@@ -114,6 +114,10 @@ void int_syscall()
 		int param2 = caller.tss.ecx
 		int param3 = caller.tss.edx
 		int param4 = caller.tss.esi
+		/*printi(RunningPid)
+		prints(" ")
+		printi(index)
+		prints(" ")*/
 	
 		if index == 1 // exit
 			caller.sys_exit(param1)
@@ -169,9 +173,6 @@ void int_syscall()
 		else if index == 117 // ipc
 			r = caller.sys_ipc(param1, param2, param3, param4)
 		else if index == 122 // uname
-			int a = 1
-			int b = 0
-			a = a / b
 			_uts_name.get()
 			caller.page_dir.memcpy2task(param1, &_uts_name, sizeof(_uts_name))
 		else if index == 141 // getdents
@@ -206,8 +207,10 @@ void int_syscall()
 		
 		// task switch?
 		if caller.status != TASK_STATUS_RUNNING
+			//prints("S")
 			pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, SysCallTask)
+			//printi(pid_next)
 
 		// zurück
 		caller.tss.eax = r

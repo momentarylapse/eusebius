@@ -12,7 +12,7 @@ const int O_APPEND = 16
 const int O_CREATE = 32
 const int O_NONBLOCK = 64
 const int O_TRUNC = 128
-const int E_WOULD_BLOCK = 0-128
+const int EWOULDBLOCK = 128
 
 int stdin, stdout
 
@@ -987,7 +987,7 @@ void lib__print(string s)
 	int done = 0
 	while done < s.num
 		int r = write(stdout, &s[done], s.num - done)
-		if r == E_WOULD_BLOCK
+		if r == -EWOULDBLOCK
 			continue
 		if r > 0
 			done += r
