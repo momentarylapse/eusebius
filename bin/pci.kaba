@@ -1,0 +1,150 @@
+#define __OS__
+use "prog_header.kaba"
+
+
+int _temp_port_no_
+int _temp_port_data_
+
+extern void* _i2p(int i)
+extern int _p2i(void *p)
+
+
+void outportb(int port, char data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		out dx, al
+	}
+
+char inportb(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		xor eax, eax
+		in al, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+void outportd(int port,int data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		out dx, eax
+	}
+
+int inportd(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		in eax, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+void outportw(int port,int data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		db 0x66
+		out dx, eax
+	}
+
+int inportw(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		xor eax, eax
+		db 0x66
+		in eax, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+char geth0(int i)
+	if (i >= 0) and (i <= 9)
+		return i + '0'
+	if (i >= 10) and (i <= 15)
+		return i - 10 + 'a'
+
+void printh(int i)
+	string s
+	for n in 0:8
+		s.add(geth0((i >> ((7-n)*4)) & 0xf))
+	print s
+	
+
+
+int pciConfigRead(int bus, int slot, int func, int offset)
+ 
+	/* create configuration address as per Figure 1 */
+	int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
+ 
+	/* write out the address */
+	outportd(0xcf8, address)
+	/* read in the data */
+	/* (offset & 2) * 8) = 0 will choose the first word of the 32 bits register */
+	return inportd(0xcfc)
+
+
+class PCIDevice
+	int bus, slot, func
+	int vendor, device
+	int xxx
+	int bar0
+PCIDevice[] pci_devices
+
+void checkDevice(int bus, int slot)
+	for fun in 0:8
+		int a = pciConfigRead(bus, slot, fun, 0)
+		int b = pciConfigRead(bus, slot, fun, 8)
+		int bar0 = pciConfigRead(bus, slot, fun, 16)
+	
+		int vendor = (a >> 16) & 0xffff
+		int dev = a & 0xffff
+		if vendor != 0xffff
+			PCIDevice p
+			p.bus = bus
+			p.slot = slot
+			p.func = fun
+			p.vendor = vendor
+			p.device = dev
+			p.xxx = b
+			p.bar0 = bar0 & 0xfffffff0
+			pci_devices.add(p)
+			print "---- "
+			print bus
+			print ":"
+			print slot
+			print ":"
+			print fun
+			print " "
+			printh vendor
+			print " "
+			printh dev
+			print "   "
+			printh b
+			print "   "
+			printh bar0
+			print "\n"
+
+void scan_pci()
+	for bus in 0:256
+		for dev in 0:32
+			checkDevice(bus, dev)
+
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	scan_pci()
+		
+	exit(0)

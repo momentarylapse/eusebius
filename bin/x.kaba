@@ -531,6 +531,9 @@ CommandController *cmds
 
 void main()
 	init_lib()
+	string[] arg
+	get_args(arg)
+	
 	graphics_enabled = false
 
 	next_window_id = 0
@@ -545,7 +548,8 @@ void main()
 	
 //	scan_pci()
 	
-	//BgaSetVideoMode(640, 480, 32, false, false)
+	if arg.num == 1
+		BgaSetVideoMode(640, 480, 32, false, false)
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
 	desktop.fill(0xff402040)
@@ -555,18 +559,15 @@ void main()
 	draw_invalidated()
 	
 	// make our debugging life easier...
-	string[] arg
-	arg.add("/bin/client")
-	execute(arg, -1, -1)
-	execute(arg, -1, -1)
+	string[] arg2
+	arg2.add("/bin/client")
+	execute(arg2, -1, -1)
+	execute(arg2, -1, -1)
 	
 	print "x: running\n"
 	while true
-	//	print "a"
 		cmds.update()
-	//	print "b"
 		mouse.update()
-	//	print "c"
 		draw_invalidated()
 		
 	XExit()

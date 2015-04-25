@@ -47,46 +47,95 @@ void main()	//-------------------------------------------------------------	// R
 		//jnz _reset_drive
 		xor ax, ax
 		mov es, ax
-		
 		// Ziel des Images
 		mov ax, 0x1000
 		mov es, ax
 		mov bx, 0x0000 // 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
 		mov ah, 0x02 // "ReadSector"
 		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x001d // sector 0x1d, cylinder 0
-		mov dx, 0x0080 // head 0, disc 0
-		int 0x13
-		
+		mov cx, 0x001d // sector 0x1f, cylinder 0
+		mov dx, 0x0080 // head 0x00, disc 0
+//		int 0x13
 		mov ax, 0x2000
 		mov es, ax
-		mov bx, 0x0000 // 0x200000
+		mov bx, 0x0000 // 0x2000:0x0000 = 0x20000 real mode segmentation is ugly
 		mov ah, 0x02 // "ReadSector"
 		mov al, 0x80 // 128 sectors * 512 bytes = 64k
 		mov cx, 0x001f // sector 0x1f, cylinder 0
-		mov dx, 0x0280 // head 2, disc 0
-		int 0x13
-		
-		mov ax, 0x3000
-		mov es, ax
-		mov bx, 0x0000 // 0x300000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x0021 // sector 0x21, cylinder 0
-		mov dx, 0x0480 // head 4, disc 0
-		int 0x13
-		
-		mov ax, 0x3000
-		mov es, ax
-		mov bx, 0x0000 // 0x400000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x0023 // sector 0x23, cylinder 0
-		mov dx, 0x0680 // head 6, disc 0
-		int 0x13
-		
+		mov dx, 0x0280 // head 0x02, disc 0
+//		int 0x13
+	//	mov al, [0x5008] // Größe: 1Sektor = 512b
+	//	mov cx, [0x5004]
+	//	mov dx, [0x5006]
+	//	int 0x13
 		or ah, ah
 		//jnz _reset_drive
+		
+		
+		
+	
+		
+		// set destination
+		mov   ax, 0x0000 // 0x0030
+		mov   [_rsp_dest_hi], ax
+		mov   ax, 0xa000 // 0x0000
+		mov   [_rsp_dest_lo], ax
+		
+		// set source
+		mov   ax, 0x001c
+		mov   [_rsp_lba], ax
+		mov   ax, 0x0001
+		mov   [_rsp_count], ax
+	_read_loop_start:
+		
+		// if count == 0 break
+		mov   ax, [_rsp_count]
+		cmp   ax, 0x0000
+		jz    _after_read_loop
+		
+		mov al, 'M'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		
+		jmp   _read_sector
+	_after_read:
+	
+		// count --
+		mov   ax, [_rsp_count]
+		dec   ax
+		mov   [_rsp_count], ax
+		
+		// lba ++
+		mov   ax, [_rsp_lba]
+		inc   ax
+		mov   [_rsp_lba], ax
+		
+		// dest ++
+		mov   ax, [_rsp_dest_lo]
+		add   ax, 0x0200
+		mov   [_rsp_dest_lo], ax
+		cmp   ax, 0x0000
+		jnz   _after_dest
+		mov   ax, [_rsp_dest_hi]
+		add   ax, 0x0100
+		mov   [_rsp_dest_hi], ax
+		_after_dest:
+		
+		jmp    _read_loop_start
+	_after_read_loop:
+	
+		mov al, 'X'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		
+		
+		mov al, [0xa012]
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		jmp $
 
 
 		// Speicher-Segmente laden
@@ -157,6 +206,84 @@ void main()	//-------------------------------------------------------------	// R
 
 		// zur Sicherheit....
 		jmp $
+		
+		
+		bits_16
+		
+	_read_sector:
+		
+		
+		
+		
+		
+		// Calculate cylinder, head and sector:
+		// Cylinder = (LBA / SectorsPerTrack) / NumHeads
+		// Sector   = (LBA mod SectorsPerTrack) + 1
+		// Head     = (LBA / SectorsPerTrack) mod NumHeads
+ 
+ 		mov ax, [_rsp_lba]
+ 		
+		mov bx, [_drive_sectors]
+		xor dx, dx
+		div ax, bx
+		inc dx
+		mov cl, dl
+
+		mov     bx, [_drive_heads]
+		xor     dx, dx
+		div     ax, bx
+		mov     ch, al
+		xchg    dl, dh
+		
+		mov     dl, 0x00 // disc 0
+		
+		// destination
+		mov     ax, [_rsp_dest_hi]
+		shl     ax, 0x08 // 0x1200:0x3456 = 0x123456 real mode segmentation is ugly
+		mov     es, ax
+		mov     bx, [_rsp_dest_lo]
+		
+		// DEBUG
+	
+		//mov ax, 0x0000
+		//mov es, ax
+		//mov bx, 0xa000 // 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
+		
+		mov ah, 0x02 // "ReadSector"
+		mov al, 0x01 // 128 sectors * 512 bytes = 64k
+		mov cx, 0x001d // sector 0x1f, cylinder 0
+		mov dx, 0x0080 // head 0x00, disc 0
+		int 0x13
+		jmp _after_read
+		jmp _after_read
+		
+		// read
+		mov     ah, 0x02 // "ReadSector"
+		mov     al, 0x01 // 1 sector = 512 bytes
+		int     0x13
+	//	mov cx, 0x001d // sector 0x1f, cylinder 0
+	//	mov dx, 0x0080 // head 0x00, disc 0
+	//	mov ah, 0x02 // "ReadSector"
+	//	mov al, 0x01 // 1 sector = 512 bytes
+	//	int 0x13
+	
+	
+	
+		jmp _after_read
+		
+		_rsp_dest_hi:
+		dw 0x0000
+		_rsp_dest_lo:
+		dw 0x0000
+		_rsp_lba:
+		dw 0x0000
+		_rsp_count:
+		dw 0x0000
+		
+		_drive_heads:
+		dw 0x0010 // 16
+		_drive_sectors:
+		dw 0x003f // 63
 
 	//-------------------------------------------------------------
 	// Daten
