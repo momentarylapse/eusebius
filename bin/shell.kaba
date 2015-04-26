@@ -171,18 +171,25 @@ class Job
 		close(pipe_out[0])
 	
 	void test()
+		//kprint "A"
 		string s
 		s.resize(512)
 		int r = read(pipe_out[0], &s[0], s.num)
+		//kprinti r
 		if r > 0
+			/*kprint "X"
+			kprinti(r)
+			kprint " "*/
 			s.resize(r)
 			print s
+			//kprint "Y"
 			return
 		
-	
+		//kprint "B"
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
+		//kprint "C"
 		vars.get("?").value = status
 		if self != jobs.fg
 			print "[" + id + "] Fertig: " + cmd + "\n"
@@ -190,6 +197,7 @@ class Job
 			print("  -- Programm hat was boeses gemacht! --\n")
 		//print(" status " + status)
 		done = true
+		//kprint "X"
 
 class JobManager
 	Job*[] job
@@ -224,6 +232,7 @@ class JobManager
 			j.test()
 		for i in 0:job.num
 			if job[i].done
+				//kprint "-JKILL-"
 				if job[i] == fg
 					fg = nil
 					prompt.show()
@@ -381,5 +390,4 @@ void main()
 		int key = getkey()
 		prompt.process(key)
 	
-	while true
-		nil
+	exit(0)

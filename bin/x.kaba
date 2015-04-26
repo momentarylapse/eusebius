@@ -135,10 +135,8 @@ class MouseController
 			cursor.fill(0xffc0c0c0)
 
 	bool update_single()
-		print "v"
 		int[4] m
 		if read(dev, &m, 4*4) < 16
-			print "x"
 			return false
 		x += m[1]
 		y -= m[2]
@@ -151,21 +149,16 @@ class MouseController
 		if y >= screen_height
 			y = screen_height - 1
 	
-		print "j"
 		return true
 
 	void update()
-		print "u"
 		bool need_update = false
 		for i in 0:8
 			if !update_single()
 				break
 			need_update = true
-		print "."
 		if need_update
-			print "+"
 			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
-		print "-"
 
 MouseController *mouse
 
@@ -465,7 +458,7 @@ void main()
 	print "x: running\n"
 	while true
 		cmds.update()
-//		mouse.update()
+		mouse.update()
 		draw_invalidated()
 		
 	XExit()

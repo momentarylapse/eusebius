@@ -9,24 +9,22 @@ use "irq.kaba"
 
 
 void handle_task_error(Task* t, Task* e, int i)
-	SchedulerEnabled = false
 	int pid = t.pid
-	prints("-- Interrupt #")
+	prints("\n    -- Interrupt #")
 	printi(i)
 	prints(" pid=")
 	printi(pid)
-	prints("--\n")
+	prints(" --\n")
 	cstring s
 	get_error_text(i, s)
 	prints(s)
+	
+	// TODO send signal
 	
 	t.die(i-666)
 	
 	int pid_next = GetNextTask(pid)
 	ReconnectTasks(pid_next, e)
-	prints("\nreturn")
-	printi(pid_next)
-	prints("\n")
 	
 
 void handle_kernel_error(Task* t, int i)
@@ -73,9 +71,12 @@ void get_error_text(int i, cstring s)
 
 void int_handler(int i)
 	while true
+		// task?
 		Task* e = error.tasks[i]
 		int prev_pid = e.get_prev_pid()
 		Task *prev = &Tasks[prev_pid]
+		
+		// handle error
 		if prev.kernel_mode
 			handle_kernel_error(prev, i)
 		else

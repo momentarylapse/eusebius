@@ -56,9 +56,8 @@ void main()
 	read_data_from_init()
 	mem_init()
 	etm_init()
-	SchedulerEnabled = false
 	
-	prints("Willkommen zu Eusebius 0.2.11   (c) by MichiSoft TM 2015\n")
+	prints("Willkommen zu Eusebius 0.2.12   (c) by MichiSoft TM 2015\n")
 	prints("Speicher: ")
 	printi(MemorySize / 1024)
 	prints("k\n")

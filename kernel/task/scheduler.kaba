@@ -11,29 +11,26 @@ use "../irq/irq.kaba"
 const int TASK_SWITCH_DT = 5 // ms
 const int PERF_UPDATE_DT = 1000000000 // 1000 ns
 
-bool SchedulerEnabled
-
 Task* SchedulerTask
 
 TimeValue next_perf_calc
 
 void int_timer()
 	while true
-		if SchedulerEnabled
-			//prints("(")
-			kernel_timer.tick()
+		//prints("(")
+		kernel_timer.tick()
 		
-			// IO-waits
-			ProcessWaitingTasks()
+		// IO-waits
+		ProcessWaitingTasks()
 			
-			UpdateTimes()
-			//prints(" ")
+		UpdateTimes()
+		//prints(" ")
 		
-			// pick next task
-			int pid_next = GetNextTask(RunningPid)
-			ReconnectTasks(pid_next, SchedulerTask)
+		// pick next task
+		int pid_next = GetNextTask(RunningPid)
+		ReconnectTasks(pid_next, SchedulerTask)
 
-			//prints(")")
+		//prints(")")
 
 		// allow more timer IRQs
 		outportb(0x20,0x20)
@@ -45,15 +42,13 @@ void int_timer()
 
 void StartScheduler()
 	RunningPid = 0
-	if VerbosityLevel >= 1
-		prints("starte Scheduler\n")
+	prints("starte Scheduler\n")
 	
 	SchedulerTask = AddTaskKernel("scheduler", &int_timer, KernelTask)
 	
 	InitTimerInterrupt(SchedulerTask, TASK_SWITCH_DT)
 	next_perf_calc = kernel_timer.tv
 	next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
-	SchedulerEnabled = true
 	SchedulerTask.run_forced()
 
 

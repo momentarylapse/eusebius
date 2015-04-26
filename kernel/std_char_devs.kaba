@@ -80,11 +80,6 @@ int dev_mouse_open(FileEntry *f)
 int dev_mouse_close(FileEntry *f)
 	return 0
 int dev_mouse_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	prints("[")
-	printi(size)
-	prints(":")
-	printi(dev_mouse_num)
-	prints("]")
 	if dev_mouse_num == 0
 		return -EWOULDBLOCK
 	if size < 16

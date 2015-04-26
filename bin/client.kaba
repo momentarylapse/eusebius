@@ -93,7 +93,7 @@ void main()
 		w.invalidate()
 	
 	while true
-		sleep(10)
+		sleep(5)
 		
 		w.move(randi(500), randi(400))
 	

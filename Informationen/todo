@@ -1,15 +1,15 @@
 
 == bugs ==
 
-* Pipes laufen über
+? Pipes laufen über
 * Maus-Pipe
 * shell stürzt ab
-* Interrupt-Fehler
-* x hängt
+J Interrupt-Fehler
+J x hängt (-> shell)
 J x Grafikfehler (-> LFB)
 
 * verschönerte Version
-  * Fehler beim Laden
+  J Fehler beim Laden
   * init-x
 
 
@@ -23,6 +23,6 @@ J PCI
 * Scripte
 * k2k
 * Signale
-* top
+J top
 * shell respawn
 
