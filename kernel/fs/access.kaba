@@ -1,28 +1,21 @@
-use "base.kaba"
-use "io/text.kaba"
-use "filesystem.kaba"
-use "mem/heap.kaba"
-use "mem/paging.kaba"
+use "../base.kaba"
+use "../io/text.kaba"
+use "fs.kaba"
+use "../mem/heap.kaba"
+use "../mem/paging.kaba"
 #define __STRING_CONST_AS_CSTRING__
+
+
+// TODO: split off pipe... but right now too entangled
 
 
 const int MAX_OPEN_FILES = 128
 const int MAX_PIPES = 64
 const int PIPE_BUFFER_SIZE = 1024
 
-const int O_RDONLY = 1
-const int O_WRONLY = 2
-const int O_RDWR = 3
-const int O_APPEND = 16
-const int O_CREATE = 32
-const int O_NONBLOCK = 64
-const int O_TRUNC = 128
 
 
-//--------------------------------------------------------------
-// Dateizugriff
-
-class PipeData
+class Pipe
 	bool used
 	FileEntry *e
 	int read_ref_count
@@ -80,11 +73,11 @@ class PipeData
 		free(buffer)
 		used = false
 
-PipeData[MAX_PIPES] Pipes
+Pipe[MAX_PIPES] Pipes
 
 
 
-PipeData *create_pipe(FileEntry *e)
+Pipe* create_pipe(FileEntry *e)
 	for p in Pipes
 		if !p.used
 			p.used = true
@@ -96,7 +89,7 @@ PipeData *create_pipe(FileEntry *e)
 			return &p
 	return nil
 
-PipeData *get_pipe(FileEntry *e)
+Pipe* get_pipe(FileEntry *e)
 	for p in Pipes
 		if p.e == e
 			return &p
@@ -111,7 +104,7 @@ class OpenFileData
 	int offset
 	int block_size
 	char[0]* buffer
-	PipeData *pipe
+	Pipe* pipe
 	int ref_count
 	
 	int get_flags()

@@ -1,10 +1,10 @@
-use "base.kaba"
-use "io/text.kaba"
-use "io/io.kaba"
-use "filesystem.kaba"
-use "mem/paging.kaba"
-use "irq/irq.kaba"
-use "task/tasks.kaba"
+use "../base.kaba"
+use "../io/text.kaba"
+use "../io/io.kaba"
+use "../fs/fs.kaba"
+use "../mem/paging.kaba"
+use "../irq/irq.kaba"
+use "../task/tasks.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
