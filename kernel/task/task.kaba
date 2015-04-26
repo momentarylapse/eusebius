@@ -24,11 +24,13 @@ const int SIGSTOP = 19
 //--------------------------------------------------------------
 // Tasks
 
+const int KERNEL_STACK_SIZE = 0x00020000 // 128k
+const int KERNEL_MEM = 0x00800000 // 8mb
+
 const int MAX_TASKS = 256
 const int TASK_IMAGE_POS = KERNEL_MEM
 const int TASK_STACK_SIZE = 0x00080000 // 512k
 const int TASK_STACK_POS = 0x00880000
-const int KERNEL_STACK_SIZE = 0x00020000 // 128k
 const int NUM_PRE_GDT_ENTRIES = 5
 const int INITIAL_TASK_MEM = 0x00800000 // 8m
 

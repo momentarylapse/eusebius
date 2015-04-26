@@ -54,12 +54,12 @@ class UTSName
 	cstring machine
 	cstring domainname
 	void get()
-		strcpy(&sysname, &"Eusebius")
-		strcpy(&nodename, &"x")
-		strcpy(&release, &"0.2.10")
-		strcpy(&version, &"0.2.10")
-		strcpy(&machine, &"x86")
-		strcpy(&domainname, &"y")
+		strcpy(&sysname, &KERNEL_NAME)
+		strcpy(&nodename, &"???")
+		strcpy(&release, &KERNEL_VERSION)
+		strcpy(&version, &KERNEL_VERSION)
+		strcpy(&machine, &MACHINE_TYPE)
+		strcpy(&domainname, &"-no domain-")
 
 UTSName _uts_name
 
