@@ -79,9 +79,6 @@ void get_error_text(int i, cstring s)
 	strcat(&s, &"  8-P")
 
 void int_handler(int i)
-	asm{
-		cli
-	}
 	SchedulerEnabled = false
 	while true
 		TaskData* e = Interrupts.tasks[i]
@@ -93,9 +90,7 @@ void int_handler(int i)
 			handle_task_error(prev, e, i)
 		
 		asm{
-			sti
 			iret
-			cli
 		}
 
 void int_00()
@@ -147,6 +142,8 @@ class InterruptDescriptor
 			a = 0x00080000 + (addr & 0xffff) // desc[1],addr[15..0]
 			b = (addr & 0xffff0000) + 0x00008e00 // addr[31..16],typ
 
+
+	// interrupt tasks don't need the cli/sti... we use the IF bit
 	void set_task(TaskData *t)
 		a = 0
 		b = 0

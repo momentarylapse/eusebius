@@ -15,11 +15,7 @@ bool SchedulerEnabled
 TimeValue next_perf_calc
 
 void int_timer()
-	asm{
-		cli
-	}
 	while true
-		//prints "."
 		if SchedulerEnabled
 			//prints("(")
 			kernel_timer.tick()
@@ -41,9 +37,7 @@ void int_timer()
 
 		// return to (other) task
 		asm{
-			sti
 			iret
-			cli
 		}
 
 void StartScheduler()

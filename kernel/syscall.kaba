@@ -128,9 +128,6 @@ TaskInfo _task_info
 
 	
 void int_syscall()
-	asm{
-		cli
-	}
 	while true
 		//show_pvl()
 		int r = 0
@@ -249,12 +246,7 @@ void int_syscall()
 		caller.tss.eax = r
 		
 		//prints(">")
-		if InterruptsEnabled
-			asm{
-				sti
-			}
 		asm{
 			iret
-			cli
 		}
 		//prints("<")
