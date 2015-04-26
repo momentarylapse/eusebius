@@ -49,7 +49,15 @@ class SysInfo
 	int procs
 	int totalhigh, freehigh
 	int mem_unit
-	int[64] pad
+	int[2] pad
+	int totalheap, freeheap
+
+class TaskInfo
+	cstring name
+	int pid, mode, status
+	int mem
+	int cpu
+	TimeValue life
 
 extern void init_lib()
 extern void get_args(string[] arg)
@@ -59,7 +67,7 @@ extern int *malloc_first_free
 extern int stdin, stdout
 extern int lib_error
 
-extern void cs2s(cstring cs, string s)
+extern string cs2s(cstring cs)
 
 extern void exit(int r)
 extern int execute(string[] arg, int fd_in, int fd_out)
@@ -82,6 +90,7 @@ extern int shmget(int key, int size, int flags)
 extern void* shmat(int id, int flags)
 extern int shmdt(void* p)
 extern int sysinfo(SysInfo s)
+extern int taskinfo(int pid, TaskInfo t)
 extern int sched_yield(int pid)
 extern int uname(void *buf)
 extern int time(TimeValue t)

@@ -2,35 +2,27 @@
 use "lib/std.kaba"
 
 class UTSName
-	char[65] sysname
-	char[65] nodename
-	char[65] release
-	char[65] version
-	char[65] machine
-	char[65] domainname
-
-extern void cs2s(char* p, string s)
+	cstring sysname
+	cstring nodename
+	cstring release
+	cstring version
+	cstring machine
+	cstring domainname
 
 void main()
 	init_lib()
 	
 	UTSName u
 	if uname(&u) == 0
-		string s
-		cs2s(&u.sysname, s)
-		print s
+		print cs2s(u.sysname)
 		print "  "
-		cs2s(&u.nodename, s)
-		print s
+		print cs2s(u.nodename)
 		print "  "
-		cs2s(&u.release, s)
-		print s
+		print cs2s(u.release)
 		print "  "
-		cs2s(&u.version, s)
-		print s
+		print cs2s(u.version)
 		print "  "
-		cs2s(&u.machine, s)
-		print s
+		print cs2s(u.machine)
 		print "\n"
 	
 	exit(0)

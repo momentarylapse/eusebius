@@ -152,6 +152,7 @@ class InterruptDescriptor
 		b = 0
 		if t
 			t.tss.eflags = 0x000 // Iterrupt Flag = 0
+			t.status = TASK_STATUS_INTERRUPT
 
 			// Interrupt Task Gate
 			a = 0x00080000*t.desc // desc,0[15..0]

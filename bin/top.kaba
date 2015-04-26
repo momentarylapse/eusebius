@@ -1,26 +1,99 @@
 #define __OS__
 use "lib/std.kaba"
 
+enum
+	TASK_STATUS_UNUSED
+	TASK_STATUS_SLEEPING
+	TASK_STATUS_RUNNING
+	TASK_STATUS_WAITING
+	TASK_STATUS_ZOMBIE
+	TASK_STATUS_INTERRUPT
+	//TASK_STATUS_DEAD
 
+void fill(string s, int n)
+	while s.num < n
+		s.add(' ')
+
+string i2s2(int i, int n)
+	string s2 = i.str()
+	string s1
+	fill(s1, n - s2.num)
+	return s1 + s2
+
+string sec2s(int sec)
+	int hour = sec / 3600
+	int min = (sec / 60) % 60
+	sec = sec % 60
+	string s = "  :  "
+	s[0] = '0' + (min / 10)
+	s[1] = '0' + (min % 10)
+	s[3] = '0' + (sec / 10)
+	s[4] = '0' + (sec % 10)
+	if hour > 0
+		return i2s2(hour, 3) + ":" + s
+	return "   " + s
+
+void show_task(TaskInfo t)
+	string s
+	s = i2s2(t.pid, 3)
+	s += "   "
+	s += cs2s(t.name)
+	fill(s, 30)
+	if t.mode == 0
+		s += "U "
+	else
+		s += "K "
+	if t.status == TASK_STATUS_RUNNING
+		s += "R"
+	else if t.status == TASK_STATUS_SLEEPING
+		s += "S"
+	else if t.status == TASK_STATUS_WAITING
+		s += "W"
+	else if t.status == TASK_STATUS_ZOMBIE
+		s += "Z"
+	else if t.status == TASK_STATUS_INTERRUPT
+		s += "I"
+	else
+		s += t.status
+	fill(s, 38)
+	s += i2s2(t.cpu/10, 3) + "%"
+	s += i2s2(t.mem, 9)+"k  "
+	s += sec2s(t.life.sec)
+	print s
+	print "\n"
 
 void main()
 	init_lib()
 	
 	SysInfo s
-	if sysinfo(s) == 0
-		print "uptime: "
-		print s.uptime
-		print "\n"
-		print "free: "
-		print (s.freeram * s.mem_unit) / 1024
-		print "k  "
-		print "total: "
-		print (s.totalram * s.mem_unit) / 1024
-		print "k  "
-		print "shared: "
-		print (s.sharedram * s.mem_unit) / 1024
-		print "k\n"
+	if sysinfo(s) != 0
+		print "Fehler sysinfo\n"
+		exit(1)
+	print "uptime: "
+	print sec2s(s.uptime)
+	print "\n"
+	print "memory:   "
+	print i2s2((s.freeram * s.mem_unit) / 1024, 8)
+	print "k free   "
+	print i2s2((s.totalram * s.mem_unit) / 1024, 8)
+	print "k total  "
+	print i2s2((s.sharedram * s.mem_unit) / 1024, 8)
+	print "k shared\n"
+	print "heap:     "
+	print i2s2((s.freeheap * s.mem_unit) / 1024, 8)
+	print "k free   "
+	print i2s2((s.totalheap * s.mem_unit) / 1024, 8)
+	print "k total\n"
 	
-	showstats()
+	TaskInfo[] tasks
+	TaskInfo tt
+	for pid in 0:256
+		if taskinfo(pid, tt) == 0
+			if tt.status != TASK_STATUS_INTERRUPT
+				tasks.add(tt)
+	
+	print " Pid   Name                 Status     CPU      Mem       Time\n"
+	for t in tasks
+		show_task(t)
 	
 	exit(0)

@@ -2,15 +2,27 @@
 == bugs ==
 
 * Pipes laufen über
+* Maus-Pipe
+* shell stürzt ab
+* Interrupt-Fehler
 * x hängt
-* x Grafikfehler
+J x Grafikfehler (-> LFB)
+
+* verschönerte Version
+  * Fehler beim Laden
+  * init-x
 
 
 == Features ==
 
+J LFB
 * wirklich in Dateien schreiben
 * Log-Datei
+J PCI
 * Netzwerk-Treiber
 * Scripte
 * k2k
+* Signale
+* top
+* shell respawn
 

@@ -39,17 +39,22 @@ void *_i2p(int i)
 	return __temp_p__
 
 
-void s2cs(string s, cstring cs)
+void _s2cs(string s, cstring cs)
 	for i in 0:s.num
 		cs[i] = s[i]
 	cs[s.num] = 0
 
-void cs2s(cstring cs, lib__string s)
+void _cs2s(cstring cs, lib__string s)
 	s.clear()
 	for i in 0:255
 		if cs[i] == 0
 			return
 		s.add(cs[i])
+
+lib__string cs2s(cstring cs)
+	lib__string s
+	_cs2s(cs, s)
+	return s
 
 void sa2cs(string[] a, cstring cs)
 	int n = 0
@@ -95,7 +100,7 @@ int fork()
 
 int open(string filename, int flags)
 	cstring tt
-	s2cs(filename, tt)
+	_s2cs(filename, tt)
 	__temp_p__ = &tt
 	__temp_i__ = flags
 	asm{
@@ -109,7 +114,7 @@ int open(string filename, int flags)
 
 int create(string filename)
 	cstring tt
-	s2cs(filename, tt)
+	_s2cs(filename, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x00000008
@@ -159,7 +164,7 @@ int write(int h, void *buf, int size)
 
 int mkdir(string filename)
 	cstring tt
-	s2cs(filename, tt)
+	_s2cs(filename, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x00000027
@@ -219,7 +224,7 @@ int fcntl(int h, int op, int param)
 
 int mkfifo(string filename)
 	cstring tt
-	s2cs(filename, tt)
+	_s2cs(filename, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x0000000e
@@ -273,7 +278,7 @@ void showstats()
 
 int chdir(string dir)
 	cstring tt
-	s2cs(dir, tt)
+	_s2cs(dir, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x0000000c
@@ -294,7 +299,7 @@ lib__string getcwd()
 		mov __temp_i__, eax
 	}
 	lib__string r
-	cs2s(tt, r)
+	_cs2s(tt, r)
 	return r
 
 int execute(string[] arg, int fd_in, int fd_out)
@@ -362,6 +367,18 @@ int sysinfo(void *buf)
 	asm{
 		mov eax, 0x00000074
 		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int taskinfo(int pid, void *buf)
+	__temp_i__ = pid
+	__temp_p__ = buf
+	asm{
+		mov eax, 0x00002005
+		mov ebx, __temp_i__
+		mov ecx, __temp_p__
 		int 0x80
 		mov __temp_i3__, eax
 	}
@@ -1050,7 +1067,7 @@ class dirent_struct
 	int type
 	cstring name
 	void fill(lib__DirEntry e)
-		cs2s(name, e.name)
+		_cs2s(name, e.name)
 		e.size = size
 		e.is_dir = (type == 1)
 
@@ -1066,7 +1083,7 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 	lib__DirEntry e
 	while r > 0
 		lib__string s
-		cs2s(d.name, s)
+		_cs2s(d.name, s)
 		d.fill(e)
 		l.add(e)
 		r = getdents(h, &d)

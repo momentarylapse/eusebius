@@ -20,12 +20,13 @@ class SysInfo
 	int totalhigh, freehigh
 	int mem_unit
 	int[2] pad
+	int totalheap, freeheap
 	void get()
 		kernel_timer.update()
 		uptime = kernel_timer.tv.sec
 		for l in loads
 			l = 0
-		mem_unit = PAGE_SIZE
+		mem_unit = 1024 //PAGE_SIZE
 		totalram = MemorySize / mem_unit
 		freeram = (MemorySize - Paging.get_used()) / mem_unit
 		sharedram = SharedMem.get_used() / mem_unit
@@ -38,16 +39,18 @@ class SysInfo
 				procs ++
 		totalhigh = 0
 		freehigh = 0
+		totalheap = MEM_HEAP_SIZE / mem_unit
+		freeheap = MemHeapAllocated / mem_unit
 
 SysInfo _sys_info
 
 class UTSName
-	char[65] sysname
-	char[65] nodename
-	char[65] release
-	char[65] version
-	char[65] machine
-	char[65] domainname
+	cstring sysname
+	cstring nodename
+	cstring release
+	cstring version
+	cstring machine
+	cstring domainname
 	void get()
 		strcpy(&sysname, &"Eusebius")
 		strcpy(&nodename, &"x")
@@ -58,7 +61,33 @@ class UTSName
 
 UTSName _uts_name
 
-void sys_showstats()
+class TaskInfo
+	cstring name
+	int pid, mode, status
+	int mem
+	int cpu
+	TimeValue life
+	int get(int _pid)
+		TaskData* t = nil
+		if _pid < 0 or _pid >= MAX_TASKS
+			return -1
+		t = &Tasks[_pid]
+		if t.status == TASK_STATUS_UNUSED
+			return -1
+		strcpy(&name, &t.name)
+		pid = t.pid
+		status = t.status
+		mode = 1
+		if t.kernel_mode
+			mode = 0
+		mem = t.pages_alloced()
+		cpu = t.load
+		life = t.time_all
+		return 0
+
+TaskInfo _task_info
+
+/*void sys_showstats()
 	prints("Paging:  ")
 	printi(Paging.get_used() / 1024)
 	prints("k von ")
@@ -95,7 +124,7 @@ void sys_showstats()
 			printi(t.load)
 			TextPos = 40
 			printi(t.time_all.sec)
-			prints("\n")
+			prints("\n")*/
 
 	
 void int_syscall()
@@ -191,8 +220,12 @@ void int_syscall()
 			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
 		else if index == 0x2002 // prints
 			nil//p = _i2p(caller.addr2kernel(param1))
-		else if index == 0x2003 // showstats
-			sys_showstats()
+		/*else if index == 0x2003 // showstats
+			//sys_showstats()*/
+		else if index == 0x2005 // taskstats
+			r = _task_info.get(param1)
+			if r == 0
+				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
 		else
 			r = -ENOSYS
 		/*TextColor = 4
