@@ -14,6 +14,8 @@ const int FILE_TYPE_PIPE = 2
 const int FILE_TYPE_CHAR = 8
 const int FILE_TYPE_BLOCK = 16
 
+const int MAX_MOUNT_POINTS = 16
+
 
 class FileOperations
 	void *_open
@@ -88,19 +90,27 @@ class MountPoint
 	void readBlock(int block_no, cstring *buf)
 		for i in 0:dev_blocks_per_block
 			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+
 	void writeBlock(int block_no, cstring *buf)
 		for i in 0:dev_blocks_per_block
 			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+	
+	int alloc_block()
+		if type == &FSTMichiFS
+			return -1
+		if type == &FSTExt2
+			return FSTExt2.allocBlock()
+		return -1
 
 
 
 class FileSystemData
-	MountPoint[16] mounts
-	int num_mounts
+	MountPoint[MAX_MOUNT_POINTS] mounts
 	FileEntry *root
 	
 	void init()
-		num_mounts = 0
+		for m in mounts
+			m.type = nil
 		root = add("-root-", FILE_TYPE_DIR, nil, nil)
 	
 	FileEntry *add(cstring name, int type, MountPoint *mount, FileEntry *parent)
@@ -161,10 +171,14 @@ class FileSystemData
 		else
 			strcpy(&path, &"/")
 		
-	void mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
+	int mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
 		prints("mounte...")
-		MountPoint *mp = &mounts[num_mounts]
-		num_mounts ++
+		MountPoint *mp = nil
+		for m in mounts
+			if !m.type
+				mp = &m
+		if !mp
+			return -1
 		mp.dest = dir
 		mp.dev = dev
 		if strcmp(&fs_name, &"michifs") == 0
@@ -175,6 +189,7 @@ class FileSystemData
 			FSTExt2.mount(mp)
 		dir.mount = mp
 		prints(" ok\n")
+		return 0
 
 FileSystemData FileSystem
 

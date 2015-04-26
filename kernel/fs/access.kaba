@@ -107,7 +107,7 @@ class OpenFileData
 			if cur_size > block_size - pos_in_block
 				cur_size = block_size - pos_in_block
 
-			// direkt lesen (aus dem Lese-Puffer kopieren)
+			// direkt schreiben (in den Puffer kopieren)
 			page_dir.memcpy2kernel(&buffer[pos_in_block], addr, cur_size)
 			pos_in_block += cur_size
 			offset += cur_size
@@ -116,6 +116,9 @@ class OpenFileData
 			addr += cur_size
 			entry.size += cur_size
 			entry.meta_dirty = true
+			
+			if block_no >= entry.num_blocks
+				entry.add_block(entry.mount.alloc_block())
 			
 			// write cur block
 			int cl = entry.blocks[block_no]
@@ -127,10 +130,6 @@ class OpenFileData
 				block_no ++
 		
 		return r
-		
-		entry.size += size
-		return size
-		return -EWOULDBLOCK
 
 	int getdents(PageDirectory *page_dir, int addr, int num)
 		if !used
