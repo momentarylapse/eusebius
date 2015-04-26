@@ -1,7 +1,7 @@
 #define __OS__
 use "../base.kaba"
 use "../io/text.kaba"
-use "../task/tasks.kaba"
+use "../task/task.kaba"
 use "../task/scheduler.kaba"
 use "irq.kaba"
 #define __STRING_CONST_AS_CSTRING__

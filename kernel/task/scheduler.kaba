@@ -1,7 +1,7 @@
 use "../base.kaba"
 use "../io/text.kaba"
 use "../io/io.kaba"
-use "tasks.kaba"
+use "task.kaba"
 use "../time/timevalue.kaba"
 use "../time/timer.kaba"
 use "../irq/irq.kaba"

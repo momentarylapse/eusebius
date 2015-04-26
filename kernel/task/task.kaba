@@ -2,6 +2,7 @@
 use "../base.kaba"
 use "../io/text.kaba"
 use "../fs/fs.kaba"
+use "../fs/pipe.kaba"
 use "../fs/access.kaba"
 use "../mem/heap.kaba"
 use "../mem/paging.kaba"

@@ -1,7 +1,7 @@
 use "../base.kaba"
 use "../io/text.kaba"
 use "../io/io.kaba"
-use "../task/tasks.kaba"
+use "../task/task.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 

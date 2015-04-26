@@ -9,10 +9,11 @@ use "dev/ata.kaba"
 use "dev/std_char_devs.kaba"
 use "fs/fs.kaba"
 use "fs/access.kaba"
+use "fs/pipe.kaba"
 use "mem/heap.kaba"
 use "mem/paging.kaba"
 use "mem/shared.kaba"
-use "task/tasks.kaba"
+use "task/task.kaba"
 use "task/scheduler.kaba"
 use "irq/irq.kaba"
 use "irq/error.kaba"
@@ -72,6 +73,7 @@ void main()
 	ShowPartitions()
 	
 	InitFileAccessData()
+	InitPipes()
 	
 	FileSystem.init()
 	

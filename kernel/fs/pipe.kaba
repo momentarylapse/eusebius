@@ -1,0 +1,98 @@
+use "../base.kaba"
+use "../io/text.kaba"
+use "fs.kaba"
+use "../mem/heap.kaba"
+use "../mem/paging.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+
+const int MAX_PIPES = 64
+const int PIPE_BUFFER_SIZE = 1024
+
+
+
+class Pipe
+	bool used
+	FileEntry *e
+	int read_ref_count
+	int write_ref_count
+	char[0]* buffer
+	int buffer_used
+	int write(PageDirectory *page_dir, int addr, int size)
+		if buffer_used + size > PIPE_BUFFER_SIZE
+			return -EWOULDBLOCK
+		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
+		buffer_used += size
+		return size
+	int read(PageDirectory *page_dir, int addr, int size)
+		if buffer_used == 0
+			// no data... block if we have a writer
+			if write_ref_count > 0
+				return -EWOULDBLOCK
+			// else "empty"
+			return 0
+		if size > buffer_used
+			size = buffer_used
+		page_dir.memcpy2task(addr, buffer, size)
+		buffer_used -= size
+		for i in 0:buffer_used
+			buffer[i] = buffer[i + size]
+		return size
+	/*void show()
+		prints("  ")
+		printi(_p2i(self))
+		prints("  ")
+		printi read_ref_count
+		prints(":")
+		printi write_ref_count
+		prints("  ")*/
+	void unref(bool writing)
+		if writing
+			write_ref_count --
+		else
+			read_ref_count --
+			
+		if read_ref_count < 0
+			panic("Pipe.read_ref_count < 0")
+		if write_ref_count < 0
+			panic("Pipe.write_ref_count < 0")
+			
+		if read_ref_count == 0 and write_ref_count == 0 and !e.parent
+			// only auto-delete if anonymous
+			clean_up()
+	
+	void clean_up()
+		if !e.parent
+			// anonymous pipe
+			FileSystem.del(e)
+
+		free(buffer)
+		used = false
+
+Pipe[MAX_PIPES] Pipes
+
+
+
+Pipe* create_pipe(FileEntry *e)
+	for p in Pipes
+		if !p.used
+			p.used = true
+			p.e = e
+			p.read_ref_count = 0
+			p.write_ref_count = 0
+			p.buffer_used = 0
+			p.buffer = malloc(PIPE_BUFFER_SIZE)
+			return &p
+	return nil
+
+Pipe* get_pipe(FileEntry *e)
+	for p in Pipes
+		if p.e == e
+			return &p
+	return nil
+
+
+void InitPipes()
+	for p in Pipes
+		p.used = false
