@@ -104,7 +104,7 @@ class TaskSharedMemoryRef
 	SharedMemory *s
 	int dest // task space
 
-class TaskData
+class Task
 	TaskStateSegment tss
 	int[0]* stack
 	int stack_size
@@ -114,10 +114,10 @@ class TaskData
 	int waiting_mode
 	int waiting_param_i1, waiting_param_i2, waiting_param_i3
 	int *waiting_param_p
-	TaskData *parent
+	Task* parent
 	cstring name
 	cstring arg
-	FileEntry *cur_dir
+	FileEntry* cur_dir
 	PageDirectory *page_dir
 	int mem_bottom, mem_size
 	
@@ -128,7 +128,7 @@ class TaskData
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
 	TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK] shmem
 	
-	void __assign__(TaskData o)
+	void __assign__(Task o)
 		nil
 	
 	void activate()
@@ -323,7 +323,7 @@ class TaskData
 		if h < 0
 			return -ENOENT
 		int addr = TASK_IMAGE_POS // task space...
-		TaskData *t = AddTaskUser(filename, _i2p(addr), self)
+		Task* t = AddTaskUser(filename, _i2p(addr), self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
@@ -349,10 +349,8 @@ class TaskData
 		die(r)
 
 	int sys_waitpid(int _pid, int status_addr, int options)
-		if _pid < 0 or _pid >= MAX_TASKS
-			return -ECHILD
-		TaskData *t = &Tasks[_pid]
-		if t.status == TASK_STATUS_UNUSED
+		Task* t = get_task(_pid)
+		if !t
 			return -ECHILD
 		int *_status = _i2p(addr2kernel(status_addr))
 		if t.status == TASK_STATUS_ZOMBIE
@@ -366,10 +364,8 @@ class TaskData
 		return 0
 
 	int sys_kill(int _pid, int signal)
-		if _pid < 0 or _pid >= MAX_TASKS
-			return -ESRCH
-		TaskData *t = &Tasks[_pid]
-		if t.status == TASK_STATUS_UNUSED
+		Task* t = get_task(_pid)
+		if !t
 			return -ESRCH
 		if signal == SIGKILL
 			t.die(0)
@@ -408,7 +404,7 @@ class TaskData
 		return -EINVAL
 	
 	int sys_fork()
-		TaskData *t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), self)
+		Task* t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), self)
 		if !t
 			return -ENOMEM
 		
@@ -463,12 +459,20 @@ class TaskData
 					r.s.unref()
 					r.s = nil
 		return -EINVAL
-	
-TaskData[MAX_TASKS] Tasks
-TaskData *KernelTask
-TaskData *IdleTask
-TaskData *TimerTask
-TaskData *SysCallTask
+
+Task *get_task(int pid)
+	if pid < 0 or pid >= MAX_TASKS
+		return nil
+	Task* t = &Tasks[pid]
+	if t.status == TASK_STATUS_UNUSED
+		return nil
+	return t
+
+Task[MAX_TASKS] Tasks
+Task* KernelTask
+Task* IdleTask
+Task* TimerTask
+Task* SysCallTask
 int NextPidToAssign
 int RunningPid
 bool InterruptsEnabled
@@ -487,7 +491,7 @@ class GlobalDescriptorData
 		if executable
 			b += 0x00000800
 		b += 0x00002000 * pvl
-	void set_task(TaskData *t)
+	void set_task(Task *t)
 		set_base(_p2i(&t.tss), 103, false)
 		b += 0x00000900 // not busy
 	void set_busy(bool busy)
@@ -509,11 +513,11 @@ int get_next_pid()
 			return i
 	return -1
 
-TaskData *AddTaskUser(cstring name, void *func, TaskData *parent)
+Task* AddTaskUser(cstring name, void *func, Task *parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
-	TaskData *t = &Tasks[pid]
+	Task* t = &Tasks[pid]
 	t.pid = pid
 
 	strcpy(&t.name, &name)
@@ -542,11 +546,11 @@ TaskData *AddTaskUser(cstring name, void *func, TaskData *parent)
 
 	return t
 
-TaskData *AddTaskKernel(cstring name, void *func, TaskData *parent)
+Task* AddTaskKernel(cstring name, void *func, Task* parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
-	TaskData *t = &Tasks[pid]
+	Task* t = &Tasks[pid]
 	t.pid = pid
 
 	strcpy(&t.name, &name)

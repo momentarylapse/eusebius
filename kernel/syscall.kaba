@@ -68,11 +68,8 @@ class TaskInfo
 	int cpu
 	TimeValue life
 	int get(int _pid)
-		TaskData* t = nil
-		if _pid < 0 or _pid >= MAX_TASKS
-			return -1
-		t = &Tasks[_pid]
-		if t.status == TASK_STATUS_UNUSED
+		Task* t = get_task(_pid)
+		if !t
 			return -1
 		strcpy(&name, &t.name)
 		pid = t.pid
@@ -87,45 +84,6 @@ class TaskInfo
 
 TaskInfo _task_info
 
-/*void sys_showstats()
-	prints("Paging:  ")
-	printi(Paging.get_used() / 1024)
-	prints("k von ")
-	printi(MemorySize / 1024)
-	prints("k\nHeap:    ")
-	printi(MemHeapAllocated / 1024)
-	prints("k von ")
-	printi(MEM_HEAP_SIZE / 1024)
-	prints("\n---------------------------------\n")
-	for t in Tasks
-		if t.status != TASK_STATUS_UNUSED
-			printi(t.pid)
-			TextPos = 3
-			prints(t.name)
-			TextPos = 20
-			if t.kernel_mode
-				prints("K")
-			else
-				prints("U")
-			TextPos = 23
-			if t.status == TASK_STATUS_RUNNING
-				prints("R")
-			else if t.status == TASK_STATUS_SLEEPING
-				prints("S")
-			else if t.status == TASK_STATUS_WAITING
-				prints("W")
-			else if t.status == TASK_STATUS_ZOMBIE
-				prints("Z")
-			else
-				printi(t.status)
-			TextPos = 27
-			printi(t.pages_alloced())
-			TextPos = 35
-			printi(t.load)
-			TextPos = 40
-			printi(t.time_all.sec)
-			prints("\n")*/
-
 	
 void int_syscall()
 	while true
@@ -133,7 +91,7 @@ void int_syscall()
 		int r = 0
 		
 		//int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		TaskData *caller = &Tasks[RunningPid]
+		Task* caller = &Tasks[RunningPid]
 		//printi(pid)
 		int index = caller.tss.eax
 		int param1 = caller.tss.ebx

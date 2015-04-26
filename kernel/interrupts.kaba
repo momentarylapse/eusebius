@@ -15,7 +15,7 @@ use "syscall.kaba"
 //--------------------------------------------------------------
 // Interrupts
 
-void handle_task_error(TaskData* t, TaskData* e, int i)
+void handle_task_error(Task* t, Task* e, int i)
 	SchedulerEnabled = false
 	int pid = t.pid
 	prints("-- Interrupt #")
@@ -36,7 +36,7 @@ void handle_task_error(TaskData* t, TaskData* e, int i)
 	prints("\n")
 	
 
-void handle_kernel_error(TaskData* t, int i)
+void handle_kernel_error(Task* t, int i)
 	cstring s
 	get_error_text(i, s)
 	panic(s)
@@ -81,9 +81,9 @@ void get_error_text(int i, cstring s)
 void int_handler(int i)
 	SchedulerEnabled = false
 	while true
-		TaskData* e = Interrupts.tasks[i]
+		Task* e = Interrupts.tasks[i]
 		int prev_pid = e.get_prev_pid()
-		TaskData *prev = &Tasks[prev_pid]
+		Task *prev = &Tasks[prev_pid]
 		if prev.kernel_mode
 			handle_kernel_error(prev, i)
 		else
@@ -133,7 +133,7 @@ void int_XX()
 class InterruptDescriptor
 	int a, b
 
-	void set(void *func)
+	void set(void* func)
 		a = 0
 		b = 0
 		if func
@@ -144,7 +144,7 @@ class InterruptDescriptor
 
 
 	// interrupt tasks don't need the cli/sti... we use the IF bit
-	void set_task(TaskData *t)
+	void set_task(Task* t)
 		a = 0
 		b = 0
 		if t
@@ -158,12 +158,12 @@ class InterruptDescriptor
 class InterruptController
 	InterruptDescriptor[256] idt
 	void*[16] handler
-	TaskData*[16] tasks
+	Task*[16] tasks
 	
-	void set(int id, void *func)
+	void set(int id, void* func)
 		idt[id].set(func)
 	
-	void set_task(int id, TaskData *t)
+	void set_task(int id, Task* t)
 		idt[id].set_task(t)
 
 	void init()
@@ -176,8 +176,8 @@ class InterruptController
 		//ErrorTask = AddTask("irq-error", &int_handler, KernelTask)
 		TimerTask = AddTaskKernel("irq-timer", &int_timer, KernelTask)
 		SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, KernelTask)
-		TaskData *KeyTask = AddTaskKernel("irq-key", &int_key, KernelTask)
-		TaskData *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, KernelTask)
+		Task *KeyTask = AddTaskKernel("irq-key", &int_key, KernelTask)
+		Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, KernelTask)
 
 		handler[ 0] = &int_00
 		handler[ 1] = &int_01
