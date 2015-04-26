@@ -4,6 +4,7 @@ use "../text_mode.kaba"
 use "tasks.kaba"
 use "../time/timevalue.kaba"
 use "../time/timer.kaba"
+use "../irq/irq.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -11,6 +12,8 @@ const int TASK_SWITCH_DT = 5 // ms
 const int PERF_UPDATE_DT = 1000000000 // 1000 ns
 
 bool SchedulerEnabled
+
+Task* SchedulerTask
 
 TimeValue next_perf_calc
 
@@ -28,7 +31,7 @@ void int_timer()
 		
 			// pick next task
 			int pid_next = GetNextTask(RunningPid)
-			ReconnectTasks(pid_next, TimerTask)
+			ReconnectTasks(pid_next, SchedulerTask)
 
 			//prints(")")
 
@@ -44,11 +47,14 @@ void StartScheduler()
 	RunningPid = 0
 	if VerbosityLevel >= 1
 		prints("starte Scheduler\n")
-	InitTimerInterrupt(TASK_SWITCH_DT)
+	
+	SchedulerTask = AddTaskKernel("scheduler", &int_timer, KernelTask)
+	
+	InitTimerInterrupt(SchedulerTask, TASK_SWITCH_DT)
 	next_perf_calc = kernel_timer.tv
 	next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
 	SchedulerEnabled = true
-	TimerTask.run_forced()
+	SchedulerTask.run_forced()
 
 
 

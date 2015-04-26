@@ -2,9 +2,15 @@
 use "../base.kaba"
 use "../text_mode.kaba"
 use "../task/tasks.kaba"
-use "../task/scheduler.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
+
+void int_ignore()
+	//prints("[ignore irq]")
+	asm{
+		iret
+	}
+Task *IgnoreTask
 
 
 
@@ -47,10 +53,10 @@ class InterruptController
 
 		for i in idt
 			i.set(nil)
+		
 	
-		TimerTask = AddTaskKernel("irq-timer", &int_timer, KernelTask)
-	
-		set_task(32, TimerTask) // IRQ 0
+		IgnoreTask = AddTaskKernel("irq-ignore", &int_ignore, KernelTask)
+		irq.set_task(32, IgnoreTask) // IRQ 0
 
 		// move IRQs to higher interrupts
 		outportb(0x20,0x11) // init

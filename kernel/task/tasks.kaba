@@ -471,7 +471,6 @@ Task *get_task(int pid)
 Task[MAX_TASKS] Tasks
 Task* KernelTask
 Task* IdleTask
-Task* TimerTask
 int NextPidToAssign
 int RunningPid
 
