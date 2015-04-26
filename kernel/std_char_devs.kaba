@@ -3,6 +3,8 @@ use "base.kaba"
 use "text_mode.kaba"
 use "filesystem.kaba"
 use "mem/paging.kaba"
+use "irq/irq.kaba"
+use "task/tasks.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -120,8 +122,7 @@ int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 
 void InitDrivers()
-	if VerbosityLevel > 0
-		prints("init drivers... ")
+	prints("init drivers... ")
 	dev_key_escaped = false
 	dev_key_shift = false
 	dev_key_control = false
@@ -179,6 +180,13 @@ void InitDrivers()
 	dev_mouse_ops._read = &dev_mouse_read
 	dev_mouse_ops._write = &dev_mouse_write
 	dev_mouse.op = &dev_mouse_ops
+	
+	Task *KeyTask = AddTaskKernel("irq-key", &int_key, KernelTask)
+	Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, KernelTask)
+ 	
+	irq.set_task(33, KeyTask) // IRQ 1
+	irq.set_task(44, MouseTask) // IRQ 12
+
 
 	// Enable the auxiliary mouse device
 	mouse_wait_signal()
@@ -202,8 +210,7 @@ void InitDrivers()
 	mouse_write(0xf4)
 	mouse_read() // acknowledge
 	
-	if VerbosityLevel > 0
-		prints("ok\n")
+	prints("ok\n")
 
 
 void mouse_wait_data()

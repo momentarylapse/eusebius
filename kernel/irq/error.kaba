@@ -150,7 +150,7 @@ class ErrorController
 		
 		for h,i in handler
 			//set(i, h)
-			tasks[i] = AddTaskKernel("error", h, KernelTask)
+			tasks[i] = AddTaskKernel("irq-error", h, KernelTask)
 			irq.set_task(i, tasks[i])
 	
 		prints("   ok\n")
