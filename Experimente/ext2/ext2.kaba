@@ -1,12 +1,12 @@
 class BinaryFile : File
 	int xread(cstring *p, int size)
 		string r = read(size)
-		for int i, 0, r.num
+		for i in 0:r.num
 			p[i] = r[i]
 		return r.num
 
 class Word
-	char c[2]
+	char[2] c
 	int int()
 		int a = c[0]
 		int b = c[1]
@@ -22,12 +22,12 @@ class Inode
 	int blocks
 	int flags
 	int version
-	int iblock[15]
+	int[15] iblock
 	int file_version
 	int acl
 	int size_high
 	int dummy
-	int xx_high[3]
+	int[3] xx_high
 	bool isDir()
 		return (rights.int() & 0xf000) == 0x4000
 	bool isFile()
@@ -65,10 +65,10 @@ class SuperBlock
 	Word inode_size
 	Word block_group_nr
 	int feature_compat, feature_incompat, feature_ro_compat
-	char uuid[16]
-	char volume_name[16]
-	char last_mounted[64]
-	char _filler_[1024-200]
+	char[16] uuid
+	char[16] volume_name
+	char[64] last_mounted
+	char[1024-200] _filler_
 
 class BlockGroupDescriptor
 	int block_bitmap
@@ -92,7 +92,7 @@ class Ext2Reader
 	BlockGroupDescriptor bg
 	bool readable, writable
 	
-	string filter[]
+	string[] filter
 	bool show_details
 	
 	void testCompatibility()
@@ -158,7 +158,7 @@ class Ext2Reader
 		int num_blocks = (inode.size-1) / block_size + 1
 		int size = num_blocks * block_size
 		int num_direct = min(num_blocks, 12)
-		for int i, 0, num_direct
+		for i in 0:num_direct
 			r += readBlock(inode.iblock[i])
 		// indirect...
 		
@@ -169,7 +169,7 @@ class Ext2Reader
 		Inode inode
 		readInode(index, inode)
 		string indent
-		for int i, 0, level*2+1
+		for i in 0:level*2+1
 			indent += "  "
 		string info = "s=" + inode.size
 		//print inode.mtime
@@ -229,11 +229,11 @@ class Ext2Reader
 		print bg.inode_bitmap
 		print bg.inode_table
 
-void main(string arg[])
+void main(string[] arg)
 	string filename
 	Ext2Reader r
 	r.show_details = false
-	for int i, 0, arg.num
+	for i in 0:arg.num
 		if arg[i] == "details"
 			r.show_details = true
 		else if arg[i] == "filter"

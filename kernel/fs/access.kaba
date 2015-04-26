@@ -75,7 +75,7 @@ class OpenFileData
 				pos_in_block = 0
 				block_no ++
 				int cl = entry.blocks[block_no]
-				entry.mount.readBlock(cl, buffer)
+				entry.mount.read_block(cl, buffer)
 		
 		return r
 
@@ -122,7 +122,7 @@ class OpenFileData
 			
 			// write cur block
 			int cl = entry.blocks[block_no]
-			entry.mount.writeBlock(cl, buffer)
+			entry.mount.write_block(cl, buffer)
 		
 			if pos_in_block >= block_size
 				// next block
@@ -211,7 +211,7 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 	if of.entry.type == FILE_TYPE_FILE
 		of.buffer = malloc(of.block_size)
 		if of.entry.num_blocks > 0
-			of.entry.mount.readBlock(of.entry.blocks[0], of.buffer)
+			of.entry.mount.read_block(of.entry.blocks[0], of.buffer)
 		if of.writing
 			if truncating
 				of.truncate()
