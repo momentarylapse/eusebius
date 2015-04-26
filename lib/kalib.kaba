@@ -740,6 +740,8 @@ class lib__string : lib__@DynamicArray
 		return compare(s) == 0
 	bool __neq__(lib__string s)
 		return compare(s) != 0
+	bool __ne__(lib__string s)
+		return compare(s) != 0
 
 /*int string::rfind(const string &s, int start) const
 {
@@ -890,6 +892,9 @@ int string::icompare(const string &s) const
 		if !sign
 			return -r
 		return r
+	
+	float float()
+		return 0.0
 
 class lib__int@list : lib__@DynamicArray
 	overwrite int[0]* data
@@ -902,6 +907,24 @@ class lib__int@list : lib__@DynamicArray
 	void add(int i)
 		resize(num + 1)
 		data[num - 1] = i
+	void remove(int index)
+		if (index < 0) or (index >= num)
+			return
+		for i in index : num - 1
+			data[i] = data[i+1]
+		resize(num - 1)
+
+class lib__bool@list : lib__@DynamicArray
+	overwrite bool[0]* data
+	void __init__()
+		__mem_init__(sizeof(bool))
+	void resize(int size)
+		if size > num
+			reserve(size)
+		num = size
+	void add(bool b)
+		resize(num + 1)
+		data[num - 1] = b
 	void remove(int index)
 		if (index < 0) or (index >= num)
 			return
@@ -950,6 +973,19 @@ class lib__string@list : lib__@DynamicArray
 				r += glue
 			r += data[i]
 		return r
+	lib__string str()
+		return lib__@sa2s(*self)
+
+lib__string lib__@sa2s(lib__string@list a)
+	lib__string r
+	r.add('[')
+	for i in 0:a.num
+		if i > 0
+			r.add(',')
+		r.add('"')
+		r += a.data[i]
+		r.add('"')
+	r.add(']')
 
 lib__string lib__@i2s(int i)
 	bool sign = i >= 0
@@ -982,6 +1018,25 @@ class lib__int
 	int i
 	lib__string str()
 		return lib__@i2s(i)
+
+class lib__float
+	float f
+	lib__string str()
+		return lib__@f2s(0.0, 6)
+
+// TODO
+float lib__sin(float f)
+	return 0
+
+// TODO
+float lib__cos(float f)
+	return 0
+
+// TODO
+lib__string lib__@f2s(float f, int n)
+	lib__string s
+	s.add('?')
+	return s
 
 lib__string lib__p2s(void *p)
 	lib__string r

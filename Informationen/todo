@@ -2,8 +2,8 @@
 == bugs ==
 
 ? Pipes laufen über
-* Maus-Pipe
-* shell stürzt ab
+? Maus-Pipe
+? shell stürzt ab
 J Interrupt-Fehler
 J x hängt (-> shell)
 J x Grafikfehler (-> LFB)
@@ -25,4 +25,5 @@ J PCI
 * Signale
 J top
 * shell respawn
+* float
 

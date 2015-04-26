@@ -1,0 +1,6 @@
+a=17
+hallo =17.1+42
+	a=sin(5)
+	s="hallo Welt"
+b=a
+print(hallo,a,b,s)

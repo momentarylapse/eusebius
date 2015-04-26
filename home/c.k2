@@ -1,0 +1,14 @@
+if 0
+	print("true")
+else
+	if 12 > 14
+		print("aaa")
+	print("false")
+
+a=0
+while a < 10
+	if a == 3
+		print("-----3---")
+	print(a)
+	a = a+1
+print(".")

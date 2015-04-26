@@ -1,0 +1,822 @@
+use "lib/std.kaba"
+
+const int CHAR_NL = 0x0a
+const int CHAR_TAB = 0x09
+
+bool verbose
+
+bool isWhitespace(char c)
+	return (c == ' ') or (c == CHAR_TAB) or (c == CHAR_NL)
+
+bool isNumber(char c)
+	return (c >= '0') and (c <= '9')
+
+bool isOperator(char c)
+	return (c == '(') or (c == ')') or (c == '=') or (c == '+') or (c == '-') or (c == '*') or (c == '/') or (c == '%') or (c == '.') or (c == ',') or (c == '[') or (c == ']') or (c == '!') or (c == '<') or (c == '>')
+
+
+string unescape(string s)
+	string r
+	for j in 1:s.num-1
+		if s[j] == '\' and j < s.num + 1
+			j ++
+			if s[j] == 'n'
+				r.add(CHAR_NL)
+			if s[j] == 't'
+				r.add(CHAR_TAB)
+			if s[j] == '\'
+				r.add('\')
+		else
+			r.add(s[j])
+	return r
+
+class Line
+	int indent
+	int physical_line_no
+	string[] words
+	void show()
+		print indent
+		print words
+
+class Lines
+	Line[] lines
+	void show()
+		for l in lines
+			l.show()
+
+class LiteralParser
+	string getWord(string source, int i0)
+		string r
+		for j in i0:source.num
+			if isWhitespace(source[j])
+				break
+			if isOperator(source[j])
+				break
+			r.add(source[j])
+		return r
+
+	string getNumber(string source, int i0)
+		string r
+		for j in i0:source.num
+			if !isNumber(source[j]) and (source[j] != '.')
+				break
+			r.add(source[j])
+		return r
+		
+	string getString(string source, int i0)
+		string r
+		r.add(source[i0])
+		for j in i0+1:source.num
+			if source[j] == '\' and j < source.num + 1
+				r.add(source[j])
+				r.add(source[j+1])
+				j ++
+			else
+				r.add(source[j])
+				if source[j] == '"' // "
+					break
+		return r
+
+	string getOperator(string source, int i0)
+		string r
+		r.add(source[i0])
+		if source.num > i0 + 1
+			if source[i0 + 1] == '='
+				if source[i0] == '=' or source[i0] == '+' or source[i0] == '-' or source[i0] == '*' or source[i0] == '/' or source[i0] == '<' or source[i0] == '>'
+					r.add(source[i0 + 1])
+		return r
+	
+	Line parseLine(string source)
+		Line l
+		l.indent = 0
+		for i in 0:source.num
+			l.indent = i
+			if source[i] != CHAR_TAB
+				break
+		string temp
+		for i in l.indent:source.num
+			if isWhitespace(source[i])
+				continue
+			if source[i] == '"' // "
+				temp = getString(source, i)
+			else if isNumber(source[i])
+				temp = getNumber(source, i)
+			else if isOperator(source[i])
+				temp = getOperator(source, i)
+			else
+				temp = getWord(source, i)
+			l.words.add(temp)
+			i += temp.num-1
+		return l
+
+	Lines parse(string source)
+		Lines r
+		string[] lines = source.explode("\n")
+		int line_no = 0
+		for l in lines
+			Line ll = parseLine(l)
+			if ll.words.num > 0
+				ll.physical_line_no = line_no
+				r.lines.add(ll)
+			line_no ++
+		return r
+
+enum
+	TYPE_NONE
+	TYPE_BOOL
+	TYPE_INT
+	TYPE_FLOAT
+	TYPE_STRING
+	TYPE_ARRAY
+	TYPE_OBJECT
+
+class DynamicValue
+	int type
+	void __init__()
+		type = TYPE_NONE
+	virtual void __delete__()
+	virtual string str()
+	virtual int int()
+		return 0
+
+class DynamicValueInt : DynamicValue
+	int v
+	void __init__()
+		type = TYPE_INT
+		v = 0
+	virtual void __delete__()
+	overwrite string str()
+		return v.str()
+	overwrite int int()
+		return v
+
+class DynamicValueBool : DynamicValue
+	bool v
+	void __init__()
+		type = TYPE_BOOL
+		v = false
+	virtual void __delete__()
+	overwrite string str()
+		return v.str()
+
+class DynamicValueFloat : DynamicValue
+	float v
+	void __init__()
+		type = TYPE_FLOAT
+		v = 0.0
+	virtual void __delete__()
+	overwrite string str()
+		return v.str()
+
+class DynamicValueString : DynamicValue
+	string v
+	void __init__()
+		type = TYPE_STRING
+		v.__init__()
+	virtual void __delete__()
+	overwrite string str()
+		return v
+
+class Variable
+	string name
+	DynamicValue *v
+	void __init__()
+		v = new DynamicValue
+	void __init__(string _name)
+		name = _name
+		v = new DynamicValue
+	void __delete__()
+		delete v
+	void show()
+		if v.type == TYPE_NONE
+			print "variable " + name
+		else
+			print "variable " + name + " = " + v.str()
+	void setType(int _type)
+		if v.type != _type
+			delete v
+			if _type == TYPE_BOOL
+				v = new DynamicValueBool
+			else if _type == TYPE_INT
+				v = new DynamicValueInt
+			else if _type == TYPE_FLOAT
+				v = new DynamicValueFloat
+			else if _type == TYPE_STRING
+				v = new DynamicValueString
+	void setBool(bool b)
+		setType(TYPE_INT)
+		DynamicValueBool *vb = v
+		vb.v = b
+	void setInt(int i)
+		setType(TYPE_INT)
+		DynamicValueInt *vi = v
+		vi.v = i
+	void setFloat(float f)
+		setType(TYPE_FLOAT)
+		DynamicValueFloat *vf = v
+		vf.v = f
+	void setString(string s)
+		setType(TYPE_STRING)
+		DynamicValueString *vs = v
+		vs.v = s
+
+	void __assign__(Variable b)
+		if b.v.type == TYPE_BOOL
+			DynamicValueBool *bb = b.v
+			setBool(bb.v)
+		else if b.v.type == TYPE_INT
+			DynamicValueInt *bi = b.v
+			setInt(bi.v)
+		else if b.v.type == TYPE_FLOAT
+			DynamicValueFloat *bf = b.v
+			setFloat(bf.v)
+		else if b.v.type == TYPE_STRING
+			DynamicValueString *bs = b.v
+			setString(bs.v)
+
+	void __iadd__(Variable b)
+		if b.v.type == TYPE_INT
+			DynamicValueInt *bi = b.v
+			if v.type == TYPE_INT
+				DynamicValueInt *ai = v
+				ai.v += bi.v
+			else if v.type == TYPE_FLOAT
+				DynamicValueFloat *af = v
+				af.v += bi.v
+		else if b.v.type == TYPE_FLOAT
+			DynamicValueFloat *bf = b.v
+			if v.type == TYPE_INT
+				ai = v
+				setFloat(ai.v + bf.v)
+			else if v.type == TYPE_FLOAT
+				af = v
+				af.v += bf.v
+		else if b.v.type == TYPE_STRING
+			DynamicValueString *bs = b.v
+			if v.type == TYPE_STRING
+				DynamicValueString *as = v
+				ai.v += bf.v
+
+	void __isub__(Variable b)
+		if b.v.type == TYPE_INT
+			DynamicValueInt *bi = b.v
+			if v.type == TYPE_INT
+				DynamicValueInt *ai = v
+				ai.v -= bi.v
+			else if v.type == TYPE_FLOAT
+				DynamicValueFloat *af = v
+				af.v -= bi.v
+		else if b.v.type == TYPE_FLOAT
+			DynamicValueFloat *bf = b.v
+			if v.type == TYPE_INT
+				ai = v
+				setFloat(ai.v - bf.v)
+			else if v.type == TYPE_FLOAT
+				af = v
+				af.v -= bf.v
+
+	void __imul__(Variable b)
+		if b.v.type == TYPE_INT
+			DynamicValueInt *bi = b.v
+			if v.type == TYPE_INT
+				DynamicValueInt *ai = v
+//				ai.v *= bi.v
+				ai.v = ai.v * bi.v
+			else if v.type == TYPE_FLOAT
+				DynamicValueFloat *af = v
+				af.v *= bi.v
+		else if b.v.type == TYPE_FLOAT
+			DynamicValueFloat *bf = b.v
+			if v.type == TYPE_INT
+				ai = v
+				setFloat(ai.v * bf.v)
+			else if v.type == TYPE_FLOAT
+				af = v
+				af.v *= bf.v
+
+	void __idiv__(Variable b)
+		if b.v.type == TYPE_INT
+			DynamicValueInt *bi = b.v
+			if v.type == TYPE_INT
+				DynamicValueInt *ai = v
+				ai.v /= bi.v
+			else if v.type == TYPE_FLOAT
+				DynamicValueFloat *af = v
+				af.v /= bi.v
+		else if b.v.type == TYPE_FLOAT
+			DynamicValueFloat *bf = b.v
+			if v.type == TYPE_INT
+				ai = v
+				setFloat(ai.v / bf.v)
+			else if v.type == TYPE_FLOAT
+				af = v
+				af.v /= bf.v
+
+	int compare(Variable b)
+		if b.v.type == TYPE_INT
+			DynamicValueInt *bi = b.v
+			if v.type == TYPE_INT
+				DynamicValueInt *ai = v
+				return ai.v - bi.v
+			else if v.type == TYPE_FLOAT
+				DynamicValueFloat *af = v
+				return (af.v - bi.v)*1000.0
+		else if b.v.type == TYPE_FLOAT
+			DynamicValueFloat *bf = b.v
+			if v.type == TYPE_INT
+				ai = v
+				return (ai.v - bf.v)*1000.0
+			else if v.type == TYPE_FLOAT
+				af = v
+				return (af.v - bf.v)*1000.0
+		else if b.v.type == TYPE_STRING
+			DynamicValueString *bs = b.v
+			if v.type == TYPE_STRING
+				DynamicValueString *as = v
+				if ai.v < bf.v
+					return -1
+				if ai.v > bf.v
+					return 1
+				return 0
+				//return ai.v.compare(bf.v)
+		return 0
+
+
+void FuncSin(Variable* r, Variable*[] p)
+	if p[0].v.type == TYPE_FLOAT
+		DynamicValueFloat *p0f = p[0].v
+		r.setFloat(sin(p0f.v))
+	else if p[0].v.type == TYPE_INT
+		DynamicValueInt *p0i = p[0].v
+		r.setFloat(sin(p0i.v))
+
+void FuncPrint(Variable *r, Variable*[] p)
+	string s
+	for pp in p
+		if pp.v.type == TYPE_FLOAT
+			DynamicValueFloat *ppf = pp.v
+			s += ppf.v
+		else if pp.v.type == TYPE_INT
+			DynamicValueInt *ppi = pp.v
+			s += ppi.v
+		else if pp.v.type == TYPE_STRING
+			DynamicValueString *pps = pp.v
+			s += pps.v
+		else
+			s += "-empty-"
+		s += " "
+	print s
+
+enum
+	TYPE_OPERATOR
+	TYPE_VARIABLE
+	TYPE_FUNCTION
+	TYPE_BLOCK
+	TYPE_IF
+	TYPE_WHILE
+
+class SyntaxNode
+	int type
+	SyntaxNode*[] params
+	virtual string str()
+		return "???"
+	virtual void showPost(int indent)
+	void show(int indent)
+		string s
+		for i in 0:indent
+			s += "    "
+		print s + str()
+		for p in params
+			p.show(indent + 1)
+		showPost(indent)
+
+class SyntaxNodeVariable : SyntaxNode
+	Variable *v
+	void __init__(Variable *_v)
+		v = _v
+		type = TYPE_VARIABLE
+	overwrite string str()
+		return "variable " + v.name
+
+class SyntaxNodeOperator : SyntaxNode
+	string op
+	void __init__(string _op)
+		op = _op
+		type = TYPE_OPERATOR
+	overwrite string str()
+		return "operator " + op
+	int rank()
+		if op == "*"
+			return 1
+		if op == "/"
+			return 2
+		if op == "+"
+			return 3
+		if op == "-"
+			return 4
+		if op == "="
+			return 10
+		return 5
+
+class SyntaxNodeFunction : SyntaxNode
+	string func
+	void __init__(string _func)
+		func = _func
+		type = TYPE_FUNCTION
+	overwrite string str()
+		return "function " + func
+
+class SyntaxNodeBlock : SyntaxNode
+	void __init__()
+		type = TYPE_BLOCK
+	overwrite string str()
+		return "block"
+
+class SyntaxNodeIf : SyntaxNode
+	SyntaxNode* block, block_else
+	void __init__()
+		type = TYPE_IF
+		block = nil
+		block_else = nil
+	overwrite string str()
+		return "if"
+	overwrite void showPost(int indent)
+		block.show(indent+1)
+		if block_else
+			block_else.show(indent+1)
+
+class SyntaxNodeWhile : SyntaxNode
+	SyntaxNode* block, block_else
+	void __init__()
+		type = TYPE_WHILE
+		block = nil
+		block_else = nil
+	overwrite string str()
+		return "while"
+	overwrite void showPost(int indent)
+		block.show(indent+1)
+		if block_else
+			block_else.show(indent+1)
+
+class SyntaxTree
+	Variable*[] vars
+	Variable*[] consts
+	SyntaxNode* block
+	
+	Lines lines
+	int cur_line_no
+	Line cur_line
+	int cur_word
+	string cur
+	bool endOfFile()
+		return cur_line_no >= lines.lines.num - 1
+	void nextLine()
+		if endOfFile()
+			setError("unerwartetes Dateiende")
+			return
+		cur_line_no ++
+		cur_line = lines.lines[cur_line_no]
+		cur_word = 0
+		cur = cur_line.words[0]
+	bool endOfLine()
+		return cur_word >= cur_line.words.num - 1
+	void next()
+		if endOfLine()
+			setError("unerwartetes Zeilenende")
+			return
+		cur_word ++
+		cur = cur_line.words[cur_word]
+	
+	bool error
+	void setError(string msg)
+		print "---Fehler---"
+		print "Zeile " + (cur_line.physical_line_no + 1) + " bei " + cur
+		print msg
+		error = true
+	
+	Variable* getVar(string name)
+		for v in vars
+			if v.name == name
+				return v
+		Variable *v = new Variable(name)
+		vars.add(v)
+		return v
+	Variable* addConstNumber(string s)
+		Variable* c = new Variable(s)
+		if s.find(".", 0) >= 0
+			c.setFloat(s.float())
+		else
+			c.setInt(s.int())
+		consts.add(c)
+		return c
+	Variable* addConstString(string s)
+		Variable* c = new Variable(s)
+		c.setString(s)
+		consts.add(c)
+		return c
+	SyntaxNode* getNuclearOperand()
+		if isNumber(cur[0])
+			return new SyntaxNodeVariable(addConstNumber(cur))
+		if cur[0] == '"' // "
+			return new SyntaxNodeVariable(addConstString(unescape(cur)))
+		if isOperator(cur[0])
+			setError("Variablennamen erwartet")
+			return nil
+		return new SyntaxNodeVariable(getVar(cur))
+	SyntaxNode* getOperator()
+		if !isOperator(cur[0]) and (cur != "and") and (cur != "or")
+			setError("Operator erwartet")
+			return nil
+		return new SyntaxNodeOperator(cur)
+	SyntaxNode* getOperandFunc()
+		SyntaxNode* sn = new SyntaxNodeFunction(cur)
+		next()
+		if error
+			return nil
+		if cur != "("
+			setError("( nach Funktionsnamen erwartet")
+			return nil
+		next()
+		if error
+			return nil
+		if cur == ")"
+			return sn
+		while true
+			SyntaxNode *param = getOperandGreedy()
+			if error
+				return nil
+			sn.params.add(param)
+			next()
+			if cur != "," and cur != ")"
+				setError(", oder ) nach Parameter erwartet")
+				return nil
+			if cur == ")"
+				break
+			next()
+			if error
+				return nil
+		return sn
+	SyntaxNode* getOperand()
+		if cur == "("
+			next()
+			SyntaxNode *sn = getOperandGreedy()
+			next()
+			if cur != ")"
+				setError(") erwartet")
+				return nil
+			return sn
+		if cur_word+1 < cur_line.words.num
+			if cur_line.words[cur_word+1] == "("
+				return getOperandFunc()
+		sn = getNuclearOperand()
+		return sn
+	SyntaxNode* getOperandGreedy()
+		SyntaxNode*[] sn
+		sn.add(getOperand())
+		if error
+			return nil
+		while !endOfLine()
+			if cur_line.words[cur_word + 1] == "," or cur_line.words[cur_word + 1] == ")"
+				break
+			next()
+			if error
+				return nil
+			sn.add(getOperator())
+			if error
+				return nil
+			next()
+			if error
+				return nil
+			sn.add(getOperand())
+			if error
+				return nil
+		return linkOperators(sn)
+	SyntaxNode* linkOperators(SyntaxNode*[] sn)
+		int[] rank
+		for i in 0:(sn.num-1)/2
+			SyntaxNodeOperator *op = sn[i*2+1]
+			rank.add(op.rank())
+		while sn.num > 2
+			int rmin = 100, imin = 0
+			for r,i in rank
+				if r < rmin
+					rmin = r
+					imin = i
+			sn[imin*2+1].params.add(sn[imin*2])
+			sn[imin*2+1].params.add(sn[imin*2+2])
+			sn.remove(imin*2+2)
+			sn.remove(imin*2)
+			rank.remove(imin)
+		return sn[0]
+	SyntaxNode *getSpecialCommandIf()
+		int indent0 = cur_line.indent
+		SyntaxNodeIf *sn = new SyntaxNodeIf
+		next()
+		sn.params.add(getOperandGreedy())
+		if error
+			return nil
+		sn.block = parseBlock()
+		if error
+			return nil
+		if endOfFile()
+			return sn
+		if lines.lines[cur_line_no + 1].indent != indent0 or lines.lines[cur_line_no + 1].words[0] != "else"
+			return sn
+		nextLine()
+		// else
+		sn.block_else = parseBlock()
+		return sn
+	SyntaxNode *getSpecialCommandWhile()
+		int indent0 = cur_line.indent
+		SyntaxNodeWhile *sn = new SyntaxNodeWhile
+		next()
+		sn.params.add(getOperandGreedy())
+		if error
+			return nil
+		sn.block = parseBlock()
+		if error
+			return nil
+		if endOfFile()
+			return sn
+		if lines.lines[cur_line_no + 1].indent != indent0 or lines.lines[cur_line_no + 1].words[0] != "else"
+			return sn
+		nextLine()
+		// else
+		sn.block_else = parseBlock()
+		return sn
+	SyntaxNode *parseLine()
+		if cur == "if"
+			return getSpecialCommandIf()
+		if cur == "while"
+			return getSpecialCommandWhile()
+		SyntaxNode *sn = getOperandGreedy()
+		if error
+			return nil
+		if !endOfLine()
+			setError("hier sollte die Zeile enden?")
+		return sn
+	SyntaxNode *parseBlock()
+		SyntaxNode *sn = new SyntaxNodeBlock
+		nextLine()
+		if error
+			return nil
+		int indent0 = cur_line.indent
+		sn.params.add(parseLine())
+		if error
+			return nil
+		while !endOfFile()
+			if lines.lines[cur_line_no + 1].indent < indent0
+				return sn
+			if lines.lines[cur_line_no + 1].indent > indent0
+				sn.params.add(parseBlock())
+			else
+				nextLine()
+				sn.params.add(parseLine())
+			if error
+				return nil
+		return sn
+	
+	void create(string source)
+		error = false
+		LiteralParser lp
+		lines = lp.parse(source)
+		cur_line_no = -1
+		//lines.show()
+		block = parseBlock()
+	void show()
+		block.show(0)
+	void showVars()
+		for v in vars
+			v.show()
+
+class Interpreter
+	bool error
+	void setError(string msg)
+		print "----Fehler beim Ausführen----"
+		print msg
+		error = true
+	void doNode(SyntaxTree syntax, SyntaxNode *sn, Variable *ret)
+		Variable*[] params
+		bool[] is_temp
+		for p in sn.params
+			if p.type == TYPE_VARIABLE
+				SyntaxNodeVariable *vv = p
+				params.add(vv.v)
+				is_temp.add(false)
+			else
+				Variable *temp = new Variable
+				doNode(syntax, p, temp)
+				if error
+					return
+				params.add(temp)
+				is_temp.add(true)
+		if sn.type == TYPE_OPERATOR
+			SyntaxNodeOperator *op = sn
+			if op.op == "="
+				*params[0] = *params[1]
+			else if op.op == "+"
+				*ret = *params[0]
+				*ret += *params[1]
+			else if op.op == "+="
+				*params[0] += *params[1]
+			else if op.op == "-"
+				*ret = *params[0]
+				*ret -= *params[1]
+			else if op.op == "-="
+				*params[0] -= *params[1]
+			else if op.op == "*"
+				*ret = *params[0]
+				*ret *= *params[1]
+			else if op.op == "*="
+				*params[0] *= *params[1]
+			else if op.op == "/"
+				*ret = *params[0]
+				*ret /= *params[1]
+			else if op.op == "/="
+				*params[0] /= *params[1]
+			else if op.op == ">"
+				ret.setInt(0)
+				if params[0].compare(*params[1]) > 0
+					ret.setInt(1)
+			else if op.op == "<"
+				ret.setInt(0)
+				if params[0].compare(*params[1]) < 0
+					ret.setInt(1)
+			else if op.op == "=="
+				ret.setInt(0)
+				if params[0].compare(*params[1]) == 0
+					ret.setInt(1)
+			else if op.op == ">="
+				ret.setInt(0)
+				if params[0].compare(*params[1]) >= 0
+					ret.setInt(1)
+			else if op.op == "<="
+				ret.setInt(0)
+				if params[0].compare(*params[1]) <= 0
+					ret.setInt(1)
+			else if op.op == "and"
+				ret.setInt(0)
+				if params[0].v.int() > 0 and params[1].v.int() > 0
+					ret.setInt(1)
+			else
+				setError("unbehandelter Operator: " + op.op)
+		else if sn.type == TYPE_FUNCTION
+			SyntaxNodeFunction *func = sn
+			if func.func == "sin"
+				FuncSin(ret, params)
+			else if func.func == "print"
+				FuncPrint(ret, params)
+			else
+				setError("unbekannte Funktion: " + func.func)
+		else if sn.type == TYPE_IF
+			Variable dummy
+			SyntaxNodeIf *_if = sn
+			if params[0].v.int() > 0
+				doNode(syntax, _if.block, &dummy)
+			else if _if.block_else
+				doNode(syntax, _if.block_else, &dummy)
+		else if sn.type == TYPE_WHILE
+			SyntaxNodeWhile *_while = sn
+			while params[0].v.int() > 0
+				doNode(syntax, _while.block, &dummy)
+
+				// reevaluate
+				if sn.params[0].type != TYPE_VARIABLE
+					doNode(syntax, sn.params[0], params[0])
+					if error
+						return
+		for p,i in params
+			if is_temp[i]
+				delete p
+	void run(SyntaxTree syntax)
+		Variable dummy
+		doNode(syntax, syntax.block, &dummy)
+
+void eval(string source)
+	SyntaxTree syntax
+	syntax.create(source)
+	if syntax.error
+		return
+	if verbose
+		syntax.show()
+	Interpreter inter
+	inter.run(syntax)
+	if verbose
+		syntax.showVars()
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	verbose = false
+	string filename
+	for a in arg
+		if a == "verbose"
+			verbose = true
+		else
+			filename = a
+	if filename.num > 0
+		string source = FileRead(filename)
+		eval(source)
+	exit(0)
