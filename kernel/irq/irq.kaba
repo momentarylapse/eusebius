@@ -5,7 +5,6 @@ use "../task/tasks.kaba"
 use "../task/scheduler.kaba"
 use "../std_char_devs.kaba"
 use "../syscall.kaba"
-use "error.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -38,8 +37,6 @@ class InterruptDescriptor
 
 class InterruptController
 	InterruptDescriptor[256] idt
-	void*[16] handler
-	Task*[16] tasks
 	
 	void set(int id, void* func)
 		idt[id].set(func)
@@ -48,8 +45,7 @@ class InterruptController
 		idt[id].set_task(t)
 
 	void init()
-		if VerbosityLevel >= 1
-			prints("lade Interrupt-Tabelle")
+		prints("lade Interrupt-Tabelle")
 
 		for i in idt
 			i.set(nil)
@@ -59,28 +55,6 @@ class InterruptController
 		SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, KernelTask)
 		Task *KeyTask = AddTaskKernel("irq-key", &int_key, KernelTask)
 		Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, KernelTask)
-
-		handler[ 0] = &int_00
-		handler[ 1] = &int_01
-		handler[ 2] = &int_02
-		handler[ 3] = &int_03
-		handler[ 4] = &int_04
-		handler[ 5] = &int_05
-		handler[ 6] = &int_06
-		handler[ 7] = &int_07
-		handler[ 8] = &int_08
-		handler[ 9] = &int_09
-		handler[10] = &int_10
-		handler[11] = &int_11
-		handler[12] = &int_12
-		handler[13] = &int_13
-		handler[14] = &int_14
-		handler[15] = &int_15
-		
-		for h,i in handler
-			//set(i, h)
-			tasks[i] = AddTaskKernel("error", h, KernelTask)
-			set_task(i, tasks[i])
 	
 		set_task(32, TimerTask) // IRQ 0
 		set_task(33, KeyTask) // IRQ 1
@@ -115,7 +89,6 @@ class InterruptController
 			sti
 		}
 	
-		if VerbosityLevel >= 1
-			prints("   ok\n")
+		prints("   ok\n")
 
 InterruptController irq

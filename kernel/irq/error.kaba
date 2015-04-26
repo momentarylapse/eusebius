@@ -3,6 +3,7 @@ use "../base.kaba"
 use "../text_mode.kaba"
 use "../task/tasks.kaba"
 use "../task/scheduler.kaba"
+use "irq.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -71,17 +72,14 @@ void get_error_text(int i, cstring s)
 	strcat(&s, &"  8-P")
 
 void int_handler(int i)
-	panic("error")
 	while true
-		nil
-	while true
-		/*Task* e = Interrupts.tasks[i]
+		Task* e = error.tasks[i]
 		int prev_pid = e.get_prev_pid()
 		Task *prev = &Tasks[prev_pid]
 		if prev.kernel_mode
 			handle_kernel_error(prev, i)
 		else
-			handle_task_error(prev, e, i)*/
+			handle_task_error(prev, e, i)
 		
 		asm{
 			iret
@@ -124,3 +122,40 @@ void int_16()
 void int_XX()
 	int_handler(2004)
 
+
+class ErrorController
+	void*[16] handler
+	Task*[16] tasks
+
+	void init()
+		prints("setze Fehler-Handler")
+
+		handler[ 0] = &int_00
+		handler[ 1] = &int_01
+		handler[ 2] = &int_02
+		handler[ 3] = &int_03
+		handler[ 4] = &int_04
+		handler[ 5] = &int_05
+		handler[ 6] = &int_06
+		handler[ 7] = &int_07
+		handler[ 8] = &int_08
+		handler[ 9] = &int_09
+		handler[10] = &int_10
+		handler[11] = &int_11
+		handler[12] = &int_12
+		handler[13] = &int_13
+		handler[14] = &int_14
+		handler[15] = &int_15
+		
+		
+		for h,i in handler
+			//set(i, h)
+			tasks[i] = AddTaskKernel("error", h, KernelTask)
+			irq.set_task(i, tasks[i])
+	
+		prints("   ok\n")
+
+
+ErrorController error
+	
+	

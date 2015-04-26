@@ -11,6 +11,7 @@ use "file_access.kaba"
 use "task/tasks.kaba"
 use "task/scheduler.kaba"
 use "irq/irq.kaba"
+use "irq/error.kaba"
 use "syscall.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
@@ -81,6 +82,7 @@ void main()
 	InitTasks()
 	
 	irq.init()
+	error.init()
 	
 	InitDrivers()
 	
