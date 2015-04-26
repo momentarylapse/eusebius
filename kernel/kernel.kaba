@@ -83,6 +83,7 @@ void main()
 	
 	irq.init()
 	error.init()
+	InitSysCall()
 	
 	InitDrivers()
 	

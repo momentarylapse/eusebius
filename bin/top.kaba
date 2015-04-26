@@ -64,6 +64,13 @@ void show_task(TaskInfo t)
 
 void main()
 	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	bool allow_irq = false
+	for a in arg
+		if a == "-a" or a == "--all"
+			allow_irq = true
 	
 	SysInfo s
 	if sysinfo(s) != 0
@@ -89,7 +96,7 @@ void main()
 	TaskInfo tt
 	for pid in 0:256
 		if taskinfo(pid, tt) == 0
-			if tt.status != TASK_STATUS_INTERRUPT
+			if tt.status != TASK_STATUS_INTERRUPT or allow_irq
 				tasks.add(tt)
 	
 	print " Pid   Name                 Status     CPU      Mem       Time\n"

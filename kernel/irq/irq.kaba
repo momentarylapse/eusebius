@@ -3,7 +3,6 @@ use "../base.kaba"
 use "../text_mode.kaba"
 use "../task/tasks.kaba"
 use "../task/scheduler.kaba"
-use "../syscall.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -49,14 +48,11 @@ class InterruptController
 		for i in idt
 			i.set(nil)
 	
-		//ErrorTask = AddTask("irq-error", &int_handler, KernelTask)
 		TimerTask = AddTaskKernel("irq-timer", &int_timer, KernelTask)
-		SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, KernelTask)
 	
 		set_task(32, TimerTask) // IRQ 0
-		set_task(0x80, SysCallTask)
 
-		// IRQs auf höhere Interrupts legen
+		// move IRQs to higher interrupts
 		outportb(0x20,0x11) // init
 		outportb(0xa0,0x11)
 		outportb(0x21,0x20) // offset 32

@@ -10,6 +10,7 @@ use "task/tasks.kaba"
 use "task/scheduler.kaba"
 use "time/timevalue.kaba"
 use "time/timer.kaba"
+use "irq/irq.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 class SysInfo
@@ -209,3 +210,9 @@ void int_syscall()
 			iret
 		}
 		//prints("<")
+	
+Task *SysCallTask
+
+void InitSysCall()
+	SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, KernelTask)
+	irq.set_task(0x80, SysCallTask)

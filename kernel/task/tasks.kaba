@@ -472,7 +472,6 @@ Task[MAX_TASKS] Tasks
 Task* KernelTask
 Task* IdleTask
 Task* TimerTask
-Task* SysCallTask
 int NextPidToAssign
 int RunningPid
 
