@@ -1,5 +1,5 @@
-#define __OS__
 use "../base.kaba"
+use "../io/io.kaba"
 use "timevalue.kaba"
 use "../task/tasks.kaba"
 use "../irq/irq.kaba"

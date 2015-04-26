@@ -1,6 +1,6 @@
 #define __OS__
 use "../base.kaba"
-use "../text_mode.kaba"
+use "../io/text.kaba"
 use "heap.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
@@ -243,8 +243,7 @@ class PageController
 	int mask_occupation
 	int alloc_count, free_count
 	void init()
-		if VerbosityLevel >= 1
-			prints("Paging")
+		prints("Paging")
 		num_masks = MemorySize / PAGE_SIZE / 32
 		MemorySize = num_masks * PAGE_SIZE * 32 // easier memory management...
 		for i in 0:num_masks
@@ -274,8 +273,7 @@ class PageController
 			jmp _flush
 			_flush:
 		}
-		if VerbosityLevel >= 1
-			prints(" ok\n")
+		prints(" ok\n")
 	
 	// does not clear
 	int alloc_page()

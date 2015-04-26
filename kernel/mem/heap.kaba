@@ -1,6 +1,6 @@
 #define __OS__
 use "../base.kaba"
-use "../text_mode.kaba"
+use "../io/text.kaba"
 
 
 //--------------------------------------------------------------
@@ -127,7 +127,7 @@ void memcheck()
 			panic "memcheck: h!=h.next.prev"
 		h = h.next
 
-void mem_init()
+void InitHeap()
 	// intentionally leave a 8b gap to prevent merging
 	MemHeapAllocated = sizeof(MallocHeader)*2-8
 	malloc_first_free = _i2p(MEM_HEAP_OFFSET)

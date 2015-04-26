@@ -1,6 +1,6 @@
-#define __OS__
 use "base.kaba"
-use "text_mode.kaba"
+use "io/text.kaba"
+use "io/io.kaba"
 use "filesystem.kaba"
 use "mem/paging.kaba"
 use "irq/irq.kaba"

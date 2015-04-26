@@ -1,6 +1,6 @@
 #define __OS__
 use "../base.kaba"
-use "../text_mode.kaba"
+use "../io/text.kaba"
 use "../filesystem.kaba"
 use "../file_access.kaba"
 use "../mem/heap.kaba"
@@ -584,8 +584,7 @@ void idle_func()
 		}
 
 void InitTasks()
-	if VerbosityLevel >= 1
-		prints("init Tasks")
+	prints("init Tasks")
 	
 	// null descriptor
 	for g in GlobalDescriptorTable
@@ -639,8 +638,7 @@ void InitTasks()
 	}
 	// markiert das aktuelle TSS als "busy"!
 
-	if VerbosityLevel >= 1
-		prints("   ok\n")
+	prints("   ok\n")
 
 /*int sys_getpid()
 	asm{

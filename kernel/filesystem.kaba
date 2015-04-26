@@ -1,8 +1,7 @@
-#define __OS__
 use "base.kaba"
 use "mem/heap.kaba"
 use "ata.kaba"
-use "text_mode.kaba"
+use "io/text.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -156,8 +155,7 @@ class FileSystemData
 			strcpy(&path, &"/")
 		
 	void mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
-		if VerbosityLevel >= 1
-			prints("mounte...")
+		prints("mounte...")
 		MountPoint *mp = &mounts[num_mounts]
 		num_mounts ++
 		mp.dest = dir
@@ -169,8 +167,7 @@ class FileSystemData
 			mp.type = &FSTExt2
 			FSTExt2.mount(mp)
 		dir.mount = mp
-		if VerbosityLevel >= 1
-			prints(" ok\n")
+		prints(" ok\n")
 
 FileSystemData FileSystem
 

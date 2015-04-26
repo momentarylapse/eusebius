@@ -1,6 +1,6 @@
 #define __OS__
 use "base.kaba"
-use "text_mode.kaba"
+use "io/text.kaba"
 use "filesystem.kaba"
 use "file_access.kaba"
 use "mem/heap.kaba"

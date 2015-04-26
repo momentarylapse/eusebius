@@ -1,6 +1,6 @@
 #define __OS__
 use "../base.kaba"
-use "../text_mode.kaba"
+use "../io/text.kaba"
 use "../task/tasks.kaba"
 use "../task/scheduler.kaba"
 use "irq.kaba"

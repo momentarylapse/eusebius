@@ -1,6 +1,6 @@
 #define __OS__
 use "base.kaba"
-use "text_mode.kaba"
+use "io/text.kaba"
 use "ata.kaba"
 use "filesystem.kaba"
 use "std_char_devs.kaba"
@@ -32,8 +32,7 @@ void show_pvl()
 	prints("]")
 
 void LoadKalib()
-	if VerbosityLevel > 0
-		prints("loading kalib... ")
+	prints("loading kalib... ")
 	int h = KernelTask.sys_open("/lib/kalib", O_RDONLY)
 	if h < 0
 		panic("kann /lib/kalib nicht lesen!")
@@ -48,14 +47,13 @@ void LoadKalib()
 		addr += r
 	KernelTask.sys_close(h)
 	printi(size)
-	if VerbosityLevel > 0
-		prints("b  ok\n")
+	prints("b  ok\n")
 
 
 void main()
 	read_data_from_init()
-	mem_init()
-	etm_init()
+	InitTextMode()
+	InitHeap()
 	
 	prints("Willkommen zu Eusebius 0.2.12   (c) by MichiSoft TM 2015\n")
 	prints("Speicher: ")

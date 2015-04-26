@@ -1,5 +1,5 @@
-#define __OS__
-use "base.kaba"
+use "../base.kaba"
+use "io.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 
@@ -10,8 +10,6 @@ use "base.kaba"
 void* VideoMemory
 char TextColor, TextColor2
 int TextPos, TextLine
-
-int VerbosityLevel
 
 const int SCREEN_WIDTH = 80
 const int SCREEN_HEIGHT = 25
@@ -24,8 +22,7 @@ void clrscr()
 	TextLine = 0
 	TextPos = 0
 
-void etm_init()
-	VerbosityLevel = 10
+void InitTextMode()
 	asm{
 		mov eax, 0x000b8000
 		mov VideoMemory, eax
