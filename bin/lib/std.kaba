@@ -98,4 +98,5 @@ extern int nanosleep(TimeValue a, TimeValue b)
 extern int sleep(int sec)
 extern int usleep(int usec)
 
-extern void showstats()
+extern void kprint(string s)
+extern void kprinti(int i)

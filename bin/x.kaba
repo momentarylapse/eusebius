@@ -206,15 +206,20 @@ class XWindow
 		next_window_id ++
 		shm_key = next_window_id + 0x0f810000 // randi()
 		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
-		buf = shmat(shm_id, 0)
-		windows.add(self)
-		sort_windows()
-		invalidated.add(r)
+		if shm_id < 0
+			print "x: ERROR can't create shared memory for window\n"
+			// TODO clean-up
+		else
+			buf = shmat(shm_id, 0)
+			windows.add(self)
+			sort_windows()
+			invalidated.add(r)
 		
 	void __delete__()
 		print "x: del win\n"
-		invalidated.add(r)
-		shmdt(buf)
+		if buf
+			invalidated.add(r)
+			shmdt(buf)
 		for ww,n in windows
 			if ww == self
 				windows_r.remove(windows.num - n - 1)
@@ -413,6 +418,7 @@ void main()
 
 	next_window_id = 0
 	windows.__init__()
+	windows_r.__init__()
 	invalidated.__init__()
 	
 	screen_width = 800
@@ -430,12 +436,10 @@ void main()
 		print "\n"
 	
 		int id = shmget(dev.getMemAddr0(), 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
-		print id
 		if id >= 0
 			vga_mem2 = shmat(id, 0)
-			print " ...ok\n"
 		else
-			print " ...Fehler: kann nicht mappen\n"
+			kprint " ...Fehler: kann nicht mappen\n"
 	else
 		print "pci dev not found\n"
 	

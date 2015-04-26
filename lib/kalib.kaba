@@ -269,12 +269,6 @@ int kill(int pid, int signal)
 		mov __temp_i3__, eax
 	}
 	return __temp_i3__
-	
-void showstats()
-	asm{
-		mov eax, 0x00002003
-		int 0x80
-	}
 
 int chdir(string dir)
 	cstring tt
@@ -435,6 +429,25 @@ int sched_yield(int pid)
 		mov __temp_i3__, eax
 	}
 	return __temp_i3__
+
+	
+void kprint(lib__string s)
+	__temp_p__ = s.data
+	__temp_i__ = s.num
+	asm{
+		mov eax, 0x00002002
+		mov ebx, __temp_p__
+		mov ecx, __temp_i__
+		int 0x80
+	}
+	
+void kprinti(int i)
+	__temp_i__ = i
+	asm{
+		mov eax, 0x00002003
+		mov ebx, __temp_i__
+		int 0x80
+	}
 
 void get_args(lib__string@list arg)
 	cstring cs

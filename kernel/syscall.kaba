@@ -175,11 +175,14 @@ void int_syscall()
 			caller.page_dir.memcpy2task(param1, &filename, sizeof(cstring))
 		else if index == 0x2001 // getarg
 			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
-		else if index == 0x2002 // prints
-			nil//p = _i2p(caller.addr2kernel(param1))
-		/*else if index == 0x2003 // showstats
-			//sys_showstats()*/
-		else if index == 0x2005 // taskstats
+		else if index == 0x2002 // kprints
+			if param2 < sizeof(filename)
+				caller.page_dir.memcpy2kernel(&filename, param1, param2)
+				filename[param2] = 0
+				prints(filename)
+		else if index == 0x2003 // kprinti
+			printi(param1)
+		else if index == 0x2005 // taskinfo
 			r = _task_info.get(param1)
 			if r == 0
 				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
