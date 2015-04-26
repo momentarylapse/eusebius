@@ -10,7 +10,7 @@ use "mem/shared.kaba"
 use "file_access.kaba"
 use "task/tasks.kaba"
 use "task/scheduler.kaba"
-use "interrupts.kaba"
+use "irq/irq.kaba"
 use "syscall.kaba"
 #define __STRING_CONST_AS_CSTRING__
 

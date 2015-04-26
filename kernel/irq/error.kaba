@@ -1,0 +1,125 @@
+#define __OS__
+use "../base.kaba"
+use "../text_mode.kaba"
+use "../task/tasks.kaba"
+use "../task/scheduler.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+
+void handle_task_error(Task* t, Task* e, int i)
+	SchedulerEnabled = false
+	int pid = t.pid
+	prints("-- Interrupt #")
+	printi(i)
+	prints(" pid=")
+	printi(pid)
+	prints("--\n")
+	cstring s
+	get_error_text(i, s)
+	prints(s)
+	
+	t.die(i-666)
+	
+	int pid_next = GetNextTask(pid)
+	ReconnectTasks(pid_next, e)
+	prints("\nreturn")
+	printi(pid_next)
+	prints("\n")
+	
+
+void handle_kernel_error(Task* t, int i)
+	cstring s
+	get_error_text(i, s)
+	panic(s)
+
+void get_error_text(int i, cstring s)
+	cstring nn
+	strcpy(&s, &"Int ")
+	_i2s(i, &nn)
+	strcat(&s, &nn)
+	if i==0
+		strcat(&s, &": Division durch Null")
+	if i==1
+		strcat(&s, &": Debug")
+	if i==3
+		strcat(&s, &": Breakpoint")
+	if i==4
+		strcat(&s, &": Overflow")
+	if i==5
+		strcat(&s, &": Bounds Check")
+	if i==6
+		strcat(&s, &": Invalider Opcode")
+	if i==7
+		strcat(&s, &": kein Ko-Prozessor")
+	if i==8
+		strcat(&s, &": System-Fehler")
+	if i==9
+		strcat(&s, &": Ko-Prozessor-Segment overrun")
+	if i==10
+		strcat(&s, &": Invalides TSS")
+	if i==11
+		strcat(&s, &": Segment fehlt")
+	if i==12
+		strcat(&s, &": Stack-Fehler")
+	if i==13
+		strcat(&s, &": General Protection Fault")
+	if i==14
+		strcat(&s, &": Page-Fault")
+	if i==16
+		strcat(&s, &": Koprozessor-Fehler")
+	strcat(&s, &"  8-P")
+
+void int_handler(int i)
+	while true
+		nil
+	while true
+		/*Task* e = Interrupts.tasks[i]
+		int prev_pid = e.get_prev_pid()
+		Task *prev = &Tasks[prev_pid]
+		if prev.kernel_mode
+			handle_kernel_error(prev, i)
+		else
+			handle_task_error(prev, e, i)*/
+		
+		asm{
+			iret
+		}
+
+void int_00()
+	int_handler(0)
+void int_01()
+	int_handler(1)
+void int_02()
+	int_handler(2)
+void int_03()
+	int_handler(3)
+void int_04()
+	int_handler(4)
+void int_05()
+	int_handler(5)
+void int_06()
+	int_handler(6)
+void int_07()
+	int_handler(7)
+void int_08()
+	int_handler(8)
+void int_09()
+	int_handler(9)
+void int_10()
+	int_handler(10)
+void int_11()
+	int_handler(11)
+void int_12()
+	int_handler(12)
+void int_13()
+	int_handler(13)
+void int_14()
+	int_handler(14)
+void int_15()
+	int_handler(15)
+void int_16()
+	int_handler(16)
+void int_XX()
+	int_handler(2004)
+
