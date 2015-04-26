@@ -1,5 +1,11 @@
 #define __OS__
-use "prog_header.kaba"
+use "lib/std.kaba"
+use "lib/io.kaba"
+use "lib/pci.kaba"
+use "lib/x.kaba"
+
+extern int _p2i(void *p)
+extern void* _i2p(int i)
 
 const int VBE_DISPI_IOPORT_INDEX = 0x01ce
 const int VBE_DISPI_IOPORT_DATA = 0x01cf
@@ -23,84 +29,7 @@ const int VBE_DISPI_INDEX_VIRT_HEIGHT = 7
 const int VBE_DISPI_INDEX_X_OFFSET = 8
 const int VBE_DISPI_INDEX_Y_OFFSET = 9
 
-
-int _temp_port_no_
-int _temp_port_data_
-
-extern void* _i2p(int i)
-extern int _p2i(void *p)
-
-
-void outportb(int port, char data)
-	_temp_port_no_ = port
-	_temp_port_data_ = data
-	asm{
-		mov eax, _temp_port_data_
-		mov edx, _temp_port_no_
-		out dx, al
-	}
-
-char inportb(int port)
-	_temp_port_no_ = port
-	asm{
-		mov edx, _temp_port_no_
-		xor eax, eax
-		in al, dx
-		mov _temp_port_data_, eax
-	}
-	return _temp_port_data_
-
-void outportd(int port,int data)
-	_temp_port_no_ = port
-	_temp_port_data_ = data
-	asm{
-		mov eax, _temp_port_data_
-		mov edx, _temp_port_no_
-		out dx, eax
-	}
-
-int inportd(int port)
-	_temp_port_no_ = port
-	asm{
-		mov edx, _temp_port_no_
-		in eax, dx
-		mov _temp_port_data_, eax
-	}
-	return _temp_port_data_
-
-void outportw(int port,int data)
-	_temp_port_no_ = port
-	_temp_port_data_ = data
-	asm{
-		mov eax, _temp_port_data_
-		mov edx, _temp_port_no_
-		db 0x66
-		out dx, eax
-	}
-
-int inportw(int port)
-	_temp_port_no_ = port
-	asm{
-		mov edx, _temp_port_no_
-		xor eax, eax
-		db 0x66
-		in eax, dx
-		mov _temp_port_data_, eax
-	}
-	return _temp_port_data_
-
-char geth0(int i)
-	if (i >= 0) and (i <= 9)
-		return i + '0'
-	if (i >= 10) and (i <= 15)
-		return i - 10 + 'a'
-
-void printh(int i)
-	string s
-	for n in 0:8
-		s.add(geth0((i >> ((7-n)*4)) & 0xf))
-	print s
-	
+PCIController *pci
 
 void BgaWriteRegister(int IndexValue, int DataValue)
 	outportw(VBE_DISPI_IOPORT_INDEX, IndexValue)
@@ -121,7 +50,11 @@ int cur_bank
 int[0]* vga_mem
 int[0]* vga_mem2
  
-void BgaSetVideoMode(int width, int height, int depth, bool UseLinearFrameBuffer, bool ClearVideoMemory)
+void BgaSetVideoMode(int width, int height, int depth)
+	bool UseLinearFrameBuffer = false
+	if vga_mem2
+		UseLinearFrameBuffer = true
+	bool ClearVideoMemory = false
 	screen_width = width
 	screen_height = height
 	mouse.x = width / 2
@@ -174,63 +107,6 @@ void setPixel2(int x, int y, int col)
 	vga_mem2[p] = col
 
 
-int pciConfigRead(int bus, int slot, int func, int offset)
- 
-	/* create configuration address as per Figure 1 */
-	int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
- 
-	/* write out the address */
-	outportd(0xcf8, address)
-	/* read in the data */
-	/* (offset & 2) * 8) = 0 will choose the first word of the 32 bits register */
-	return inportd(0xcfc)
-
-
-class PCIDevice
-	int bus, slot, func
-	int vendor, device
-	int xxx
-	int bar0
-PCIDevice[] pci_devices
-
-void checkDevice(int bus, int slot)
-	for fun in 0:8
-		int a = pciConfigRead(bus, slot, fun, 0)
-		int b = pciConfigRead(bus, slot, fun, 8)
-		int bar0 = pciConfigRead(bus, slot, fun, 16)
-	
-		int vendor = (a >> 16) & 0xffff
-		int dev = a & 0xffff
-		if vendor != 0xffff
-			PCIDevice p
-			p.bus = bus
-			p.slot = slot
-			p.func = fun
-			p.vendor = vendor
-			p.device = dev
-			p.xxx = b
-			p.bar0 = bar0 & 0xfffffff0
-			pci_devices.add(p)
-			print "---- "
-			print bus
-			print ":"
-			print slot
-			print ":"
-			print fun
-			print " "
-			printh vendor
-			print " "
-			printh dev
-			print "   "
-			printh b
-			print "   "
-			printh bar0
-			print "\n"
-
-void scan_pci()
-	for bus in 0:256
-		for dev in 0:32
-			checkDevice(bus, dev)
 
 class MouseController
 	int x, y
@@ -453,11 +329,6 @@ void draw_invalidated()
 		draw(r)
 	invalidated.clear()
 
-const int XCMD_KILL = 666
-const int XCMD_NEW_WINDOW = 1024
-const int XCMD_DEL_WINDOW = 1025
-const int XCMD_MOVE_WINDOW = 1026
-const int XCMD_INVALIDATE_WINDOW = 1027
 
 class Client
 	int[0]* buf
@@ -538,6 +409,7 @@ void main()
 	get_args(arg)
 	
 	graphics_enabled = false
+	vga_mem2 = nil
 
 	next_window_id = 0
 	windows.__init__()
@@ -549,21 +421,26 @@ void main()
 	cmds = new CommandController
 	mouse = new MouseController
 	
-	//scan_pci()
+	pci = new PCIController
+	pci.scan()
+	PCIDevice *dev = pci.get(0x1111, 0x1234)
+	if dev
+		print "pci dev found, mem="
+		printh dev.getMemAddr0()
+		print "\n"
 	
-	vga_mem2 = nil
-	int id = shmget(0xc0000000, 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
-	print id
-	print "\n"
-	if id >= 0
-		vga_mem2 = shmat(id, 0)
-		print p2s(vga_mem2)
+		int id = shmget(dev.getMemAddr0(), 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
+		print id
+		if id >= 0
+			vga_mem2 = shmat(id, 0)
+			print " ...ok\n"
+		else
+			print " ...Fehler: kann nicht mappen\n"
+	else
+		print "pci dev not found\n"
 	
 	if arg.num == 1
-		if vga_mem2
-			BgaSetVideoMode(640, 480, 32, true, false)
-		else
-			BgaSetVideoMode(640, 480, 32, false, false)
+		BgaSetVideoMode(640, 480, 32)
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
 	if vga_mem2
@@ -584,7 +461,7 @@ void main()
 	print "x: running\n"
 	while true
 		cmds.update()
-		mouse.update()
+//		mouse.update()
 		draw_invalidated()
 		
 	XExit()

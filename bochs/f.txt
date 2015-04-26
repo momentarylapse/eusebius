@@ -10,7 +10,7 @@ ne2k: enabled=1, ioaddr=0x300, irq=3, mac=b0:c4:20:00:00:00, ethmod=vnet, ethdev
 #vga: extension=vbe
 #vgaromimage: file=VGABIOS-lgpl-latest.cirrus.bin
 #vga: extension=cirrus
-pci: enabled=1, chipset=i440fx, slot1=pcivga  , slot2=ne2k
+pci: enabled=1, chipset=i440fx, slot1=pcivga, slot2=ne2k
 
 
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14

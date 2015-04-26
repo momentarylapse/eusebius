@@ -1,0 +1,8 @@
+#define __OS__
+use "std.kaba"
+
+const int XCMD_KILL = 666
+const int XCMD_NEW_WINDOW = 1024
+const int XCMD_DEL_WINDOW = 1025
+const int XCMD_MOVE_WINDOW = 1026
+const int XCMD_INVALIDATE_WINDOW = 1027

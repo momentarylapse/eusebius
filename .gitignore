@@ -18,8 +18,9 @@ tools/compiler/temp
 init
 loader_fake
 kernel/kernel
-bin/*
-!bin/*.kaba
 lib/*
 !lib/*.kaba
-
+bin/*
+!bin/*.kaba
+!bin/lib
+!bin/lib/*.kaba

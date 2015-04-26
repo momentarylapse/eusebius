@@ -1,0 +1,79 @@
+#define __OS__
+use "std.kaba"
+
+
+int _temp_port_no_
+int _temp_port_data_
+
+
+void outportb(int port, char data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		out dx, al
+	}
+
+char inportb(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		xor eax, eax
+		in al, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+void outportd(int port,int data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		out dx, eax
+	}
+
+int inportd(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		in eax, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+void outportw(int port,int data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		db 0x66
+		out dx, eax
+	}
+
+int inportw(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		xor eax, eax
+		db 0x66
+		in eax, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+char geth0(int i)
+	if (i >= 0) and (i <= 9)
+		return i + '0'
+	if (i >= 10) and (i <= 15)
+		return i - 10 + 'a'
+
+void printh(int i)
+	string s
+	for n in 0:8
+		s.add(geth0((i >> ((7-n)*4)) & 0xf))
+	print s
+
+

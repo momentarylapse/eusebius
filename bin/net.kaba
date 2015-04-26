@@ -1,8 +1,12 @@
 #define __OS__
 use "lib/std.kaba"
+use "lib/io.kaba"
 use "lib/pci.kaba"
 
 PCIController *pci
+PCIDevice *dev
+
+
 
 void main()
 	init_lib()
@@ -12,6 +16,11 @@ void main()
 	pci = new PCIController
 	
 	pci.scan()
-	pci.show()
+	
+	dev = pci.get(0x8029, 0x10ec)
+	if dev
+		dev.show()
+		printh dev.getIOAddr0()
+		print "\n"
 		
 	exit(0)

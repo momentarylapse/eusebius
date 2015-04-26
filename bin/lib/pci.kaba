@@ -1,0 +1,143 @@
+#define __OS__
+use "std.kaba"
+use "io.kaba"
+
+
+class PCIDevice
+	int header_type
+	int bus, slot, function
+	int vendor, device
+	int _class, subclass
+	int bar0
+	int secondary_bus
+	int irq
+	
+	int getSecondaryBus()
+		return -1
+		
+	void __init__()
+		bar0 = 0
+		irq = -1
+	
+	int getMemAddr0()
+		if (bar0 & 1) == 0
+			return bar0 & 0xfffffff0
+		return 0
+	
+	int getIOAddr0()
+		if (bar0 & 1) == 1
+			return bar0 & 0xfffffffc
+		return 0
+	
+	void show()
+		print bus
+		print ":"
+		print slot
+		print ":"
+		print function
+		print " "
+		printh vendor
+		print ":"
+		printh device
+		print "   class="
+		print _class
+		print ":"
+		print subclass
+		print "  ht="
+		print header_type
+		if irq >= 0
+			print "  irq="
+			print irq
+		print "\n"
+
+class PCIController
+	int read_config(int bus, int slot, int func, int offset)
+ 
+		/* create configuration address as per Figure 1 */
+		int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
+ 
+		/* write out the address */
+		outportd(0xcf8, address)
+		/* read in the data */
+		/* (offset & 2) * 8) = 0 will choose the first word of the 32 bits register */
+		return inportd(0xcfc)
+
+
+	PCIDevice*[] devices
+
+	PCIDevice* checkDevice(int bus, int slot, int function)
+		PCIDevice* p = getx(bus, slot, function)
+		if p
+			return p
+	
+		int a = read_config(bus, slot, function, 0x00)
+	
+		int vendor = (a >> 16) & 0xffff
+		if vendor == 0xffff
+			return nil
+		//int b = read_config(bus, slot, function, 0x04)
+		int c = read_config(bus, slot, function, 0x08)
+		int d = read_config(bus, slot, function, 0x0c)
+		p = new PCIDevice
+		p.header_type = (d >> 16) & 0xff
+		p.bus = bus
+		p.slot = slot
+		p.function = function
+		p.vendor = vendor
+		p.device = a & 0xffff
+		p._class = c >> 24
+		p.subclass = (c >> 16) & 0xff
+		if p.header_type == 0
+			p.bar0 = read_config(bus, slot, function, 0x10)
+			p.irq = read_config(bus, slot, function, 0x3c) & 0x000000ff
+		else if p.header_type == 1
+			p.secondary_bus = (read_config(bus, slot, function, 0x18) >> 16) & 0xff
+			p.irq = read_config(bus, slot, function, 0x3c) & 0x000000ff
+		devices.add(p)
+		return p
+
+	void __scan()
+		for bus in 0:256
+			for slot in 0:32
+				for function in 0:8
+					checkDevice(bus, slot, function)
+	
+	void scan()
+		PCIDevice *d = checkDevice(0, 0, 0)
+		if !d
+			return
+		if (d.header_type & 0x80) == 0
+			checkBus(0)
+		else
+			for function in 0:8
+				if !checkDevice(0, 0, function)
+					break
+				checkBus(function)
+	
+	void checkBus(int bus)
+ 		for slot in 0:32
+ 			for function in 0:8
+				checkDevice(bus, slot, function)
+	
+	void checkFunction(int bus, int slot, int function)
+		PCIDevice* d = getx(bus, slot, function)
+		if (d._class == 0x06) and (d.subclass == 0x04)
+			checkBus(d.getSecondaryBus())
+	
+	void show()
+		for d in devices
+			d.show()
+
+	PCIDevice* getx(int bus, int slot, int function)
+		for d in devices
+			if (d.bus == bus) and (d.slot == slot) and (d.function == function)
+				return d
+		return nil
+
+	PCIDevice* get(int vendor, int device)
+		for d in devices
+			if (d.vendor == vendor) and (d.device == device)
+				return d
+		return nil
+
+

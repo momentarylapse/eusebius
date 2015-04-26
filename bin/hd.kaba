@@ -1,5 +1,5 @@
 #define __OS__
-use "prog_header.kaba"
+use "lib/std.kaba"
 
 
 void hd(int h)
