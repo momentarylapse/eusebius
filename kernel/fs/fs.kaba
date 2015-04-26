@@ -57,6 +57,13 @@ class FileEntry
 				return e
 			e = e.next
 		return nil
+	
+	// allocate list int blocks of int[16]
+	void add_block(int b)
+		if (num_blocks & 0x0f) == 0
+			blocks = realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
+		blocks[num_blocks] = b
+		num_blocks ++
 
 
 
@@ -211,10 +218,9 @@ class FileSystemTypeMichiFS : FileSystemType
 			e.size = read_int()
 			read_int() // NumParts = 1
 			int first_block = read_int()
-			e.num_blocks = read_int()
-			e.blocks = malloc(e.num_blocks * sizeof(int))
-			for i in 0:e.num_blocks
-				e.blocks[i] = first_block + i
+			int num_blocks = read_int()
+			for i in 0:num_blocks
+				e.add_block(first_block + i)
 	
 	//void readBlock(int no, cstring *buf)
 	//void readFileBlock(int inode, int block, cstring *buf)
@@ -377,19 +383,21 @@ class FileSystemTypeExt2 : FileSystemType
 			e.type = FILE_TYPE_DIR
 		
 		e.size = inode.size
-		e.num_blocks = (inode.size-1) / block_size + 1
-		e.blocks = malloc((e.num_blocks + 8) * sizeof(int))
-		int num_direct = e.num_blocks
+		if e.num_blocks != 0
+			panic("!=0")
+		int num_blocks = (inode.size-1) / block_size + 1
+		//e.blocks = malloc((e.num_blocks + 8) * sizeof(int))
+		int num_direct = num_blocks
 		if num_direct > 12
 			num_direct = 12
 	
 		for i in 0:num_direct
-			e.blocks[i] = inode.iblock[i]
-		if e.num_blocks > 12
+			e.add_block(inode.iblock[i])
+		if num_blocks > 12
 			_mp.readBlock(inode.iblock[12], &_buf)
 			int[0]* p = &_buf
-			for i in 12:e.num_blocks
-				e.blocks[i] = p[i - 12]
+			for i in 12:num_blocks
+				e.add_block(p[i - 12])
 		
 	
 	Ext2Inode inode

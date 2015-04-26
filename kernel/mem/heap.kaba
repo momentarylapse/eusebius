@@ -78,6 +78,8 @@ void _cleanup(MallocHeader *h)
 		h.prev.next = h.next
 
 void free(void *p)
+	if !p
+		return
 	int ip = _p2i(p)
 	//prints "---free"
 	//prints("<-")
@@ -126,6 +128,15 @@ void memcheck()
 		if h != h.next.prev
 			panic "memcheck: h!=h.next.prev"
 		h = h.next
+
+void* realloc(void* po, int old_size, int new_size)
+	void *pn = malloc(new_size)
+	int n = old_size
+	if new_size < n
+		n = new_size
+	memcpy(pn, po, n)
+	free(po)
+	return pn
 
 void InitHeap()
 	// intentionally leave a 8b gap to prevent merging
