@@ -115,8 +115,7 @@ class InterruptController
 			sti
 		}
 	
-		InterruptsEnabled = true
 		if VerbosityLevel >= 1
 			prints("   ok\n")
 
-InterruptController Interrupts
+InterruptController irq

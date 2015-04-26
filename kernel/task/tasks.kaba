@@ -197,7 +197,7 @@ class Task
 			if page_dir
 				page_dir.unmap(0, KERNEL_MEM, false)
 				page_dir.unmap(mem_bottom, mem_size, true)
-				Paging.free_page(_p2i(page_dir))
+				paging.free_page(_p2i(page_dir))
 				page_dir = nil
 
 	void clean_up_deep()
@@ -475,7 +475,6 @@ Task* TimerTask
 Task* SysCallTask
 int NextPidToAssign
 int RunningPid
-bool InterruptsEnabled
 
 class GlobalDescriptorData
 	int a, b
@@ -534,7 +533,8 @@ Task* AddTaskUser(cstring name, void *func, Task *parent)
 	t.stack = _i2p(TASK_STACK_POS)
 	t.mem_bottom = KERNEL_MEM
 	t.mem_size = INITIAL_TASK_MEM
-	t.page_dir = Paging.create_page_directory(KERNEL_MEM, false)
+	t.page_dir = paging.create_page_directory()
+	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
 	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
 		panic("incomplete page dir") // ...
 	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
@@ -588,7 +588,6 @@ void idle_func()
 void InitTasks()
 	if VerbosityLevel >= 1
 		prints("init Tasks")
-	InterruptsEnabled = false
 	
 	// null descriptor
 	for g in GlobalDescriptorTable

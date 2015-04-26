@@ -25,7 +25,7 @@ class SharedMemory
 			panic("SharedMem.refcount < 0")
 	
 	void clean_up()
-		Paging.free_chunk(p, size)
+		paging.free_chunk(p, size)
 		key = -1
 
 class SharedMemoryController
@@ -50,11 +50,11 @@ class SharedMemoryController
 		for b,i in blocks
 			if b.key == -1
 				if absolute
-					if !Paging.alloc_chunk(key, size)
+					if !paging.alloc_chunk(key, size)
 						return -ENOMEM
 					b.p = key
 				else
-					b.p = Paging.find_and_alloc_chunk(size)
+					b.p = paging.find_and_alloc_chunk(size)
 					if b.p == -1
 						return -ENOMEM
 				b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
@@ -91,4 +91,4 @@ class SharedMemoryController
 			return -ENOENT
 		return create(key, size, flags, pid)
 	
-SharedMemoryController SharedMem	
+SharedMemoryController SharedMem

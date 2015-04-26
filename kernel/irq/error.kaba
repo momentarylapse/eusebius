@@ -71,6 +71,7 @@ void get_error_text(int i, cstring s)
 	strcat(&s, &"  8-P")
 
 void int_handler(int i)
+	panic("error")
 	while true
 		nil
 	while true

@@ -30,52 +30,25 @@ void show_pvl()
 	printi(pvl)
 	prints("]")
 
-void LoadKaLib()
+void LoadKalib()
 	if VerbosityLevel > 0
 		prints("loading kalib... ")
 	int h = KernelTask.sys_open("/lib/kalib", O_RDONLY)
-	printi(h)
 	if h < 0
 		panic("kann /lib/kalib nicht lesen!")
 		return
 	int addr = KALIB_LOCATION
+	int size = 0
 	while true
 		int r = KernelTask.sys_read(h, addr, 1024)
 		if r <= 0
 			break
+		size += r
 		addr += r
 	KernelTask.sys_close(h)
+	printi(size)
 	if VerbosityLevel > 0
-		prints("ok\n")
-
-/*void FileTest()
-	int h = sys_open("/test.txt")
-	if h < 0
-		prints("## kann Datei nicht lesen! ##\n")
-		return
-	cstring s
-	int r = sys_read(h, &s, 256)
-	s[r] = 0
-	prints(s)
-	sys_close(h)
-
-void DriverTest()
-	prints("Treiber Test\n")
-	int h = sys_open("/dev/keyboard")
-	if h < 0
-		prints("## kann Datei nicht lesen! ##\n")
-		return
-	while true
-		cstring s
-		int r = sys_read(h, &s, 64)
-		if r > 0
-			printh(&s, r)
-			prints(" ")
-	sys_close(h)*/
-
-
-void PagingTest()
-	printh(_i2p(0x007ff000), 256)
+		prints("b  ok\n")
 
 
 void main()
@@ -89,7 +62,7 @@ void main()
 	printi(MemorySize / 1024)
 	prints("k\n")
 	
-	Paging.init()
+	paging.init()
 	
 	SharedMem.init()
 	
@@ -107,16 +80,11 @@ void main()
 	
 	InitTasks()
 	
-	Interrupts.init()
+	irq.init()
 	
 	InitDrivers()
 	
-	//PagingTest()
-
-	//FileTest()
-	//DriverTest()
-	
-	LoadKaLib()
+	LoadKalib()
 	
 	int stdin = KernelTask.sys_open("/dev/tty", O_RDONLY)
 	int stdout = KernelTask.sys_open("/dev/tty", O_WRONLY)

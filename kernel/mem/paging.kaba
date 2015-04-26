@@ -37,6 +37,7 @@ class PageDirectory : PageTable
 
 	// source = task-space
 	// dest = kernel-space
+	// (does not allocate pages)
 	void map_lin(int source, int dest, int size, bool writable)
 		source = source & 0xfffff000
 		dest = dest & 0xfffff000
@@ -48,7 +49,7 @@ class PageDirectory : PageTable
 			flags = 7
 		while npages > 0
 			if e[dir_no] == 0
-				int pos = Paging.alloc_page()
+				int pos = paging.alloc_page()
 				PageTable *pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
@@ -78,7 +79,7 @@ class PageDirectory : PageTable
 			flags = 7
 		while npages > 0
 			if e[dir_no] == 0
-				int pos = Paging.alloc_page()
+				int pos = paging.alloc_page()
 				PageTable *pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
@@ -89,7 +90,7 @@ class PageDirectory : PageTable
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
-				int dest = Paging.alloc_page()
+				int dest = paging.alloc_page()
 				if dest == -1
 					unmap(start, size, true)
 					return false
@@ -114,10 +115,10 @@ class PageDirectory : PageTable
 			for i in i0:i1
 				if pt.e[i] != 0
 					if dealloc
-						Paging.free_page(pt.e[i] & 0xfffff000)
+						paging.free_page(pt.e[i] & 0xfffff000)
 					pt.e[i] = 0
 			if pt.count_entries() == 0
-				Paging.free_page(pt_pos)
+				paging.free_page(pt_pos)
 			npages -= i1-i0
 			dir_no ++
 			page_no = 0
@@ -257,10 +258,10 @@ class PageController
 		alloc_count = 0
 		free_count = 0
 			
-		// flat paging
+		// kernel: flat paging
 		int nmax = MemorySize / PAGE_SIZE / 1024
-		KernelPageDir = create_page_directory(MemorySize, true)
-		//printi(_p2i(KernelPageDir))
+		KernelPageDir = create_page_directory()
+		KernelPageDir.map_lin(0, 0, MemorySize, true)
 	
 		asm{
 			mov eax, KernelPageDir
@@ -403,13 +404,12 @@ class PageController
 						n ++
 		return n * PAGE_SIZE
 	
-	PageDirectory *create_page_directory(int size, bool writable)
+	PageDirectory *create_page_directory()
 		int pos = alloc_page()
 		PageDirectory *pd = _i2p(pos)
 		pd.clear()
-		pd.map_lin(0, 0, size, writable)
 		return pd
 			
 
-PageController Paging
+PageController paging
 
