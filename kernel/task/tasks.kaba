@@ -6,7 +6,7 @@ use "../file_access.kaba"
 use "../mem/heap.kaba"
 use "../mem/paging.kaba"
 use "../mem/shared.kaba"
-use "../timer.kaba"
+use "../time/timevalue.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 

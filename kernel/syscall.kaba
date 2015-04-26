@@ -8,7 +8,8 @@ use "mem/paging.kaba"
 use "mem/shared.kaba"
 use "task/tasks.kaba"
 use "task/scheduler.kaba"
-use "timer.kaba"
+use "time/timevalue.kaba"
+use "time/timer.kaba"
 #define __STRING_CONST_AS_CSTRING__
 
 class SysInfo

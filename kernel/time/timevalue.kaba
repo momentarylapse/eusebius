@@ -1,0 +1,39 @@
+#define __OS__
+use "../base.kaba"
+#define __STRING_CONST_AS_CSTRING__
+
+
+class TimeValue
+	int sec
+	int nanosec
+	void clear()
+		sec = 0
+		nanosec = 0
+	
+	bool is_before(TimeValue t)
+		if sec < t.sec
+			return true
+		if sec > t.sec
+			return false
+		if nanosec < t.nanosec
+			return true
+		return nanosec < t.nanosec
+
+	bool is_valid()
+		return (nanosec >= 0) and (nanosec < 1000000000)
+	
+	void inc_nanosec(int ns)
+		nanosec += ns
+  		if nanosec > 1000000000
+  			sec ++
+  			nanosec -= 1000000000
+	
+	void dec_nanosec(int ns)
+		nanosec -= ns
+		if nanosec < 0
+			sec --
+			nanosec += 1000000000
+
+	void add(TimeValue t)
+		sec += t.sec
+		inc_nanosec(t.nanosec)
