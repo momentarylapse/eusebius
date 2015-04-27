@@ -1,6 +1,4 @@
-#define __OS__
 use "../base.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 
 class TimeValue

@@ -57,7 +57,7 @@ void show_task(TaskInfo t)
 		s += t.status
 	fill(s, 38)
 	s += i2s2(t.cpu/10, 3) + "%"
-	s += i2s2(t.mem, 9)+"k  "
+	s += i2s2(t.mem*4, 9)+"k  "
 	s += sec2s(t.life.sec)
 	print s
 	print "\n"
@@ -80,17 +80,21 @@ void main()
 	print sec2s(s.uptime)
 	print "\n"
 	print "memory:   "
-	print i2s2((s.freeram * s.mem_unit) / 1024, 8)
-	print "k free   "
 	print i2s2((s.totalram * s.mem_unit) / 1024, 8)
 	print "k total  "
+	print i2s2((s.freeram * s.mem_unit) / 1024, 8)
+	print "k free   "
+	print i2s2(((s.totalram - s.freeram) * s.mem_unit) / 1024, 8)
+	print "k used  "
 	print i2s2((s.sharedram * s.mem_unit) / 1024, 8)
 	print "k shared\n"
 	print "heap:     "
+	print i2s2((s.totalheap * s.mem_unit) / 1024, 8)
+	print "k total  "
 	print i2s2((s.freeheap * s.mem_unit) / 1024, 8)
 	print "k free   "
-	print i2s2((s.totalheap * s.mem_unit) / 1024, 8)
-	print "k total\n"
+	print i2s2(((s.totalheap - s.freeheap) * s.mem_unit) / 1024, 8)
+	print "k used\n"
 	
 	TaskInfo[] tasks
 	TaskInfo tt

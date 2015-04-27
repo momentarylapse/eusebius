@@ -1,4 +1,3 @@
-#define __OS__
 use "base.kaba"
 use "io/text.kaba"
 use "fs/fs.kaba"
@@ -11,7 +10,8 @@ use "task/scheduler.kaba"
 use "time/timevalue.kaba"
 use "time/timer.kaba"
 use "irq/irq.kaba"
-#define __STRING_CONST_AS_CSTRING__
+
+const int SYSCALL_STACK_SIZE = 65536
 
 class SysInfo
 	int uptime
@@ -42,7 +42,7 @@ class SysInfo
 		totalhigh = 0
 		freehigh = 0
 		totalheap = MEM_HEAP_SIZE / mem_unit
-		freeheap = MemHeapAllocated / mem_unit
+		freeheap = (MEM_HEAP_SIZE - MemHeapAllocated) / mem_unit
 
 SysInfo _sys_info
 
@@ -223,5 +223,5 @@ void int_syscall()
 Task *SysCallTask
 
 void InitSysCall()
-	SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, KernelTask)
+	SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, SYSCALL_STACK_SIZE, KernelTask)
 	irq.set_task(0x80, SysCallTask)

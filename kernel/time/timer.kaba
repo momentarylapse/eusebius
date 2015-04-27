@@ -3,7 +3,6 @@ use "../io/io.kaba"
 use "timevalue.kaba"
 use "../task/task.kaba"
 use "../irq/irq.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 
 class KernelTimer

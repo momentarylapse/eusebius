@@ -2,7 +2,6 @@
 #define __CODE_ORIGIN__ 0x00010000
 #define __VARIABLE_OFFSET__ 0x00100000
 #define __ADD_ENTRY_POINT__
-#define __STRING_CONST_AS_CSTRING__
 use "base.kaba"
 use "io/text.kaba"
 use "dev/ata.kaba"

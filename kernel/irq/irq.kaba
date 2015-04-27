@@ -2,7 +2,6 @@ use "../base.kaba"
 use "../io/text.kaba"
 use "../io/io.kaba"
 use "../task/task.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 
 void int_ignore()
@@ -55,7 +54,7 @@ class InterruptController
 			i.set(nil)
 		
 	
-		IgnoreTask = AddTaskKernel("irq-ignore", &int_ignore, KernelTask)
+		IgnoreTask = AddTaskKernel("irq-ignore", &int_ignore, 128, KernelTask)
 		irq.set_task(32, IgnoreTask) // IRQ 0
 
 		// move IRQs to higher interrupts

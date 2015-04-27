@@ -3,7 +3,6 @@ use "../io/text.kaba"
 use "fs.kaba"
 use "../mem/heap.kaba"
 use "../mem/paging.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 
 

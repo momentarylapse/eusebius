@@ -5,7 +5,6 @@ use "../fs/fs.kaba"
 use "../mem/paging.kaba"
 use "../irq/irq.kaba"
 use "../task/task.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 
 
@@ -176,8 +175,8 @@ void InitDrivers()
 	dev_mouse_ops._write = &dev_mouse_write
 	dev_mouse.op = &dev_mouse_ops
 	
-	Task *KeyTask = AddTaskKernel("irq-key", &int_key, KernelTask)
-	Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, KernelTask)
+	Task *KeyTask = AddTaskKernel("irq-key", &int_key, 1024, KernelTask)
+	Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, 1024, KernelTask)
  	
 	irq.set_task(33, KeyTask) // IRQ 1
 	irq.set_task(44, MouseTask) // IRQ 12

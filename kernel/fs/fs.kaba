@@ -2,7 +2,6 @@ use "../base.kaba"
 use "../mem/heap.kaba"
 use "../dev/ata.kaba"
 use "../io/text.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 const int FILE_TYPE_FILE = 0
 const int FILE_TYPE_DIR = 1

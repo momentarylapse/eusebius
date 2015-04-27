@@ -1,6 +1,5 @@
 #define __STRING_CONST_AS_CSTRING__
 
-
 const int O_RDONLY = 1
 const int O_WRONLY = 2
 const int O_RDWR = 3

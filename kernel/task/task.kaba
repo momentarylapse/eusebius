@@ -1,4 +1,3 @@
-#define __OS__
 use "../base.kaba"
 use "../io/text.kaba"
 use "../fs/fs.kaba"
@@ -8,7 +7,6 @@ use "../mem/heap.kaba"
 use "../mem/paging.kaba"
 use "../mem/shared.kaba"
 use "../time/timevalue.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 
 
@@ -26,6 +24,7 @@ const int SIGSTOP = 19
 
 const int KERNEL_STACK_SIZE = 0x00020000 // 128k
 const int KERNEL_MEM = 0x00800000 // 8mb
+const int IDLE_STACK_SIZE = 0x00001000 // 4k
 
 const int MAX_TASKS = 256
 const int TASK_IMAGE_POS = KERNEL_MEM
@@ -553,7 +552,7 @@ Task* AddTaskUser(cstring name, void *func, Task *parent)
 
 	return t
 
-Task* AddTaskKernel(cstring name, void *func, Task* parent)
+Task* AddTaskKernel(cstring name, void *func, int stack_size, Task* parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
@@ -570,8 +569,8 @@ Task* AddTaskKernel(cstring name, void *func, Task* parent)
 	t.parent = parent
 	t.kernel_mode = true
 	
-	t.stack_size = KERNEL_STACK_SIZE
-	t.stack = malloc(KERNEL_STACK_SIZE)
+	t.stack_size = stack_size
+	t.stack = malloc(stack_size)
 	t.page_dir = KernelPageDir
 	t.mem_bottom = 0
 	t.mem_size = 0
@@ -619,8 +618,8 @@ void InitTasks()
 	//UserMemMask = 0
 	RunningPid = 0
 
-	KernelTask = AddTaskKernel("kernel", nil, nil)
-	IdleTask = AddTaskKernel("idle", &idle_func, KernelTask)
+	KernelTask = AddTaskKernel("kernel", nil, KERNEL_STACK_SIZE, nil)
+	IdleTask = AddTaskKernel("idle", &idle_func, IDLE_STACK_SIZE, KernelTask)
 	
 	// GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
