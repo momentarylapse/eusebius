@@ -38,7 +38,7 @@ class OpenFileData
 		blocking = (flags & O_NONBLOCK) == 0
 
 	int read(PageDirectory *page_dir, int addr, int size)
-		int r=0
+		int r = 0
 		
 		if !reading
 			return -3

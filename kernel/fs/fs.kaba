@@ -13,6 +13,14 @@ const int FILE_TYPE_BLOCK = 16
 const int MAX_MOUNT_POINTS = 8
 
 
+
+class Word
+	char[2] c
+	int int()
+		int a = c[0]
+		int b = c[1]
+		return a + b * 256
+
 class FileOperations
 	void *_open
 	void *_close
@@ -180,19 +188,16 @@ class MountPoint
 			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
 	
 	int alloc_block()
-		prints(" AB")
 		if !p_alloc_block
 			return -1
 		return call_p(p_alloc_block, self)
 	
 	int alloc_inode()
-		prints(" AI")
 		if !p_alloc_inode
 			return -1
 		return call_p(p_alloc_inode, self)
 	
 	int save_inode(FileEntry *e)
-		prints(" SI")
 		if !p_save_inode
 			return -1
 		return call_pp(p_save_inode, self, e)
@@ -267,7 +272,18 @@ class FileSystemData
 			strcpy(&path, &"/")
 		
 	int mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
-		prints("mounte...")
+		if !dev
+			return -1
+		if !dir
+			return -1
+		prints("mounte ")
+		prints(fs_name)
+		prints(" ")
+		prints(dev.name)
+		prints(" ")
+		cstring dirname
+		FileSystem.get_name(dirname, dir)
+		prints(dirname)
 		MountPoint *mp = nil
 		for m in mounts
 			if !m.dev
@@ -291,16 +307,6 @@ class FileSystemData
 		return 0
 
 FileSystemData FileSystem
-
-class Word
-	char[2] c
-	int int()
-		int a = c[0]
-		int b = c[1]
-		return a + b * 256
-
-class FileSystemType
-	int dummy
 
 class MountPointMichiFS : MountPoint
 	
@@ -393,7 +399,6 @@ class MountPointExt2 : MountPoint
 		writable = true
 	
 	int my_save_inode(FileEntry *e)
-		//prints("save Inode")
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
@@ -417,8 +422,6 @@ class MountPointExt2 : MountPoint
 			e.type = FILE_TYPE_DIR
 		
 		e.size = inode.size
-		if e.num_blocks != 0
-			panic("!=0")
 		int num_blocks = (inode.size-1) / block_size + 1
 		int num_direct = num_blocks
 		if num_direct > 12
