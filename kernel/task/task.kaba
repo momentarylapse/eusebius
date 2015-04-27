@@ -323,6 +323,9 @@ class Task
 		
 	int sys_unlink(cstring filename)
 		return kernel_unlink(filename, cur_dir)
+		
+	int sys_rmdir(cstring filename)
+		return kernel_rmdir(filename, cur_dir)
 	
 	int sys_execute(cstring filename, int fd_in, int fd_out)
 		int h = sys_open(filename, O_RDONLY)

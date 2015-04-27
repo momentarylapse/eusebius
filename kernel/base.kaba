@@ -22,6 +22,9 @@ const int EBADF = 119
 const int ENFILE = 118
 const int EFAULT = 117
 const int ENOSYS = 116
+const int ENOTDIR = 115
+const int EISDIR = 114
+const int ENOTEMPTY = 113
 
 const int F_GETFL = 1
 const int F_SETFL = 2

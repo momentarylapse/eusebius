@@ -10,7 +10,7 @@ const int FILE_TYPE_PIPE = 2
 const int FILE_TYPE_CHAR = 8
 const int FILE_TYPE_BLOCK = 16
 
-const int MAX_MOUNT_POINTS = 8
+const int MAX_MOUNT_POINTS = 32
 
 
 
@@ -88,6 +88,8 @@ class FileEntry
 	
 FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
 	FileEntry *e = malloc(sizeof(FileEntry))
+	e.inode = 0
+	e.mp_inode = 0
 	e.num_blocks = 0
 	e.blocks = nil
 	strcpy(&e.name, &name)
@@ -260,13 +262,38 @@ class FileSystemData
 		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
 	
 	int del(FileEntry *e)
+		//prints("[del]")
+		//prints e.name
+		if e.first_sub
+			return -1
 		if !e.parent
-			free(e)
+			clean_up(e)
 			return 0
-		//if e.first_sub
-		//	nil
-		//prints("--[del e.parent]---\n")
-		return -1
+		
+		FileEntry *p = e.parent
+		if p.first_sub == e
+			// first in dir...
+			p.first_sub = e.next
+		else
+			// find previous in dir
+			FileEntry *c = p.first_sub
+			while c
+				if c.next == e
+					c.next = e.next
+					break
+				c = c.next
+		clean_up(e)
+		return 0
+	
+	void clean_up(FileEntry *e)
+		FileEntry *p = e.parent
+		e.shrink_block_list(0)
+		if e.mount
+			e.mount.free_inode(e.mp_inode)
+		free(e)
+		if p
+			p.mount.write_inode(p)
+			p.mount.sync()
 	
 	FileEntry *get(cstring path, FileEntry *cur_dir)
 		int ppos = 0
@@ -596,6 +623,7 @@ class MountPointExt2 : MountPoint
 		return -1
 	
 	int my_alloc_block()
+		//prints(" AB ")
 		int n = sb.blocks_per_group / 32
 		for i in 0:n
 			int b = block_bitmap[i]
@@ -608,10 +636,13 @@ class MountPointExt2 : MountPoint
 					sb.free_blocks_count --
 					bg.free_blocks_count += -1
 					dirty = true
+					//printi(i * 32 + j)
 					return i * 32 + j
 		return -1
 	
 	int my_free_block(int index)
+		//prints(" FB ")
+		//printi(index)
 		int bmi = index >> 5 // index/32
 		int bit = index & 0x1f // index%32
 		int mask = 1 << bit

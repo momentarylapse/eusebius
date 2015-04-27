@@ -27,6 +27,9 @@ const int EBADF = 119
 const int ENFILE = 118
 const int EFAULT = 117
 const int ENOSYS = 116
+const int ENOTDIR = 115
+const int EISDIR = 114
+const int ENOTEMPTY = 113
 
 const int F_GETFL = 1
 const int F_SETFL = 2
@@ -77,6 +80,7 @@ extern void close(int h)
 extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
 extern int mkdir(string filename)
+extern int rmdir(string filename)
 extern int mkfifo(string filename)
 extern int unlink(string filename)
 extern int dup(int h)

@@ -1,0 +1,28 @@
+#define __OS__
+use "lib/std.kaba"
+
+
+void _rmdir(string filename)
+	int r = rmdir(filename)
+	if r == 0
+		return
+	if r == -ENOENT
+		print("rm: " + filename + " existiert nicht\n")
+	else if r == -ENOTDIR
+		print("rm: " + filename + " ist kein Verzeichnis\n")
+	else if r == -ENOTEMPTY
+		print("rm: " + filename + " ist nicht leer\n")
+	else
+		print("rm: kann " + filename + " nicht loeschen, aber weiss nicht, warum\n")
+	exit(r)
+
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	for i in 1:arg.num
+		_rmdir(arg[i])
+	
+	exit(0)

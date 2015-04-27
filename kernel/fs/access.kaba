@@ -285,6 +285,19 @@ int kernel_unlink(cstring filename, FileEntry *cur_dir)
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
+	if e.type == FILE_TYPE_DIR
+		return -EISDIR
+	return FileSystem.del(e)
+	
+
+int kernel_rmdir(cstring filename, FileEntry *cur_dir)
+	FileEntry *e = FileSystem.get(filename, cur_dir)
+	if !e
+		return -ENOENT
+	if e.type != FILE_TYPE_DIR
+		return -ENOTDIR
+	if e.first_sub
+		return -ENOTEMPTY
 	return FileSystem.del(e)
 
 
