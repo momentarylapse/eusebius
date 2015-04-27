@@ -250,8 +250,11 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 	bool creating = (flags & O_CREATE) > 0
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e and creating
+		//prints("kernel Warnung: neue Datei...\n")
 		e = cur_dir.create_child(filename, FILE_TYPE_FILE, cur_dir.mount)
-		prints("kernel Warnung: neue Datei...\n")
+		e.add_block(cur_dir.mount.alloc_block())
+		e.mp_inode = cur_dir.mount.alloc_inode()
+		cur_dir.mount.write_inode(cur_dir)
 	if !e
 		return nil
 	return kernel_open_entry(e, flags)
@@ -259,8 +262,13 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	if !cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
+	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
+	if !e
 		return -2
+	e.mp_inode = cur_dir.mount.alloc_inode()
+	cur_dir.mount.write_inode(e)
+	cur_dir.mount.write_inode(cur_dir)
+	cur_dir.mount.sync()
 	return 0
 
 int kernel_mknod(cstring filename, int flags, FileEntry *cur_dir)

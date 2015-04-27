@@ -426,14 +426,20 @@ class MountPointExt2 : MountPoint
 			return
 		writable = true
 	
-	int my_write_inode(FileEntry *e)
+	int write_inode_simple(FileEntry *e)
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
 		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
-		Ext2Inode inode
-		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
+		Ext2Inode *inode = &buf[offset % block_size]
+		
+		if e.type == FILE_TYPE_DIR
+			inode.rights.set(0x4000)
+		else if e.type == FILE_TYPE_FILE
+			inode.rights.set(0x8000)
+		else
+			inode.rights.set(0)
 		
 		inode.size = e.size
 		inode.blocks = e.num_blocks
@@ -448,7 +454,6 @@ class MountPointExt2 : MountPoint
 				inode.iblock[12] = my_alloc_block()
 			write_block(inode.iblock[12], buf)
 		
-		memcpy(&buf[offset % block_size], &inode, sizeof(Ext2Inode))
 		write_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		
 		return 0
@@ -485,6 +490,11 @@ class MountPointExt2 : MountPoint
 			read_block(e.blocks[i], &buf[i * block_size])
 		
 		return buf
+		
+	/*void write_inode_contents(FileEntry *e, cstring *buf, int size)
+		cstring *buf = malloc(e.num_blocks * block_size)
+		for i in 0:e.num_blocks
+			write_block(e.blocks[i], &buf[i * block_size])*/
 	
 	void read_inode_recursive(int index, FileEntry *dir)
 		Ext2Inode inode
@@ -514,6 +524,57 @@ class MountPointExt2 : MountPoint
 				e.mp_inode = d.inode
 				read_inode_recursive(d.inode, e)
 		free(cont)
+		
+	int my_write_inode(FileEntry *e)
+		if e.type == FILE_TYPE_DIR
+			return write_inode_dir(e)
+		return write_inode_simple(e)
+	
+	int write_inode_dir(FileEntry *dir)
+		cstring fn
+		dir.get_path(fn)
+		cstring *b = malloc(4096*8)
+		int pos = 0
+	
+		dir.size = 0
+		dir.shrink_block_list(0)
+		
+		// iterate over files and fill buffer
+		FileEntry *e = dir.first_sub
+		int n = 0
+		while e
+			Ext2DirEntryHeader *d = &b[pos]
+			for i in 0:8
+				b[pos + i] = 0
+			d.inode = e.mp_inode
+			d.file_type = 0
+			if e.type == FILE_TYPE_DIR
+				d.file_type = 2
+			int len = strlen(&e.name)
+			d.name_len = len
+			d.rec_len.set(8 + len)
+			memcpy(&b[pos + 8], &e.name, len)
+			pos += 8 + len
+		
+			e = e.next
+			n ++
+		if pos == 0
+			pos = block_size
+		
+		// create blocks for buffer
+		int num_blocks = ceil_quot(pos, block_size)
+		dir.size = num_blocks * block_size
+		for i in pos:dir.size
+			b[i] = 0
+		for i in 0:num_blocks
+			dir.add_block(my_alloc_block())
+		
+		for i in 0:num_blocks
+			write_block(dir.blocks[i], &b[i * block_size])
+			
+		write_inode_simple(dir)
+		free(b)
+		return 0
 	
 	int my_alloc_inode()
 		int n = sb.inodes_per_group / 32
@@ -559,6 +620,21 @@ class MountPointExt2 : MountPoint
 		block_bitmap[bmi] = block_bitmap[bmi] & mask
 		sb.free_blocks_count ++
 		bg.free_blocks_count += 1
+		dirty = true
+		return 0
+	
+	int my_free_inode(int index)
+		int bmi = index >> 5 // index/32
+		int bit = index & 0x1f // index%32
+		int mask = 1 << bit
+		if (inode_bitmap[bmi] & mask) == 0
+			prints("  ---EFI--- ")
+			return -1
+		
+		mask = 0xffffffff - mask
+		inode_bitmap[bmi] = inode_bitmap[bmi] & mask
+		sb.free_inodes_count ++
+		bg.free_inodes_count += 1
 		dirty = true
 		return 0
 	
