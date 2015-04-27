@@ -18,10 +18,12 @@ class OpenFileData
 	bool blocking
 	FileEntry *entry
 	int offset
-	int block_size
+	//int block_size
 	char[0]* buffer
 	Pipe* pipe
 	int ref_count
+	
+	bool buffer_dirty, inode_dirty
 	
 	int get_flags()
 		int flags = 0
@@ -48,6 +50,7 @@ class OpenFileData
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.read(page_dir, addr, size)
 		
+		int block_size = entry.mount.block_size
 		int pos_in_block = offset % block_size
 		int block_no = offset / block_size
 		
@@ -81,7 +84,8 @@ class OpenFileData
 
 	void truncate()
 		entry.size = offset
-		entry.meta_dirty = true
+		entry.shrink_block_list(ceil_quot(entry.size, entry.mount.block_size))
+		inode_dirty = true
 
 	int write(PageDirectory *page_dir, int addr, int size)
 		int r=0
@@ -97,6 +101,7 @@ class OpenFileData
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.write(page_dir, addr, size)
 		
+		int block_size = entry.mount.block_size
 		int pos_in_block = offset % block_size
 		int block_no = offset / block_size
 		
@@ -115,16 +120,19 @@ class OpenFileData
 			size -= cur_size
 			addr += cur_size
 			entry.size += cur_size
-			entry.meta_dirty = true
+			buffer_dirty = true
+			inode_dirty = true
 			
+			// make sure, the current block exists
 			if block_no >= entry.num_blocks
 				entry.add_block(entry.mount.alloc_block())
 			
-			// write cur block
-			int cl = entry.blocks[block_no]
-			entry.mount.write_block(cl, buffer)
-		
+			// buffer full? -> write cur block
 			if pos_in_block >= block_size
+				int cl = entry.blocks[block_no]
+				entry.mount.write_block(cl, buffer)
+				buffer_dirty = false
+				
 				// next block
 				pos_in_block = 0
 				block_no ++
@@ -169,10 +177,14 @@ class OpenFileData
 			
 	void clean_up()
 			
-		if entry.meta_dirty
-			//prints "-dirty- "
-			if entry.mount.save_inode(entry) == 0
-				entry.meta_dirty = false
+		if inode_dirty
+			if entry.mount.write_inode(entry) == 0
+				inode_dirty = false
+		if buffer_dirty
+			int cl = entry.blocks[offset / entry.mount.block_size]
+			entry.mount.write_block(cl, buffer)
+			buffer_dirty = false
+		FileSystem.sync()
 			
 		if buffer
 			free(buffer)
@@ -194,6 +206,8 @@ OpenFileData *create_handle(int flags)
 			o.set_flags(flags)
 			o.buffer = nil
 			o.ref_count = 0
+			o.buffer_dirty = false
+			o.inode_dirty = false
 			return &o
 	return nil
 
@@ -206,9 +220,8 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 		return nil
 	of.entry = e
 	of.offset = 0
-	of.block_size = of.entry.mount.block_size
 	if of.entry.type == FILE_TYPE_FILE
-		of.buffer = malloc(of.block_size)
+		of.buffer = malloc(of.entry.mount.block_size)
 		if of.entry.num_blocks > 0
 			of.entry.mount.read_block(of.entry.blocks[0], of.buffer)
 		if of.writing
@@ -216,6 +229,7 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 				of.truncate()
 			else
 				of.offset = e.size
+				of.entry.mount.read_block(of.entry.blocks[of.entry.num_blocks - 1], of.buffer)
 	else if of.entry.type == FILE_TYPE_PIPE
 		if of.reading == of.writing
 			of.used = false

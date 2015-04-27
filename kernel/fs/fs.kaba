@@ -33,21 +33,10 @@ class FileEntry
 	FileEntry *next
 	FileEntry *first_sub
 	FileOperations *op
-	bool meta_dirty
 	
 	
 	FileEntry *create_child(cstring _name, int _type, MountPoint *_mount)
-		FileEntry *e = malloc(sizeof(FileEntry))
-		e.num_blocks = 0
-		e.blocks = nil
-		strcpy(&e.name, &_name)
-		e.parent = self
-		e.type = _type
-		e.mount = _mount
-		e.next = nil
-		e.first_sub = nil
-		e.op = nil
-		e.meta_dirty = false
+		FileEntry *e = create_file_entry(_name, _type, _mount)
 		add_child(e)
 		return e
 	
@@ -89,6 +78,11 @@ class FileEntry
 			blocks = realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
 		blocks[num_blocks] = b
 		num_blocks ++
+	
+	void shrink_block_list(int n)
+		while num_blocks > n
+			mount.free_block(blocks[num_blocks - 1])
+			num_blocks --
 
 
 	
@@ -103,7 +97,6 @@ FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
 	e.next = nil
 	e.first_sub = nil
 	e.op = nil
-	e.meta_dirty = false
 	return e
 
 
@@ -201,9 +194,12 @@ class MountPoint
 	int[0]* inode_bitmap
 	int[0]* block_bitmap
 	
-	void *p_save_inode // int f(self, FileEntry*)
+	void *p_write_inode // int f(self, FileEntry*)
 	void *p_alloc_block // int f(self)
+	void *p_free_block  // int f(self, int index)
+	void *p_free_inode  // int f(self, int index)
 	void *p_alloc_inode // int f(self)
+	void *p_sync        // int f(self)
 	
 	void __assign__(MountPoint o)
 		nil
@@ -227,15 +223,30 @@ class MountPoint
 			return -1
 		return call_p(p_alloc_block, self)
 	
+	int free_block(int index)
+		if !p_free_block
+			return -1
+		return call_pi(p_free_block, self, index)
+	
+	int free_inode(int index)
+		if !p_free_inode
+			return -1
+		return call_pi(p_free_inode, self, index)
+	
 	int alloc_inode()
 		if !p_alloc_inode
 			return -1
 		return call_p(p_alloc_inode, self)
 	
-	int save_inode(FileEntry *e)
-		if !p_save_inode
+	int write_inode(FileEntry *e)
+		if !p_write_inode
 			return -1
-		return call_pp(p_save_inode, self, e)
+		return call_pp(p_write_inode, self, e)
+	
+	int sync()
+		if !p_sync
+			return -1
+		return call_p(p_sync, self)
 
 
 
@@ -302,9 +313,13 @@ class FileSystemData
 			return -1
 		mp.dest = dir
 		mp.dev = dev
-		mp.p_save_inode = nil
+		mp.p_write_inode = nil
 		mp.p_alloc_inode = nil
+		mp.p_free_inode = nil
 		mp.p_alloc_block = nil
+		mp.p_free_block = nil
+		mp.p_sync = nil
+		mp.dirty = false
 		strcpy(&mp.type, &fs_name)
 		if strcmp(&fs_name, &"michifs") == 0
 			MountPointMichiFS *mp_michi = mp
@@ -315,6 +330,11 @@ class FileSystemData
 		dir.mount = mp
 		prints(" ok\n")
 		return 0
+	
+	void sync()
+		for m in mounts
+			if m.dev
+				m.sync()
 
 FileSystemData FileSystem
 
@@ -349,22 +369,20 @@ class MountPointMichiFS : MountPoint
 			int num_blocks = read_int()
 			for i in 0:num_blocks
 				e.add_block(first_block + i)
-	
-	//void readBlock(int no, cstring *buf)
-	//void readFileBlock(int inode, int block, cstring *buf)
 
 
 class MountPointExt2 : MountPoint
 	
 	int mount()
 		buf = malloc(4096)
-		p_save_inode = &my_save_inode
+		p_write_inode = &my_write_inode
 		p_alloc_inode = &my_alloc_inode
 		p_alloc_block = &my_alloc_block
+		p_free_block  = &my_free_block
+		p_sync        = &my_sync
 		update_sizes(1024, 0) // temp
 		
 		read_block(1, buf)
-		
 		memcpy(&sb, buf, sizeof(Ext2SuperBlock))
 		
 		block_size = 1 << (sb.log_block_size + 10)
@@ -391,9 +409,9 @@ class MountPointExt2 : MountPoint
 		//showMetaData()
 		test_compatibility()
 		if readable
-			load_inode_recursive(2, dest)
+			read_inode_recursive(2, dest)
 	
-	void save_meta_data()
+	void write_meta_data()
 		ata.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)
 		write_block(1 + block_size / 1024, &bg)
 			
@@ -408,16 +426,31 @@ class MountPointExt2 : MountPoint
 			return
 		writable = true
 	
-	int my_save_inode(FileEntry *e)
+	int my_write_inode(FileEntry *e)
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
+		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		Ext2Inode inode
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
+		
 		inode.size = e.size
+		inode.blocks = e.num_blocks
+		int num_direct = e.num_blocks
+		if num_direct > 12
+			num_direct = 12
+		for i in 1:num_direct
+			inode.iblock[i] = e.blocks[i]
+		
+		if e.num_blocks > 12
+			if inode.iblock[12] == 0
+				inode.iblock[12] = my_alloc_block()
+			write_block(inode.iblock[12], buf)
+		
 		memcpy(&buf[offset % block_size], &inode, sizeof(Ext2Inode))
 		write_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
+		
 		return 0
 	
 	void read_inode(int index, Ext2Inode inode, FileEntry *e)
@@ -432,17 +465,17 @@ class MountPointExt2 : MountPoint
 			e.type = FILE_TYPE_DIR
 		
 		e.size = inode.size
-		int num_blocks = (inode.size-1) / block_size + 1
-		int num_direct = num_blocks
-		if num_direct > 12
-			num_direct = 12
+		int f_num_blocks = (inode.size-1) / block_size + 1
+		int f_num_direct = f_num_blocks
+		if f_num_direct > 12
+			f_num_direct = 12
 	
-		for i in 0:num_direct
+		for i in 0:f_num_direct
 			e.add_block(inode.iblock[i])
-		if num_blocks > 12
+		if f_num_blocks > 12
 			read_block(inode.iblock[12], buf)
 			int[0]* p = buf
-			for i in 12:num_blocks
+			for i in 12:f_num_blocks
 				e.add_block(p[i - 12])
 	
 	
@@ -453,7 +486,7 @@ class MountPointExt2 : MountPoint
 		
 		return buf
 	
-	void load_inode_recursive(int index, FileEntry *dir)
+	void read_inode_recursive(int index, FileEntry *dir)
 		Ext2Inode inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()
@@ -479,7 +512,7 @@ class MountPointExt2 : MountPoint
 					type = FILE_TYPE_DIR
 				FileEntry *e = dir.create_child(name, type, self)
 				e.mp_inode = d.inode
-				load_inode_recursive(d.inode, e)
+				read_inode_recursive(d.inode, e)
 		free(cont)
 	
 	int my_alloc_inode()
@@ -493,7 +526,7 @@ class MountPointExt2 : MountPoint
 				if (b & m) == 0
 					inode_bitmap[i] += m
 					sb.free_inodes_count --
-					//bg.free_inodes_count
+					bg.free_inodes_count += -1
 					dirty = true
 					return i * 32 + j
 		return -1
@@ -509,8 +542,32 @@ class MountPointExt2 : MountPoint
 				if (b & m) == 0
 					block_bitmap[i] += m
 					sb.free_blocks_count --
-					//bg.free_blocks_count
+					bg.free_blocks_count += -1
 					dirty = true
 					return i * 32 + j
 		return -1
+	
+	int my_free_block(int index)
+		int bmi = index >> 5 // index/32
+		int bit = index & 0x1f // index%32
+		int mask = 1 << bit
+		if (block_bitmap[bmi] & mask) == 0
+			prints("  ---EFB--- ")
+			return -1
+		
+		mask = 0xffffffff - mask
+		block_bitmap[bmi] = block_bitmap[bmi] & mask
+		sb.free_blocks_count ++
+		bg.free_blocks_count += 1
+		dirty = true
+		return 0
+	
+	int my_sync()
+		if !dirty
+			return 0
+		write_meta_data()
+		write_block(bg.inode_bitmap, inode_bitmap)
+		write_block(bg.block_bitmap, block_bitmap)
+		dirty = false
+		return 0
 
