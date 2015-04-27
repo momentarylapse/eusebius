@@ -72,7 +72,7 @@ void main()
 	
 	SharedMem.init()
 	
-	Ata.init()
+	ata.init()
 	ReadPartitions(0)
 	ShowPartitions()
 	

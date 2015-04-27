@@ -19,7 +19,7 @@ class AtaDiskInfo
 	int size
 	cstring name
 
-class AtaData
+class AtaController
 
 	int nAta
 	int Status
@@ -32,7 +32,7 @@ class AtaData
 
 	char[16] atapi_buffer
 	
-	AtaDiskInfo[4] DiskInfo
+	AtaDiskInfo[4] disk_info
 
 	void wait_400_ns()
 		for i in 0:100
@@ -46,7 +46,7 @@ class AtaData
 			n--
 		return n >= 0
 
-	void setDiskAdd(int disk_no)
+	void set_disk_add(int disk_no)
 		ide_no = (disk_no/2)
 		ide_ms = (disk_no%2)
 		// Adressierungs-Daten
@@ -59,9 +59,9 @@ class AtaData
 		if ide_ms == 1
 			MSMask = 0x10
 
-	bool testDisk(int disk_no)
-		setDiskAdd(disk_no)
-		DiskInfo[disk_no].isAvailable = false
+	bool test_disk(int disk_no)
+		set_disk_add(disk_no)
+		disk_info[disk_no].isAvailable = false
 
 		// generell ansprechbar?
 		prints("IDE ")
@@ -104,14 +104,14 @@ class AtaData
 		sn = inportb(IOBase + 3)
 		bool fail = true
 		if (sc == 0x01) and (sn == 0x01)
-			DiskInfo[disk_no].isAtapi = false
+			disk_info[disk_no].isAtapi = false
 			fail = false
 			char cl = inportb(IOBase + 4)
 			char ch = inportb(IOBase + 5)
 			char st = inportb(IOBase + 7)
 			if ( cl == 0x14 ) and (ch == 0xeb)
 				prints("ATAPI (CD-Rom)")
-				DiskInfo[disk_no].isAtapi = true
+				disk_info[disk_no].isAtapi = true
 			else
 				if (cl == 0x00) and (ch == 0x00) and (st != 0x00)
 					prints("ATA")
@@ -129,7 +129,7 @@ class AtaData
 		wait_400_ns()
 		ata_wait_busy()*/
 
-		DiskInfo[disk_no].isAvailable = true
+		disk_info[disk_no].isAvailable = true
 
 		outportb(IOCtrl, 0x0a) // ?+NoInt
 		wait_400_ns()
@@ -141,7 +141,7 @@ class AtaData
 		outportb(IOBase+5, 0)
 		char ata_lba3 = MSMask | 0x60 // ...+LBA
 		outportb(IOBase+6, ata_lba3) // H0
-		if DiskInfo[disk_no].isAtapi
+		if disk_info[disk_no].isAtapi
 			outportb(IOBase+7, 0xa1) // IdentifyDrive (ATAPI)
 		else
 			outportb(IOBase+7, 0xec) // IdentifyDrive
@@ -156,11 +156,11 @@ class AtaData
 		// die Bytes des Namens korregieren
 		//for n, 0, 40, 2
 		for n in 0:40:2
-			DiskInfo[disk_no].name[n  ] = Buffer[55+n]
-			DiskInfo[disk_no].name[n+1] = Buffer[54+n]
-		DiskInfo[disk_no].name[40] = 0
-		prints(DiskInfo[disk_no].name)
-		memcpy(&DiskInfo[disk_no].size, &Buffer[120], 4)
+			disk_info[disk_no].name[n  ] = Buffer[55+n]
+			disk_info[disk_no].name[n+1] = Buffer[54+n]
+		disk_info[disk_no].name[40] = 0
+		prints(disk_info[disk_no].name)
+		memcpy(&disk_info[disk_no].size, &Buffer[120], 4)
 		/*temp_i = Ata.DiskInfo[disk_no].size >> 11
 		asm{
 			mov eax, temp_i
@@ -168,7 +168,7 @@ class AtaData
 			mov temp_i, eax
 		}*/
 		TextPos = 60
-		printi(DiskInfo[disk_no].size >> 11)
+		printi(disk_info[disk_no].size >> 11)
 	//	TextPos=60
 	//	printi(DiskInfo[disk_no].Size)
 		prints("mb\n")
@@ -176,24 +176,24 @@ class AtaData
 		return true
 
 	bool reset(int disk_no)
-		if !DiskInfo[disk_no].isAvailable
+		if !disk_info[disk_no].isAvailable
 			return false
 		prints("AtaReset ")
-		setDiskAdd(disk_no)
+		set_disk_add(disk_no)
 	
 		char status
-		status=inportb(IOBase+7)
+		status = inportb(IOBase+7)
 		printh(&status,1)
-		status=inportb(IOBase+1)
+		status = inportb(IOBase+1)
 		printh(&status,1)
-		status=inportb(IOCtrl)
+		status = inportb(IOCtrl)
 		printh(&status,1)
 	
-		status=inportb(IOBase+7)
+		status = inportb(IOBase+7)
 		printh(&status,1)
-		status=inportb(IOBase+1)
+		status = inportb(IOBase+1)
 		printh(&status,1)
-		status=inportb(IOCtrl)
+		status = inportb(IOCtrl)
 		printh(&status,1)
 		prints("\n")
 
@@ -206,16 +206,16 @@ class AtaData
 		outportb(0x376, 0x0a)
 
 		for n in 0:4
-			testDisk(n)
+			test_disk(n)
 			
 	// 1 Sektor = 512 b
-	bool readSector(int disk_no, int sector_offset, int num_sectors, char *buf)
-		if !DiskInfo[disk_no].isAvailable
+	bool read_sector(int disk_no, int sector_offset, int num_sectors, char *buf)
+		if !disk_info[disk_no].isAvailable
 			return false
-		if DiskInfo[disk_no].isAtapi
+		if disk_info[disk_no].isAtapi
 			return false
 		//DrawString(0,24,"MAtaRead")
-		setDiskAdd(disk_no)
+		set_disk_add(disk_no)
 		//printh(&IOBase,2)
 		// num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
@@ -256,13 +256,13 @@ class AtaData
 		return true
 		
 	// 1 Sektor = 512 b
-	bool writeSector(int disk_no, int sector_offset, int num_sectors, char *buf)
-		if !DiskInfo[disk_no].isAvailable
+	bool write_sector(int disk_no, int sector_offset, int num_sectors, char *buf)
+		if !disk_info[disk_no].isAvailable
 			return false
-		if DiskInfo[disk_no].isAtapi
+		if disk_info[disk_no].isAtapi
 			return false
 		//prints "write "
-		setDiskAdd(disk_no)
+		set_disk_add(disk_no)
 		//printh(&IOBase,2)
 		// num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
@@ -302,17 +302,24 @@ class AtaData
 
 		return true
 
-AtaData Ata
+AtaController ata
 
+// TODO split Partition/BlockDevice
 
 class PartitionData
+	int major, minor
 	int disk_no
 	int offset, size
 	int block_size
 	char type
 	bool active
 	cstring name
-	void *readFileBlock // (int inode, int block, cstring *buf)
+	void *p_read_block // (self, buf, minor, index)
+	
+	int read_block(int index, void *buf)
+		if !p_read_block
+			return -1
+		return call_ppii(p_read_block, self, buf, minor, index)
 	
 PartitionData[8] Partition
 int NumPartitions
@@ -320,30 +327,32 @@ int NumPartitions
 void ReadPartitions(int disk_no)
 	PartitionData *p = &Partition[NumPartitions]
 	NumPartitions ++
+	p.block_size = 512
 	p.disk_no = disk_no
 	p.offset = 0
-	p.size = Ata.DiskInfo[disk_no].size
+	p.size = ata.disk_info[disk_no].size
 	p.type = 0
-	p.readFileBlock = nil
+	p.p_read_block = nil
 	p.active = false
 	strcpy(&p.name, &"hda")
 	p.name[2] = 'a' + disk_no
 	// mbr lesen
-	Ata.readSector(disk_no, 0, 1, &Ata.Buffer)
+	ata.read_sector(disk_no, 0, 1, &ata.Buffer)
 	//MountPartition=false
 	for n in 0:4
-		int *offset = &Ata.Buffer[454+n*16]
-		int *size = &Ata.Buffer[458+n*16]
-		int type = Ata.Buffer[450+n*16]
+		int *offset = &ata.Buffer[454+n*16]
+		int *size = &ata.Buffer[458+n*16]
+		int type = ata.Buffer[450+n*16]
 		if (type == 0) or (*size == 0)
 			continue
 		p = &Partition[NumPartitions]
 		NumPartitions ++
+		p.block_size = 512
 		p.disk_no = disk_no
 		p.offset = *offset
 		p.size = *size
-		p.type = Ata.Buffer[450+n*16]
-		p.active = (Ata.Buffer[446+n*16] == 0x80)
+		p.type = ata.Buffer[450+n*16]
+		p.active = (ata.Buffer[446+n*16] == 0x80)
 		strcpy(&p.name, &"hda_")
 		p.name[2] = 'a' + disk_no
 		p.name[3] = n + 49

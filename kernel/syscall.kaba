@@ -171,7 +171,7 @@ void int_syscall()
 			// p1 = &duration
 			// p2 = &duration_more
 		else if index == 183 // getcwd
-			FileSystem.get_name(filename, caller.cur_dir)
+			caller.cur_dir.get_path(filename)
 			caller.page_dir.memcpy2task(param1, &filename, sizeof(cstring))
 		else if index == 0x2001 // getarg
 			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))

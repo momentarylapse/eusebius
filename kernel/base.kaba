@@ -119,6 +119,14 @@ void *_i2p(int i)
 	return p.p
 
 
+class Word
+	char[2] c
+	int int()
+		int a = c[0]
+		int b = c[1]
+		return a + b * 256
+
+
 int call_ppii(void *f, void *a, void *b, int c, int d)
 	__temp_p__ = f
 	__temp_p2__ = a
@@ -133,7 +141,24 @@ int call_ppii(void *f, void *a, void *b, int c, int d)
 		push __temp_p2__
 		call eax
 		mov __temp_i__, eax
-		sub esp, 0x12
+		sub esp, 0x10
+	}
+	return __temp_i__
+
+
+int call_ppi(void *f, void *a, void *b, int c)
+	__temp_p__ = f
+	__temp_p2__ = a
+	__temp_p3__ = b
+	__temp_i__ = c
+	asm{
+		mov eax, __temp_p__
+		push __temp_i__
+		push __temp_p3__
+		push __temp_p2__
+		call eax
+		mov __temp_i__, eax
+		sub esp, 0x0c
 	}
 	return __temp_i__
 
@@ -148,7 +173,7 @@ int call_pp(void *f, void *a, void *b)
 		push __temp_p2__
 		call eax
 		mov __temp_i__, eax
-		sub esp, 0x12
+		sub esp, 0x08
 	}
 	return __temp_i__
 

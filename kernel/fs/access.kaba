@@ -236,7 +236,7 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 	bool creating = (flags & O_CREATE) > 0
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e and creating
-		e = FileSystem.add(filename, FILE_TYPE_FILE, cur_dir.mount, cur_dir)
+		e = cur_dir.create_child(filename, FILE_TYPE_FILE, cur_dir.mount)
 		prints("kernel Warnung: neue Datei...\n")
 	if !e
 		return nil
@@ -245,14 +245,14 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 int kernel_mkdir(cstring filename, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	if !FileSystem.add(filename, FILE_TYPE_DIR, cur_dir.mount, cur_dir)
+	if !cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
 		return -2
 	return 0
 
 int kernel_mknod(cstring filename, int flags, FileEntry *cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	FileEntry *e = FileSystem.add(filename, FILE_TYPE_PIPE, cur_dir.mount, cur_dir)
+	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
 	if !e
 		return -2
 	if !create_pipe(e)

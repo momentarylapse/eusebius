@@ -14,13 +14,6 @@ const int MAX_MOUNT_POINTS = 8
 
 
 
-class Word
-	char[2] c
-	int int()
-		int a = c[0]
-		int b = c[1]
-		return a + b * 256
-
 class FileOperations
 	void *_open
 	void *_close
@@ -42,7 +35,23 @@ class FileEntry
 	FileOperations *op
 	bool meta_dirty
 	
-	void add(FileEntry *e)
+	
+	FileEntry *create_child(cstring _name, int _type, MountPoint *_mount)
+		FileEntry *e = malloc(sizeof(FileEntry))
+		e.num_blocks = 0
+		e.blocks = nil
+		strcpy(&e.name, &_name)
+		e.parent = self
+		e.type = _type
+		e.mount = _mount
+		e.next = nil
+		e.first_sub = nil
+		e.op = nil
+		e.meta_dirty = false
+		add_child(e)
+		return e
+	
+	void add_child(FileEntry *e)
 		e.parent = self
 		if first_sub
 			FileEntry *i = first_sub
@@ -63,6 +72,16 @@ class FileEntry
 				return e
 			e = e.next
 		return nil
+		
+	
+	void get_path(cstring path)
+		if parent
+			parent.get_path(path)
+			if parent.parent
+				strcat(&path, &"/")
+			strcat(&path, &name)
+		else
+			strcpy(&path, &"/")
 	
 	// allocate list int blocks of int[16]
 	void add_block(int b)
@@ -70,6 +89,22 @@ class FileEntry
 			blocks = realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
 		blocks[num_blocks] = b
 		num_blocks ++
+
+
+	
+FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
+	FileEntry *e = malloc(sizeof(FileEntry))
+	e.num_blocks = 0
+	e.blocks = nil
+	strcpy(&e.name, &name)
+	e.parent = nil
+	e.type = type
+	e.mount = mount
+	e.next = nil
+	e.first_sub = nil
+	e.op = nil
+	e.meta_dirty = false
+	return e
 
 
 class Ext2Inode
@@ -175,17 +210,17 @@ class MountPoint
 	
 	void update_sizes(int _bs, int _bo)
 		block_size = _bs
-		dev_blocks_per_block = _bs / 512
+		dev_blocks_per_block = _bs / dev.block_size
 		block_offset = _bo
-		dev_block_offset = _bo / 512
+		dev_block_offset = _bo / dev.block_size
 	
 	void read_block(int block_no, cstring *buf)
 		for i in 0:dev_blocks_per_block
-			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+			ata.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 
 	void write_block(int block_no, cstring *buf)
 		for i in 0:dev_blocks_per_block
-			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+			ata.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 	
 	int alloc_block()
 		if !p_alloc_block
@@ -211,23 +246,7 @@ class FileSystemData
 	void init()
 		for m in mounts
 			m.dev = nil
-		root = add("-root-", FILE_TYPE_DIR, nil, nil)
-	
-	FileEntry *add(cstring name, int type, MountPoint *mount, FileEntry *parent)
-		FileEntry *e = malloc(sizeof(FileEntry))
-		e.num_blocks = 0
-		e.blocks = nil
-		strcpy(&e.name, &name)
-		e.parent = parent
-		e.type = type
-		e.mount = mount
-		e.next = nil
-		e.first_sub = nil
-		e.op = nil
-		e.meta_dirty = false
-		if parent
-			parent.add(e)
-		return e
+		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
 	
 	void del(FileEntry *e)
 		if e.parent
@@ -261,15 +280,6 @@ class FileSystemData
 			if !e
 				return nil
 		return e
-	
-	void get_name(cstring path, FileEntry *e)
-		if e.parent
-			get_name(path, e.parent)
-			if e.parent.parent
-				strcat(&path, &"/")
-			strcat(&path, &e.name)
-		else
-			strcpy(&path, &"/")
 		
 	int mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
 		if !dev
@@ -282,7 +292,7 @@ class FileSystemData
 		prints(dev.name)
 		prints(" ")
 		cstring dirname
-		FileSystem.get_name(dirname, dir)
+		dir.get_path(dirname)
 		prints(dirname)
 		MountPoint *mp = nil
 		for m in mounts
@@ -330,7 +340,7 @@ class MountPointMichiFS : MountPoint
 		for n in 0:NumFiles
 			cstring name
 			read_str(name)
-			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, self, dest)
+			FileEntry *e = dest.create_child(name, FILE_TYPE_FILE, self)
 			//e.type =
 			read_int()
 			e.size = read_int()
@@ -384,7 +394,7 @@ class MountPointExt2 : MountPoint
 			load_inode_recursive(2, dest)
 	
 	void save_meta_data()
-		Ata.writeSector(dev.disk_no, dev.offset + 2    , 1, &sb)
+		ata.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)
 		write_block(1 + block_size / 1024, &bg)
 			
 	
@@ -434,9 +444,7 @@ class MountPointExt2 : MountPoint
 			int[0]* p = buf
 			for i in 12:num_blocks
 				e.add_block(p[i - 12])
-		
 	
-	//Ext2Inode inode
 	
 	cstring *read_inode_contents(FileEntry *e)
 		cstring *buf = malloc(e.num_blocks * block_size)
@@ -469,7 +477,7 @@ class MountPointExt2 : MountPoint
 				int type = FILE_TYPE_FILE
 				if d.file_type == 2
 					type = FILE_TYPE_DIR
-				FileEntry *e = FileSystem.add(name, type, self, dir)
+				FileEntry *e = dir.create_child(name, type, self)
 				e.mp_inode = d.inode
 				load_inode_recursive(d.inode, e)
 		free(cont)
