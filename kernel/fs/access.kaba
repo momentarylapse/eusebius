@@ -171,8 +171,7 @@ class OpenFileData
 			
 		if entry.meta_dirty
 			//prints "-dirty- "
-			if entry.mount.saveInode
-				call_pp(entry.mount.saveInode, entry.mount.type, entry)
+			if entry.mount.save_inode(entry) == 0
 				entry.meta_dirty = false
 			
 		if buffer

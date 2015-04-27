@@ -64,179 +64,6 @@ class FileEntry
 		num_blocks ++
 
 
-
-class MountPoint
-	FileSystemType *type
-	PartitionData *dev
-	FileEntry *dest
-	int block_offset
-	int block_size
-	
-	int dev_blocks_per_block
-	int dev_block_offset
-	
-	void *saveInode // int f(FileSystemType*, FileEntry*)
-	
-	void update_sizes(int _bs, int _bo)
-		block_size = _bs
-		dev_blocks_per_block = _bs / 512
-		block_offset = _bo
-		dev_block_offset = _bo / 512
-	
-	void read_block(int block_no, cstring *buf)
-		for i in 0:dev_blocks_per_block
-			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
-
-	void write_block(int block_no, cstring *buf)
-		for i in 0:dev_blocks_per_block
-			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
-	
-	int alloc_block()
-		if type == &FSTMichiFS
-			return -1
-		if type == &FSTExt2
-			return FSTExt2.allocBlock()
-		return -1
-
-
-
-class FileSystemData
-	MountPoint[MAX_MOUNT_POINTS] mounts
-	FileEntry *root
-	
-	void init()
-		for m in mounts
-			m.type = nil
-		root = add("-root-", FILE_TYPE_DIR, nil, nil)
-	
-	FileEntry *add(cstring name, int type, MountPoint *mount, FileEntry *parent)
-		FileEntry *e = malloc(sizeof(FileEntry))
-		e.num_blocks = 0
-		e.blocks = nil
-		strcpy(&e.name, &name)
-		e.parent = parent
-		e.type = type
-		e.mount = mount
-		e.next = nil
-		e.first_sub = nil
-		e.op = nil
-		e.meta_dirty = false
-		if parent
-			parent.add(e)
-		return e
-	
-	void del(FileEntry *e)
-		if e.parent
-			prints("--[del e.parent]---\n")
-		else
-			free(e)
-	
-	FileEntry *get(cstring path, FileEntry *cur_dir)
-		int ppos = 0
-		if path[0] == '/'
-			ppos = 1
-			cur_dir = root
-			if path[1] == 0
-				return root
-		else if !cur_dir
-			return nil
-		FileEntry *e = cur_dir
-		cstring sub
-		bool has_more = true
-		while has_more
-			strcpy(&sub, &path[ppos])
-			cstring name
-			for i in 0:256
-				if (sub[i] == '/') or (sub[i] == 0)
-					has_more = (sub[i] == '/')
-					ppos += i + 1
-					name[i] = 0
-					break
-				name[i] = sub[i]
-			e = e.get_sub(name)
-			if !e
-				return nil
-		return e
-	
-	void get_name(cstring path, FileEntry *e)
-		if e.parent
-			get_name(path, e.parent)
-			if e.parent.parent
-				strcat(&path, &"/")
-			strcat(&path, &e.name)
-		else
-			strcpy(&path, &"/")
-		
-	int mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
-		prints("mounte...")
-		MountPoint *mp = nil
-		for m in mounts
-			if !m.type
-				mp = &m
-		if !mp
-			return -1
-		mp.dest = dir
-		mp.dev = dev
-		if strcmp(&fs_name, &"michifs") == 0
-			mp.type = &FSTMichiFS
-			FSTMichiFS.mount(mp)
-		else if strcmp(&fs_name, &"ext2") == 0
-			mp.type = &FSTExt2
-			FSTExt2.mount(mp)
-		dir.mount = mp
-		prints(" ok\n")
-		return 0
-
-FileSystemData FileSystem
-
-class Word
-	char[2] c
-	int int()
-		int a = c[0]
-		int b = c[1]
-		return a + b * 256
-
-class FileSystemType
-	int dummy
-
-class FileSystemTypeMichiFS : FileSystemType
-	char[0] *buf
-	int buf_used
-	
-	int read_int()
-		int *p = &buf[buf_used]
-		buf_used += 4
-		return *p
-	void read_str(cstring s)
-		int l = buf[buf_used] + buf[buf_used+1]*256
-		buf_used += 2
-		for i in 0:l
-			s[i] = buf[buf_used + i]
-		buf_used += l
-		s[l] = 0
-	bool mount(MountPoint *mp)
-		buf = malloc(2048)
-		mp.saveInode = nil
-		mp.update_sizes(2048, 0)
-		mp.read_block(1, buf)
-		buf_used = 0
-		int NumFiles = read_int()
-		for n in 0:NumFiles
-			cstring name
-			read_str(name)
-			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, mp, mp.dest)
-			//e.type =
-			read_int()
-			e.size = read_int()
-			read_int() // NumParts = 1
-			int first_block = read_int()
-			int num_blocks = read_int()
-			for i in 0:num_blocks
-				e.add_block(first_block + i)
-	
-	//void readBlock(int no, cstring *buf)
-	//void readFileBlock(int inode, int block, cstring *buf)
-
 class Ext2Inode
 	Word rights
 	Word user
@@ -307,29 +134,222 @@ class Ext2DirEntryHeader
 	char name_len
 	char file_type
 
-class FileSystemTypeExt2 : FileSystemType
+
+class MountPoint
+	cstring type
+	PartitionData *dev // nil => unused
+	FileEntry *dest
+	int block_offset
+	int block_size
+	
+	int dev_blocks_per_block
+	int dev_block_offset
+	
+	char[0] *buf
+	int buf_used
+	
 	int inodes_per_block
 	Ext2SuperBlock sb
 	Ext2BlockGroupDescriptor bg
-	//char[4096] ___buf
-	char[0] *buf
 	bool readable, writable
-	int block_size
-	int block_offset
-	MountPoint *_mp
 	
 	bool dirty
 	
 	int[0]* inode_bitmap
 	int[0]* block_bitmap
 	
-	bool mount(MountPoint *mp)
-		buf = malloc(4096)
-		mp.saveInode = &save_inode
-		_mp = mp
-		mp.update_sizes(1024, 0) // temp
+	void *p_save_inode // int f(self, FileEntry*)
+	void *p_alloc_block // int f(self)
+	void *p_alloc_inode // int f(self)
+	
+	void __assign__(MountPoint o)
+		nil
+	
+	void update_sizes(int _bs, int _bo)
+		block_size = _bs
+		dev_blocks_per_block = _bs / 512
+		block_offset = _bo
+		dev_block_offset = _bo / 512
+	
+	void read_block(int block_no, cstring *buf)
+		for i in 0:dev_blocks_per_block
+			Ata.readSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+
+	void write_block(int block_no, cstring *buf)
+		for i in 0:dev_blocks_per_block
+			Ata.writeSector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[512 * i])
+	
+	int alloc_block()
+		prints(" AB")
+		if !p_alloc_block
+			return -1
+		return call_p(p_alloc_block, self)
+	
+	int alloc_inode()
+		prints(" AI")
+		if !p_alloc_inode
+			return -1
+		return call_p(p_alloc_inode, self)
+	
+	int save_inode(FileEntry *e)
+		prints(" SI")
+		if !p_save_inode
+			return -1
+		return call_pp(p_save_inode, self, e)
+
+
+
+class FileSystemData
+	MountPoint[MAX_MOUNT_POINTS] mounts
+	FileEntry *root
+	
+	void init()
+		for m in mounts
+			m.dev = nil
+		root = add("-root-", FILE_TYPE_DIR, nil, nil)
+	
+	FileEntry *add(cstring name, int type, MountPoint *mount, FileEntry *parent)
+		FileEntry *e = malloc(sizeof(FileEntry))
+		e.num_blocks = 0
+		e.blocks = nil
+		strcpy(&e.name, &name)
+		e.parent = parent
+		e.type = type
+		e.mount = mount
+		e.next = nil
+		e.first_sub = nil
+		e.op = nil
+		e.meta_dirty = false
+		if parent
+			parent.add(e)
+		return e
+	
+	void del(FileEntry *e)
+		if e.parent
+			prints("--[del e.parent]---\n")
+		else
+			free(e)
+	
+	FileEntry *get(cstring path, FileEntry *cur_dir)
+		int ppos = 0
+		if path[0] == '/'
+			ppos = 1
+			cur_dir = root
+			if path[1] == 0
+				return root
+		else if !cur_dir
+			return nil
+		FileEntry *e = cur_dir
+		cstring sub
+		bool has_more = true
+		while has_more
+			strcpy(&sub, &path[ppos])
+			cstring name
+			for i in 0:256
+				if (sub[i] == '/') or (sub[i] == 0)
+					has_more = (sub[i] == '/')
+					ppos += i + 1
+					name[i] = 0
+					break
+				name[i] = sub[i]
+			e = e.get_sub(name)
+			if !e
+				return nil
+		return e
+	
+	void get_name(cstring path, FileEntry *e)
+		if e.parent
+			get_name(path, e.parent)
+			if e.parent.parent
+				strcat(&path, &"/")
+			strcat(&path, &e.name)
+		else
+			strcpy(&path, &"/")
 		
-		mp.read_block(1, &sb)
+	int mount(PartitionData *dev, FileEntry *dir, cstring fs_name)
+		prints("mounte...")
+		MountPoint *mp = nil
+		for m in mounts
+			if !m.dev
+				mp = &m
+		if !mp
+			return -1
+		mp.dest = dir
+		mp.dev = dev
+		mp.p_save_inode = nil
+		mp.p_alloc_inode = nil
+		mp.p_alloc_block = nil
+		strcpy(&mp.type, &fs_name)
+		if strcmp(&fs_name, &"michifs") == 0
+			MountPointMichiFS *mp_michi = mp
+			mp_michi.mount()
+		else if strcmp(&fs_name, &"ext2") == 0
+			MountPointExt2 *mp_ext2 = mp
+			mp_ext2.mount()
+		dir.mount = mp
+		prints(" ok\n")
+		return 0
+
+FileSystemData FileSystem
+
+class Word
+	char[2] c
+	int int()
+		int a = c[0]
+		int b = c[1]
+		return a + b * 256
+
+class FileSystemType
+	int dummy
+
+class MountPointMichiFS : MountPoint
+	
+	int read_int()
+		int *p = &buf[buf_used]
+		buf_used += 4
+		return *p
+	void read_str(cstring s)
+		int l = buf[buf_used] + buf[buf_used+1]*256
+		buf_used += 2
+		for i in 0:l
+			s[i] = buf[buf_used + i]
+		buf_used += l
+		s[l] = 0
+	int mount()
+		buf = malloc(2048)
+		update_sizes(2048, 0)
+		read_block(1, buf)
+		buf_used = 0
+		int NumFiles = read_int()
+		for n in 0:NumFiles
+			cstring name
+			read_str(name)
+			FileEntry *e = FileSystem.add(name, FILE_TYPE_FILE, self, dest)
+			//e.type =
+			read_int()
+			e.size = read_int()
+			read_int() // NumParts = 1
+			int first_block = read_int()
+			int num_blocks = read_int()
+			for i in 0:num_blocks
+				e.add_block(first_block + i)
+	
+	//void readBlock(int no, cstring *buf)
+	//void readFileBlock(int inode, int block, cstring *buf)
+
+
+class MountPointExt2 : MountPoint
+	
+	int mount()
+		buf = malloc(4096)
+		p_save_inode = &my_save_inode
+		p_alloc_inode = &my_alloc_inode
+		p_alloc_block = &my_alloc_block
+		update_sizes(1024, 0) // temp
+		
+		read_block(1, buf)
+		
+		memcpy(&sb, buf, sizeof(Ext2SuperBlock))
 		
 		block_size = 1 << (sb.log_block_size + 10)
 		inodes_per_block = block_size / sizeof(Ext2Inode) //128
@@ -342,26 +362,24 @@ class FileSystemTypeExt2 : FileSystemType
 	
 		//f.seek(1024 + block_size, true)
 		//f.xread(&bg, sizeof(BlockGroupDescriptor))
-		mp.read_block(1 + block_size / 1024, buf)
+		read_block(1 + block_size / 1024, buf)
 		memcpy(&bg, buf, sizeof(Ext2BlockGroupDescriptor))
 		
-		mp.update_sizes(block_size, block_offset)
+		update_sizes(block_size, block_offset)
 		
-		
-		mp.read_block(bg.block_bitmap, block_bitmap)
-		mp.read_block(bg.inode_bitmap, inode_bitmap)
+		read_block(bg.block_bitmap, block_bitmap)
+		read_block(bg.inode_bitmap, inode_bitmap)
 		
 		dirty = false
-		
 		
 		//showMetaData()
 		test_compatibility()
 		if readable
-			load_inode_recursive(2, mp.dest)
+			load_inode_recursive(2, dest)
 	
 	void save_meta_data()
-		Ata.writeSector(_mp.dev.disk_no, _mp.dev.offset + 2    , 1, &sb)
-		_mp.write_block(1 + block_size / 1024, &bg)
+		Ata.writeSector(dev.disk_no, dev.offset + 2    , 1, &sb)
+		write_block(1 + block_size / 1024, &bg)
 			
 	
 	void test_compatibility()
@@ -374,24 +392,24 @@ class FileSystemTypeExt2 : FileSystemType
 			return
 		writable = true
 	
-	int save_inode(FileEntry *e)
+	int my_save_inode(FileEntry *e)
 		//prints("save Inode")
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
-		_mp.read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
+		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		Ext2Inode inode
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
 		inode.size = e.size
 		memcpy(&buf[offset % block_size], &inode, sizeof(Ext2Inode))
-		_mp.write_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
+		write_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		return 0
 	
 	void read_inode(int index, Ext2Inode inode, FileEntry *e)
 		int group_no = (index - 1) / sb.inodes_per_group // 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
 		// group_no!!!!!!!!!!!!!!
-		_mp.read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
+		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
 		
 		e.type = FILE_TYPE_FILE
@@ -409,7 +427,7 @@ class FileSystemTypeExt2 : FileSystemType
 		for i in 0:num_direct
 			e.add_block(inode.iblock[i])
 		if num_blocks > 12
-			_mp.read_block(inode.iblock[12], buf)
+			read_block(inode.iblock[12], buf)
 			int[0]* p = buf
 			for i in 12:num_blocks
 				e.add_block(p[i - 12])
@@ -420,7 +438,7 @@ class FileSystemTypeExt2 : FileSystemType
 	cstring *read_inode_contents(FileEntry *e)
 		cstring *buf = malloc(e.num_blocks * block_size)
 		for i in 0:e.num_blocks
-			_mp.read_block(e.blocks[i], &buf[i * block_size])
+			read_block(e.blocks[i], &buf[i * block_size])
 		
 		return buf
 	
@@ -448,12 +466,12 @@ class FileSystemTypeExt2 : FileSystemType
 				int type = FILE_TYPE_FILE
 				if d.file_type == 2
 					type = FILE_TYPE_DIR
-				FileEntry *e = FileSystem.add(name, type, _mp, dir)
+				FileEntry *e = FileSystem.add(name, type, self, dir)
 				e.mp_inode = d.inode
 				load_inode_recursive(d.inode, e)
 		free(cont)
 	
-	int allocInode()
+	int my_alloc_inode()
 		int n = sb.inodes_per_group / 32
 		for i in 0:n
 			int b = inode_bitmap[i]
@@ -469,7 +487,7 @@ class FileSystemTypeExt2 : FileSystemType
 					return i * 32 + j
 		return -1
 	
-	int allocBlock()
+	int my_alloc_block()
 		int n = sb.blocks_per_group / 32
 		for i in 0:n
 			int b = block_bitmap[i]
@@ -485,5 +503,3 @@ class FileSystemTypeExt2 : FileSystemType
 					return i * 32 + j
 		return -1
 
-FileSystemTypeMichiFS FSTMichiFS
-FileSystemTypeExt2 FSTExt2
