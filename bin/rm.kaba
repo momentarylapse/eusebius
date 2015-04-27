@@ -1,0 +1,20 @@
+#define __OS__
+use "lib/std.kaba"
+
+
+void _rm(string filename)
+	int r = unlink(filename)
+	if r < 0
+		print("rm: kann Datei nicht loeschen: " + filename + "\n")
+		exit(-1)
+
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	for i in 1:arg.num
+		_rm(arg[i])
+	
+	exit(0)

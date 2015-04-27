@@ -259,11 +259,14 @@ class FileSystemData
 			m.dev = nil
 		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
 	
-	void del(FileEntry *e)
-		if e.parent
-			prints("--[del e.parent]---\n")
-		else
+	int del(FileEntry *e)
+		if !e.parent
 			free(e)
+			return 0
+		//if e.first_sub
+		//	nil
+		//prints("--[del e.parent]---\n")
+		return -1
 	
 	FileEntry *get(cstring path, FileEntry *cur_dir)
 		int ppos = 0

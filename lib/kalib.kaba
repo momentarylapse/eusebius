@@ -234,6 +234,18 @@ int mkfifo(string filename)
 	}
 	return __temp_i__
 
+int unlink(string filename)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x0000000a
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
 int getpid()
 	asm{
 		mov eax, 0x00000014

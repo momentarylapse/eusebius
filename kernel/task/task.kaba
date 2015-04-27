@@ -320,6 +320,9 @@ class Task
 
 	int sys_mknod(cstring filename, int flags)
 		return kernel_mknod(filename, flags, cur_dir)
+		
+	int sys_unlink(cstring filename)
+		return kernel_unlink(filename, cur_dir)
 	
 	int sys_execute(cstring filename, int fd_in, int fd_out)
 		int h = sys_open(filename, O_RDONLY)

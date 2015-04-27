@@ -281,6 +281,12 @@ int kernel_mknod(cstring filename, int flags, FileEntry *cur_dir)
 		return -3
 	return 0
 
+int kernel_unlink(cstring filename, FileEntry *cur_dir)
+	FileEntry *e = FileSystem.get(filename, cur_dir)
+	if !e
+		return -ENOENT
+	return FileSystem.del(e)
+
 
 class dirent_struct
 	int struct_size
