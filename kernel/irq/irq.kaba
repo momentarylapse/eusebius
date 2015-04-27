@@ -48,7 +48,7 @@ class InterruptController
 		idt[id].set_task(t)
 
 	void init()
-		prints("lade Interrupt-Tabelle")
+		prints("loading interrupt table...")
 
 		for i in idt
 			i.set(nil)

@@ -16,7 +16,7 @@ J x Grafikfehler (-> LFB)
 == Features ==
 
 J LFB
-* wirklich in Dateien schreiben
+j wirklich in Dateien schreiben
 * Log-Datei
 J PCI
 * Netzwerk-Treiber

@@ -20,7 +20,7 @@ use "syscall.kaba"
 
 const int KALIB_LOCATION = 0x00030000
 
-//#disasm
+
 
 void show_pvl()
 	asm{

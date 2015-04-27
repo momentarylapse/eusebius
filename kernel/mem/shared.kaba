@@ -48,7 +48,7 @@ class SharedMemoryController
 		for b,i in blocks
 			if b.key == -1
 				if absolute
-					if !paging.alloc_chunk(key, size)
+					if !paging.alloc_chunk(key, size, true)
 						return -ENOMEM
 					b.p = key
 				else

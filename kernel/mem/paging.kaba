@@ -238,10 +238,10 @@ class PageDirectory : PageTable
 class PageController
 	int[MAX_PAGE_MASKS] mask
 	int num_masks
-	int mask_occupation
-	int alloc_count, free_count
+	int pages_allocated
+	int pages_usable
 	void init()
-		prints("Paging")
+		prints("enable paging...")
 		num_masks = MemorySize / PAGE_SIZE / 32
 		MemorySize = num_masks * PAGE_SIZE * 32 // easier memory management...
 		for i in 0:num_masks
@@ -250,10 +250,11 @@ class PageController
 		// reserve 8mb for kernel
 		for i in 0:64
 			mask[i] = 0xffffffff
-		mask_occupation = 64
 		
-		alloc_count = 0
-		free_count = 0
+		mark_by_bios()
+		
+		pages_allocated = 0
+		pages_usable = 0
 			
 		// kernel: flat paging
 		int nmax = MemorySize / PAGE_SIZE / 1024
@@ -271,20 +272,31 @@ class PageController
 			jmp _flush
 			_flush:
 		}
-		prints(" ok\n")
+		prints("  ok\n")
+		
+	
+	void mark_by_bios()
+		for m,i in bios_mem_map
+			if m.type < 0
+				break
+			if m.type == 1
+				continue
+			
+			int p0 = m.offset / PAGE_SIZE
+			int p1 = ceil_quot(m.offset + m.size, PAGE_SIZE)
+			alloc_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
 	// does not clear
 	int alloc_page()
 		bool ok = true
-		for i in mask_occupation:num_masks
+		for i in 0:num_masks
 			if mask[i] == 0xffffffff
 				continue
 			for j in 0:32
 				int m = 1 << j
 				if (mask[i] & m) == 0
-					mask_occupation = i
 					mask[i] = mask[i] | m
-					alloc_count ++
+					pages_allocated ++
 					int pos = (i * 32 + j) * PAGE_SIZE
 					return pos
 		return -1
@@ -297,10 +309,8 @@ class PageController
 		int offset = page_no & 0x0000001f // % 32
 		int m = 1 << offset
 		if (mask[mask_no] & m) != 0
-			free_count ++
+			pages_allocated ++
 			mask[mask_no] -= m
-			if mask_no < mask_occupation
-				mask_occupation = mask_no
 		else
 			prints("  -e-  ")
 			printh(&mask[mask_no], 4)
@@ -313,15 +323,6 @@ class PageController
 			prints(" ")
 			printi(offset)
 			panic("invalid free page")
-	
-	void show_stats()
-		prints("alloc ")
-		printi(alloc_count)
-		prints("/")
-		printi(free_count)
-		prints(" ")
-		alloc_count = 0
-		free_count = 0
 			
 	int find_and_alloc_chunk(int size)
 		int num_pages_req = ceil_quot(size, PAGE_SIZE)
@@ -338,9 +339,60 @@ class PageController
 				return i * PAGE_SIZE * 32
 		return 0
 	
-	bool alloc_chunk(int pos, int size)
+	bool alloc_chunk(int pos, int size, bool test_free)
 		if (pos & 0x00000fff) != 0
 			return false
+		if size == 0
+			return true
+		int npages = ceil_quot(size, PAGE_SIZE)
+		
+		// which pages/masks?
+		int p0 = pos >> 12
+		int p1 = p0 + npages - 1 // inclusive
+		
+		int m0 = p0 >> 5
+		int m1 = p1 >> 5
+		p0 = p0 & 0x0000001f
+		p1 = p1 & 0x0000001f
+		
+		// boundary masks
+		int mask0 = 0xffffffff << p0
+		int mask1 = 0xffffffff >> (32 - p1 - 1)
+		
+		// special case
+		if m0 == m1
+			mask0 = mask0 & mask1
+			if test_free
+				if (mask[m0] & mask0) != 0
+					return false
+				pages_allocated += npages
+			mask[m0] = mask[m0] | mask0
+			return true
+		
+		if test_free
+			// free?
+			if (mask[m0] & mask0) != 0
+				return false
+			if (mask[m1] & mask1) != 0
+				return false
+			for m in m0+1:m1
+				if mask[m] != 0
+					return false
+		
+		// allocate
+		mask[m0] = mask[m0] | mask0
+		mask[m1] = mask[m1] | mask1
+		for m in m0+1:m1
+			mask[m] = 0xffffffff
+		if test_free
+			pages_allocated += npages
+		return true
+
+	bool free_chunk(int pos, int size)
+		if (pos & 0x00000fff) != 0
+			return false
+		if size == 0
+			return true
 		int npages = ceil_quot(size, PAGE_SIZE)
 		
 		// which pages/masks?
@@ -352,39 +404,22 @@ class PageController
 		p1 = p1 & 0x0000001f
 		
 		// boundary masks
-		int mask0 = 0xffffffff << p0
-		int mask1 = 0xffffffff >> (32 - p1)
+		int mask0 = 0xffffffff >> (32 - p0)
+		int mask1 = 0xffffffff << p1
 		
 		// special case
 		if m0 == m1
-			mask0 = mask0 & mask1
-			if (mask[m0] & mask0) != 0
-				return false
-			mask[m0] = mask[m0] | mask0
+			mask[m0] = mask[m0] & mask0
+			pages_allocated -= npages
 			return true
 		
-		// free?
-		if (mask[m0] & mask0) != 0
-			return false
-		if (mask[m1] & mask1) != 0
-			return false
+		// free
+		mask[m0] = mask[m0] & mask0
+		mask[m1] = mask[m1] & mask1
 		for m in m0+1:m1
-			if mask[m] != 0
-				return false
-		
-		// allocate
-		mask[m0] = mask[m0] | mask0
-		mask[m1] = mask[m1] | mask1
-		for m in m0+1:m1
-			mask[m] = 0xffffffff
+			mask[m] = 0
+		pages_allocated -= npages
 		return true
-
-	void free_chunk(int p, int size)
-		int offset = p / PAGE_SIZE / 32
-		int num_pages_req = (size - PAGE_SIZE + 1) / PAGE_SIZE//ceil_quot(size, PAGE_SIZE)
-		int num_masks_req = (num_pages_req - 31) / 32 //ceil_quot(num_pages_req, 32)
-		for j in 0:num_masks_req
-			mask[offset + j] = 0
 
 	int get_used()
 		int n = 0
@@ -402,10 +437,37 @@ class PageController
 	
 	PageDirectory *create_page_directory()
 		int pos = alloc_page()
+		if pos == -1
+			panic("kann PageDirectory nicht anlegen")
+			return nil
 		PageDirectory *pd = _i2p(pos)
 		pd.clear()
 		return pd
 			
 
 PageController paging
+
+
+
+void show_mem_map()
+	for m,i in bios_mem_map
+		if m.type < 0
+			break
+		printh(&m.offset, 4)
+		prints("    ")
+		printh(&m.size, 4)
+		prints("    ")
+		if m.type == 1
+			prints("free")
+		else if m.type == 2
+			prints("used-2")
+		else if m.type == 3
+			prints("used-3")
+		else if m.type == 4
+			prints("used-4")
+		else if m.type == 5
+			prints("BAD")
+		else
+			printh(&m.type, 1)
+		prints("\n")
 

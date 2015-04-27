@@ -11,7 +11,6 @@
 #define __OS__
 #define __NO_FUNCTION_FRAME__
 #define __CODE_ORIGIN__ 0x7e00
-//#disasm
 
 void main()	//-------------------------------------------------------------	// RealMode!!!
 	asm{
@@ -24,7 +23,9 @@ void main()	//-------------------------------------------------------------	// R
 		int 0x10
 
 
-		// mehr als 1mb Ram erlauben (Gate 20A... :~~[  )
+//--------------------------------------------------------------
+// gate 20A -> allow more than 1mb RAM :~~[
+
 		mov ax, 0x2401
 		int 0x15
 		in al, 0x92
@@ -37,8 +38,52 @@ void main()	//-------------------------------------------------------------	// R
 		mov [_var_mem_size], bx // #64kb
 		shr ax, 0x06
 		add [_var_mem_size], ax // #1kb
+		
+//--------------------------------------------------------------
+// read memory map
 
-		// Kernel-Image laden
+		mov si, 0x0000 // counter
+		
+		mov ax, 0x0000
+		mov es, ax
+		mov di, 0x6000 // 00:6000
+		xor ebx, ebx
+		mov edx, 0x534d4150
+		mov eax, 0x0000e820
+		mov ecx, 0x00000018
+		int 0x15
+		
+		// failed?
+		jb _read_mem_map_end
+		cmp eax, 0x534d4150
+		jnz _read_mem_map_end
+	_read_mem_map_loop:
+		inc si
+	
+		mov ax, 0x0000
+		mov es, ax
+		add di, 0x0018
+		mov edx, 0x534d4150
+		mov eax, 0x0000e820
+		mov ecx, 0x00000018
+		int 0x15
+		
+		// end of list?
+		jb _read_mem_map_end
+	
+		cmp si, 0x040
+		jl _read_mem_map_loop
+	_read_mem_map_end:
+		
+		// save count
+		mov [0x5104], si
+		xor ax, ax
+		mov [0x5106], ax
+
+
+//--------------------------------------------------------------
+// load kernel image
+
 //		_reset_drive:
 			mov dl, 0x00
 			mov ah, 0x00
@@ -48,7 +93,7 @@ void main()	//-------------------------------------------------------------	// R
 		xor ax, ax
 		mov es, ax
 		
-		// Ziel des Images
+		// target address
 		mov ax, 0x1000
 		mov es, ax
 		mov bx, 0x0000 // 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
@@ -89,7 +134,9 @@ void main()	//-------------------------------------------------------------	// R
 		//jnz _reset_drive
 
 
-		// Speicher-Segmente laden
+//--------------------------------------------------------------
+// load memory segments
+
 		lgdt [_gdtr]
 
 		// Debug
@@ -98,7 +145,9 @@ void main()	//-------------------------------------------------------------	// R
 		mov bx, 0x0000
 		int 0x10
 
-		// 32bit Protected-Mode aktivieren
+//--------------------------------------------------------------
+// activate 32bit protected mode
+
 		cli
 		mov eax, cr0
 		or al, 0x01
@@ -158,8 +207,9 @@ void main()	//-------------------------------------------------------------	// R
 		// zur Sicherheit....
 		jmp $
 
-	//-------------------------------------------------------------
-	// Daten
+
+//--------------------------------------------------------------
+// data
 	
 		// Variablen
 		_var_mem_size:
