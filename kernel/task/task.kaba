@@ -645,8 +645,28 @@ void InitTasks()
 		ltr ax
 	}
 	// markiert das aktuelle TSS als "busy"!
+	
+	// enable sse
+	asm{
+	
+		mov eax, cr0
+		and eax, 0xfffffffb // clear CR0.EM (don't emulate via IRQ)
+		or eax, 0x00000002 // set CR0.MP (inform about task-switches)
+		mov cr0, eax
+		mov __temp_i__, eax
+		
+		// set CR4.OSFXSR (enable sse)
+		mov eax, cr4
+		//mov __temp_i__, eax
+		or eax, 0x00000200
+		mov cr4, eax
+	
+		// flush cpu prefetch
+		jmp _flush_sse
+		_flush_sse:
+	}
 
-	prints("   ok\n")
+	prints("   --ok\n")
 
 /*int sys_getpid()
 	asm{

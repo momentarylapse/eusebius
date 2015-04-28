@@ -29,4 +29,4 @@ mouse: enabled=0, toggle=ctrl+f10
 #keyboard: type=mf, serial_delay=200, paste_delay=100000
 #keyboard: keymap=gui/keymaps/x11-pc-de.map
 #keyboard_mapping: enabled=1, map=/usr/share/bochs/keymaps/x11-pc-de.map
-keyboard_mapping: enabled=1, map=/usr/share/bochs/keymaps/sdl-pc-de.map
+keyboard: keymap=/usr/share/bochs/keymaps/sdl-pc-de.map

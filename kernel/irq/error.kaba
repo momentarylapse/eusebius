@@ -28,6 +28,17 @@ void handle_task_error(Task* t, Task* e, int i)
 void handle_kernel_error(Task* t, int i)
 	cstring s
 	get_error_text(i, s)
+	
+	/*if i == 0
+		prints("   eflags=")
+		printh(&KernelTask.tss.eflags, 4)
+		prints(s)
+		prints("-y-")
+		return
+		asm{
+			iret
+		}
+		prints("xxxx")*/
 	panic(s)
 
 void get_error_text(int i, cstring s)
@@ -100,6 +111,12 @@ void int_06()
 	int_handler(6)
 void int_07()
 	int_handler(7)
+	prints("[CP]")
+	asm{
+		db 0x0f
+		db 0x06
+		iret
+	}
 void int_08()
 	int_handler(8)
 void int_09()
@@ -120,6 +137,18 @@ void int_16()
 	int_handler(16)
 void int_XX()
 	int_handler(2004)
+	
+	
+void int_ignore_dummy()
+	asm{
+		_ignore_interrupt_handler:
+	}
+	prints("  [ignore]")
+	asm{
+		db 0x0f
+		db 0x06
+		iret
+	}
 
 
 class ErrorController
@@ -148,9 +177,16 @@ class ErrorController
 		
 		
 		for h,i in handler
-			//set(i, h)
 			tasks[i] = AddTaskKernel("irq-error", h, ERROR_STACK_SIZE, KernelTask)
 			irq.set_task(i, tasks[i])
+		
+		
+		// tell the cpu to ignore sse/task-switch-exceptions
+		asm{
+			mov eax, _ignore_interrupt_handler
+			mov __temp_p__, eax
+		}
+		irq.set(7, __temp_p__)
 	
 		prints("   ok\n")
 

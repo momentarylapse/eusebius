@@ -6,7 +6,75 @@ use "lib/pci.kaba"
 PCIController *pci
 PCIDevice *dev
 
+int temp1, temp2, temp3, temp4
 
+void cpuid(int n, int[4] o)
+	temp1 = n
+	asm{
+		mov eax, temp1
+		db 0x0f
+		db 0xa2
+		mov temp1, eax
+		mov temp2, ebx
+		mov temp3, ecx
+		mov temp4, edx
+	}
+	o[0] = temp1
+	o[1] = temp2
+	o[2] = temp3
+	o[3] = temp4
+	
+	
+	/*printh(n)
+	print ": "
+	for i in o
+		print " "
+		printh(i)
+	print("\n")*/
+
+void show_cpu()
+	print("   cpu:  ")
+	int[4] o
+	cpuid(0, o)
+	
+	string s
+	//for i in [1,3,2]
+	for j in 0:4
+		s.add(o[1] >> (j*8))
+	for j in 0:4
+		s.add(o[3] >> (j*8))
+	for j in 0:4
+		s.add(o[2] >> (j*8))
+	print s
+	print "\n"
+	
+	//cpuid(0x8000000, o)
+	cpuid(1, o)
+	
+	print "  sse="
+	print (o[3] & 1<<25) != 0
+	print "  sse2="
+	print (o[3] & 1<<26) != 0
+	print "  sse3="
+	print (o[2] & 1<<0) != 0
+	
+	cpuid(0x8000001, o)
+	
+	print "  x87="
+	print (o[3] & 1<<0) != 0
+	print "  mmx="
+	print (o[3] & 1<<23) != 0
+	print "  3dnow="
+	print (o[3] & 1<<31) != 0
+	print "  fxrestore="
+	print (o[3] & 1<<24) != 0
+	print "  sse4a="
+	print (o[2] & 1<<6) != 0
+	print "  64="
+	print (o[3] & 1<<29) != 0
+	print "\n"
+
+float f
 
 void main()
 	init_lib()
@@ -22,5 +90,23 @@ void main()
 		dev.show()
 		printh dev.getIOAddr0()
 		print "\n"
-		
+	
+	show_cpu()
+	
+	sleep(2)
+	
+	
+	f = 1
+	//f += f
+	asm{
+		movss xmm0, f
+		addss xmm0, f
+		movss f, xmm0
+	}
+	
+	int *p = &f
+	printh(*p)
+	
+	
+	print "\n----ok----\n"		
 	exit(0)
