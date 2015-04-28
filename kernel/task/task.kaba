@@ -592,7 +592,7 @@ void idle_func()
 		}
 
 void InitTasks()
-	prints("init Tasks")
+	prints("init Tasks...")
 	
 	// null descriptor
 	for g in GlobalDescriptorTable
@@ -666,7 +666,7 @@ void InitTasks()
 		_flush_sse:
 	}
 
-	prints("   --ok\n")
+	prints("  ok\n")
 
 /*int sys_getpid()
 	asm{

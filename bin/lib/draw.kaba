@@ -1,0 +1,9 @@
+use "std.kaba"
+use "x.kaba"
+
+class XPainter
+	int[0]* buf
+	int w, h
+	
+	void __init__(XWindow *win)
+		

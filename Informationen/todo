@@ -25,5 +25,6 @@ J PCI
 * Signale
 J top
 * shell respawn
-* float
+j float
+J Bios Memory Map
 

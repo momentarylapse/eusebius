@@ -2,111 +2,20 @@
 use "lib/std.kaba"
 use "lib/io.kaba"
 use "lib/pci.kaba"
-use "lib/x.kaba"
-
-extern int _p2i(void *p)
-extern void* _i2p(int i)
-
-const int VBE_DISPI_IOPORT_INDEX = 0x01ce
-const int VBE_DISPI_IOPORT_DATA = 0x01cf
-
-const int VBE_DISPI_ID5 = 0xb0c5
-const int VBE_DISPI_ID4 = 0xb0c4
-
-const int VBE_DISPI_DISABLED = 0
-const int VBE_DISPI_ENABLED = 0x01
-const int VBE_DISPI_LFB_ENABLED = 0x40
-const int VBE_DISPI_NOCLEARMEM = 0x80
-
-const int VBE_DISPI_INDEX_ID = 0
-const int VBE_DISPI_INDEX_XRES = 1
-const int VBE_DISPI_INDEX_YRES = 2
-const int VBE_DISPI_INDEX_BPP = 3
-const int VBE_DISPI_INDEX_ENABLE = 4
-const int VBE_DISPI_INDEX_BANK = 5
-const int VBE_DISPI_INDEX_VIRT_WIDTH = 6
-const int VBE_DISPI_INDEX_VIRT_HEIGHT = 7
-const int VBE_DISPI_INDEX_X_OFFSET = 8
-const int VBE_DISPI_INDEX_Y_OFFSET = 9
-
-PCIController *pci
-
-void BgaWriteRegister(int IndexValue, int DataValue)
-	outportw(VBE_DISPI_IOPORT_INDEX, IndexValue)
-	outportw(VBE_DISPI_IOPORT_DATA, DataValue)
- 
-int BgaReadRegister(int IndexValue)
-	outportw(VBE_DISPI_IOPORT_INDEX, IndexValue)
-	return inportw(VBE_DISPI_IOPORT_DATA)
+use "lib/vesa.kaba"
+//use "lib/x.kaba"
 
 
- 
-bool BgaIsAvailable()
-	return BgaReadRegister(VBE_DISPI_INDEX_ID) == VBE_DISPI_ID5
-
-bool graphics_enabled
-int screen_width, screen_height
-int cur_bank
-int[0]* vga_mem
-int[0]* vga_mem2
- 
-void BgaSetVideoMode(int width, int height, int depth)
-	bool UseLinearFrameBuffer = false
-	if vga_mem2
-		UseLinearFrameBuffer = true
-	bool ClearVideoMemory = false
-	screen_width = width
-	screen_height = height
-	mouse.x = width / 2
-	mouse.y = height / 2
-	cur_bank = -1
-	vga_mem = _i2p(0xa0000)
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
-	BgaWriteRegister(VBE_DISPI_INDEX_XRES, width)
-	BgaWriteRegister(VBE_DISPI_INDEX_YRES, height)
-	BgaWriteRegister(VBE_DISPI_INDEX_BPP, depth)
-	int x = VBE_DISPI_ENABLED
-	if UseLinearFrameBuffer
-		x = x | VBE_DISPI_LFB_ENABLED
-	if ClearVideoMemory
-		x = x | VBE_DISPI_NOCLEARMEM
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, x)
-	graphics_enabled = true
-	
-	
-	
-	//vga_mem2 = _i2p(0xc0000000)
-	/*for d in pci_devices
-		if d.vendor == 0x1111 and d.device == 0x1234
-			print d.bar0
-			vga_mem2 = _i2p(d.bar0)
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
-	print _p2i(vga_mem2)*/
- 
-void BgaSetBank(int bank)
-	BgaWriteRegister(VBE_DISPI_INDEX_BANK, bank)
-	cur_bank = bank
-	for i in 0:1000
-		nil
-
-void setPixel(int x, int y, int col)
-	if !graphics_enabled
-		return
-	int p = x + y * screen_width
-	if vga_mem2
-		vga_mem2[p] = col
-	else
-		int b = p >> 14
-		int off = p & 0x3fff
-		if b != cur_bank
-			BgaSetBank(b)
-		vga_mem[off] = col
-
-void setPixel2(int x, int y, int col)
-	int p = x + y * screen_width
-	vga_mem2[p] = col
+const int XCMD_KILL = 666
+const int XCMD_WINDOW_NEW = 1024
+const int XCMD_WINDOW_DELETE = 1025
+const int XCMD_WINDOW_MOVE = 1026
+const int XCMD_WINDOW_INVALIDATE = 1027
+const int XCMD_WINDOW_GET_SIZE = 2048
+const int XCMD_WINDOW_GET_POS = 2049
 
 
+const int WF_TRANSPARENT = 1024
 
 class MouseController
 	int x, y
@@ -174,8 +83,6 @@ class XRect
 		return y1 - y0
 	bool inside(int x, int y)
 		return x >= x0 and x < x1 and y >= y0 and y < y1
-
-const int WF_TRANSPARENT = 1024
 
 
 class XWindow
@@ -335,7 +242,7 @@ class Client
 	
 	void __init__(int key)
 		kill_me = false
-		print "x: new client\n"
+		print "x: new client " + key + "\n"
 		int id = shmget(key, 0, 0)
 		buf = shmat(id, 0)
 	
@@ -346,30 +253,44 @@ class Client
 			delete w
 	
 	void update()
+		usleep(100000)
 		if buf[0] == 1
 			buf[32] = -1
-			print "x: empfange "
-			print buf[1]
-			print "\n"
+			print "x: empfange\n"
 			if buf[1] == XCMD_KILL
 				buf[32] = 0
 				kill_me = true
-			else if buf[1] == XCMD_NEW_WINDOW
+			else if buf[1] == XCMD_WINDOW_NEW
 				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2)
 				win.add(ww)
-				buf[32] = ww.id
-				buf[33] = ww.shm_key
-				print "x: key="
-				print ww.shm_key
-				print "\n"
-			else if buf[1] == XCMD_INVALIDATE_WINDOW
+				buf[32] = 0
+				buf[33] = ww.id
+				buf[34] = ww.shm_key
+				print "x: key=" + ww.shm_key + "\n"
+			else if buf[1] == XCMD_WINDOW_INVALIDATE
 				for w in win
 					if w.id == buf[2]
 						invalidated.add(w.r)
-			else if buf[1] == XCMD_MOVE_WINDOW
+						buf[32] = 0
+			else if buf[1] == XCMD_WINDOW_MOVE
 				for w in win
 					if w.id == buf[2]
 						w.move(buf[3], buf[4])
+						buf[32] = 0
+			else if buf[1] == XCMD_WINDOW_GET_POS
+				for w in win
+					if w.id == buf[2]
+						buf[32] = 0
+						buf[33] = w.r.x0
+						buf[34] = w.r.y0
+						break
+			else if buf[1] == XCMD_WINDOW_GET_SIZE
+				for w in win
+					if w.id == buf[2]
+						buf[32] = 0
+						buf[33] = w.r.w()
+						buf[34] = w.r.h()
+						break
 			buf[0] = 0
 		
 
@@ -406,16 +327,13 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	graphics_enabled = false
-	vga_mem2 = nil
+	vesa_init()
 
 	next_window_id = 0
 	windows.__init__()
 	windows_r.__init__()
 	invalidated.__init__()
 	
-	screen_width = 800
-	screen_height = 600
 	
 	cmds = new CommandController
 	mouse = new MouseController
@@ -438,6 +356,8 @@ void main()
 	
 	if arg.num == 1
 		BgaSetVideoMode(640, 480, 32)
+		mouse.x = screen_width / 2
+		mouse.y = screen_height / 2
 	
 	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
 	if vga_mem2

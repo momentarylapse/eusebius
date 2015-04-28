@@ -74,8 +74,6 @@ void show_cpu()
 	print (o[3] & 1<<29) != 0
 	print "\n"
 
-float f
-
 void main()
 	init_lib()
 	string[] arg
@@ -96,16 +94,12 @@ void main()
 	sleep(2)
 	
 	
-	f = 1
-	//f += f
-	asm{
-		movss xmm0, f
-		addss xmm0, f
-		movss f, xmm0
-	}
+	float f = 2
+	f *= f
 	
 	int *p = &f
 	printh(*p)
+	print "\n"
 	
 	
 	print "\n----ok----\n"		
