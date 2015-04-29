@@ -73,7 +73,7 @@ void main()
 			allow_irq = true
 	
 	SysInfo s
-	if sysinfo(s) != 0
+	if !sysinfo(s)
 		print "Fehler sysinfo\n"
 		exit(1)
 	print "uptime: "
@@ -99,7 +99,7 @@ void main()
 	TaskInfo[] tasks
 	TaskInfo tt
 	for pid in 0:256
-		if taskinfo(pid, tt) == 0
+		if taskinfo(pid, tt)
 			if tt.status != TASK_STATUS_INTERRUPT or allow_irq
 				tasks.add(tt)
 	

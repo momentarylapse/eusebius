@@ -6,7 +6,7 @@ void touch(string filename)
 	int h = create(filename)
 	if h < 0
 		print("touch: kann Datei nicht anlegen: " + filename + "\n")
-		exit(-1)
+		exit(h)
 	close(h)
 
 

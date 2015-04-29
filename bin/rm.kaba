@@ -3,16 +3,15 @@ use "lib/std.kaba"
 
 
 void _rm(string filename)
-	int r = unlink(filename)
-	if r == 0
+	if unlink(filename)
 		return
-	if r == -ENOENT
+	if lib_error == -ENOENT
 		print("rm: " + filename + " existiert nicht\n")
-	else if r == -EISDIR
+	else if lib_error == -EISDIR
 		print("rm: " + filename + " ist ein Verzeichnis\n")
 	else
 		print("rm: kann Datei nicht loeschen: " + filename + "\n")
-	exit(r)
+	exit(lib_error)
 
 
 void main()

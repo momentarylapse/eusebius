@@ -70,13 +70,15 @@ void sa2cs(string[] a, cstring cs)
 //--------------------------------------------------------------------------
 // system calls
 
-int exit(int r)
+bool exit(int r)
 	__temp_i__ = r
 	asm{
 		mov eax, 0x00000001
 		mov ebx, __temp_i__
 		int 0x80
+		mov lib_error, eax
 	}
+	return lib_error == 0
 
 int brk(int size)
 	__temp_i__ = size
@@ -125,13 +127,15 @@ int create(string filename)
 	}
 	return __temp_i__
 	
-void close(int h)
+bool close(int h)
 	__temp_i__ = h
 	asm{
 		mov eax, 0x00000006
 		mov ebx, __temp_i__
 		int 0x80
+		mov lib_error, eax
 	}
+	return lib_error == 0
 
 int read(int h, void *buf, int size)
 	__temp_i__ = h
@@ -162,7 +166,7 @@ int write(int h, void *buf, int size)
 	return __temp_i3__
 
 
-int mkdir(string filename)
+bool mkdir(string filename)
 	cstring tt
 	_s2cs(filename, tt)
 	__temp_p__ = &tt
@@ -170,11 +174,11 @@ int mkdir(string filename)
 		mov eax, 0x00000027
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error == 0
 
-int rmdir(string filename)
+bool rmdir(string filename)
 	cstring tt
 	_s2cs(filename, tt)
 	__temp_p__ = &tt
@@ -182,11 +186,11 @@ int rmdir(string filename)
 		mov eax, 0x00000028
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error == 0
 
-int getdents(int h, void *buf)//lib__DirEntry)
+bool getdents(int h, void *buf)//lib__DirEntry)
 	__temp_i__ = h
 	__temp_i2__ = 1
 	__temp_p__ = buf
@@ -196,9 +200,9 @@ int getdents(int h, void *buf)//lib__DirEntry)
 		mov ecx, __temp_p__
 		mov edx, __temp_i2__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error > 0
 
 int dup(int h)
 	__temp_i__ = h
@@ -234,7 +238,7 @@ int fcntl(int h, int op, int param)
 	}
 	return __temp_i__
 
-int mkfifo(string filename)
+bool mkfifo(string filename)
 	cstring tt
 	_s2cs(filename, tt)
 	__temp_p__ = &tt
@@ -242,11 +246,11 @@ int mkfifo(string filename)
 		mov eax, 0x0000000e
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error == 0
 
-int unlink(string filename)
+bool unlink(string filename)
 	cstring tt
 	_s2cs(filename, tt)
 	__temp_p__ = &tt
@@ -254,9 +258,9 @@ int unlink(string filename)
 		mov eax, 0x0000000a
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error == 0
 
 int getpid()
 	asm{
@@ -282,7 +286,7 @@ int waitpid(int pid, void *status, bool block)
 	}
 	return __temp_i3__
 	
-int kill(int pid, int signal)
+bool kill(int pid, int signal)
 	__temp_i__ = pid
 	__temp_i2__ = signal
 	asm{
@@ -290,11 +294,11 @@ int kill(int pid, int signal)
 		mov ebx, __temp_i__
 		mov ecx, __temp_i2__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
-int chdir(string dir)
+bool chdir(string dir)
 	cstring tt
 	_s2cs(dir, tt)
 	__temp_p__ = &tt
@@ -302,9 +306,9 @@ int chdir(string dir)
 		mov eax, 0x0000000c
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error == 0
 
 lib__string getcwd()
 	cstring tt
@@ -314,7 +318,7 @@ lib__string getcwd()
 		mov ebx, __temp_p__
 		mov ecx, 0x00000100
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
 	lib__string r
 	_cs2s(tt, r)
@@ -332,9 +336,9 @@ int execute(string[] arg, int fd_in, int fd_out)
 		mov ecx, __temp_i__
 		mov edx, __temp_i2__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error
 
 int shmget(int key, int size, int flags)
 	__temp_i__ = key
@@ -363,34 +367,34 @@ void* shmat(int id, int flags)
 		mov edx, __temp_p__
 		mov esi, __temp_i2__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	if __temp_i3__ < 0 and __temp_i3__ > - 1024
-		return _i2p(__temp_i3__)
+	if lib_error < 0 and lib_error > - 1024
+		return nil
 	return p
 	
-int shmdt(void* addr)
+bool shmdt(void* addr)
 	__temp_p__ = addr
 	asm{
 		mov eax, 0x00000075 // ipc
 		mov ebx, 0x0000000a
 		mov ecx, __temp_p__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
-int sysinfo(void *buf)
+bool sysinfo(void *buf)
 	__temp_p__ = buf
 	asm{
 		mov eax, 0x00000074
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
-int taskinfo(int pid, void *buf)
+bool taskinfo(int pid, void *buf)
 	__temp_i__ = pid
 	__temp_p__ = buf
 	asm{
@@ -398,19 +402,19 @@ int taskinfo(int pid, void *buf)
 		mov ebx, __temp_i__
 		mov ecx, __temp_p__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
-int uname(void *buf)
+bool uname(void *buf)
 	__temp_p__ = buf
 	asm{
 		mov eax, 0x0000007a
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
 int time(void *buf)
 	__temp_p__ = buf
@@ -444,15 +448,15 @@ int usleep(int usec)
 	tv[1] = (usec % 1000000) * 1000
 	return nanosleep(&tv, nil)
 
-int sched_yield(int pid)
+bool sched_yield(int pid)
 	__temp_i__ = pid
 	asm{
 		mov eax, 0x0000009e
 		mov ebx, __temp_i__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
 	
 void kprint(lib__string s)
@@ -1171,14 +1175,12 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 		lib_error = -1
 		return l
 	dirent_struct d
-	int r = getdents(h, &d)
 	lib__DirEntry e
-	while r > 0
+	while getdents(h, &d)
 		lib__string s
 		_cs2s(d.name, s)
 		d.fill(e)
 		l.add(e)
-		r = getdents(h, &d)
 	close(h)
 	lib_error = 0
 	

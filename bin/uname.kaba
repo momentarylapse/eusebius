@@ -13,7 +13,7 @@ void main()
 	init_lib()
 	
 	UTSName u
-	if uname(&u) == 0
+	if uname(&u)
 		print cs2s(u.sysname)
 		print "  "
 		print cs2s(u.nodename)

@@ -140,10 +140,10 @@ class OpenFileData
 
 	int getdents(PageDirectory *page_dir, int addr, int num)
 		if !used
-			return -1
+			return -EBADF
 
 		if entry.type != FILE_TYPE_DIR
-			return -2
+			return -ENOTDIR
 		
 		if !reading
 			return -3

@@ -3,18 +3,17 @@ use "lib/std.kaba"
 
 
 void _rmdir(string filename)
-	int r = rmdir(filename)
-	if r == 0
+	if !rmdir(filename)
 		return
-	if r == -ENOENT
+	if lib_error == -ENOENT
 		print("rm: " + filename + " existiert nicht\n")
-	else if r == -ENOTDIR
+	else if lib_error == -ENOTDIR
 		print("rm: " + filename + " ist kein Verzeichnis\n")
-	else if r == -ENOTEMPTY
+	else if lib_error == -ENOTEMPTY
 		print("rm: " + filename + " ist nicht leer\n")
 	else
 		print("rm: kann " + filename + " nicht loeschen, aber weiss nicht, warum\n")
-	exit(r)
+	exit(lib_error)
 
 
 void main()

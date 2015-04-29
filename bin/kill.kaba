@@ -17,7 +17,7 @@ void main()
 			else
 				pid.add(n)
 		for p in pid
-			if kill(p, signal) < 0
+			if !kill(p, signal)
 				print "kill: Prozess " + p + " nicht gefunden\n"
 				exit(-1)
 	else

@@ -3,10 +3,9 @@ use "lib/std.kaba"
 
 
 void _mkfifo(string filename)
-	int r = mkfifo(filename)
-	if r < 0
+	if !mkfifo(filename)
 		print("mkfifo: kann FIFO nicht anlegen: " + filename + "\n")
-		exit(-1)
+		exit(lib_error)
 
 
 void main()
