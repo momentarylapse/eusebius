@@ -1,0 +1,3 @@
+#! /bin/sh
+echo c | ~/Downloads/bochs-20150425/bochs -qf f.txt
+

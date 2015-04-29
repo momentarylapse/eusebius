@@ -143,7 +143,7 @@ void int_ignore_dummy()
 	asm{
 		_ignore_interrupt_handler:
 	}
-	prints("  [ignore]")
+	//prints("  [ignore]")
 	asm{
 		db 0x0f
 		db 0x06

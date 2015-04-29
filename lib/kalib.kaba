@@ -1033,9 +1033,11 @@ int rand_next()
 void lib__rand_seed(int s)
 	rand_state = s
 
+float lib__rand(float m)
+	return rand_next() * m / i2f(0x01000000)
+
 int lib__randi(int m)
-	return rand_next() % m // terrible!
-	//return f2i(i2f(rand_next()) * i2f(m) / i2f(0x00ffffff))
+	return lib__rand(m)
 
 class lib__int
 	int i
@@ -1045,20 +1047,90 @@ class lib__int
 class lib__float
 	float f
 	lib__string str()
-		return lib__@f2s(0.0, 6)
+		return lib__@f2s(f, 6)
 
 // TODO
 float lib__sin(float f)
-	return 0
+	return 123.0
 
 // TODO
 float lib__cos(float f)
-	return 0
+	return 42.0
 
-// TODO
+float lib__min(float a, float b)
+	if a < b
+		return a
+	return b
+
+float lib__max(float a, float b)
+	if a > b
+		return a
+	return b
+	
+
+int lib__clampi(int i, int min, int max)
+	if max <= min
+		return min
+	if i > max
+		return max
+	if i < min
+		return min
+	return i
+
+int lib_loopi(int i, int min, int max)
+	if max <= min
+		return min
+	int d = max - min + 1
+	if i < min
+		int n= ( (min-i-1) / d ) + 1
+		return i + d * n
+	if i > max
+		n= ( (i-max-1) / d ) + 1
+		return i - d * n
+	return i
+
+
+
+float lib__sqr(float f)
+	return f * f
+
+float lib__clamp(float f, float min, float max)
+	if max < min
+		return min
+	if f > max
+		return max
+	if f < min
+		return min
+	return f
+
+float lib__loop(float f, float min, float max)
+	float d = max - min
+	if f < min
+		int n = i2f( (min-f) / d ) + 1
+		return f + d * i2f(n)
+	if f >= max
+		n= i2f( (f-max) / d ) + 1
+		return f - d * i2f(n)
+	return f
+
 lib__string lib__@f2s(float f, int n)
 	lib__string s
-	s.add('?')
+	
+	if f < 0.0
+		s.add('-')
+		f = -f
+	s += lib__@i2s(f)
+	if n > 0
+		s.add('.')
+		int e = 1
+		float fe = 1.0
+		for i in 0:n
+			e = e *10
+			fe *= 10.0
+		int after = f2i(f*fe) % e
+		for i in 0:n
+			e /= 10
+			s.add(((after / e) % 10) + 0x30)
 	return s
 
 lib__string lib__p2s(void *p)

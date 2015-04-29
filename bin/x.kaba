@@ -15,6 +15,7 @@ const int XCMD_WINDOW_GET_POS = 2049
 
 
 const int WF_TRANSPARENT = 1024
+const int WF_DONT_INVALIDATE = 2048
 
 class MouseController
 	int x, y
@@ -112,7 +113,8 @@ class XWindow
 			buf = shmat(shm_id, 0)
 			windows.add(self)
 			sort_windows()
-			invalidated.add(r)
+			if (flags & WF_DONT_INVALIDATE) == 0
+				invalidated.add(r)
 		
 	void __delete__()
 		print "x: del win\n"
@@ -264,7 +266,7 @@ class Client
 				buf[32] = 0
 				kill_me = true
 			else if buf[1] == XCMD_WINDOW_NEW
-				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2)
+				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2 | WF_DONT_INVALIDATE)
 				win.add(ww)
 				buf[32] = 0
 				buf[33] = ww.id

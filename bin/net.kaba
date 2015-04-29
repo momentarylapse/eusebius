@@ -90,16 +90,4 @@ void main()
 	
 	show_cpu()
 	
-	sleep(2)
-	
-	
-	float f = 2
-	f *= f
-	
-	int *p = &f
-	printh(*p)
-	print "\n"
-	
-	
-	print "\n----ok----\n"		
 	exit(0)
