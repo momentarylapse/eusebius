@@ -1,4 +1,3 @@
-#define __OS__
 use "lib/std.kaba"
 
 class UTSName

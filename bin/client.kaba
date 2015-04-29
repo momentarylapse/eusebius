@@ -1,4 +1,3 @@
-#define __OS__
 use "lib/std.kaba"
 use "lib/x.kaba"
 use "lib/draw.kaba"

@@ -1,7 +1,12 @@
 KABA  = kaba
 #KABA  = ~/Projekte/Kaba/Debug/Kaba
-FLAGS =  --x86 --no-std-lib
-PFLAGS =  --x86 --no-std-lib --import-symbols kalib_symbols
+MACHINE = --x86
+FLAGS =  $(MACHINE) --no-std-lib
+LOADERFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7c00
+INITFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7e00
+KERNELFLAGS = $(MACHINE)  --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
+PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point --import-symbols kalib_symbols
+LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00030000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/date bin/sleep bin/uname bin/client bin/pci bin/net bin/error bin/k bin/rm bin/rmdir
@@ -10,20 +15,17 @@ LIBS = lib/kalib
 
 all : bochs/c.img
 
-test : test.kaba
-	$(KABA) --x86 -o test test.kaba
-
 init : init.kaba
-	$(KABA) --x86 -o init init.kaba
+	$(KABA) $(INITFLAGS) -o init init.kaba
 
 kernel/kernel : kernel/*.kaba kernel/dev/*.kaba kernel/fs/*.kaba kernel/io/*.kaba kernel/irq/*.kaba kernel/mem/*.kaba kernel/task/*.kaba kernel/time/*.kaba
-	$(KABA) --x86 -o kernel/kernel kernel/kernel.kaba
+	$(KABA) $(KERNELFLAGS) -o kernel/kernel kernel/kernel.kaba
  
 loader_fake : loader_fake.kaba
-	$(KABA) --x86 -o loader_fake loader_fake.kaba
+	$(KABA) $(LOADERFLAGS) -o loader_fake loader_fake.kaba
  
 loader_br : loader_br.kaba
-	$(KABA) --x86 -o loader_br loader_br.kaba
+	$(KABA) $(LOADERFLAGS) -o loader_br loader_br.kaba
 
 bin/hello: bin/hello.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/hello bin/hello.kaba
@@ -101,7 +103,7 @@ bin/k: bin/k.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/k bin/k.kaba
 
 lib/kalib: lib/kalib.kaba
-	$(KABA) --x86 -o lib/kalib --export-symbols kalib_symbols lib/kalib.kaba
+	$(KABA) $(LIBFLAGS) -o lib/kalib --export-symbols kalib_symbols lib/kalib.kaba
 
 kalib_symbols : lib/kalib lib/kalib.kaba
 
