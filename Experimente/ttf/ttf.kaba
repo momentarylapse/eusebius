@@ -1,0 +1,174 @@
+
+class BEShort
+	char[2] c
+	int int()
+		int a = c[0]
+		int b = c[1]
+		return (a << 8) + b
+class BELong
+	char[4] x
+	int int()
+		int a = x[0]
+		int b = x[1]
+		int c = x[2]
+		int d = x[3]
+		return (a << 24) + (b << 16) + (c << 8) + d
+
+class Fixed
+	BEShort a, b
+
+void read(File *f, char[0]* p, int size)
+	string s = f.read(size)
+	for i in 0:size
+		p[i] = s[i]
+
+class TTFTableDirectory
+	Fixed version
+	BEShort num_tables
+	BEShort seach_range
+	BEShort entry_selector
+	BEShort range_shift
+
+class TTFTableDirectoryEntry
+	BELong tag, chksum, offset, length
+	string name()
+		string s
+		s.add(tag.x[0])
+		s.add(tag.x[1])
+		s.add(tag.x[2])
+		s.add(tag.x[3])
+		return s
+
+class TTFMapHeader
+	BEShort version, num_tables
+
+class TTFMapTable
+	BEShort platform, encoding
+	BELong offset
+
+class TTFGlyphHeader
+	BEShort num_contours
+	BEShort xmin, ymin, xmax, ymax
+
+class TTFContour
+	int dummy
+	
+
+class TTFGlyph
+	TTFContour[] contours
+
+class TTF
+	TTFTableDirectory td
+	TTFTableDirectoryEntry[] tdentries
+	
+	TTFMapHeader mh
+	TTFMapTable[] mt
+	
+	File *f
+	
+	bool read_table_directory()
+	
+		read(f, &td, 12)
+		int n = td.num_tables.int()
+		if n > 1000
+			return false
+		for i in 0:n
+			TTFTableDirectoryEntry e
+			read(f, &e, 16)
+			tdentries.add(e)
+	
+		for ee in tdentries
+			print ee.name() + " " + ee.offset.int()
+		return true
+	
+	bool read_mapping()
+		int offset = get_offset("cmap")
+		if offset < 0
+			return false
+		f.seek(offset, true)
+		
+		read(f, &mh, 4)
+		int n = mh.num_tables.int()
+		print "map"
+		print mh.version.int()
+		print n
+		if n > 100000
+			return false
+		for i in 0:n
+			TTFMapTable t
+			read(f, &t, 8)
+			mt.add(t)
+		for tt in mt
+			print "-----"
+			print tt.platform.int()
+			print tt.encoding.int()
+			print tt.offset.int()
+			
+		
+		return true
+	
+	bool read_glyph()
+		TTFGlyphHeader gh
+		read(f, &gh, 10)
+		int n = gh.num_contours.int()
+		print "glyph"
+		print n
+		if n > 30000
+			return false
+		
+		BEShort[] endpoints
+		endpoints.resize(n)
+		read(f, &endpoints[0], n*2)
+		BEShort instrlen
+		read(f, &instrlen, 2)
+		n = instrlen.int()
+		f.read(n) // instr
+		string flags = f.read(n)
+		for e in endpoints
+			print e.int()
+		
+		return true
+	
+	bool read_glyphs()
+		int offset = get_offset("glyf")
+		if offset < 0
+			return false
+		f.seek(offset, true)
+		
+		read_glyph()
+			
+		
+		return true
+	
+	bool load(string filename)
+
+		f = FileOpen(filename)
+		if !f
+			return false
+		f.setBinaryMode(true)
+		
+		if !read_table_directory()
+			return false
+		if !read_mapping()
+			return false
+		if !read_glyphs()
+			return false
+	
+		delete f
+		return true
+		
+	int get_offset(string tag)
+		for ee in tdentries
+			if tag == ee.name()
+				return ee.offset.int()
+		return -1
+
+void main(string[] arg)
+	if arg.num == 0
+		return
+	
+	TTF ttf
+	ttf.load(arg[0])
+	
+
+

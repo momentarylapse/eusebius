@@ -27,7 +27,7 @@ void main()
 	p.set_color(White)
 	p.set_rect(rect(10, 30, 10, 30))
 	p.fill()
-	p.line_width = 1
+	p.line_width = 3
 	p.path_add(10, 20)
 	p.path_add(80, 30)
 	p.path_add(90, 90)
@@ -35,6 +35,7 @@ void main()
 	p.path_close()
 	p.strike()
 	p.circle(60, 60, 10)
+	p.spline(complex(0,0), complex(100, 0), complex(100, 100))
 	p.end()
 	
 	while true

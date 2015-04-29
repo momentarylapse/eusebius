@@ -15,7 +15,9 @@ int lib_error
 bool __free_error__
 
 int __temp_i__, __temp_i2__, __temp_i3__
+float __temp_f__
 void* __temp_p__, __temp_p2__
+
 int _p2i(void *p)
 	int* i = &p
 	return *i
@@ -1097,6 +1099,14 @@ int lib_loopi(int i, int min, int max)
 
 float lib__sqr(float f)
 	return f * f
+
+float lib__sqrt(float f)
+	__temp_f__ = f
+	asm{
+		sqrtss xmm0, __temp_f__
+		movss __temp_f__, xmm0
+	}
+	return __temp_f__
 
 float lib__clamp(float f, float min, float max)
 	if max < min

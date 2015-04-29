@@ -99,6 +99,17 @@ class XPainter
 				dx += 1.0
 				index ++
 	
+	void spline(complex a, complex b, complex c)
+		int n = 12
+		complex z1 = a
+		for i in 1:n
+			float t = i2f(i) / n
+			float s = 1 - t
+			complex z2 = a * (s*s) + b * (s*t*2.0) + c * (t*t)
+			line(z1, z2)
+			z1 = z2
+		line(z2, c)
+	
 	void path_add(float x, float y)
 		path.add(complex(x, y))
 	
