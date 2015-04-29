@@ -4,6 +4,36 @@ use "x.kaba"
 class XPainter
 	int[0]* buf
 	int w, h
+	bool error
+	int cur_color
+	XWindow *win
 	
-	void __init__(XWindow *win)
+	void __init__(XWindow *_win)
+		win = _win
+		error = true
+		buf = win.buf
+		if !win.get_size(&w, &h)
+			print "Draw-Fehler: get_size()\n"
+			return
+		error = false
+		cur_color = 0xff000000
+	
+	void set_color(int r, int g, int b, int a)
+		cur_color = b + (g << 8) + (r << 16) + (a << 24)
+	
+	void draw_pixel(int x, int y)
+		if x < 0 or x >= w
+			return
+		if y < 0 or y >= h
+			return
+		int index = x + y * w
+		buf[index] = cur_color
+	
+	void fill()
+		int n = w * h
+		for i in 0:n
+			buf[i] = cur_color
+		
+	void end()
+		win.invalidate()
 		

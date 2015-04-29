@@ -5,6 +5,7 @@ PFLAGS =  --x86 --no-std-lib --import-symbols kalib_symbols
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = bin/hello bin/shell bin/cat bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/date bin/sleep bin/uname bin/client bin/pci bin/net bin/error bin/k bin/rm bin/rmdir
+PDEP = kalib_symbols bin/lib/*.kaba
 LIBS = lib/kalib
 
 all : bochs/c.img
@@ -24,79 +25,79 @@ loader_fake : loader_fake.kaba
 loader_br : loader_br.kaba
 	$(KABA) --x86 -o loader_br loader_br.kaba
 
-bin/hello: bin/hello.kaba kalib_symbols
+bin/hello: bin/hello.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/hello bin/hello.kaba
 
-bin/shell: bin/shell.kaba kalib_symbols
+bin/shell: bin/shell.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/shell bin/shell.kaba
 
-bin/cat: bin/cat.kaba kalib_symbols
+bin/cat: bin/cat.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/cat bin/cat.kaba
 
-bin/hd: bin/hd.kaba kalib_symbols
+bin/hd: bin/hd.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/hd bin/hd.kaba
 
-bin/echo: bin/echo.kaba kalib_symbols
+bin/echo: bin/echo.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/echo bin/echo.kaba
 
-bin/kill: bin/kill.kaba kalib_symbols
+bin/kill: bin/kill.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/kill bin/kill.kaba
 
-bin/ls: bin/ls.kaba kalib_symbols
+bin/ls: bin/ls.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/ls bin/ls.kaba
 
-bin/top: bin/top.kaba kalib_symbols
+bin/top: bin/top.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/top bin/top.kaba
 
-bin/touch: bin/touch.kaba kalib_symbols
+bin/touch: bin/touch.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/touch bin/touch.kaba
 
-bin/mkdir: bin/mkdir.kaba kalib_symbols
+bin/mkdir: bin/mkdir.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/mkdir bin/mkdir.kaba
 
-bin/mkfifo: bin/mkfifo.kaba kalib_symbols
+bin/mkfifo: bin/mkfifo.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/mkfifo bin/mkfifo.kaba
 
-bin/tr: bin/tr.kaba kalib_symbols
+bin/tr: bin/tr.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/tr bin/tr.kaba
 
-bin/less: bin/less.kaba kalib_symbols
+bin/less: bin/less.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/less bin/less.kaba
 
-bin/x: bin/x.kaba kalib_symbols
+bin/x: bin/x.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/x bin/x.kaba
 
-bin/shmem: bin/shmem.kaba kalib_symbols
+bin/shmem: bin/shmem.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/shmem bin/shmem.kaba
 
-bin/date: bin/date.kaba kalib_symbols
+bin/date: bin/date.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/date bin/date.kaba
 
-bin/sleep: bin/sleep.kaba kalib_symbols
+bin/sleep: bin/sleep.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/sleep bin/sleep.kaba
 
-bin/uname: bin/uname.kaba kalib_symbols
+bin/uname: bin/uname.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/uname bin/uname.kaba
 
-bin/client: bin/client.kaba kalib_symbols
+bin/client: bin/client.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/client bin/client.kaba
 
-bin/pci: bin/pci.kaba kalib_symbols
+bin/pci: bin/pci.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/pci bin/pci.kaba
 
-bin/net: bin/net.kaba kalib_symbols
+bin/net: bin/net.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/net bin/net.kaba
 
-bin/rm: bin/rm.kaba kalib_symbols
+bin/rm: bin/rm.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/rm bin/rm.kaba
 
-bin/rmdir: bin/rmdir.kaba kalib_symbols
+bin/rmdir: bin/rmdir.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/rmdir bin/rmdir.kaba
 
-bin/error: bin/error.kaba kalib_symbols
+bin/error: bin/error.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/error bin/error.kaba
 
-bin/k: bin/k.kaba kalib_symbols
+bin/k: bin/k.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/k bin/k.kaba
 
 lib/kalib: lib/kalib.kaba

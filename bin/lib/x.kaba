@@ -12,31 +12,48 @@ class XWindow
 	int id
 	int[0]* buf
 	XConnection *con
-	void invalidate()
-		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
-	void move(int x, int y)
-		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
-	void get_size(int *w, int *h)
-		con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
+	void __init__(XConnection *c, int _id, int key)
+		con = c
+		id = _id
+		int mem_id = shmget(key, 0, 0)
+		buf = shmat(mem_id, 0)
+	void __delete__()
+		if buf
+			shmdt(buf)
+	bool invalidate()
+		return con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1) == 0
+	bool move(int x, int y)
+		return con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0) == 0
+	bool get_size(int *w, int *h)
+		int r = con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
 		*w = con.buf[33]
 		*h = con.buf[34]
 		con.wait_clear()
+		return r == 0
 		
 
 class XConnection
 	int[0]* buf
+	bool error
 	
 	void __init__()
+		error = true
 	
 		int key = randi(1000000)
 		print "client: key=" + key + "\n"
 		int id = shmget(key, 1024, SHM_DEST | IPC_CREAT)
 		buf = shmat(id, 0)
+		if !buf
+			print "client: shmat (1) fehlgeschlagen\n"
+			return
 		buf[0] = 0
 	
 		// connect
 		int id0 = shmget(0x7bcd0123, 0, 0)
 		int[0]* buf0 = shmat(id0, 0)
+		if !buf0
+			print "client: shmat (2) fehlgeschlagen\n"
+			return
 	
 		while buf0[0] != 0
 			nil
@@ -44,8 +61,11 @@ class XConnection
 		buf0[1] = key
 		buf0[0] = 1
 		shmdt(buf0)
+		error = false
 		
 	void __delete__()
+		if error
+			return
 		send_exit()
 	
 	void wait_clear()
@@ -53,7 +73,7 @@ class XConnection
 			nil
 	
 	void clear()
-		buf[0] = 1
+		buf[0] = 0
 	
 	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		wait_clear()
@@ -77,16 +97,19 @@ class XConnection
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
 	XWindow *create_win(int x, int y, int w, int h)
+		print "client: send new win\n"
 		if just_send(XCMD_NEW_WINDOW, x, y, w, h, 0) != 0
 			print "   -- client: kein neues Fenster --\n"
 			return nil
-		XWindow *win = new XWindow
-		win.con = self
-		win.id = buf[33]
-		int key = buf[34]
+		print "ok"
+		int win_id = buf[33]
+		int win_key = buf[34]
 		clear()
-		int id = shmget(key, 0, 0)
-		win.buf = shmat(id, 0)
-		print "client: ok " + key + " " + id + "\n"
+		XWindow *win = new XWindow(self, win_id, win_key)
+		if !win.buf
+			print "  -- client: konnte Fenster nicht anlegen --\n"
+			delete win
+			return nil
+		//print "client: ok\n"// " + key + " " + id + "\n"
 		return win
 		

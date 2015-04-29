@@ -239,12 +239,16 @@ class Client
 	int[0]* buf
 	bool kill_me
 	XWindow*[] win
+	int key
 	
-	void __init__(int key)
+	void __init__(int _key)
+		key = _key
 		kill_me = false
-		print "x: new client " + key + "\n"
+		print "x: new client key=" + key + " \n"
 		int id = shmget(key, 0, 0)
 		buf = shmat(id, 0)
+		if !buf
+			print "  -- x: Fehler shmat (2) --\n"
 	
 	void __delete__()
 		print "x: del client\n"
@@ -253,8 +257,8 @@ class Client
 			delete w
 	
 	void update()
-		usleep(100000)
 		if buf[0] == 1
+			buf[0] = 13
 			buf[32] = -1
 			print "x: empfange\n"
 			if buf[1] == XCMD_KILL
@@ -266,7 +270,7 @@ class Client
 				buf[32] = 0
 				buf[33] = ww.id
 				buf[34] = ww.shm_key
-				print "x: key=" + ww.shm_key + "\n"
+				print "x: c.key=" + key + " w.key=" + ww.shm_key + "\n"
 			else if buf[1] == XCMD_WINDOW_INVALIDATE
 				for w in win
 					if w.id == buf[2]
@@ -305,13 +309,18 @@ class CommandController
 		//connection = open("/tmp/x", O_RDONLY)
 		int id = shmget(0x7bcd0123, 1024, SHM_DEST | IPC_CREAT)
 		buf = shmat(id, 0)
+		if !buf
+			print "x: Fehler shmat (1)\n"
+			exit(-1)
 		
 		buf[0] = 0
 	
 	void update()
 		if buf[0] == 1
+			buf[0] = 13
 			clients.add(new Client(buf[1]))
 			buf[0] = 0
+			
 		for c in clients
 			c.update()
 		for i in 0:clients.num
@@ -337,22 +346,6 @@ void main()
 	
 	cmds = new CommandController
 	mouse = new MouseController
-	
-	pci = new PCIController
-	pci.scan()
-	PCIDevice *dev = pci.get(0x1111, 0x1234)
-	if dev
-		print "pci dev found, mem="
-		printh dev.getMemAddr0()
-		print "\n"
-	
-		int id = shmget(dev.getMemAddr0(), 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
-		if id >= 0
-			vga_mem2 = shmat(id, 0)
-		else
-			kprint " ...Fehler: kann nicht mappen\n"
-	else
-		print "pci dev not found\n"
 	
 	if arg.num == 1
 		BgaSetVideoMode(640, 480, 32)

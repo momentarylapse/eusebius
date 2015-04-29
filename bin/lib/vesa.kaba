@@ -108,4 +108,21 @@ void vesa_init()
 	screen_height = 600
 	graphics_enabled = false
 	vga_mem2 = nil
+	
+	
+	pci = new PCIController
+	pci.scan()
+	PCIDevice *dev = pci.get(0x1111, 0x1234)
+	if dev
+		print "pci dev found, mem="
+		printh dev.getMemAddr0()
+		print "\n"
+	
+		int id = shmget(dev.getMemAddr0(), 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
+		if id >= 0
+			vga_mem2 = shmat(id, 0)
+		else
+			kprint " ...Fehler: kann nicht mappen\n"
+	else
+		print "pci dev not found\n"
 
