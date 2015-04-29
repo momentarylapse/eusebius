@@ -923,6 +923,8 @@ class lib__int@list : lib__@DynamicArray
 	overwrite int[0]* data
 	void __init__()
 		__mem_init__(sizeof(int))
+	void clear()
+		__mem_clear__()
 	void resize(int size)
 		if size > num
 			reserve(size)
@@ -941,6 +943,8 @@ class lib__bool@list : lib__@DynamicArray
 	overwrite bool[0]* data
 	void __init__()
 		__mem_init__(sizeof(bool))
+	void clear()
+		__mem_clear__()
 	void resize(int size)
 		if size > num
 			reserve(size)
@@ -1162,6 +1166,31 @@ lib__string lib__@ia2s(lib__int@list a)
 		r += lib__@i2s(a.data[i])
 	r.add(']')
 	return r
+
+class lib__complex
+	float x, y
+
+
+
+class lib__complex@list : lib__@DynamicArray
+	overwrite complex[0]* data
+	void __init__()
+		__mem_init__(sizeof(complex))
+	void clear()
+		__mem_clear__()
+	void resize(int size)
+		if size > num
+			reserve(size)
+		num = size
+	void add(complex c)
+		resize(num + 1)
+		data[num - 1] = c
+	void remove(int index)
+		if (index < 0) or (index >= num)
+			return
+		for i in index : num - 1
+			data[i] = data[i+1]
+		resize(num - 1)
 
 void lib__print(string s)
 	int done = 0

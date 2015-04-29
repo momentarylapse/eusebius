@@ -28,6 +28,8 @@ class XPainter
 	bool error
 	int cur_color
 	rect cur_rect
+	complex[] path
+	bool path_closed
 	float line_width
 	XWindow *win
 	
@@ -42,6 +44,7 @@ class XPainter
 		set_color(Black)
 		set_rect(rect(0, w, 0, h))
 		line_width = 1.0
+		path_closed = false
 	
 	void set_color(color c)
 		cur_color = col2i(c)
@@ -95,6 +98,26 @@ class XPainter
 						buf[index] = add_blend(buf[index], cur_color, 0.5)
 				dx += 1.0
 				index ++
+	
+	void path_add(float x, float y)
+		path.add(complex(x, y))
+	
+	void path_close()
+		path_closed = true
+	
+	void path_clear()
+		path.clear()
+		path_closed = false
+	
+	void strike()
+		if path.num > 0
+			complex s = path[0]
+			for d in path
+				line(s, d)
+				s = d
+			if path_closed
+				line(s, path[0])
+		path_clear()
 	
 	void circle(float mx, float my, float r)
 		r += 0.5
