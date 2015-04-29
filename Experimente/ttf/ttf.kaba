@@ -1,10 +1,19 @@
 
-class BEShort
+class BEUShort
 	char[2] c
 	int int()
 		int a = c[0]
 		int b = c[1]
 		return (a << 8) + b
+class BESShort
+	char[2] c
+	int int()
+		int a = c[0]
+		int b = c[1]
+		int r = (a << 8) + b
+		if (r & 0x8000) != 0
+			r -= 1<<16
+		return r
 class BELong
 	char[4] x
 	int int()
@@ -15,7 +24,7 @@ class BELong
 		return (a << 24) + (b << 16) + (c << 8) + d
 
 class Fixed
-	BEShort a, b
+	BEUShort a, b
 
 void read(File *f, char[0]* p, int size)
 	string s = f.read(size)
@@ -24,10 +33,10 @@ void read(File *f, char[0]* p, int size)
 
 class TTFTableDirectory
 	Fixed version
-	BEShort num_tables
-	BEShort seach_range
-	BEShort entry_selector
-	BEShort range_shift
+	BEUShort num_tables
+	BEUShort seach_range
+	BEUShort entry_selector
+	BEUShort range_shift
 
 class TTFTableDirectoryEntry
 	BELong tag, chksum, offset, length
@@ -40,15 +49,15 @@ class TTFTableDirectoryEntry
 		return s
 
 class TTFMapHeader
-	BEShort version, num_tables
+	BEUShort version, num_tables
 
 class TTFMapTable
-	BEShort platform, encoding
+	BEUShort platform, encoding
 	BELong offset
 
 class TTFGlyphHeader
-	BEShort num_contours
-	BEShort xmin, ymin, xmax, ymax
+	BESShort num_contours
+	BESShort xmin, ymin, xmax, ymax
 
 class TTFContour
 	int dummy
@@ -108,26 +117,102 @@ class TTF
 		return true
 	
 	bool read_glyph()
+		int pos = f.getPos()
 		TTFGlyphHeader gh
 		read(f, &gh, 10)
 		int n = gh.num_contours.int()
-		print "glyph"
+		print "glyph---------------------------------"
 		print n
-		if n > 30000
+		if n < 0
+			print "---compound"
 			return false
+		if n > 1000
+			print "???"
+			return false
+			
+		print "" + gh.xmin.int() + ":" + gh.xmax.int()
+		print "" + gh.ymin.int() + ":" + gh.ymax.int()
 		
-		BEShort[] endpoints
+		// endpoints
+		BEUShort[] endpoints
 		endpoints.resize(n)
 		read(f, &endpoints[0], n*2)
-		BEShort instrlen
+		
+		for e in endpoints
+			print "e " + e.int()
+		
+		// instructions???
+		BEUShort instrlen
 		read(f, &instrlen, 2)
 		n = instrlen.int()
+		print "instr: " + n
 		f.read(n) // instr
-		string flags = f.read(n)
-		for e in endpoints
-			print e.int()
 		
+		int num_points = endpoints[endpoints.num-1].int()+1
+		print "points: " + num_points
+		
+		// flags
+		string flags = read_contour_flags(num_points)
+		print flags.hex(false)
+		
+		float[] x = read_contour_coords(num_points, flags, 0x02, 0x10)
+		float[] y = read_contour_coords(num_points, flags, 0x04, 0x20)
+		print x
+		print y
+		
+		print f.getPos()-pos
+		/*string rr = f.read(16)
+		print rr.hex(false)
+		f.seek(-16+2, false)*/
+		int ttt
+		//read(f, &ttt, 2)
 		return true
+	
+	string read_contour_flags(int n)
+		string flags
+		flags.resize(n)
+		
+		for i in 0:n
+			char c, cn
+			read(f, &c, 1)
+			flags[i] = c
+			
+			if (c & 0x08) != 0x00
+				print "repeat"
+				read(f, &cn, 1)
+				for j in 0:cn
+					flags[i+j] = c
+				i += cn
+		
+		return flags
+	
+	float[] read_contour_coords(int n, string flags, int mask_short, int mask_same)
+		float[] x
+		x.resize(n)
+		float cur = 0
+		for i in 0:n
+			int ff = flags[i]
+			
+			bool is_same = (ff & mask_same) != 0
+			bool is_short = (ff & mask_short) != 0
+			if is_same and !is_short
+				print "rep"
+			else
+				int t = 0
+				BESShort t2
+				if is_short
+					print "1b"
+					read(f, &t, 1)
+					if !is_same
+						t = -t
+				else
+					print "2b"
+					read(f, &t2, 2)
+					t = t2.int()
+				cur += t
+			x[i] = cur
+					
+		return x
 	
 	bool read_glyphs()
 		int offset = get_offset("glyf")
@@ -135,7 +220,9 @@ class TTF
 			return false
 		f.seek(offset, true)
 		
-		read_glyph()
+		for i in 0:5
+			if !read_glyph()
+				return false
 			
 		
 		return true
