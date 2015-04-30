@@ -200,6 +200,8 @@ void int_syscall()
 				// don't overwrite eax with return value
 				jmp __sys_call_return
 			}
+		else if index == 0x2007 // map IRQ
+			r = irq.sys_map_irq(param1, caller, param2)
 		else
 			r = -ENOSYS
 		/*TextColor = 4

@@ -38,20 +38,37 @@ class InterruptDescriptor
 			a = 0x00080000*t.desc // desc,0[15..0]
 			b = 0x00008500 // 0[31..16],typ
 
+class InterruptToSignalMap
+	int pid, puid
+	int signal
+
 class InterruptController
 	InterruptDescriptor[256] idt
+	InterruptToSignalMap[256] task_maps
+	
+	void deny_user_map(int id)
+		if id < 0 and id >= 256
+			return
+		task_maps[id].pid = 666666
+		
 	
 	void set(int id, void* func)
 		idt[id].set(func)
+		if func
+			deny_user_map(id)
 	
 	void set_task(int id, Task* t)
 		idt[id].set_task(t)
+		if t
+			deny_user_map(id)
 
 	void init()
 		prints("loading interrupt table...")
 
 		for i in idt
 			i.set(nil)
+		for m in task_maps
+			m.pid = -1
 		
 	
 		IgnoreTask = AddTaskKernel("irq-ignore", &int_ignore, 128, KernelTask)
@@ -86,5 +103,19 @@ class InterruptController
 		}
 	
 		prints("   ok\n")
+	
+	int sys_map_irq(int irq, Task *t, int signal)
+		if irq < 0 or irq >= 256
+			return -EINVAL
+		if signal < 0 or signal >= 32
+			return -EINVAL
+		InterruptToSignalMap* m = &task_maps[irq]
+		if m.pid >= 0
+			return -EEXIST
+		m.pid = t.pid
+		m.puid = t.puid
+		m.signal = signal
+		return 0
+		
 
 InterruptController irq

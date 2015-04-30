@@ -139,7 +139,7 @@ class Task
 	int[0]* stack
 	int stack_size
 	int desc // Index in GDT
-	int pid, status
+	int pid, puid, status
 	int return_status
 	int waiting_mode
 	int waiting_param_i1, waiting_param_i2, waiting_param_i3
@@ -169,6 +169,8 @@ class Task
 		sleep_and_wait = false
 			
 		pid = _pid
+		puid = NextPuidToAssign
+		NextPuidToAssign ++
 
 		strcpy(&name, &_name)
 		desc = NUM_PRE_GDT_ENTRIES + pid
@@ -587,6 +589,7 @@ Task[MAX_TASKS] Tasks
 Task* KernelTask
 Task* IdleTask
 int NextPidToAssign
+int NextPuidToAssign
 int RunningPid
 
 class GlobalDescriptorData
@@ -698,6 +701,7 @@ void InitTasks()
 			sm.s = nil
 
 	NextPidToAssign = 0
+	NextPuidToAssign = 0
 	//UserMemMask = 0
 	RunningPid = 0
 

@@ -97,6 +97,7 @@ extern int nanosleep(TimeValue a, TimeValue b)
 extern int sleep(int sec)
 extern int usleep(int usec)
 extern bool sigaction(int sig, void* f)
+extern bool mapirq(int irq, int signal)
 
 extern void kprint(string s)
 extern void kprinti(int i)

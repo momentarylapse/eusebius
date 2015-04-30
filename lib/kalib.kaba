@@ -485,6 +485,18 @@ void kprinti(int i)
 		mov ebx, __temp_i__
 		int 0x80
 	}
+	
+bool mapirq(int irq, int signal)
+	__temp_i__ = irq
+	__temp_i2__ = signal
+	asm{
+		mov eax, 0x00002007
+		mov ebx, __temp_i__
+		mov ecx, __temp_i2__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
 
 void get_args(lib__string@list arg)
 	cstring cs
