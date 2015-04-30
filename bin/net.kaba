@@ -95,7 +95,7 @@ void main()
 	
 	if !sigaction(23, &handler)
 		print "---E1\n"
-	if !mapirq(33, 23) // key
+	if !mapirq(1, 23) // key
 		print "---E2\n"
 	print "ok\n"
 	while true

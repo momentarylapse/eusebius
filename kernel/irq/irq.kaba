@@ -4,6 +4,8 @@ use "../io/io.kaba"
 use "../task/task.kaba"
 
 
+const int HARDWARE_IRQ_SHIFT = 32
+
 void int_ignore()
 	//prints("[ignore irq]")
 	asm{
@@ -24,7 +26,7 @@ void int_task_irq()
 			t.handle_signal(m.signal)
 		
 		// allow more
-		if irq_no >= 40
+		if irq_no >= 8
 			outportb(0xa0, 0x20)
 		outportb(0x20, 0x20)
 		asm{
@@ -59,7 +61,7 @@ class InterruptDescriptor
 			b = 0x00008500 // 0[31..16],typ
 
 class InterruptToSignalMap
-	int irq
+	int irq // hardware IRQ  (!= shifted version...)
 	int pid, puid
 	int signal
 	Task *ktask
@@ -67,7 +69,7 @@ class InterruptToSignalMap
 
 class InterruptController
 	InterruptDescriptor[256] idt
-	InterruptToSignalMap[256] task_maps
+	InterruptToSignalMap[16] task_maps
 	
 	void deny_user_map(int id)
 		if id < 0 and id >= 256
@@ -103,7 +105,7 @@ class InterruptController
 		// move IRQs to higher interrupts
 		outportb(0x20,0x11) // init
 		outportb(0xa0,0x11)
-		outportb(0x21,0x20) // offset 32
+		outportb(0x21,HARDWARE_IRQ_SHIFT) // offset
 		outportb(0xa1,0x28)
 		outportb(0x21,0x04) // master/slave identity stuff?
 		outportb(0xa1,0x02)
@@ -130,18 +132,18 @@ class InterruptController
 	
 		prints("   ok\n")
 	
-	int sys_map_irq(int irq, Task *t, int signal)
-		if irq < 0 or irq >= 256
+	int sys_map_irq(int hw_irq, Task *t, int signal)
+		if hw_irq < 0 or hw_irq >= 16
 			return -EINVAL
 		if signal < 0 or signal >= 32
 			return -EINVAL
-		InterruptToSignalMap* m = &task_maps[irq]
+		InterruptToSignalMap* m = &task_maps[hw_irq]
 		if m.pid >= 0
 			return -EEXIST
 		if !m.ktask
 			m.ktask = AddTaskKernel("irq-task", &int_task_irq, 4096, KernelTask)
-			set_task(irq, m.ktask)
-			m.ktask.tss.esi = irq
+			set_task(hw_irq + HARDWARE_IRQ_SHIFT, m.ktask)
+			m.ktask.tss.esi = hw_irq
 		m.pid = t.pid
 		m.puid = t.puid
 		m.signal = signal
