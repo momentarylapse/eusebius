@@ -15,8 +15,10 @@ const int MAX_OPEN_FILES_PER_TASK = 16
 const int MAX_SHARED_MEMS_PER_TASK = 16
 
 const int SIGKILL = 9
+const int SIGSEGV = 11
 const int SIGCONT = 18
 const int SIGSTOP = 19
+const int SIGX = 23
 
 
 //--------------------------------------------------------------
@@ -32,6 +34,8 @@ const int TASK_STACK_SIZE = 0x00080000 // 512k
 const int TASK_STACK_POS = 0x00880000
 const int NUM_PRE_GDT_ENTRIES = 5
 const int INITIAL_TASK_MEM = 0x00800000 // 8m
+
+const int TASK_MAX_MESSAGES = 16
 
 enum
 	TASK_STATUS_UNUSED
@@ -106,6 +110,24 @@ class TaskSharedMemoryRef
 	SharedMemory *s
 	int dest // task space
 
+int __handler_p__
+
+void TaskSignalHandler()//void *p)
+	asm{
+		//mov __handler_p__, eax
+	}
+	//__temp_p__ = p
+	prints("-----signal-handler-----\n")
+	printh(&__handler_p__, 4)
+	//__temp_p__ = p
+	asm{
+		mov eax, __handler_p__
+		call [eax]
+	}
+	while true
+		nil
+	
+
 class Task
 	TaskStateSegment tss
 	int[0]* stack
@@ -129,6 +151,41 @@ class Task
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
 	TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK] shmem
+	
+	int[32] signal_handlers
+	TaskStateSegment signal_reg_buf
+	bool in_signal
+	
+	void init(int _pid, cstring _name, Task *_parent)
+		for s in signal_handlers
+			s = 0
+			
+		pid = _pid
+
+		strcpy(&name, &_name)
+		desc = NUM_PRE_GDT_ENTRIES + pid
+		status = TASK_STATUS_SLEEPING
+		parent = _parent
+		if parent
+			cur_dir = parent.cur_dir
+		else
+			cur_dir = FileSystem.root
+		kernel_mode = false
+	
+		/*t.stack_size = TASK_STACK_SIZE
+	t.stack = _i2p(TASK_STACK_POS)
+	t.mem_bottom = KERNEL_MEM
+	t.mem_size = INITIAL_TASK_MEM
+	t.page_dir = paging.create_page_directory()
+	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
+	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+		panic("incomplete page dir") // ...
+	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+	GlobalDescriptorTable[t.desc].set_task(t)*/
+	
+		time_all.clear()
+		load = 0
+		time_temp.clear()
 	
 	void __assign__(Task o)
 		nil
@@ -242,6 +299,37 @@ class Task
 		
 	int get_prev_pid()
 		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		
+	int handle_signal(int signal)
+		if signal < 0 or signal >= 32
+			return -EINVAL
+		
+		if in_signal
+			die(0) // we're very friendly :-P
+
+
+		if signal_handlers[signal] != 0
+			in_signal = true
+			memcpy(&signal_reg_buf, &tss, sizeof(TaskStateSegment))
+			tss.eax = signal_handlers[signal]
+			__handler_p__ = tss.eax
+			tss.esp = tss.esp2
+			tss.ebp = tss.esp2
+			tss.eip = &TaskSignalHandler
+			prints "[a "
+			printh(&tss.eax, 4)
+			prints "]"
+		else
+			// default actions
+			if signal == SIGSTOP
+				if status == TASK_STATUS_RUNNING
+					status = TASK_STATUS_SLEEPING
+			else if signal == SIGCONT
+				if status == TASK_STATUS_SLEEPING
+					status = TASK_STATUS_RUNNING
+			else
+				die(0)
+		return 0
 
 //--------------------------------------------------------------
 // Dateizugriff
@@ -375,15 +463,7 @@ class Task
 		Task* t = get_task(_pid)
 		if !t
 			return -ESRCH
-		if signal == SIGKILL
-			t.die(0)
-		else if signal == SIGSTOP
-			if t.status == TASK_STATUS_RUNNING
-				t.status = TASK_STATUS_SLEEPING
-		else if signal == SIGCONT
-			if t.status == TASK_STATUS_SLEEPING
-				t.status = TASK_STATUS_RUNNING
-		return 0
+		return t.handle_signal(signal)
 	
 	int sys_nanosleep(int p1, int p2)
 		TimeValue tv
@@ -467,6 +547,16 @@ class Task
 					r.s.unref()
 					r.s = nil
 		return -EINVAL
+	
+	int sys_sigaction(int sig, int addr)
+		if sig < 0 or sig >= 32 or sig == SIGSTOP or sig == SIGKILL
+			return -EINVAL
+		prints "[sig handler]"
+		printi sig
+		prints " "
+		printh(&addr, 4)
+		signal_handlers[sig] = addr
+		return 0
 
 Task *get_task(int pid)
 	if pid < 0 or pid >= MAX_TASKS
@@ -523,16 +613,8 @@ Task* AddTaskUser(cstring name, void *func, Task *parent)
 	if pid < 0
 		return nil
 	Task* t = &Tasks[pid]
-	t.pid = pid
-
-	strcpy(&t.name, &name)
-	t.desc = NUM_PRE_GDT_ENTRIES + pid
-	t.status = TASK_STATUS_SLEEPING
-	if parent
-		t.cur_dir = parent.cur_dir
-	else
-		t.cur_dir = FileSystem.root
-	t.parent = parent
+	
+	t.init(pid, name, parent)
 	t.kernel_mode = false
 	
 	t.stack_size = TASK_STACK_SIZE
@@ -545,10 +627,6 @@ Task* AddTaskUser(cstring name, void *func, Task *parent)
 		panic("incomplete page dir") // ...
 	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
-	
-	t.time_all.clear()
-	t.load = 0
-	t.time_temp.clear()
 
 	return t
 
@@ -557,16 +635,8 @@ Task* AddTaskKernel(cstring name, void *func, int stack_size, Task* parent)
 	if pid < 0
 		return nil
 	Task* t = &Tasks[pid]
-	t.pid = pid
 
-	strcpy(&t.name, &name)
-	t.desc = NUM_PRE_GDT_ENTRIES + pid
-	t.status = TASK_STATUS_SLEEPING
-	if parent
-		t.cur_dir = parent.cur_dir
-	else
-		t.cur_dir = FileSystem.root
-	t.parent = parent
+	t.init(pid, name, parent)
 	t.kernel_mode = true
 	
 	t.stack_size = stack_size
@@ -577,10 +647,6 @@ Task* AddTaskKernel(cstring name, void *func, int stack_size, Task* parent)
 	t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
 	
 	GlobalDescriptorTable[t.desc].set_task(t)
-	
-	t.time_all.clear()
-	t.load = 0
-	t.time_temp.clear()
 
 	return t
 

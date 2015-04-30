@@ -266,6 +266,18 @@ int getpid()
 		mov __temp_i__, eax
 	}
 	return __temp_i__
+
+bool sigaction(int sig, void *f)
+	__temp_i__ = sig
+	__temp_p__ = f
+	asm{
+		mov eax, 0x00000043
+		mov ebx, __temp_i__
+		mov ecx, __temp_p__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
 	
 int waitpid(int pid, void *status, bool block)
 	__temp_i__ = pid

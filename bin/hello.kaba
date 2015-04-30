@@ -1,9 +1,15 @@
 use "lib/std.kaba"
 
+void handler()
+	print "---user handler---   \\(^_^)/\n"
 
 void main()
 	init_lib()
 	print("Hallo Welt\n")
+	
+	print p2s(&handler)
+	print "\n"
+	sigaction(23, &handler)
 	
 	while true
 		usleep(100000)

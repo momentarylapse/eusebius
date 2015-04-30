@@ -157,6 +157,8 @@ void int_syscall()
 			r = caller.sys_brk(param1)
 		else if index == 51 // fcntl
 			r = caller.sys_fcntl(param1, param2, param3)
+		else if index == 67 // sigaction
+			r = caller.sys_sigaction(param1, param2)
 		else if index == 88 // reboot
 			nil
 		else if index == 116 // sysinfo
