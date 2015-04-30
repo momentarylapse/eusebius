@@ -6,16 +6,17 @@ void main()
 	init_lib()
 	
 	TimeValue t
-	if time(t) == 0
-		print t.sec / 3600
-		print ":"
-		print (t.sec / 600) % 6
-		print (t.sec / 60) % 10
-		print ":"
-		print (t.sec / 10) % 6
-		print (t.sec     ) % 10
-		print " "
-		print t.nanosec
-		print "ns\n"
+	if !time(t)
+		exit(lib_error)
+	print t.sec / 3600
+	print ":"
+	print (t.sec / 600) % 6
+	print (t.sec / 60) % 10
+	print ":"
+	print (t.sec / 10) % 6
+	print (t.sec     ) % 10
+	print " "
+	print t.nanosec
+	print "ns\n"
 	
 	exit(0)

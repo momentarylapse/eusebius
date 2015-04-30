@@ -354,7 +354,10 @@ class Task
 			return nil
 		return handles[handle]
 
-	int sys_open(cstring filename, int flags)
+	int sys_open(int faddr, int flags)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
 		OpenFileData *of = kernel_open(filename, flags, cur_dir)
 		if !of
 			return -ENOENT
@@ -415,31 +418,56 @@ class Task
 		int[2] fd
 		fd[0] = add_handle(of_in)
 		fd[1] = add_handle(of_out)
-		page_dir.memcpy2task(addr, &fd, 8)
+		if fd[0] < 0 or fd[1] < 0
+			return -2
+		if !page_dir.memcpy2task(addr, &fd, 8)
+			return -EFAULT
+		return 0
+	
+	int sys_set_cur_dir(int faddr)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
+		return set_cur_dir(filename)
 		
-	int sys_mkdir(cstring filename)
+	int sys_mkdir(int faddr)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
 		return kernel_mkdir(filename, cur_dir)
 
-	int sys_mknod(cstring filename, int flags)
+	int sys_mknod(int faddr, int flags)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
 		return kernel_mknod(filename, flags, cur_dir)
 		
-	int sys_unlink(cstring filename)
+	int sys_unlink(int faddr)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
 		return kernel_unlink(filename, cur_dir)
 		
-	int sys_rmdir(cstring filename)
+	int sys_rmdir(int faddr)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
 		return kernel_rmdir(filename, cur_dir)
 	
-	int sys_execute(cstring filename, int fd_in, int fd_out)
-		int h = sys_open(filename, O_RDONLY)
+	int sys_execute(int faddr, int fd_in, int fd_out)
+		int h = sys_open(faddr, O_RDONLY)
 		if h < 0
 			return -ENOENT
+		OpenFileData *of = handles[h]
+		cstring filename
+		of.entry.get_path(filename)
 		int addr = TASK_IMAGE_POS // task space...
 		Task* t = AddTaskUser(filename, _i2p(addr), self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
-		memcpy(&t.arg, &filename, sizeof(cstring))
-		OpenFileData *of = handles[h]
+		if !page_dir.memcpy2kernel(&t.arg, faddr, sizeof(cstring))
+			return -EFAULT
 		while true
 			//int r = sys_read(caller, h, addr, 1024)
 			int r = of.read(t.page_dir, addr, 1024)
@@ -482,7 +510,8 @@ class Task
 	
 	int sys_nanosleep(int p1, int p2)
 		TimeValue tv
-		page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
+		if !page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
+			return -EFAULT
 		set_wait(WAITING_MODE_TIME, nil, tv.sec, tv.nanosec, 0)
 		return 0
 
@@ -552,7 +581,8 @@ class Task
 						return -ENOMEM
 					r.s.refcount ++
 					page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
-					page_dir.memcpy2task(p2, &r.dest, 4)
+					if !page_dir.memcpy2task(p2, &r.dest, 4)
+						return -EFAULT
 					return 0
 			return -1
 		if cmd == SHMDT

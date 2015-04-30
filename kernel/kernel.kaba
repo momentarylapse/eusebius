@@ -32,7 +32,7 @@ void show_pvl()
 
 void LoadKalib()
 	prints("loading kalib... ")
-	int h = KernelTask.sys_open("/lib/kalib", O_RDONLY)
+	int h = KernelTask.sys_open(_p2i(&"/lib/kalib"), O_RDONLY)
 	if h < 0
 		panic("kann /lib/kalib nicht lesen!")
 		return
@@ -104,10 +104,10 @@ void main()
 	
 	LoadKalib()
 	
-	int stdin = KernelTask.sys_open("/dev/tty", O_RDONLY)
-	int stdout = KernelTask.sys_open("/dev/tty", O_WRONLY)
+	int stdin = KernelTask.sys_open(_p2i(&"/dev/tty"), O_RDONLY)
+	int stdout = KernelTask.sys_open(_p2i(&"/dev/tty"), O_WRONLY)
 	
-	if KernelTask.sys_execute("/bin/shell", stdin, stdout) < 0
+	if KernelTask.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
 		panic("kann /bin/shell-Datei nicht lesen!")
 	
 	StartScheduler()

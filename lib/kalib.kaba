@@ -53,6 +53,7 @@ lib__string cs2s(cstring cs)
 	_cs2s(cs, s)
 	return s
 
+// ["aa", "bb"] -> "aa\0bb\0\0"
 void sa2cs(string[] a, cstring cs)
 	int n = 0
 	for k in 0:a.num
@@ -211,15 +212,15 @@ int dup(int h)
 	}
 	return __temp_i__
 
-int pipe(int[2] h)
+bool pipe(int[2] h)
 	__temp_p__ = &h
 	asm{
 		mov eax, 0x0000002a
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i__, eax
+		mov lib_error, eax
 	}
-	return __temp_i__
+	return lib_error == 0
 
 int fcntl(int h, int op, int param)
 	__temp_i__ = h
@@ -425,33 +426,33 @@ bool uname(void *buf)
 	}
 	return lib_error == 0
 
-int time(void *buf)
+bool time(void *buf)
 	__temp_p__ = buf
 	asm{
 		mov eax, 0x00000019
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
-int nanosleep(void *buf, void *buf2)
+bool nanosleep(void *buf, void *buf2)
 	__temp_p__ = buf
 	asm{
 		mov eax, 0x000000a2
 		mov ebx, __temp_p__
 		int 0x80
-		mov __temp_i3__, eax
+		mov lib_error, eax
 	}
-	return __temp_i3__
+	return lib_error == 0
 
-int sleep(int sec)
+bool sleep(int sec)
 	int[2] tv
 	tv[0] = sec
 	tv[1] = 0
 	return nanosleep(&tv, nil)
 
-int usleep(int usec)
+bool usleep(int usec)
 	int[2] tv
 	tv[0] = usec / 1000000
 	tv[1] = (usec % 1000000) * 1000
