@@ -276,6 +276,7 @@ class Task
 	void clean_up_deep()
 		clean_up_resources()
 		status = TASK_STATUS_UNUSED
+		puid = -1
 		
 	
 	void send_death_message()

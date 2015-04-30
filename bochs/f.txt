@@ -4,6 +4,10 @@ display_library: sdl
 #ne2k: enabled=1, ioaddr=0x300, irq=3, mac=b0:c4:20:00:00:00, ethmod=linux, ethdev=eth0
 ne2k: enabled=1, ioaddr=0x300, irq=3, mac=b0:c4:20:00:00:00, ethmod=vnet, ethdev=/tmp/bochsnet
 
+#sound: driver=alsa
+#sb16: midimode=1, midi=/dev/midi00, wavemode=1, loglevel=2, log=sb16.log, dmatimer=600000
+
+
 #romimage: file=BIOS-bochs-latest
 #, address=0xf0000
 #vgaromimage: file=VGABIOS-lgpl-latest

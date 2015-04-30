@@ -11,6 +11,26 @@ void int_ignore()
 	}
 Task *IgnoreTask
 
+void int_task_irq()
+	asm{
+		mov __temp_i__, esi
+	}
+	int irq_no = __temp_i__
+	InterruptToSignalMap *m = &irq.task_maps[irq_no]
+	Task *t = m.utask
+	while true
+		
+		if t.puid == m.puid
+			t.handle_signal(m.signal)
+		
+		// allow more
+		if irq_no >= 40
+			outportb(0xa0, 0x20)
+		outportb(0x20, 0x20)
+		asm{
+			iret
+		}
+
 
 
 class InterruptDescriptor
@@ -39,8 +59,11 @@ class InterruptDescriptor
 			b = 0x00008500 // 0[31..16],typ
 
 class InterruptToSignalMap
+	int irq
 	int pid, puid
 	int signal
+	Task *ktask
+	Task *utask
 
 class InterruptController
 	InterruptDescriptor[256] idt
@@ -67,8 +90,11 @@ class InterruptController
 
 		for i in idt
 			i.set(nil)
-		for m in task_maps
+		for m,i in task_maps
 			m.pid = -1
+			m.irq = i
+			m.ktask = nil
+			m.utask = nil
 		
 	
 		IgnoreTask = AddTaskKernel("irq-ignore", &int_ignore, 128, KernelTask)
@@ -112,9 +138,14 @@ class InterruptController
 		InterruptToSignalMap* m = &task_maps[irq]
 		if m.pid >= 0
 			return -EEXIST
+		if !m.ktask
+			m.ktask = AddTaskKernel("irq-task", &int_task_irq, 4096, KernelTask)
+			set_task(irq, m.ktask)
+			m.ktask.tss.esi = irq
 		m.pid = t.pid
 		m.puid = t.puid
 		m.signal = signal
+		m.utask = t
 		return 0
 		
 
