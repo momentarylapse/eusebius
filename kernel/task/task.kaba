@@ -117,14 +117,14 @@ void TaskSignalHandler()//void *p)
 		//mov __handler_p__, eax
 	}
 	//__temp_p__ = p
-	prints("-----signal-handler-----\n")
-	printh(&__handler_p__, 4)
+	//prints("-----signal-handler-----\n")
+	//printh(&__handler_p__, 4)
 	//__temp_p__ = p
 	asm{
 		mov eax, __handler_p__
 		call eax
 	}
-	prints("[fertig...return]\n")
+	//prints("[fertig...return]\n")
 	asm{	
 		// return from handler
 		mov eax, 0x00002006
@@ -554,14 +554,10 @@ class Task
 	int sys_sigaction(int sig, int addr)
 		if sig < 0 or sig >= 32 or sig == SIGSTOP or sig == SIGKILL
 			return -EINVAL
-		prints "[sig handler]"
-		printi sig
-		prints " "
-		printh(&addr, 4)
 		signal_handlers[sig] = addr
 		return 0
 		
-	int exit_signal()
+	int sys_exit_signal()
 		if !in_signal
 			return -1
 		

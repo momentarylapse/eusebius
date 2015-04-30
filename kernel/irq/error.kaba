@@ -8,7 +8,7 @@ const int ERROR_STACK_SIZE = 4096
 
 void handle_task_error(Task* t, Task* e, int i)
 	int pid = t.pid
-	prints("\n    -- Interrupt #")
+	/*prints("\n    -- Interrupt #")
 	printi(i)
 	prints(" pid=")
 	printi(pid)
@@ -17,11 +17,14 @@ void handle_task_error(Task* t, Task* e, int i)
 	prints(" --\n")
 	cstring s
 	get_error_text(i, s)
-	prints(s)
+	prints(s)*/
 	
 	// TODO send signal
 	
-	t.die(i-666)
+	if i == 13 or i == 14
+		t.handle_signal(SIGSEGV)
+	else
+		t.die(i-666)
 	
 	int pid_next = GetNextTask(pid)
 	ReconnectTasks(pid_next, e)

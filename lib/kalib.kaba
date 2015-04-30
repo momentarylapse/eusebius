@@ -1384,6 +1384,11 @@ lib__Image* lib__LoadImage(string filename)
 //--------------------------------------------------------------------------
 // start
 
+void signal_handler_segv()
+	lib__print("  -- Segmentation Fault --\n")
+	exit(0)
+	
+
 void init_lib()
 	__free_error__ = false
 	int malloc_begin = 0x00b00000
@@ -1395,6 +1400,8 @@ void init_lib()
 	malloc_first_free.prev = nil
 	
 	rand_state = 0
+	
+	sigaction(11, &signal_handler_segv)
 	
 	stdin = 0
 	stdout = 1
