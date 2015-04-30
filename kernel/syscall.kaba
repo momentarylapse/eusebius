@@ -194,6 +194,12 @@ void int_syscall()
 			r = _task_info.get(param1)
 			if r == 0
 				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
+		else if index == 0x2006 // exit_signal
+			r = caller.exit_signal()
+			asm{
+				// don't overwrite eax with return value
+				jmp __sys_call_return
+			}
 		else
 			r = -ENOSYS
 		/*TextColor = 4
@@ -218,6 +224,7 @@ void int_syscall()
 		
 		//prints(">")
 		asm{
+		__sys_call_return:
 			iret
 		}
 		//prints("<")

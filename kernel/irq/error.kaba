@@ -12,6 +12,8 @@ void handle_task_error(Task* t, Task* e, int i)
 	printi(i)
 	prints(" pid=")
 	printi(pid)
+	prints "  eip="
+	printh(t.tss.eip, 4)
 	prints(" --\n")
 	cstring s
 	get_error_text(i, s)
@@ -28,6 +30,12 @@ void handle_task_error(Task* t, Task* e, int i)
 void handle_kernel_error(Task* t, int i)
 	cstring s
 	get_error_text(i, s)
+	
+	prints "\neip="
+	printh(t.tss.eip, 4)
+	prints "  esp="
+	printh(t.tss.esp, 4)
+	prints "\n"
 	
 	/*if i == 0
 		prints("   eflags=")

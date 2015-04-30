@@ -122,7 +122,13 @@ void TaskSignalHandler()//void *p)
 	//__temp_p__ = p
 	asm{
 		mov eax, __handler_p__
-		call [eax]
+		call eax
+	}
+	prints("[fertig...return]\n")
+	asm{	
+		// return from handler
+		mov eax, 0x00002006
+		int 0x80
 	}
 	while true
 		nil
@@ -313,12 +319,9 @@ class Task
 			memcpy(&signal_reg_buf, &tss, sizeof(TaskStateSegment))
 			tss.eax = signal_handlers[signal]
 			__handler_p__ = tss.eax
-			tss.esp = tss.esp2
-			tss.ebp = tss.esp2
+			tss.esp = _i2p(_p2i(tss.esp) + 1024)
+			tss.ebp = tss.esp
 			tss.eip = &TaskSignalHandler
-			prints "[a "
-			printh(&tss.eax, 4)
-			prints "]"
 		else
 			// default actions
 			if signal == SIGSTOP
@@ -556,6 +559,14 @@ class Task
 		prints " "
 		printh(&addr, 4)
 		signal_handlers[sig] = addr
+		return 0
+		
+	int exit_signal()
+		if !in_signal
+			return -1
+		
+		in_signal = false
+		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
 		return 0
 
 Task *get_task(int pid)
