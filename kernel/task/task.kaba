@@ -144,6 +144,7 @@ class Task
 	int waiting_mode
 	int waiting_param_i1, waiting_param_i2, waiting_param_i3
 	int *waiting_param_p
+	bool sleep_and_wait
 	Task* parent
 	cstring name
 	cstring arg
@@ -165,6 +166,7 @@ class Task
 	void init(int _pid, cstring _name, Task *_parent)
 		for s in signal_handlers
 			s = 0
+		sleep_and_wait = false
 			
 		pid = _pid
 
@@ -197,7 +199,11 @@ class Task
 		nil
 	
 	void activate()
-		status = TASK_STATUS_RUNNING
+		if sleep_and_wait
+			status = TASK_STATUS_SLEEPING
+			sleep_and_wait = false
+		else
+			status = TASK_STATUS_RUNNING
 	
 	// nur um einmalig den Scheduler zu starten
 	void run_forced()
@@ -327,9 +333,13 @@ class Task
 			if signal == SIGSTOP
 				if status == TASK_STATUS_RUNNING
 					status = TASK_STATUS_SLEEPING
+				else if status == TASK_STATUS_WAITING
+					sleep_and_wait = true
 			else if signal == SIGCONT
 				if status == TASK_STATUS_SLEEPING
 					status = TASK_STATUS_RUNNING
+				else if status == TASK_STATUS_WAITING
+					sleep_and_wait = false
 			else
 				die(0)
 		return 0

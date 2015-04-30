@@ -373,10 +373,10 @@ void main()
 	
 	prompt.show()
 	while true
-		usleep(10000)
-		if jobs.fg
-			jobs.test_all()
+		usleep(100000)
+		jobs.test_all()
 		int key = getkey()
-		prompt.process(key)
+		if key != -1
+			prompt.process(key)
 	
 	exit(0)
