@@ -1,4 +1,5 @@
 const int MALLOC_OFFSET = 0x00b00000
+const int MALLOC_STOPPER = 8
 
 const int O_RDONLY = 1
 const int O_WRONLY = 2
@@ -485,10 +486,9 @@ bool sched_yield(int pid)
 		mov lib_error, eax
 	}
 	return lib_error == 0
-
 	
-void kprint(lib__string s)
-	__temp_p__ = s.data
+void kprint(string s)
+	__temp_p__ = &s[0]
 	__temp_i__ = s.num
 	asm{
 		mov eax, 0x00002002
@@ -581,101 +581,195 @@ void prints(cstring s)
 	}
 
 
-// double-linked list of free fields
+int MemHeapAllocated // includes overhead of all headers
 
 class MallocHeader
 	int size // header + payload
-	MallocHeader* next
-	MallocHeader* prev
-	void* after()
+	int magic
+	MallocHeader *next
+	MallocHeader *prev
+	void *after()
 		char[0]* pp = self
 		return &pp[size]
-	void* payload()
+	void *payload()
 		char[0]* pp = self
 		return &pp[sizeof(MallocHeader)]
-MallocHeader* malloc_first_free
-int malloc_after_all // free AND used
+MallocHeader *malloc_first_free
+MallocHeader *malloc_end_marker
+int cur_break_value
+
+// heap is split into a (hole-free) list of blocks
+// blocks are either free or allocated
+// free blocks form a doubly-linked list (no loop)
+// allocated blocks are not linked
+
+int _align8_(int size)
+	if (size & 0x00000007) == 0
+		return size
+	return (size & 0xfffffff8) + 8
+
 
 void* lib__@malloc(int size)
-	if size <= 0
-		return nil
-	MallocHeader* cur = malloc_first_free
+	size = _align8_(size)
+	/*kprint " +"
+	kprinti(size)
+	kprint " "*/
+	
+	// account for the allocation header
 	size += sizeof(MallocHeader)
-	while cur
+	
+	// find a free block big enough
+	MallocHeader *cur = malloc_first_free
+	while cur.next
 		if size <= cur.size - sizeof(MallocHeader)
+		
+			// shrink free block
 			cur.size -= size
+			
+			// create allocated block at (former) end of free block
 			MallocHeader *hh = cur.after()
+			hh.magic = 0x12345678
 			hh.size = size
 			hh.next = nil
 			hh.prev = nil
+			
+			MemHeapAllocated += size
+			//prints " "
+			//printi(_p2i(hh.payload()))
+			memcheck()
+			//prints ">"
+//			kprinti(_p2i(hh.payload()))
 			return hh.payload()
 		cur = cur.next
 	
+	
+//	__lib_fatal__("malloc fail")
+//	return nil
+	kprint("  ---malloc break ---")
+ 	
 	// request more memory from kernel
-	hh = _i2p(malloc_after_all)
-	malloc_after_all = size + sizeof(MallocHeader)
-	brk(malloc_after_all)
+	int new_break_value = cur_break_value + size + sizeof(MallocHeader) + 1024
+	int r = brk(new_break_value)
+	if r < 0
+		__lib_fatal__("malloc/brk()")
+	cur_break_value = r
+	
+	// add allocated block
+	hh = _i2p(cur_break_value - size - sizeof(MallocHeader) - MALLOC_STOPPER)
 	hh.size = size
 	hh.next = nil
 	hh.prev = nil
+	
+	// resize last free block
+	MallocHeader *last_before_end = malloc_end_marker.prev
+	last_before_end.size = _p2i(hh) - _p2i(last_before_end)
+	
+	// create new end marker
+	malloc_end_marker = _i2p(cur_break_value - sizeof(MallocHeader))
+	malloc_end_marker.size = sizeof(MallocHeader)
+	malloc_end_marker.next = nil
+	malloc_end_marker.prev = last_before_end
+	last_before_end.next = malloc_end_marker
+	
 	return hh.payload()
 
-// merge with neighbors
 void _cleanup(MallocHeader *h)
-	if h.next
-		if h.after() == h.next
-			h.size += h.next.size
-			h.next = h.next.next
-			if h.next
-				h.next.prev = h
-	if h.prev
-		if h.prev.after() == h
-			h.prev.size += h.size
-			if h.next
-				h.next.prev = h.prev
-			h.prev.next = h.next
+	if h.after() == h.next
+		MemHeapAllocated -= sizeof(MallocHeader)
+		//kprint(" merge after ")
+		h.size += h.next.size
+		h.next = h.next.next
+		h.next.prev = h
+	if h.prev.after() == h
+		MemHeapAllocated -= sizeof(MallocHeader)
+		//kprint(" merge before ")
+		h.prev.size += h.size
+		h.next.prev = h.prev
+		h.prev.next = h.next
+
+void lib__@free(void *p)
+	if !p
+		return
+	int ip = _p2i(p)
+	//kprint " free "
+	//kprinti(ip)
+	
+	MallocHeader *hh = _i2p(ip - sizeof(MallocHeader))
+	if hh.magic != 0x12345678
+		__lib_fatal__("evil free()")
+		
+	//kprint(" ")
+	//kprinti(hh.size)
+	
+	// find last free window before p
+	MallocHeader *cur = malloc_first_free
+	while cur.next
+		if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
+			/*prints("\n")
+			printi(_p2i(cur))
+			prints("  ")
+			printi(cur.size)
+			
+			panic("double free")*/
+		//	__lib_free_error__()
+			__lib_fatal__("double free()")
+		if ip < _p2i(cur.next)
+			// turn allocated block into a free one
+			hh.magic = 0
+			
+			//printi(hh.size)
+			MemHeapAllocated -= hh.size - sizeof(MallocHeader)
+			
+			// ..by linking it to its neighbors
+			hh.next = cur.next
+			cur.next.prev = hh
+			hh.prev = cur
+			cur.next = hh
+			
+			_cleanup(hh)
+			memcheck()
+			//prints(">")
+			return
+		cur = cur.next
+	__lib_fatal__( "invalid call to free()")
+
+
+
+void memcheck()
+	MallocHeader *h = malloc_first_free
+	while h.next
+		if _p2i(h.next) < _p2i(h) + h.size
+			__lib_fatal__("memcheck: h.next<h+size")
+		if h != h.next.prev
+			__lib_fatal__("memcheck: h!=h.next.prev")
+		h = h.next
+
+/*void* realloc(void* po, int old_size, int new_size)
+	void *pn = malloc(new_size)
+	int n = old_size
+	if new_size < n
+		n = new_size
+	memcpy(pn, po, n)
+	free(po)
+	return pn*/
+// double-linked list of free fields
+
+
+void __lib_fatal__(string s)
+	lib__print("\n\nkalib: ")
+	lib__print(s)
+	exit(-1)
 
 void __lib_free_error__()
 	__free_error__ = true
 	lib__print "\n\nkalib: invalid call to free()"
 	exit(-1)
 
-void lib__@free(void *p)
-	if __free_error__
-		return
-	//print "---free"
-	MallocHeader *cur = malloc_first_free
-	if _p2i(p) < _p2i(cur)
-		__lib_free_error__()
-	while cur
-		int end = _p2i(cur.next)
-		if !cur.next
-			end = malloc_after_all
-		if _p2i(p) < end
-			char[0]* pp = p
-			MallocHeader *hh = &pp[- sizeof(MallocHeader)]
-			
-			if hh.size < 0
-				//__lib_free_error__()
-				return
-			if (_p2i(hh.after()) > _p2i(cur.next)) and cur.next
-				//__lib_free_error__()
-				return // TODO...
-			
-			hh.next = cur.next
-			if cur.next
-				cur.next.prev = hh
-			hh.prev = cur
-			cur.next = hh
-			_cleanup(hh)
-			return
-		cur = cur.next
-	__lib_free_error__()
 
 void *lib__@realloc(void *p, int size)
 	MallocHeader[0]* hp = p
 	MallocHeader *h = &hp[-1]
-	int old_size = h.size
+	int old_size = h.size - sizeof(MallocHeader)
 	void *pp = lib__@malloc(size)
 	memcpy(pp, p, old_size)
 	lib__@free(p)
@@ -968,6 +1062,8 @@ class lib__int@list : lib__@DynamicArray
 	overwrite int[0]* data
 	void __init__()
 		__mem_init__(sizeof(int))
+	void __delete__()
+		clear()
 	void clear()
 		__mem_clear__()
 	void resize(int size)
@@ -983,11 +1079,17 @@ class lib__int@list : lib__@DynamicArray
 		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
+	void __assign__(lib__int@list o)
+		resize(o.num)
+		for i in 0:num
+			data[i] = o.data[i]
 
 class lib__float@list : lib__@DynamicArray
 	overwrite float[0]* data
 	void __init__()
 		__mem_init__(sizeof(float))
+	void __delete__()
+		clear()
 	void clear()
 		__mem_clear__()
 	void resize(int size)
@@ -1003,11 +1105,17 @@ class lib__float@list : lib__@DynamicArray
 		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
+	void __assign__(lib__float@list o)
+		resize(o.num)
+		for i in 0:num
+			data[i] = o.data[i]
 
 class lib__bool@list : lib__@DynamicArray
 	overwrite bool[0]* data
 	void __init__()
 		__mem_init__(sizeof(bool))
+	void __delete__()
+		clear()
 	void clear()
 		__mem_clear__()
 	void resize(int size)
@@ -1023,6 +1131,10 @@ class lib__bool@list : lib__@DynamicArray
 		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
+	void __assign__(lib__bool@list o)
+		resize(o.num)
+		for i in 0:num
+			data[i] = o.data[i]
 
 class lib__string@list : lib__@DynamicArray
 	overwrite lib__string[0]* data
@@ -1236,19 +1348,45 @@ lib__string lib__@ia2s(lib__int@list a)
 	for i in 0:a.num
 		if i > 0
 			r.add(',')
+			r.add(' ')
 		r += lib__@i2s(a.data[i])
+	r.add(']')
+	return r
+
+lib__string lib__@fa2s(lib__float@list a)
+	lib__string r
+	r.add('[')
+	for i in 0:a.num
+		if i > 0
+			r.add(',')
+			r.add(' ')
+		r += lib__@f2s(a.data[i], 6)
 	r.add(']')
 	return r
 
 class lib__complex
 	float x, y
+	
+	lib__string str()
+		return _complex2s(*self)
 
+lib__string _complex2s(lib__complex c)
+	lib__string r
+	r.add('(')
+	r += lib__@f2s(c.x, 6)
+	r.add(',')
+	r.add(' ')
+	r += lib__@f2s(c.y, 6)
+	r.add(')')
+	return r
 
 
 class lib__complex@list : lib__@DynamicArray
 	overwrite complex[0]* data
 	void __init__()
 		__mem_init__(sizeof(complex))
+	void __delete__()
+		clear()
 	void clear()
 		__mem_clear__()
 	void resize(int size)
@@ -1264,6 +1402,10 @@ class lib__complex@list : lib__@DynamicArray
 		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
+	void __assign__(lib__complex@list o)
+		resize(o.num)
+		for i in 0:num
+			data[i] = o.data[i]
 
 void lib__print(string s)
 	int done = 0
@@ -1367,6 +1509,9 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 
 class lib__File
 	int h
+	char[1024] buf
+	int buf_pos
+	int pos
 	
 	void __init__()
 		h = -1
@@ -1376,6 +1521,8 @@ class lib__File
 	
 	bool open(string filename)
 		h = xxx_open(filename, O_RDONLY)
+		pos = 0
+		buf_pos = 0
 		return h >= 0
 	
 	void close()
@@ -1393,13 +1540,17 @@ class lib__File
 		if r < 0
 			r = 0
 		s.resize(r)
+		
+		pos += r
 		return s
 	
 	int getPos()
-		return xxx_seek(h, 0, SEEK_CUR)
+		return pos
+		//return xxx_seek(h, 0, SEEK_CUR)
 	
-	void seek(int pos, bool absolute)
+	void seek(int _pos, bool absolute)
 		if absolute
+			pos = _pos
 			xxx_seek(h, pos, SEEK_SET)
 		else
 			xxx_seek(h, pos, SEEK_CUR)
@@ -1500,13 +1651,20 @@ void signal_handler_segv()
 
 void init_lib()
 	__free_error__ = false
+	
 	int malloc_begin = 0x00b00000
-	malloc_after_all = brk(-1)
-	int malloc_size_all = malloc_after_all - malloc_begin // 0x00200000
+	cur_break_value = brk(-1)
+	int malloc_size_all = cur_break_value - malloc_begin // 0x00200000
+	
+	// intentionally leave a 8b gap to prevent merging
 	malloc_first_free = _i2p(malloc_begin)
-	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader)
-	malloc_first_free.next = nil
+	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
 	malloc_first_free.prev = nil
+	malloc_end_marker = _i2p(cur_break_value - sizeof(MallocHeader))
+	malloc_end_marker.size = sizeof(MallocHeader)
+	malloc_end_marker.next = nil
+	malloc_end_marker.prev = malloc_first_free
+	malloc_first_free.next = malloc_end_marker
 	
 	rand_state = 0
 	
@@ -1514,4 +1672,5 @@ void init_lib()
 	
 	stdin = 0
 	stdout = 1
+	
 

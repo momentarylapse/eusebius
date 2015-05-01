@@ -99,7 +99,7 @@ class TTFContour
 
 class TTFGlyph
 	int xmin, ymin, xmax, ymax
-	TTFContour[] contours
+	TTFContour*[] contours
 
 class TTF
 	TTFTableDirectory td
@@ -107,7 +107,7 @@ class TTF
 	
 	TTFMapHeader mh
 	TTFMapTable[] map_tables
-	TTFGlyph[] glyphs
+	TTFGlyph*[] glyphs
 	
 	File *f
 	
@@ -236,8 +236,8 @@ class TTF
 		
 		return true
 	
-	bool read_glyph(TTFGlyph g)
-		print "glyph---------------------------------\n"
+	bool read_glyph(TTFGlyph *g)
+		//print "glyph\n"
 		//print i2h(f.getPos())
 		int num_contours = readSS()
 		//print num_contours
@@ -259,8 +259,8 @@ class TTF
 			return read_glyph_compound(g)
 		return read_glyph_simple(g, num_contours)
 	
-	bool read_glyph_compound(TTFGlyph g)
-		print "---compound\n"
+	bool read_glyph_compound(TTFGlyph *g)
+		//print "---compound\n"
 		int n = 0
 		
 		while true
@@ -303,21 +303,21 @@ class TTF
 			
 		return true
 	
-	bool read_glyph_simple(TTFGlyph g, int num_contours)
-		print "---simple\n"
+	bool read_glyph_simple(TTFGlyph *g, int num_contours)
+		//print "---simple\n"
 		
 		// endpoints
 		int[] endpoints
 		for i in 0:num_contours
 			endpoints.add(readUS())
-		print "a\n"
+		//print "a\n"
 		
 		for e in endpoints
 			//print "e " + e
 			if e > 1000
 				print "invalid endpoint: " + e + "\n"
 				return false
-		print "b\n"
+		//print "b\n"
 		
 		// instructions???
 		int instrlen = readUS()
@@ -326,49 +326,54 @@ class TTF
 			return false
 		//print "instr: " + instrlen
 		f.read(instrlen) // instr
-		print "c\n"
+		//print "c\n"
 		
 		if num_contours > 0
 			int num_points = endpoints[endpoints.num-1] + 1
 			//print "points: " + num_points
-			print "d\n"
+			//print "d\n"
 		
 			// flags
 			string flags = read_contour_flags(num_points)
-			//print flags.hex(false)
-			print "e\n"
+			//print flags.hex(false) + "\n"
+			//print "e\n"
 		
 			//print i2h(f.getPos())
 			float[] x = read_contour_coords(num_points, flags, 0x02, 0x10)
-			print "f1\n"
+			//print "f1\n"
 			float[] y = read_contour_coords(num_points, flags, 0x04, 0x20)
-			print "f2\n"
-			print x
-			print y
+			//print "f2 " + x.num + " " + y.num + "\n"
+			//print "" + x + "--a\n"
+			//print "" + y + "--b\n"
 			
 			int i0 = 0
 			for e,ci in endpoints
-				print "e " + ci + "\n"
-				TTFContour c
+				//print "e " + ci + "\n"
+				TTFContour *c = new TTFContour
 				int i1 = e + 1
-				print "" + i0 + ":" + i1 + "\n"
+				//print "" + i0 + ":" + i1 + "\n"
 				for i in i0:i1
-					print i
+					//print i
 					c.flags.add(flags[i])
-					print " - "
-					c.p.add(complex(x[i], y[i]))
-					print " ... "
-				print "ee\n"
+					//print " - "
+					complex z = complex(x[i], y[i])
+					//print z
+					//print " - "
+					//print c.p.num
+					//print " - "
+					c.p.add(z)
+					//print " ... "
+				//print "ee\n"
 				i0 = i1
 				g.contours.add(c)
-				print "ee2\n"
-				c.__delete__() // TODO repair kaba :P
+				//print "ee2\n"
+				/*c.__delete__() // TODO repair kaba :P
 				print "ee3\n"
 				c.__init__()
-				print "ee4\n"
+				print "ee4\n"*/
 		
 		//print i2h(f.getPos())
-		print "z\n"
+		//print "z\n"
 		
 		// 2byte alignment
 		if (f.getPos() & 1) != 0
@@ -429,11 +434,12 @@ class TTF
 		int _max = te.offset.int() + te.length.int() - 32
 		
 		while f.getPos() < _max
-			TTFGlyph g
+			TTFGlyph *g = new TTFGlyph
 			if !read_glyph(g)
 				return false
 			glyphs.add(g)
-			g.contours.clear()
+			print "  " + glyphs.num
+			//g.contours.clear()
 		print "Glyphs: " + glyphs.num + "\n"
 		/*for gg in glyphs
 			print "---- " + gg.contours.num

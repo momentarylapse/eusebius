@@ -130,13 +130,6 @@ void int_syscall()
 		else if index == 14 // mknod
 			r = caller.sys_mknod(param1, param2)
 		else if index == 19 // seek
-			prints "["
-			printi param1
-			prints " "
-			printi param2
-			prints " "
-			printi param3
-			prints "]"
 			r = caller.sys_seek(param1, param2, param3)
 		else if index == 20 // getpid
 			r = RunningPid

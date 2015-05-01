@@ -3,7 +3,7 @@ use "lib/x.kaba"
 use "lib/draw.kaba"
 use "lib/ttf.kaba"
 
-void main()
+void __main()
 	init_lib()
 	
 	print "hallo\n"
@@ -19,7 +19,7 @@ void main()
 
 XConnection *xcon
 
-void __main()
+void main()
 	init_lib()
 	
 	stdout = open("/dev/tty", O_WRONLY)
