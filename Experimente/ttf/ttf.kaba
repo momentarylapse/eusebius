@@ -43,6 +43,11 @@ void read(File *f, char[0]* p, int size)
 	for i in 0:size
 		p[i] = s[i]
 
+int readL(File *f)
+	BELong t
+	read(f, &t, 4)
+	return t.int()
+
 int readUS(File *f)
 	BEUShort t
 	read(f, &t, 2)
@@ -84,8 +89,31 @@ class TTFMapHeader
 	BEUShort version, num_tables
 
 class TTFMapTable
-	BEUShort platform, encoding
-	BELong offset
+	int platform, encoding
+	int offset
+	int format
+	
+	// format 4
+	int[] end_count
+	int[] start_count
+	int[] id_delta
+	int[] id_range_offset
+	
+	// format 6
+	int first_code
+	int[] glyph_id_array
+	
+	int map(int code)
+		if format == 4
+			for i in 0:end_count.num
+				if code >= start_count[i] and code <= end_count[i]
+					return (code + id_delta[i]) & 0x0000ffff
+			return -1
+		if format == 6
+			if code < first_code or code >= (first_code + glyph_id_array.num)
+				return -1
+			return glyph_id_array[code - first_code]
+		return -1
 
 class TTFContour
 	string flags
@@ -101,7 +129,7 @@ class TTF
 	TTFTableDirectoryEntry[] tdentries
 	
 	TTFMapHeader mh
-	TTFMapTable[] mt
+	TTFMapTable[] map_tables
 	TTFGlyph[] glyphs
 	
 	File *f
@@ -129,20 +157,79 @@ class TTF
 		
 		read(f, &mh, 4)
 		int n = mh.num_tables.int()
-		print "map"
-		print mh.version.int()
-		print n
+		print "map-----------------------------"
+		print i2h(f.getPos())
+		//print mh.version.int()
+		//print n
 		if n > 100000
+			print "too many mapping tables"
 			return false
+			
 		for i in 0:n
 			TTFMapTable t
-			read(f, &t, 8)
-			mt.add(t)
-		for tt in mt
-			print "-----"
-			print tt.platform.int()
-			print tt.encoding.int()
-			print tt.offset.int()
+			t.platform = readUS(f)
+			t.encoding = readUS(f)
+			t.offset = readL(f)
+			map_tables.add(t)
+		
+		for m in map_tables
+			print "--------------"
+			f.seek(te.offset.int() + m.offset, true)
+			m.format = readUS(f)
+			int length = readUS(f)
+			print "l " + length
+			int version = readUS(f)
+			
+			if m.format == 4
+				int seg_count = readUS(f) / 2
+				print "s " + seg_count
+				int search_range = readUS(f)
+				int entry_selector = readUS(f)
+				int range_shift = readUS(f)
+				for i in 0:seg_count
+					m.end_count.add(readUS(f))
+				readUS(f)
+				for i in 0:seg_count
+					m.start_count.add(readUS(f))
+				for i in 0:seg_count
+					m.id_delta.add(readUS(f))
+				for i in 0:seg_count
+					m.id_range_offset.add(readUS(f))
+				int rs = seg_count * 8 + 16
+				print "r: " + (length - rs)
+				f.read(length - rs)
+				
+				/*print start_count
+				print end_count
+				print id_delta
+				print id_range_offset
+				for i in 0:seg_count
+					print "--"
+					print start_count[i]
+					print end_count[i]
+					print id_delta[i]
+					print id_range_offset[i]*/
+				
+				for i in 0:seg_count
+					if m.id_range_offset[i] != 0
+						print "id_range_offset != 0"
+						return false
+					
+				//int length = readUS(f)
+				//int length = readUS(f)
+				
+				//return false
+			else if m.format == 6
+				m.first_code = readUS(f)
+				int entry_count = readUS(f)
+				for i in 0:entry_count
+					m.glyph_id_array.add(readUS(f))
+				//print m.glyph_id_array
+			else
+				print "unhandled format: " + m.format
+				return false
+				
+				
 			
 		
 		return true
@@ -361,13 +448,36 @@ class TTF
 			if tag == ee.name()
 				return &ee
 		return nil
+	
+	int map(int code)
+		for m in map_tables
+			int n = m.map(code)
+			if code >= glyphs.num
+				print "mapping error: " + code + " => " + n
+				return -1
+			if code >= 0
+				return code
+		return -1
+	
+	TTFGlyph* get(int code)
+		print "get " + code
+		int n = map(code)
+		print n
+		if n < 0
+			return &glyphs[0]
+		return &glyphs[n]
 
 void main(string[] arg)
 	if arg.num == 0
 		return
 	
 	TTF ttf
-	ttf.load(arg[0])
+	if !ttf.load(arg[0])
+		return
 	
+	print "----------- ok"
+	TTFGlyph *g = ttf.get('B')
+	for c in g.contours
+		print c.p.num
 
 
