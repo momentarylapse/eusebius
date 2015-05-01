@@ -352,16 +352,18 @@ class TTF
 				TTFContour *c = new TTFContour
 				int i1 = e + 1
 				//print "" + i0 + ":" + i1 + "\n"
+				c.flags.resize(i1-i0)
+				c.p.resize(i1-i0)
 				for i in i0:i1
 					//print i
-					c.flags.add(flags[i])
+					c.flags[i-i0] = flags[i]
 					//print " - "
 					complex z = complex(x[i], y[i])
 					//print z
 					//print " - "
 					//print c.p.num
 					//print " - "
-					c.p.add(z)
+					c.p[i-i0] = z
 					//print " ... "
 				//print "ee\n"
 				i0 = i1

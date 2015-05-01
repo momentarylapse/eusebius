@@ -1,0 +1,73 @@
+use "lib/std.kaba"
+use "lib/x.kaba"
+use "lib/draw.kaba"
+use "lib/ttfx.kaba"
+
+
+
+XConnection *xcon
+
+void main()
+	init_lib()
+	
+	
+	/*TTFFont *font = LoadTTF("/home/x.font")
+	
+	print font.points[0]
+	print "\n"
+	print font.glyphs[23].contours.num
+	print "\n"
+	print font.glyphs[23].contours[0].start
+	print "\n"
+	print font.points[font.glyphs[23].contours[0].start]
+	print "\n"
+	exit(0)*/
+	
+	stdout = open("/dev/tty", O_WRONLY)
+	
+	rand_seed(getpid())
+	
+	xcon = new XConnection
+	if xcon.error
+		print "client: kann nicht mit x verbinden\n"
+		exit(-1)
+	
+	XWindow *win = xcon.create_win(10 + randi(100), 10 + randi(100), 400, 400)
+	if !win
+		print "client: kann kein Fenster erstellen\n"
+		exit(-2)
+		
+		
+		
+	XPainter *p = new XPainter(win)
+	p.font = LoadTTF("/home/x.font")
+
+	p.set_color(color(1, 0,0,0))
+	p.rectangle(p.all)
+	p.fill()
+	p.set_color(White)
+	p.line_width = 1
+	
+	//for x in 0:10
+	//	for y in 0:10
+	//		p.draw_glyph(40*x, 40*y, 100+x + 10*y, 0.02)
+	p.draw_glyph(100, 100, 99, 0.1)
+	p.draw_glyph(105, 105, 99, 0.1)
+	
+	/*for c in g.contours
+		for i in c.start:c.start+c.num
+			p.path_add(100+ttf.points[i].x*0.1, 100+ttf.points[i].y*0.1)
+		p.path_close()
+		p.set_color(White)
+		p.strike()*/
+	//p.spline(complex(0,0), complex(100, 0), complex(100, 100))
+	p.end()
+	
+	while true
+		sleep(50)
+		
+		//win.move(randi(500), randi(400))
+	
+	delete xcon
+	
+	exit(0)

@@ -365,9 +365,9 @@ void main()
 	
 	// make our debugging life easier...
 	string[] arg2
-	arg2.add("/bin/client")
+	arg2.add("/bin/c")
 	execute(arg2, -1, -1)
-	execute(arg2, -1, -1)
+	//execute(arg2, -1, -1)
 	
 	print "x: running\n"
 	while true

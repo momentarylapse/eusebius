@@ -1,5 +1,6 @@
 use "std.kaba"
 use "x.kaba"
+use "ttfx.kaba"
 
 int col2i(color c)
 	int ir = c.r * 255.0
@@ -22,16 +23,26 @@ int add_blend(int i1, int i2, float t)
 	i2col(c2, i2)
 	return col2i(color(1, s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b))
 
+class XCircle
+	complex m
+	float r
+
 class XPainter
 	int[0]* buf
 	int w, h
+	rect all
 	bool error
+	
 	int cur_color
-	rect cur_rect
+	complex pos
+	
+	rect[] rects
 	complex[] path
-	bool path_closed
+	XCircle[] circles
+	
 	float line_width
 	XWindow *win
+	TTFFont *font
 	
 	void __init__(XWindow *_win)
 		win = _win
@@ -42,15 +53,16 @@ class XPainter
 			return
 		error = false
 		set_color(Black)
-		set_rect(rect(0, w, 0, h))
+		all = rect(0, w, 0, h)
+		pos = complex(0, 0)
 		line_width = 1.0
-		path_closed = false
+		font = nil
 	
 	void set_color(color c)
 		cur_color = col2i(c)
 	
-	void set_rect(rect r)
-		cur_rect = r
+	void rectangle(rect r)
+		rects.add(r)
 	
 	void draw_pixel(int x, int y)
 		if x < 0 or x >= w
@@ -60,18 +72,39 @@ class XPainter
 		int index = x + y * w
 		buf[index] = cur_color
 	
-	void fill()
-		int x0 = max(cur_rect.x1, 0)
-		int y0 = max(cur_rect.y1, 0)
-		int x1 = min(cur_rect.x2, w)
-		int y1 = min(cur_rect.y2, h)
+	void draw_rect(rect r)
+		int x0 = max(r.x1, 0)
+		int y0 = max(r.y1, 0)
+		int x1 = min(r.x2, w)
+		int y1 = min(r.y2, h)
 		for y in y0:y1
 			int index = x0 + y * w
 			for x in x0:x1
 				buf[index] = cur_color
 				index ++
 	
-	void line(complex a, complex b)
+	void draw_circle(float mx, float my, float r)
+		r += 0.5
+		int x0 = max(mx - r , 0)
+		int y0 = max(my - r, 0)
+		int x1 = min(mx + r, w)
+		int y1 = min(my + r, h)
+		float rr_i = sqr(r - 1)
+		float rr_o = sqr(r)
+		for y in y0:y1
+			int index = x0 + y * w
+			float dy = y - my
+			float dx = x0 - mx
+			for x in x0:x1
+				float dd = dx*dx+dy*dy
+				if dd < rr_i
+					buf[index] = cur_color
+				else if dd < rr_o
+					buf[index] = add_blend(buf[index], cur_color, 0.5)
+				dx += 1.0
+				index ++
+	
+	void draw_line(complex a, complex b)
 		float r = line_width * 1.5
 		int x0 = max(min(a.x, b.x)-r, 0)
 		int y0 = max(min(a.y, b.y)-r, 0)
@@ -99,58 +132,54 @@ class XPainter
 				dx += 1.0
 				index ++
 	
-	void spline(complex a, complex b, complex c)
+	void draw_spline(complex a, complex b, complex c)
 		int n = 12
 		complex z1 = a
 		for i in 1:n
 			float t = i2f(i) / n
 			float s = 1 - t
 			complex z2 = a * (s*s) + b * (s*t*2.0) + c * (t*t)
-			line(z1, z2)
+			draw_line(z1, z2)
 			z1 = z2
-		line(z2, c)
+		draw_line(z2, c)
+	
+	void fill()
+		for r in rects
+			draw_rect(r)
+		for c in circles
+			draw_circle(c.m.x, c.m.y, c.r)
+		clear_data()
 	
 	void path_add(float x, float y)
 		path.add(complex(x, y))
 	
 	void path_close()
-		path_closed = true
+		if path.num > 0
+			path.add(path[0])
 	
-	void path_clear()
+	void clear_data()
 		path.clear()
-		path_closed = false
+		circles.clear()
 	
 	void strike()
 		if path.num > 0
-			complex s = path[0]
-			for d in path
-				line(s, d)
+			complex s
+			for d,i in path
+				if i > 0
+					draw_line(s, d)
 				s = d
-			if path_closed
-				line(s, path[0])
-		path_clear()
+		clear_data()
 	
-	void circle(float mx, float my, float r)
-		r += 0.5
-		int x0 = max(mx - r , 0)
-		int y0 = max(my - r, 0)
-		int x1 = min(mx + r, w)
-		int y1 = min(my + r, h)
-		float rr_i = sqr(r - 1)
-		float rr_o = sqr(r)
-		for y in y0:y1
-			int index = x0 + y * w
-			float dy = y - my
-			float dx = x0 - mx
-			for x in x0:x1
-				float dd = dx*dx+dy*dy
-				if dd < rr_i
-					buf[index] = cur_color
-				else if dd < rr_o
-					buf[index] = add_blend(buf[index], cur_color, 0.5)
-				dx += 1.0
-				index ++
-		
+	void draw_glyph(float x, float y, int index, float scale)
+		if !font
+			return
+		TTFGlyph *g = &font.glyphs[index]
+	
+		for c in g.contours
+			for i in c.start:c.start+c.num
+				path_add(x + font.points[i].x * scale, y + (1000 - font.points[i].y) * scale)
+			path_close()
+		strike()
 		
 		
 	void end()

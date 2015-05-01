@@ -3,6 +3,7 @@ use "lib/x.kaba"
 use "lib/draw.kaba"
 
 
+
 XConnection *xcon
 
 void main()
@@ -41,8 +42,6 @@ void main()
 	p.strike()
 	
 	p.draw_circle(60, 60, 10)
-	p.fill()
-	
 	p.draw_spline(complex(0,0), complex(100, 0), complex(100, 100))
 	p.end()
 	

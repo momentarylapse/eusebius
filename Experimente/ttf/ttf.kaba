@@ -69,8 +69,8 @@ class TTFMapTable
 	int format
 	
 	// format 4
-	int[] end_count
-	int[] start_count
+	int[] end_code
+	int[] start_code
 	int[] id_delta
 	int[] id_range_offset
 	
@@ -80,8 +80,8 @@ class TTFMapTable
 	
 	int map(int code)
 		if format == 4
-			for i in 0:end_count.num
-				if code >= start_count[i] and code <= end_count[i]
+			for i in 0:end_code.num
+				if code >= start_code[i] and code <= end_code[i]
 					return (code + id_delta[i]) & 0x0000ffff
 			return -1
 		if format == 6
@@ -96,6 +96,7 @@ class TTFContour
 	
 
 class TTFGlyph
+	int code
 	int xmin, ymin, xmax, ymax
 	TTFContour[] contours
 
@@ -187,10 +188,10 @@ class TTF
 				int entry_selector = readUS()
 				int range_shift = readUS()
 				for i in 0:seg_count
-					m.end_count.add(readUS())
+					m.end_code.add(readUS())
 				readUS()
 				for i in 0:seg_count
-					m.start_count.add(readUS())
+					m.start_code.add(readUS())
 				for i in 0:seg_count
 					m.id_delta.add(readUS())
 				for i in 0:seg_count
@@ -246,6 +247,7 @@ class TTF
 			print "too many contours: " + num_contours
 			return false
 		
+		g.code = -1
 		g.xmin = readSS()
 		g.ymin = readSS()
 		g.xmax = readSS()
@@ -452,11 +454,11 @@ class TTF
 	int map(int code)
 		for m in map_tables
 			int n = m.map(code)
-			if code >= glyphs.num
+			if n >= glyphs.num
 				print "mapping error: " + code + " => " + n
 				return -1
-			if code >= 0
-				return code
+			if n >= 0
+				return n
 		return -1
 	
 	TTFGlyph* get(int code)
@@ -466,18 +468,112 @@ class TTF
 		if n < 0
 			return &glyphs[0]
 		return &glyphs[n]
+	
+	void export(string filename)
+	
+		for m in map_tables
+			if m.format == 6
+				for n,i in m.glyph_id_array
+					if n < glyphs.num
+						glyphs[n].code = m.first_code + i
+					//else
+					print "E: " + n + " => " + (m.first_code + i)
+			else if m.format == 4
+				for i in 0:m.end_code.num
+					for code in m.start_code[i]:(m.end_code[i]+1)
+						int n = (code + m.id_delta[i]) & 0x0000ffff
+						if n < glyphs.num
+							glyphs[n].code = code
+					//	else
+						print "E: " + n + " => " + code
+	
+	
+		File *f = FileCreate(filename)
+		f.setBinaryMode(true)
+		
+		f << glyphs.num
+		int num_p = 0
+		for g in glyphs
+			f << g.code
+			f << g.contours.num
+			for c in g.contours
+				f << num_p
+				f << c.p.num
+				num_p += c.p.num
+		f << num_p
+		for g in glyphs
+			for c in g.contours
+				for p in c.p
+					f << p.x
+					f << p.y
+		for g in glyphs
+			for c in g.contours
+				for x in c.flags
+					f << ((x & 1) != 0)
+		
+		
+		delete(f)
+
+class FontWindow : Window
+	int index
+	void __init__()
+		super.__init__("test", -1, -1, 500, 500)
+		addDrawingArea("!grabfocus", 0, 0, 0, 0, "area")
+		index = 0
+	
+	overwrite void onKeyDown()
+		if HuiGetEvent().key == KeyLeft
+			index --
+		if HuiGetEvent().key == KeyRight
+			index ++
+		index = loopi(index, 0, font.glyphs.num)
+		redraw("area")
+	
+	overwrite void onDraw()
+		Painter *p = beginDraw("area")
+		float w = p.width
+		float h = p.height
+		
+		p.setColor(White)
+		p.drawRect(0, 0, w, h)
+		
+		p.setColor(Black)
+		p.drawStr(20, 20, index)
+		
+		TTFGlyph *g = &font.glyphs[index]
+		for c in g.contours
+			for i in 0:c.p.num
+				int i1 = (i+1) % c.p.num
+				p.drawLine(100+c.p[i].x*0.1, 100+(1000-c.p[i].y)*0.1, 100+c.p[i1].x*0.1, 100+(1000-c.p[i1].y)*0.1)
+		
+		p.end()
+		
+		
+TTF *font
 
 void main(string[] arg)
 	if arg.num == 0
 		return
 	
-	TTF ttf
-	if !ttf.load(arg[0])
+	font = new TTF
+	if !font.load(arg[0])
 		return
+		
+	print font.glyphs[0].contours[0].p[0]
+	print font.glyphs[23].contours.num
+	//print font.glyphs[23].contours[0].start
+	print font.glyphs[23].contours[0].p[0]
 	
-	print "----------- ok"
-	TTFGlyph *g = ttf.get('B')
+	if arg.num > 1
+		font.export(arg[1])
+	
+	TTFGlyph *g = font.get('B')
 	for c in g.contours
 		print c.p.num
+	
+	FontWindow *w = new FontWindow
+	w.show()
+	w.run()
+	print "ok"
 
 

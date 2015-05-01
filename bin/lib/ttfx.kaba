@@ -1,0 +1,90 @@
+use "std.kaba"
+
+string hex(char[0]* p, int size)
+	string s
+	for i in 0:size
+		s.add(p[i])
+	return s.hex(false)
+string i2h(int i)
+	return hex(&i, 4)
+
+
+
+void _read(File *f, char[0]* p, int size)
+	string s = f.read(size)
+	for i in 0:size
+		p[i] = s[i]
+
+class TTFContour
+	int start, num
+	
+
+class TTFGlyph
+	//int xmin, ymin, xmax, ymax
+	int code
+	TTFContour[] contours
+
+class TTFFont
+	
+	complex[] points
+	bool[] on_curve
+	TTFGlyph[] glyphs
+	
+	File *f
+	
+	int readI()
+		int i
+		_read(f, &i, 4)
+		return i
+	
+	float readF()
+		float r
+		_read(f, &r, 4)
+		return r
+	
+	bool readB()
+		bool r
+		_read(f, &r, 1)
+		return r
+		
+	
+	bool load(string filename)
+
+		f = FileOpen(filename)
+		if !f
+			print "kann Datei nicht lesen\n"
+			return false
+		f.setBinaryMode(true)
+		
+		int n = readI()
+		glyphs.resize(n)
+		for g,i in glyphs
+			g.code = readI()
+			n = readI()
+			g.contours.resize(n)
+			for c in g.contours
+				c.start = readI()
+				c.num = readI()
+		n = readI()
+		points.resize(n)
+		_read(f, &points[0], n*8)
+		on_curve.resize(n)
+		_read(f, &on_curve[0], n)
+	
+		delete f
+		return true
+		
+	
+	TTFGlyph* get(int code)
+		for g,i in glyphs
+			if g.code == code
+				print "" + i + "\n"
+				return &g
+		return &glyphs[0]
+
+TTFFont *LoadTTF(string filename)
+	TTFFont *f = new TTFFont
+	if f.load(filename)
+		return f
+	delete f
+	return nil
