@@ -164,6 +164,28 @@ class OpenFileData
 		offset ++
 		return 1
 
+	int seek(int _offset, int mode)
+		int block_size = entry.mount.block_size
+		int old_block_no = offset / block_size
+		if mode == SEEK_SET
+			int new_offset = _offset
+		else if mode == SEEK_CUR
+			new_offset = offset + _offset
+		else if mode == SEEK_END
+			new_offset = entry.size - _offset
+		else
+			return -EINVAL
+			
+		if new_offset < 0 or new_offset >= entry.size
+			return -EINVAL
+		
+		offset = new_offset
+		int block_no = offset / block_size
+		if block_no != old_block_no
+			int cl = entry.blocks[block_no]
+			entry.mount.read_block(cl, buffer)
+		return offset
+
 
 	void unref()
 		if !used

@@ -9,6 +9,10 @@ const int O_NONBLOCK = 64
 const int O_TRUNC = 128
 const int EWOULDBLOCK = 128
 
+const int SEEK_SET = 1
+const int SEEK_CUR = 2
+const int SEEK_END = 3
+
 int stdin, stdout
 
 int lib_error
@@ -158,6 +162,20 @@ int write(int h, void *buf, int size)
 		mov ebx, __temp_i__
 		mov ecx, __temp_p__
 		mov edx, __temp_i2__
+		int 0x80
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+int seek(int h, int pos, int mode)
+	__temp_i__ = h
+	__temp_i2__ = pos
+	__temp_i3__ = mode
+	asm{
+		mov eax, 0x00000013
+		mov ebx, __temp_i__
+		mov ecx, __temp_i2__
+		mov edx, __temp_i3__
 		int 0x80
 		mov __temp_i3__, eax
 	}
@@ -966,6 +984,26 @@ class lib__int@list : lib__@DynamicArray
 			data[i] = data[i+1]
 		resize(num - 1)
 
+class lib__float@list : lib__@DynamicArray
+	overwrite float[0]* data
+	void __init__()
+		__mem_init__(sizeof(float))
+	void clear()
+		__mem_clear__()
+	void resize(int size)
+		if size > num
+			reserve(size)
+		num = size
+	void add(int i)
+		resize(num + 1)
+		data[num - 1] = i
+	void remove(int index)
+		if (index < 0) or (index >= num)
+			return
+		for i in index : num - 1
+			data[i] = data[i+1]
+		resize(num - 1)
+
 class lib__bool@list : lib__@DynamicArray
 	overwrite bool[0]* data
 	void __init__()
@@ -1327,6 +1365,64 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 				l.swap(i, j)
 	return l
 
+class lib__File
+	int h
+	
+	void __init__()
+		h = -1
+	
+	void __delete__()
+		close()
+	
+	bool open(string filename)
+		h = xxx_open(filename, O_RDONLY)
+		return h >= 0
+	
+	void close()
+		if h < 0
+			return
+		xxx_close(h)
+		h = -1
+	
+	void setBinaryMode(bool b)
+	
+	lib__string read(int size)
+		lib__string s
+		s.resize(size)
+		int r = xxx_read(h, s.data, size)
+		if r < 0
+			r = 0
+		s.resize(r)
+		return s
+	
+	int getPos()
+		return xxx_seek(h, 0, SEEK_CUR)
+	
+	void seek(int pos, bool absolute)
+		if absolute
+			xxx_seek(h, pos, SEEK_SET)
+		else
+			xxx_seek(h, pos, SEEK_CUR)
+
+bool xxx_close(int h)
+	return close(h)
+
+int xxx_open(string filename, int flags)
+	return open(filename, flags)
+
+int xxx_read(int h, void* buf, int size)
+	return read(h, buf, size)
+
+int xxx_seek(int h, int pos, int mode)
+	seek(h, pos, mode)
+
+lib__File* lib__FileOpen(string filename)
+	lib__File* f = lib__@malloc(sizeof(lib__File))
+	f.__init__()
+	if !f.open(filename)
+		lib__@free(f)
+		return nil
+	return f
 
 lib__string lib__FileRead(string filename)
 	lib__string content

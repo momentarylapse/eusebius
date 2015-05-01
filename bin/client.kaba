@@ -1,11 +1,25 @@
 use "lib/std.kaba"
 use "lib/x.kaba"
 use "lib/draw.kaba"
+use "lib/ttf.kaba"
+
+void main()
+	init_lib()
+	
+	print "hallo\n"
+	
+	TTF *ttf = new TTF
+	if ttf.load("/home/f.ttf")
+		print "ok\n"
+	else
+		print "nein\n"
+	
+	exit(0)
 
 
 XConnection *xcon
 
-void main()
+void __main()
 	init_lib()
 	
 	stdout = open("/dev/tty", O_WRONLY)
@@ -14,10 +28,12 @@ void main()
 	
 	xcon = new XConnection
 	if xcon.error
+		print "client: kann nicht mit x verbinden\n"
 		exit(-1)
 	
 	XWindow *win = xcon.create_win(10 + randi(400), 10 + randi(200), 100, 100)
 	if !win
+		print "client: kann kein Fenster erstellen\n"
 		exit(-2)
 		
 	XPainter *p = new XPainter(win)

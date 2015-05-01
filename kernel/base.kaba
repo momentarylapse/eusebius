@@ -28,6 +28,10 @@ const int ENOTEMPTY = 113
 const int F_GETFL = 1
 const int F_SETFL = 2
 
+const int SEEK_SET = 1
+const int SEEK_CUR = 2
+const int SEEK_END = 3
+
 const int SHMAT = 9
 const int SHMDT = 10
 const int SHMGET = 11

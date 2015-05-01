@@ -393,6 +393,13 @@ class Task
 			return -EBADF
 		return of.getdents(page_dir, addr, num)
 
+
+	int sys_seek(int handle, int offset, int mode)
+		OpenFileData *of = get_handle(handle)
+		if !of
+			return -EBADF
+		return of.seek(offset, mode)
+
 	int sys_close(int handle)
 		OpenFileData *of = get_handle(handle)
 		if !of

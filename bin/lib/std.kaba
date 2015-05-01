@@ -28,6 +28,10 @@ const int ENOTEMPTY = 113
 const int F_GETFL = 1
 const int F_SETFL = 2
 
+const int SEEK_SET = 1
+const int SEEK_CUR = 2
+const int SEEK_END = 3
+
 
 
 const int SHM_ABSOLUTE = 1 << 20
@@ -73,6 +77,7 @@ extern int create(string filename)
 extern bool close(int h)
 extern int read(int h, cstring *buf, int size)
 extern int write(int h, cstring *buf, int size)
+extern int seek(int h, int offset, int mode)
 extern bool mkdir(string filename)
 extern bool rmdir(string filename)
 extern bool mkfifo(string filename)
