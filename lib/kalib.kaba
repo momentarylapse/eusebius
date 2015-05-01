@@ -1,5 +1,7 @@
 const int MALLOC_OFFSET = 0x00b00000
 const int MALLOC_STOPPER = 8
+const int MALLOC_SMALL_SIZE = 8
+const int MALLOC_SMALL_NUM = 4096*16
 
 const int O_RDONLY = 1
 const int O_WRONLY = 2
@@ -610,10 +612,15 @@ int _align8_(int size)
 
 
 void* lib__@malloc(int size)
+	if size <= MALLOC_SMALL_SIZE
+		void *ppp = small_malloc()
+		if ppp
+			return ppp
+
 	size = _align8_(size)
-	/*kprint " +"
+	/*kprint " [+"
 	kprinti(size)
-	kprint " "*/
+	kprint "] "*/
 	
 	// account for the allocation header
 	size += sizeof(MallocHeader)
@@ -698,9 +705,13 @@ void _cleanup(MallocHeader *h)
 void lib__@free(void *p)
 	if !p
 		return
+	int index = small_malloc_no(p)
+	if index >= 0
+		small_free(index)
+		return
 	int ip = _p2i(p)
-	//kprint " free "
-	//kprinti(ip)
+	/*kprint " free "
+	kprinti(ip)*/
 	
 	MallocHeader *hh = _i2p(ip - sizeof(MallocHeader))
 	if hh.magic != 0x12345678
@@ -777,12 +788,83 @@ void __lib_free_error__()
 void *lib__@realloc(void *p, int size)
 	MallocHeader[0]* hp = p
 	MallocHeader *h = &hp[-1]
-	int old_size = h.size - sizeof(MallocHeader)
+	int old_size
+	int sm_index = small_malloc_no(p)
+	if sm_index >= 0
+		old_size = MALLOC_SMALL_SIZE
+	else
+		old_size = h.size - sizeof(MallocHeader)
 	void *pp = lib__@malloc(size)
+	
+	if size < old_size
+		old_size = size
+	
 	memcpy(pp, p, old_size)
 	lib__@free(p)
 	return pp
 
+class MallocSmallBlock
+	int[MALLOC_SMALL_NUM / 32] mask
+	char[MALLOC_SMALL_SIZE * MALLOC_SMALL_NUM] buf
+	int delta // address translation...
+	int full_below // #masks
+	
+	
+	void init()
+		for i in 0:(MALLOC_SMALL_NUM/32)
+			mask[i] = 0
+		delta = _p2i(&buf)
+		full_below = 0
+	
+	void* alloc()
+		//kprint " +sm "
+		for i in full_below:(MALLOC_SMALL_NUM/32)
+			if mask[i] == 0xffffffff
+				continue
+			for j in 0:32
+				int m = 1 << j
+				if (mask[i] & m) == 0
+					full_below = i
+					mask[i] = mask[i] | m
+					int n = i * 32 + j
+					//kprinti(n)
+					//kprint(" : ")
+					void *p = &buf[n * MALLOC_SMALL_SIZE]
+					//kprinti _p2i(p)
+					return p
+		//kprint " --[XXX]--"
+		return nil
+	
+	int to_index(void *p)
+		int ip = _p2i(p)
+		/*kprint(" - ")
+		kprinti(ip)
+		kprint(" : ")
+		kprinti((ip - delta) / MALLOC_SMALL_SIZE)*/
+		return (ip - delta) / MALLOC_SMALL_SIZE
+	
+	void free(int index)
+		//kprint " -sm "
+		int _mask = 1 << (index & 31)
+		int mn = index >> 5
+		if (mask[mn] & _mask) != 0
+			mask[mn] -= _mask
+		if mn < full_below
+			full_below = mn
+
+MallocSmallBlock *malloc_small_block
+
+void* small_malloc()
+	return malloc_small_block.alloc()
+
+void small_free(int n)
+	malloc_small_block.free(n)
+
+int small_malloc_no(void *p)
+	int index = malloc_small_block.to_index(p)
+	if index < 0 or index >= MALLOC_SMALL_NUM
+		return -1
+	return index
 
 //--------------------------------------------------------------------------
 // arrays
@@ -1673,6 +1755,9 @@ void init_lib()
 	malloc_end_marker.next = nil
 	malloc_end_marker.prev = malloc_first_free
 	malloc_first_free.next = malloc_end_marker
+	
+	malloc_small_block = lib__@malloc(sizeof(MallocSmallBlock))
+	malloc_small_block.init()
 	
 	rand_state = 0
 	
