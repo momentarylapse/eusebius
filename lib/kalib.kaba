@@ -645,7 +645,9 @@ void* lib__@malloc(int size)
 	
 //	__lib_fatal__("malloc fail")
 //	return nil
-	kprint("  ---malloc break ---")
+
+	
+	MallocHeader *last_before_end_new = _i2p(cur_break_value - sizeof(MallocHeader) - MALLOC_STOPPER)
  	
 	// request more memory from kernel
 	int new_break_value = cur_break_value + size + sizeof(MallocHeader) + 1024
@@ -654,6 +656,13 @@ void* lib__@malloc(int size)
 		__lib_fatal__("malloc/brk()")
 	cur_break_value = r
 	
+	// get the pointer now... we might overwrite the end marker...
+	MallocHeader *last_before_end_old = malloc_end_marker.prev
+	last_before_end_old.next = last_before_end_new
+	last_before_end_new.prev = last_before_end_old
+	last_before_end_new.magic = 0x1234567
+	
+	
 	// add allocated block
 	hh = _i2p(cur_break_value - size - sizeof(MallocHeader) - MALLOC_STOPPER)
 	hh.size = size
@@ -661,15 +670,14 @@ void* lib__@malloc(int size)
 	hh.prev = nil
 	
 	// resize last free block
-	MallocHeader *last_before_end = malloc_end_marker.prev
-	last_before_end.size = _p2i(hh) - _p2i(last_before_end)
+	last_before_end_new.size = _p2i(hh) - _p2i(last_before_end_new)
 	
 	// create new end marker
 	malloc_end_marker = _i2p(cur_break_value - sizeof(MallocHeader))
 	malloc_end_marker.size = sizeof(MallocHeader)
 	malloc_end_marker.next = nil
-	malloc_end_marker.prev = last_before_end
-	last_before_end.next = malloc_end_marker
+	malloc_end_marker.prev = last_before_end_new
+	last_before_end_new.next = malloc_end_marker
 	
 	return hh.payload()
 

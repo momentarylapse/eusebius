@@ -528,7 +528,7 @@ class Task
 		int cur_top = mem_bottom + mem_size
 		if new_top <= cur_top
 			return cur_top
-		if !page_dir.map_by_alloc(mem_bottom, new_top - cur_top, true)
+		if !page_dir.map_by_alloc(cur_top, new_top - cur_top, true)
 			return -ENOMEM
 		mem_size = new_top - mem_bottom
 		return new_top
