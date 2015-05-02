@@ -365,7 +365,7 @@ void main()
 	
 	// make our debugging life easier...
 	string[] arg2
-	arg2.add("/bin/c")
+	arg2.add("/bin/cake")
 	execute(arg2, -1, -1)
 	//execute(arg2, -1, -1)
 	

@@ -1,10 +1,31 @@
 use "lib/std.kaba"
 use "lib/x.kaba"
 use "lib/draw.kaba"
+use "lib/ttfx.kaba"
 
 
+color bg
 
 XConnection *xcon
+
+
+void draw_cancle(XPainter *p, float x, float y)
+	p.set_color(bg)
+	//p.rectangle(rect(x-12, x+12, y-60, y))
+	p.draw_circle(x, y-30, 20)
+	//p.fill()
+	
+	p.set_color(White)
+	p.path_add(x-10, y)
+	p.path_add(x-10, y-60)
+	p.path_add(x+10, y-60)
+	p.path_add(x+10, y)
+	p.strike()
+	
+	p.draw_spline(complex(x, y-60), complex(x, y-80), complex(x-10, y-90))
+	p.draw_spline(complex(x-10, y-90), complex(x-15, y-100), complex(x-5,y-115))
+	p.draw_spline(complex(x-5,y-115), complex(x+5,y-95), complex(x+12, y-90))
+	p.draw_spline(complex(x+12, y-90), complex(x+10, y-75), complex(x+2, y-60))
 
 void main()
 	init_lib()
@@ -18,37 +39,47 @@ void main()
 		print "client: kann nicht mit x verbinden\n"
 		exit(-1)
 	
-	XWindow *win = xcon.create_win(10 + randi(400), 10 + randi(200), 100, 100)
+	XWindow *win = xcon.create_win(10 + randi(200), 10 + randi(200), 300, 300)
 	if !win
 		print "client: kann kein Fenster erstellen\n"
 		exit(-2)
 		
 	XPainter *p = new XPainter(win)
+	p.font = LoadTTF("/home/x.font")
 
-	p.set_color(color(1, rand(0.5), rand(0.5), rand(0.5)))
+	bg = color(1, 0.1765, 0.1608, 0.4706)
+	p.set_color(bg)
 	p.rectangle(p.all)
 	p.fill()
 	
 	p.set_color(White)
-	p.rectangle(rect(10, 30, 10, 30))
-	p.fill()
+	p.draw_str(10, 40, "Herzlichen", 0.015)
+	p.draw_str(20, 60, "Glueckwunsch", 0.015)
 	
-	p.line_width = 3
-	p.path_add(10, 20)
-	p.path_add(80, 30)
-	p.path_add(90, 90)
-	p.path_add(30, 80)
-	p.path_close()
-	p.strike()
+	p.draw_spline(complex( 50, 200), complex( 50, 170), complex(150, 170))
+	p.draw_spline(complex(150, 170), complex(250, 170), complex(250, 200))
 	
-	p.draw_circle(60, 60, 10)
-	p.draw_spline(complex(0,0), complex(100, 0), complex(100, 100))
+	p.draw_spline(complex( 50, 200), complex( 50, 230), complex(150, 230))
+	p.draw_spline(complex(150, 230), complex(250, 230), complex(250, 200))
+	
+	p.draw_spline(complex( 50, 250), complex( 50, 280), complex(150, 280))
+	p.draw_spline(complex(150, 280), complex(250, 280), complex(250, 250))
+	
+	p.draw_line(complex( 50.0, 200.0), complex( 50.0, 250.0))
+	p.draw_line(complex(250.0, 200.0), complex(250.0, 250.0))
+	
+	draw_cancle(p, 100, 195)
+	draw_cancle(p, 170, 210)
+	draw_cancle(p, 220, 199)
+	
+	//p.draw_circle(60, 60, 10)
+	//p.draw_spline(complex(0,0), complex(100, 0), complex(100, 100))*/
 	p.end()
 	
 	while true
 		sleep(50)
 		
-		win.move(randi(500), randi(400))
+		win.move(randi(300), randi(200))
 	
 	delete xcon
 	

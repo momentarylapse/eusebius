@@ -48,11 +48,13 @@ void main()
 	p.set_color(White)
 	p.line_width = 1
 	
-	//for x in 0:10
-	//	for y in 0:10
-	//		p.draw_glyph(40*x, 40*y, 100+x + 10*y, 0.02)
-	p.draw_glyph(100, 100, 99, 0.1)
-	p.draw_glyph(105, 105, 99, 0.1)
+	/*for x in 0:10
+		for y in 0:10
+			p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)*/
+			
+	p.draw_str(20,  50, "Hallo Welt", 0.02)
+	p.draw_str(20, 100, "Hallo Welt", 0.02)
+	//p.draw_glyph(100, 100, 99, 0.1)
 	
 	/*for c in g.contours
 		for i in c.start:c.start+c.num
