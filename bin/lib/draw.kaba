@@ -27,9 +27,12 @@ class XCircle
 	complex m
 	float r
 
+class XLine
+	complex a, b
+
 class XPainter
 	int[0]* buf
-	int w, h
+	int width, height
 	rect all
 	bool error
 	
@@ -37,8 +40,9 @@ class XPainter
 	complex pos
 	
 	rect[] rects
-	complex[] path
 	XCircle[] circles
+	XLine[] path
+	int last_path_start
 	
 	float line_width
 	XWindow *win
@@ -48,15 +52,16 @@ class XPainter
 		win = _win
 		error = true
 		buf = win.buf
-		if !win.get_size(&w, &h)
+		if !win.get_size(&width, &height)
 			print "Draw-Fehler: get_size()\n"
 			return
 		error = false
 		set_color(Black)
-		all = rect(0, w, 0, h)
+		all = rect(0, width, 0, height)
 		pos = complex(0, 0)
 		line_width = 1.0
 		font = nil
+		last_path_start = 0
 	
 	void set_color(color c)
 		cur_color = col2i(c)
@@ -65,34 +70,34 @@ class XPainter
 		rects.add(r)
 	
 	void draw_pixel(int x, int y)
-		if x < 0 or x >= w
+		if x < 0 or x >= width
 			return
-		if y < 0 or y >= h
+		if y < 0 or y >= height
 			return
-		int index = x + y * w
+		int index = x + y * width
 		buf[index] = cur_color
 	
 	void draw_rect(rect r)
 		int x0 = max(r.x1, 0)
 		int y0 = max(r.y1, 0)
-		int x1 = min(r.x2, w)
-		int y1 = min(r.y2, h)
+		int x1 = min(r.x2, width)
+		int y1 = min(r.y2, height)
 		for y in y0:y1
-			int index = x0 + y * w
+			int index = x0 + y * width
 			for x in x0:x1
 				buf[index] = cur_color
 				index ++
 	
 	void draw_circle(float mx, float my, float r)
 		r += 0.5
-		int x0 = max(mx - r , 0)
+		int x0 = max(mx - r, 0)
 		int y0 = max(my - r, 0)
-		int x1 = min(mx + r, w)
-		int y1 = min(my + r, h)
+		int x1 = min(mx + r, width)
+		int y1 = min(my + r, height)
 		float rr_i = sqr(r - 1)
 		float rr_o = sqr(r)
 		for y in y0:y1
-			int index = x0 + y * w
+			int index = x0 + y * width
 			float dy = y - my
 			float dx = x0 - mx
 			for x in x0:x1
@@ -108,8 +113,8 @@ class XPainter
 		float r = line_width * 1.5
 		int x0 = max(min(a.x, b.x)-r, 0)
 		int y0 = max(min(a.y, b.y)-r, 0)
-		int x1 = min(max(a.x, b.x)+r, w)
-		int y1 = min(max(a.y, b.y)+r, h)
+		int x1 = min(max(a.x, b.x)+r, width)
+		int y1 = min(max(a.y, b.y)+r, height)
 		complex l = b - a
 		float ll = (l.x*l.x + l.y*l.y)
 		complex n = complex(l.y, -l.x)
@@ -118,7 +123,7 @@ class XPainter
 		float f2 = ll * ll
 		
 		for y in y0:y1
-			int index = x0 + y * w
+			int index = x0 + y * width
 			float dy = y - a.y
 			float dx = x0 - a.x
 			for x in x0:x1
@@ -143,31 +148,77 @@ class XPainter
 			z1 = z2
 		draw_line(z2, c)
 	
+	void fill_polygon()
+		int[][] hit
+		hit.resize(height)
+		
+		for l in path
+			if l.a.y == l.b.y
+				continue
+			int y1 = l.a.y
+			int y2 = l.b.y
+			float m = (l.a.x - l.b.x) / (l.a.y - l.b.y)
+			float a = l.a.x - l.a.y*m
+			if y2 > y1
+				y1 = max(y1, 0)
+				y2 = min(y2, height)
+				for y in y1:y2
+					float hx = y*m + a
+					hit[y].add(hx)
+			else
+				y1 = min(y1, height)
+				y2 = max(y2, 0)
+				for y in y2:y1
+					hx = y*m + a
+					hit[y].add(hx)
+		
+		for y in 0:height
+			if (hit[y].num & 1) != 0
+				continue
+			hit[y].sort()
+			for i in 0:hit[y].num:2
+				int x0 = max(hit[y][i], 0)
+				int x1 = min(hit[y][i+1], width)
+				int index = x0 + y * width
+				for x in x0:x1
+					buf[index] = cur_color
+					index ++
+	
 	void fill()
 		for r in rects
 			draw_rect(r)
 		for c in circles
 			draw_circle(c.m.x, c.m.y, c.r)
+		fill_polygon()
 		clear_data()
 	
-	void path_add(float x, float y)
-		path.add(complex(x, y))
+	void move_to(float x, float y)
+		pos = complex(x, y)
+		last_path_start = path.num
+	
+	void line_to(float x, float y)
+		XLine l
+		l.a = pos
+		l.b = complex(x, y)
+		path.add(l)
+		pos = l.b
 	
 	void path_close()
-		if path.num > 0
-			path.add(path[0])
+		if path.num > last_path_start
+			complex z = path[last_path_start].a
+			line_to(z.x, z.y)
+			last_path_start = path.num
+			pos = z
 	
 	void clear_data()
+		rects.clear()
 		path.clear()
 		circles.clear()
+		last_path_start = 0
 	
 	void strike()
-		if path.num > 0
-			complex s
-			for d,i in path
-				if i > 0
-					draw_line(s, d)
-				s = d
+		for l,i in path
+			draw_line(l.a, l.b)
 		clear_data()
 	
 	void draw_glyph(float x, float y, int index, float scale)
@@ -176,10 +227,12 @@ class XPainter
 		TTFGlyph *g = &font.glyphs[index]
 	
 		for c in g.contours
-			for i in c.start:c.start+c.num
-				path_add(x + font.points[i].x * scale, y + (1000 - font.points[i].y) * scale)
+			move_to(x + font.points[c.start].x * scale, y + (1000 - font.points[c.start].y) * scale)
+			for i in c.start+1:c.start+c.num
+				line_to(x + font.points[i].x * scale, y + (1000 - font.points[i].y) * scale)
 			path_close()
-			strike()
+		//strike()
+		fill()
 	
 	void draw_str(float x, float y, string text, float scale)
 		for c in text

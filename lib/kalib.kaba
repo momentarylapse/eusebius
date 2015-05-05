@@ -1173,6 +1173,13 @@ class lib__int@list : lib__@DynamicArray
 		resize(o.num)
 		for i in 0:num
 			data[i] = o.data[i]
+	void sort()
+		for i in 0:num
+			for j in i:num
+				if data[i]>data[j]
+					int t = data[i]
+					data[i] = data[j]
+					data[j] = t
 
 class lib__float@list : lib__@DynamicArray
 	overwrite float[0]* data
@@ -1199,6 +1206,13 @@ class lib__float@list : lib__@DynamicArray
 		resize(o.num)
 		for i in 0:num
 			data[i] = o.data[i]
+	void sort()
+		for i in 0:num
+			for j in i:num
+				if data[i]>data[j]
+					int t = data[i]
+					data[i] = data[j]
+					data[j] = t
 
 class lib__bool@list : lib__@DynamicArray
 	overwrite bool[0]* data
@@ -1280,6 +1294,7 @@ lib__string lib__@sa2s(lib__string@list a)
 		r += a.data[i]
 		r.add('"')
 	r.add(']')
+	return r
 
 lib__string lib__@i2s(int i)
 	bool sign = i >= 0

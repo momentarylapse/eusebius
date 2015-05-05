@@ -372,6 +372,7 @@ void main()
 	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	prompt.show()
+	
 	while true
 		usleep(100000)
 		jobs.test_all()
