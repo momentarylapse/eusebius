@@ -13,12 +13,15 @@ const int XCMD_WINDOW_INVALIDATE = 1027
 const int XCMD_WINDOW_GET_SIZE = 2048
 const int XCMD_WINDOW_GET_POS = 2049
 
+const int XCMD_EVENT_MOUSE = 3072
+const int XCMD_EVENT_KEY = 3073
+const int XCMD_EVENT_DRAW = 3074
 
 const int WF_TRANSPARENT = 1024
 const int WF_DONT_INVALIDATE = 2048
 
 class MouseController
-	int x, y
+	int x, y, flags
 	XWindow* cursor
 	
 	int dev
@@ -47,6 +50,7 @@ class MouseController
 		int[4] m
 		if read(dev, &m, 4*4) < 16
 			return false
+		flags = m[0]
 		x += m[1]
 		y -= m[2]
 		if x < 0
@@ -67,7 +71,10 @@ class MouseController
 				break
 			need_update = true
 		if need_update
+			for c in cmds.clients
+				c.send_mouse()
 			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
+			
 
 MouseController *mouse
 
@@ -257,46 +264,80 @@ class Client
 		for w in win
 			delete w
 	
-	void update()
-		if buf[0] == 1
-			buf[0] = 13
-			buf[32] = -1
-			print "x: empfange\n"
-			if buf[1] == XCMD_KILL
-				buf[32] = 0
-				kill_me = true
-			else if buf[1] == XCMD_WINDOW_NEW
-				XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2 | WF_DONT_INVALIDATE)
-				win.add(ww)
-				buf[32] = 0
-				buf[33] = ww.id
-				buf[34] = ww.shm_key
-				print "x: c.key=" + key + " w.key=" + ww.shm_key + "\n"
-			else if buf[1] == XCMD_WINDOW_INVALIDATE
-				for w in win
-					if w.id == buf[2]
-						invalidated.add(w.r)
-						buf[32] = 0
-			else if buf[1] == XCMD_WINDOW_MOVE
-				for w in win
-					if w.id == buf[2]
-						w.move(buf[3], buf[4])
-						buf[32] = 0
-			else if buf[1] == XCMD_WINDOW_GET_POS
-				for w in win
-					if w.id == buf[2]
-						buf[32] = 0
-						buf[33] = w.r.x0
-						buf[34] = w.r.y0
-						break
-			else if buf[1] == XCMD_WINDOW_GET_SIZE
-				for w in win
-					if w.id == buf[2]
-						buf[32] = 0
-						buf[33] = w.r.w()
-						buf[34] = w.r.h()
-						break
-			buf[0] = 0
+	void wait_clear()
+		while buf[0] != 0
+			nil
+	
+	void wait_clear_poll()
+		while buf[0] != 0
+			poll()
+	
+	void clear()
+		buf[0] = 0
+	
+	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
+		wait_clear_poll()
+		buf[0] = 13
+		buf[1] = cmd
+		buf[2] = p1
+		buf[3] = p2
+		buf[4] = p3
+		buf[5] = p4
+		buf[6] = p5
+		buf[0] = 2
+		wait_clear()
+		return buf[32]
+	
+	int send(int cmd, int p1, int p2, int p3, int p4, int p5)
+		int r = just_send(cmd, p1, p2, p3, p4, p5)
+		clear()
+		return r
+	
+	void send_mouse()
+		print "x: send mouse\n"
+		send(XCMD_EVENT_MOUSE, mouse.x, mouse.y, mouse.flags, 0, 0)
+	
+	void poll()
+		if buf[0] != 1
+			return
+		buf[0] = 13
+		buf[32] = -1
+		print "x: empfange\n"
+		if buf[1] == XCMD_KILL
+			buf[32] = 0
+			kill_me = true
+		else if buf[1] == XCMD_WINDOW_NEW
+			XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2 | WF_DONT_INVALIDATE)
+			win.add(ww)
+			buf[32] = 0
+			buf[33] = ww.id
+			buf[34] = ww.shm_key
+			print "x: c.key=" + key + " w.key=" + ww.shm_key + "\n"
+		else if buf[1] == XCMD_WINDOW_INVALIDATE
+			for w in win
+				if w.id == buf[2]
+					invalidated.add(w.r)
+					buf[32] = 0
+		else if buf[1] == XCMD_WINDOW_MOVE
+			for w in win
+				if w.id == buf[2]
+					w.move(buf[3], buf[4])
+					buf[32] = 0
+		else if buf[1] == XCMD_WINDOW_GET_POS
+			for w in win
+				if w.id == buf[2]
+					buf[32] = 0
+					buf[33] = w.r.x0
+					buf[34] = w.r.y0
+					break
+		else if buf[1] == XCMD_WINDOW_GET_SIZE
+			for w in win
+				if w.id == buf[2]
+					buf[32] = 0
+					buf[33] = w.r.w()
+					buf[34] = w.r.h()
+					break
+		clear()
 		
 
 class CommandController
@@ -323,7 +364,7 @@ class CommandController
 			buf[0] = 0
 			
 		for c in clients
-			c.update()
+			c.poll()
 		for i in 0:clients.num
 			if clients[i].kill_me
 				delete clients[i]
@@ -372,5 +413,6 @@ void main()
 		cmds.update()
 		mouse.update()
 		draw_invalidated()
+		usleep(5000)
 		
 	XExit()

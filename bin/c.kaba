@@ -74,7 +74,8 @@ void main()
 	p.end()
 	
 	while true
-		sleep(50)
+		xcon.poll()
+		usleep(5000)
 		
 		//win.move(randi(500), randi(400))
 	

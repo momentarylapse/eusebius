@@ -8,6 +8,10 @@ const int XCMD_WINDOW_INVALIDATE = 1027
 const int XCMD_WINDOW_GET_SIZE = 2048
 const int XCMD_WINDOW_GET_POS = 2049
 
+const int XCMD_EVENT_MOUSE = 3072
+const int XCMD_EVENT_KEY = 3073
+const int XCMD_EVENT_DRAW = 3074
+
 class XWindow
 	int id
 	int[0]* buf
@@ -35,6 +39,7 @@ class XWindow
 class XConnection
 	int[0]* buf
 	bool error
+	XWindow*[] windows
 	
 	void __init__()
 		error = true
@@ -72,11 +77,15 @@ class XConnection
 		while buf[0] != 0
 			nil
 	
+	void wait_clear_poll()
+		while buf[0] != 0
+			poll()
+	
 	void clear()
 		buf[0] = 0
 	
 	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		wait_clear()
+		wait_clear_poll()
 		buf[0] = 13
 		buf[1] = cmd
 		buf[2] = p1
@@ -110,6 +119,23 @@ class XConnection
 			print "  -- client: konnte Fenster nicht anlegen --\n"
 			delete win
 			return nil
+		windows.add(win)
 		//print "client: ok\n"// " + key + " " + id + "\n"
 		return win
+	
+	void poll()
+		if buf[0] != 2
+			return
+		buf[0] = 13
+		if buf[1] == XCMD_EVENT_MOUSE
+			print "client: mouse\n"
+			print buf[2]
+			print "/" + buf[3]
+			print " - " + buf[4] + "\n"
+		if buf[1] == XCMD_EVENT_KEY
+			print "client: key\n"
+		if buf[1] == XCMD_EVENT_DRAW
+			print "client: draw\n"
 		
+		
+		clear()
