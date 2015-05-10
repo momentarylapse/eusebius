@@ -248,5 +248,5 @@ class XPainter
 		
 		
 	void end()
-		win.invalidate()
+		win.invalidate_all()
 		

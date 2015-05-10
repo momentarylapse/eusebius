@@ -12,19 +12,42 @@ const int XCMD_EVENT_MOUSE = 3072
 const int XCMD_EVENT_KEY = 3073
 const int XCMD_EVENT_DRAW = 3074
 
+const int CON_STATUS_CLEAR = 0
+const int CON_STATUS_WRITING = 13
+const int CON_STATUS_SERVER_SEND = 1
+const int CON_STATUS_SERVER_ANSWER = 2
+const int CON_STATUS_CLIENT_SEND = 3
+const int CON_STATUS_CLIENT_ANSWER = 4
+
+class XRect
+	int x0, y0, x1, y1
+	int w()
+		return x1 - x0
+	int h()
+		return y1 - y0
+	bool inside(int x, int y)
+		return x >= x0 and x < x1 and y >= y0 and y < y1
+
 class XWindow
 	int id
 	int[0]* buf
 	XConnection *con
-	void __init__(XConnection *c, int _id, int key)
+	void __init__(XConnection *c, int x, int y, int w, int h)
 		con = c
-		id = _id
-		int mem_id = shmget(key, 0, 0)
-		buf = shmat(mem_id, 0)
+		buf = nil
+		c._create_win(self, x, y, w, h)
 	void __delete__()
 		if buf
 			shmdt(buf)
-	bool invalidate()
+	void create_buf(int _id, int key)
+		id = _id
+		int mem_id = shmget(key, 0, 0)
+		buf = shmat(mem_id, 0)
+		if !buf
+			kprint "  -- client: konnte Fenster-Puffer nicht anlegen --\n"
+	bool invalidate(int x0, int y0, int x1, int y1)
+		return con.send(XCMD_WINDOW_INVALIDATE, id, x0, y0, x1, y1) == 0
+	bool invalidate_all()
 		return con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1) == 0
 	bool move(int x, int y)
 		return con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0) == 0
@@ -34,6 +57,10 @@ class XWindow
 		*h = con.buf[34]
 		con.wait_clear()
 		return r == 0
+	virtual void onKey(int key)
+		print "c-win: key " + key + "\n"
+	virtual void onMouse(int x, int y, int flags)
+		print "c-win: mouse " + x + "/" + y + "   " + flags + "\n"
 		
 
 class XConnection
@@ -45,26 +72,26 @@ class XConnection
 		error = true
 	
 		int key = randi(1000000)
-		print "client: key=" + key + "\n"
+		kprint "client: key=" + key + "\n"
 		int id = shmget(key, 1024, SHM_DEST | IPC_CREAT)
 		buf = shmat(id, 0)
 		if !buf
-			print "client: shmat (1) fehlgeschlagen\n"
+			kprint "client: shmat (1) fehlgeschlagen\n"
 			return
-		buf[0] = 0
+		buf[0] = CON_STATUS_CLEAR
 	
 		// connect
 		int id0 = shmget(0x7bcd0123, 0, 0)
 		int[0]* buf0 = shmat(id0, 0)
 		if !buf0
-			print "client: shmat (2) fehlgeschlagen\n"
+			kprint "client: shmat (2) fehlgeschlagen\n"
 			return
 	
-		while buf0[0] != 0
+		while buf0[0] != CON_STATUS_CLEAR
 			nil
-		buf0[0] = 13
+		buf0[0] = CON_STATUS_WRITING
 		buf0[1] = key
-		buf0[0] = 1
+		buf0[0] = CON_STATUS_CLIENT_SEND
 		shmdt(buf0)
 		error = false
 		
@@ -74,26 +101,30 @@ class XConnection
 		send_exit()
 	
 	void wait_clear()
-		while buf[0] != 0
+		kprint " c:wc "
+		while buf[0] != CON_STATUS_CLEAR and buf[0] != CON_STATUS_SERVER_ANSWER
 			nil
+		kprint " c:/wc "
 	
-	void wait_clear_poll()
-		while buf[0] != 0
+	void __wait_clear_poll()
+		while buf[0] != CON_STATUS_CLEAR
 			poll()
 	
 	void clear()
-		buf[0] = 0
+		kprint " c:clear "
+		buf[0] = CON_STATUS_CLEAR
 	
 	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		wait_clear_poll()
-		buf[0] = 13
+		kprint " c:send "
+		wait_clear()
+		buf[0] = CON_STATUS_WRITING
 		buf[1] = cmd
 		buf[2] = p1
 		buf[3] = p2
 		buf[4] = p3
 		buf[5] = p4
 		buf[6] = p5
-		buf[0] = 1
+		buf[0] = CON_STATUS_CLIENT_SEND
 		wait_clear()
 		return buf[32]
 	
@@ -105,37 +136,41 @@ class XConnection
 	void send_exit()
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
-	XWindow *create_win(int x, int y, int w, int h)
-		print "client: send new win\n"
+	bool _create_win(XWindow *win, int x, int y, int w, int h)
+		kprint "client: send new win\n"
 		if just_send(XCMD_NEW_WINDOW, x, y, w, h, 0) != 0
-			print "   -- client: kein neues Fenster --\n"
-			return nil
-		print "ok"
+			kprint "   -- client: kein neues Fenster --\n"
+			return false
+		kprint "ok"
 		int win_id = buf[33]
 		int win_key = buf[34]
 		clear()
-		XWindow *win = new XWindow(self, win_id, win_key)
+		win.create_buf(win_id, win_key)
 		if !win.buf
-			print "  -- client: konnte Fenster nicht anlegen --\n"
-			delete win
-			return nil
+			return false
 		windows.add(win)
 		//print "client: ok\n"// " + key + " " + id + "\n"
-		return win
+		return true
 	
 	void poll()
-		if buf[0] != 2
+		if buf[0] != 0
+			kprint "    c:" + buf[0]
+		if buf[0] != CON_STATUS_SERVER_SEND
 			return
-		buf[0] = 13
+		buf[0] = CON_STATUS_WRITING
 		if buf[1] == XCMD_EVENT_MOUSE
-			print "client: mouse\n"
-			print buf[2]
-			print "/" + buf[3]
-			print " - " + buf[4] + "\n"
+			kprint "client: mouse\n"
+			kprint buf[2]
+			kprint "/" + buf[3]
+			kprint " - " + buf[4] + "\n"
+			for w in windows
+				w.onMouse(buf[2], buf[3], buf[4])
 		if buf[1] == XCMD_EVENT_KEY
-			print "client: key\n"
+			kprint "client: key\n"
+			for w in windows
+				w.onKey(buf[2])
 		if buf[1] == XCMD_EVENT_DRAW
-			print "client: draw\n"
+			kprint "client: draw\n"
 		
 		
 		clear()

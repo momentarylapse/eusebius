@@ -17,6 +17,13 @@ const int XCMD_EVENT_MOUSE = 3072
 const int XCMD_EVENT_KEY = 3073
 const int XCMD_EVENT_DRAW = 3074
 
+const int CON_STATUS_CLEAR = 0
+const int CON_STATUS_WRITING = 13
+const int CON_STATUS_SERVER_SEND = 1
+const int CON_STATUS_SERVER_ANSWER = 2
+const int CON_STATUS_CLIENT_SEND = 3
+const int CON_STATUS_CLIENT_ANSWER = 4
+
 const int WF_TRANSPARENT = 1024
 const int WF_DONT_INVALIDATE = 2048
 
@@ -46,7 +53,7 @@ class MouseController
 			cursor = new XWindow(x-16, y-16, 32, 32, WF_TRANSPARENT | 7)
 			cursor.fill(0xffc0c0c0)
 
-	bool update_single()
+	bool poll_single()
 		int[4] m
 		if read(dev, &m, 4*4) < 16
 			return false
@@ -64,19 +71,31 @@ class MouseController
 	
 		return true
 
-	void update()
+	void poll()
 		bool need_update = false
 		for i in 0:8
-			if !update_single()
+			if !poll_single()
 				break
 			need_update = true
 		if need_update
 			for c in cmds.clients
 				c.send_mouse()
 			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
-			
 
-MouseController *mouse
+MouseController* mouse
+
+class KeyboardController
+	int key
+	void __init__()
+		fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
+	void poll()
+		key = 0
+		if read(stdin, &key, 1) <= 0
+			return
+		for c in cmds.clients
+			c.send_key()
+
+KeyboardController* keyboard
 
 void XExit()
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
@@ -102,7 +121,7 @@ class XWindow
 	int level
 	
 	void __init__(int x, int y, int w, int h, int flags)
-		print "x: new win\n"
+		kprint "x: new win\n"
 		r.x0 = x
 		r.y0 = y
 		r.x1 = x + w
@@ -124,7 +143,7 @@ class XWindow
 				invalidated.add(r)
 		
 	void __delete__()
-		print "x: del win\n"
+		kprint "x: del win\n"
 		if buf
 			invalidated.add(r)
 			shmdt(buf)
@@ -252,57 +271,66 @@ class Client
 	void __init__(int _key)
 		key = _key
 		kill_me = false
-		print "x: new client key=" + key + " \n"
+		kprint "x: new client key=" + key + " \n"
 		int id = shmget(key, 0, 0)
 		buf = shmat(id, 0)
 		if !buf
-			print "  -- x: Fehler shmat (2) --\n"
+			kprint "  -- x: Fehler shmat (2) --\n"
 	
 	void __delete__()
-		print "x: del client\n"
+		kprint "x: del client\n"
 		shmdt(buf)
 		for w in win
 			delete w
 	
 	void wait_clear()
-		while buf[0] != 0
-			nil
+		kprint " x:wc "
+		while buf[0] != CON_STATUS_CLEAR
+			poll()
+		kprint " x:/wc "
 	
-	void wait_clear_poll()
-		while buf[0] != 0
+	void __wait_clear_poll()
+		while buf[0] != CON_STATUS_CLEAR
 			poll()
 	
 	void clear()
-		buf[0] = 0
+		kprint " x:clear "
+		buf[0] = CON_STATUS_CLEAR
 	
-	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		wait_clear_poll()
-		buf[0] = 13
+	void just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
+		kprint " x:send "
+		wait_clear()
+		buf[0] = CON_STATUS_WRITING
 		buf[1] = cmd
 		buf[2] = p1
 		buf[3] = p2
 		buf[4] = p3
 		buf[5] = p4
 		buf[6] = p5
-		buf[0] = 2
+		buf[0] = CON_STATUS_SERVER_SEND
 		wait_clear()
-		return buf[32]
+		//return buf[32]
 	
-	int send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		int r = just_send(cmd, p1, p2, p3, p4, p5)
+	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
+		just_send(cmd, p1, p2, p3, p4, p5)
 		clear()
-		return r
 	
 	void send_mouse()
-		print "x: send mouse\n"
+		kprint "x: send mouse\n"
 		send(XCMD_EVENT_MOUSE, mouse.x, mouse.y, mouse.flags, 0, 0)
 	
+	void send_key()
+		kprint "x: send key\n"
+		send(XCMD_EVENT_KEY, keyboard.key, 0, 0, 0, 0)
+	
 	void poll()
-		if buf[0] != 1
+		//kprint "    x:" + buf[0]
+		if buf[0] != CON_STATUS_CLIENT_SEND
 			return
-		buf[0] = 13
+		buf[0] = CON_STATUS_WRITING
 		buf[32] = -1
-		print "x: empfange\n"
+		kprint "x: empfange\n"
+		int end_status = CON_STATUS_CLEAR
 		if buf[1] == XCMD_KILL
 			buf[32] = 0
 			kill_me = true
@@ -312,7 +340,8 @@ class Client
 			buf[32] = 0
 			buf[33] = ww.id
 			buf[34] = ww.shm_key
-			print "x: c.key=" + key + " w.key=" + ww.shm_key + "\n"
+			kprint "x: c.key=" + key + " w.key=" + ww.shm_key + "\n"
+			end_status = CON_STATUS_SERVER_ANSWER
 		else if buf[1] == XCMD_WINDOW_INVALIDATE
 			for w in win
 				if w.id == buf[2]
@@ -337,7 +366,7 @@ class Client
 					buf[33] = w.r.w()
 					buf[34] = w.r.h()
 					break
-		clear()
+		buf[0] = end_status
 		
 
 class CommandController
@@ -355,13 +384,15 @@ class CommandController
 			print "x: Fehler shmat (1)\n"
 			exit(-1)
 		
-		buf[0] = 0
+		buf[0] = CON_STATUS_CLEAR
 	
 	void update()
-		if buf[0] == 1
-			buf[0] = 13
+		//kprinti buf[0]
+		if buf[0] == CON_STATUS_CLIENT_SEND
+			buf[0] = CON_STATUS_WRITING
+			//kprint "  x:new client "
 			clients.add(new Client(buf[1]))
-			buf[0] = 0
+			buf[0] = CON_STATUS_CLEAR
 			
 		for c in clients
 			c.poll()
@@ -386,8 +417,10 @@ void main()
 	invalidated.__init__()
 	
 	
+	
 	cmds = new CommandController
 	mouse = new MouseController
+	keyboard = new KeyboardController
 	
 	if arg.num == 1
 		BgaSetVideoMode(640, 480, 32)
@@ -411,7 +444,8 @@ void main()
 	print "x: running\n"
 	while true
 		cmds.update()
-		mouse.update()
+		mouse.poll()
+		keyboard.poll()
 		draw_invalidated()
 		usleep(5000)
 		

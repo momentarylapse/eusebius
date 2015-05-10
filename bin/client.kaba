@@ -17,8 +17,8 @@ void main()
 		print "client: kann nicht mit x verbinden\n"
 		exit(-1)
 	
-	XWindow *win = xcon.create_win(10 + randi(400), 10 + randi(200), 100, 100)
-	if !win
+	XWindow *win = new XWindow(xcon, 10 + randi(400), 10 + randi(200), 100, 100)
+	if !win.buf
 		print "client: kann kein Fenster erstellen\n"
 		exit(-2)
 		
