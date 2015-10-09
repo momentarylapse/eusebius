@@ -424,7 +424,7 @@ void main()
 	keyboard = new KeyboardController
 	
 	if arg.num == 1
-		BgaSetVideoMode(640, 480, 32)
+		BgaSetVideoMode(800, 600, 32)
 		mouse.x = screen_width / 2
 		mouse.y = screen_height / 2
 	
@@ -439,7 +439,7 @@ void main()
 	draw_invalidated()
 	
 	// make our debugging life easier...
-	execute(["/bin/c"], -1, -1)
+	execute(["/bin/xterm"], -1, -1)
 	//execute(["/bin/c"], -1, -1)
 	
 	print "x: running\n"

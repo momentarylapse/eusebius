@@ -232,18 +232,22 @@ class XPainter
 			for i in c.start+1:c.start+c.num
 				line_to(x + font.points[i].x * scale, y + (1000 - font.points[i].y) * scale)
 			path_close()
-		//strike()
-		fill()
+		strike()
+		//fill()
 	
 	void draw_str(float x, float y, string text, float scale)
 		for c in text
 			int code = c2i(c) & 0x000000ff
 			int index = 0
-			if code >= 'a' and code <= 'z'
+			for g,i in font.glyphs
+				if g.code == code
+					index = i
+					break
+			/*if code >= 'a' and code <= 'z'
 				index = code - 32
 			else if code >= 'A' and code <= 'Z'
-				index = code - 32
-			if index != 0
+				index = code - 32*/
+			if index != 0 and code != 32
 				draw_glyph(x, y, index, scale)
 			x += scale * 1500.0
 		

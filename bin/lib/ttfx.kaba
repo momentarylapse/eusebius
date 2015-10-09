@@ -67,7 +67,7 @@ class TTFFont
 		int n = readI()
 		glyphs.resize(n)
 		for g,i in glyphs
-			g.code = readI()
+			g.code = readI() + 3
 			n = readI()
 			g.contours.resize(n)
 			for c in g.contours

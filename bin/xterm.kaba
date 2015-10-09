@@ -1,0 +1,136 @@
+use "lib/std.kaba"
+use "lib/x.kaba"
+use "lib/draw.kaba"
+use "lib/ttfx.kaba"
+
+
+class History
+	string[] lines
+	void __init__()
+		lines.add("")
+	void add(string s)
+		for c in s
+			if c == 10
+				lines.add("")
+			else
+				lines[lines.num - 1].add(c)
+		window.redraw(self)
+History *history
+Job *shell
+
+class Job
+	int pid
+	bool done
+	int[2] pipe_in, pipe_out // from job's point of view
+	void __init__(string[] c)
+		done = false
+		pipe_in[0] = -1
+		pipe_in[1] = -1
+		pipe_out[0] = -1
+		pipe_out[1] = -1
+		pid = -1
+		
+		pipe(pipe_in)
+		pipe(pipe_out)
+		
+		pid = execute(c, pipe_in[0], pipe_out[1])
+		close(pipe_in[0])
+		close(pipe_out[1])
+		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
+		
+		// debug
+		string s = "ls\n"
+		write(pipe_in[1], &s[0], s.num)
+	
+	void __delete__()
+		close(pipe_in[1])
+		close(pipe_out[0])
+	
+	void test()
+		string s
+		s.resize(512)
+		int r = read(pipe_out[0], &s[0], s.num)
+		if r > 0
+			s.resize(r)
+			history.add(s)
+			//print s
+			return
+		
+		int status
+		if waitpid(pid, &status, false) == -2
+			return
+		history.add("---xxx---")
+	//	if status < -600//-652
+	//		print("  -- Programm hat was boeses gemacht! --\n")
+		//print(" status " + status)
+		done = true
+
+class CWindow : XWindow
+	int x, y
+	XPainter *p
+	void __init__(int x, int y, int w, int h)
+		super.__init__(xcon, x, y, w, h)
+		p = new XPainter(self)
+		p.font = LoadTTF("/home/x.font")
+		self.x = x
+		self.y = y
+	
+	overwrite void onKey(int key)
+		if key == 'w'
+			y -= 5
+		if key == 's'
+			y += 5
+		if key == 'a'
+			x -= 5
+		if key == 'd'
+			x += 5
+		move(x, y)
+			
+
+	void redraw(History *h)
+		p.set_color(color(1, 0,0,0))
+		p.rectangle(p.all)
+		p.fill()
+		p.line_width = 1
+
+		p.set_color(White)
+		for l,i in h.lines
+			p.draw_str(5, i*20+5, l, 0.01)
+			
+		p.end()
+
+CWindow *window
+
+XConnection *xcon
+
+void main()
+	init_lib()
+	
+	stdout = open("/dev/tty", O_WRONLY)
+	
+	xcon = new XConnection
+	if xcon.error
+		print "client: kann nicht mit x verbinden\n"
+		exit(-1)
+	
+	window = new CWindow(50, 50, 600, 400)
+	if !window.buf
+		print "client: kann kein Fenster erstellen\n"
+		exit(-2)
+		
+		
+	
+	history = new History
+		
+	
+	shell = new Job(["/bin/shell"])
+	window.redraw(history)
+	
+	while true
+		xcon.poll()
+		usleep(50000)
+		shell.test()
+	
+	delete xcon
+	
+	exit(0)
