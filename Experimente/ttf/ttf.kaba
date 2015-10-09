@@ -175,6 +175,9 @@ class TTF
 		
 		for m in map_tables
 			print "--------------"
+			print m.offset
+			print m.platform
+			print m.encoding
 			f.seek(te.offset.int() + m.offset, true)
 			m.format = readUS()
 			int length = readUS()
@@ -231,13 +234,11 @@ class TTF
 				return false
 				
 				
-			
-		
 		return true
 	
 	bool read_glyph(TTFGlyph g)
-		//print "glyph---------------------------------"
-		//print i2h(f.getPos())
+		print "glyph---------------------------------"
+		print i2h(f.getPos())
 		int num_contours = readSS()
 		//print num_contours
 		if num_contours == 0
@@ -262,10 +263,11 @@ class TTF
 	bool read_glyph_compound(TTFGlyph g)
 		//print "---compound"
 		int n = 0
+		int flags = 0
 		
 		while true
 			//print "C"
-			int flags = readUS()
+			flags = readUS()
 			int glyph_index = readUS()
 			//print glyph_index
 		
@@ -273,8 +275,8 @@ class TTF
 				int arg1 = readSS()
 				int arg2 = readSS()
 			else
-				arg1 = readUB()
-				arg2 = readUB()
+				int arg1 = readUB()
+				int arg2 = readUB()
 		
 			if (flags & 0x0008) != 0
 				float scale = readF214()
@@ -470,17 +472,24 @@ class TTF
 			return &glyphs[0]
 		return &glyphs[n]
 	
-	void export(string filename)
+	void update_codes()
 	
 		for m in map_tables
 			if m.format == 6
+				print "----------------------- 666"
 				for n,i in m.glyph_id_array
 					if n < glyphs.num
 						glyphs[n].code = m.first_code + i
 					//else
 					print "E: " + n + " => " + (m.first_code + i)
 			else if m.format == 4
+				print "----------------------- 444"
+				print m.end_code.num
 				for i in 0:m.end_code.num
+					print "----"
+					print m.start_code[i]
+					print m.end_code[i]
+					print m.id_delta[i]
 					for code in m.start_code[i]:(m.end_code[i]+1)
 						int n = (code + m.id_delta[i]) & 0x0000ffff
 						if n < glyphs.num
@@ -489,12 +498,14 @@ class TTF
 						print "E: " + n + " => " + code
 	
 	
+	void export(string filename)
+	
 		File *f = FileCreate(filename)
 		f.setBinaryMode(true)
 		
 		f << glyphs.num
 		int num_p = 0
-		for g in glyphs
+		for g,i in glyphs
 			f << g.code
 			f << g.contours.num
 			for c in g.contours
@@ -502,11 +513,13 @@ class TTF
 				f << c.p.num
 				num_p += c.p.num
 		f << num_p
-		for g in glyphs
-			for c in g.contours
+		int xx = 0
+		for g,i in glyphs
+			for c,ci in g.contours
 				for p in c.p
 					f << p.x
 					f << p.y
+					xx ++
 		for g in glyphs
 			for c in g.contours
 				if c.flags.num > 0
@@ -554,7 +567,7 @@ class FontWindow : Window
 		p.drawStr(220, 20, g.code)
 		string s
 		s.add(g.code)
-		p.drawStr(250, 20, s)
+		p.drawStr(270, 20, s)
 		
 		for c in g.contours
 			p.setColor(Black)
@@ -563,7 +576,7 @@ class FontWindow : Window
 				p.drawLine(xx(c.p[i].x), yy(c.p[i].y), xx(c.p[i1].x), yy(c.p[i1].y))
 				
 			for i in 0:c.p.num
-				i1 = (i+1) % c.p.num
+				int i1 = (i+1) % c.p.num
 				
 				if (c.flags[i] & 1) != 0
 					p.setColor(Red)
@@ -584,12 +597,10 @@ void main(string[] arg)
 	if !font.load(arg[0])
 		return
 	
+	font.update_codes()
+	
 	if arg.num > 1
 		font.export(arg[1])
-	
-	TTFGlyph *g = font.get('a')
-	for c in g.contours
-		print c.p.num
 	
 	FontWindow *w = new FontWindow
 	w.show()

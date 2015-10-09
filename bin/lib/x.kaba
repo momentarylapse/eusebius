@@ -13,7 +13,7 @@ const int XCMD_EVENT_KEY = 3073
 const int XCMD_EVENT_DRAW = 3074
 
 const int CON_STATUS_CLEAR = 0
-const int CON_STATUS_WRITING = 13
+const int CON_STATUS_BUSY = 13
 const int CON_STATUS_SERVER_SEND = 1
 const int CON_STATUS_SERVER_ANSWER = 2
 const int CON_STATUS_CLIENT_SEND = 3
@@ -89,7 +89,7 @@ class XConnection
 	
 		while buf0[0] != CON_STATUS_CLEAR
 			nil
-		buf0[0] = CON_STATUS_WRITING
+		buf0[0] = CON_STATUS_BUSY
 		buf0[1] = key
 		buf0[0] = CON_STATUS_CLIENT_SEND
 		shmdt(buf0)
@@ -117,7 +117,7 @@ class XConnection
 	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		kprint " c:send "
 		wait_clear()
-		buf[0] = CON_STATUS_WRITING
+		buf[0] = CON_STATUS_BUSY
 		buf[1] = cmd
 		buf[2] = p1
 		buf[3] = p2
@@ -157,18 +157,24 @@ class XConnection
 			kprint "    c:" + buf[0]
 		if buf[0] != CON_STATUS_SERVER_SEND
 			return
-		buf[0] = CON_STATUS_WRITING
+		buf[0] = CON_STATUS_BUSY
 		if buf[1] == XCMD_EVENT_MOUSE
 			kprint "client: mouse\n"
-			kprint buf[2]
-			kprint "/" + buf[3]
-			kprint " - " + buf[4] + "\n"
+			int x = buf[2]
+			int y = buf[3]
+			int flags = buf[4]
+			kprint x
+			kprint "/" + y
+			kprint " - " + flags + "\n"
+			clear()
 			for w in windows
-				w.onMouse(buf[2], buf[3], buf[4])
+				w.onMouse(x, y, flags)
 		if buf[1] == XCMD_EVENT_KEY
 			kprint "client: key\n"
+			int key = buf[2]
+			clear()
 			for w in windows
-				w.onKey(buf[2])
+				w.onKey(key)
 		if buf[1] == XCMD_EVENT_DRAW
 			kprint "client: draw\n"
 		

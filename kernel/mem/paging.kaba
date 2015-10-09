@@ -46,9 +46,10 @@ class PageDirectory : PageTable
 		if writable
 			flags = 7
 		while npages > 0
+			PageTable *pt
 			if e[dir_no] == 0
 				int pos = paging.alloc_page()
-				PageTable *pt = _i2p(pos)
+				pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
 			else
@@ -76,9 +77,10 @@ class PageDirectory : PageTable
 		if writable
 			flags = 7
 		while npages > 0
+			PageTable *pt
 			if e[dir_no] == 0
 				int pos = paging.alloc_page()
-				PageTable *pt = _i2p(pos)
+				pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
 			else

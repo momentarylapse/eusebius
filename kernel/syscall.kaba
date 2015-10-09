@@ -182,6 +182,7 @@ void int_syscall()
 		else if index == 0x2001 // getarg
 			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
 		else if index == 0x2002 // kprints
+			cstring filename
 			if param2 < sizeof(filename)
 				caller.page_dir.memcpy2kernel(&filename, param1, param2)
 				filename[param2] = 0
@@ -215,7 +216,7 @@ void int_syscall()
 		// task switch?
 		if caller.status != TASK_STATUS_RUNNING
 			//prints("S")
-			pid_next = GetNextTask(RunningPid)
+			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, SysCallTask)
 			//printi(pid_next)
 

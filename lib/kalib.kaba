@@ -557,7 +557,7 @@ int lib__loopi(int i, int min, int max)
 		int n = ( (min-i-1) / d ) + 1
 		return i + d * n
 	if i > max
-		n = ( (i-max-1) / d ) + 1
+		int n = ( (i-max-1) / d ) + 1
 		return i - d * n
 	return i
 
@@ -671,7 +671,7 @@ void* lib__@malloc(int size)
 	
 	
 	// add allocated block
-	hh = _i2p(cur_break_value - size - sizeof(MallocHeader) - MALLOC_STOPPER)
+	MallocHeader *hh = _i2p(cur_break_value - size - sizeof(MallocHeader) - MALLOC_STOPPER)
 	hh.size = size
 	hh.next = nil
 	hh.prev = nil
@@ -1148,6 +1148,12 @@ int string::icompare(const string &s) const
 	float float()
 		return 0.0
 
+lib__string binary(void *p, int num)
+	lib__string s
+	s.num = num
+	s.data = p
+	return s
+
 class lib__int@list : lib__@DynamicArray
 	overwrite int[0]* data
 	void __init__()
@@ -1371,7 +1377,7 @@ int lib_loopi(int i, int min, int max)
 		int n= ( (min-i-1) / d ) + 1
 		return i + d * n
 	if i > max
-		n= ( (i-max-1) / d ) + 1
+		int n= ( (i-max-1) / d ) + 1
 		return i - d * n
 	return i
 
@@ -1403,7 +1409,7 @@ float lib__loop(float f, float min, float max)
 		int n = i2f( (min-f) / d ) + 1
 		return f + d * i2f(n)
 	if f >= max
-		n= i2f( (f-max) / d ) + 1
+		int n= i2f( (f-max) / d ) + 1
 		return f - d * i2f(n)
 	return f
 
@@ -1614,7 +1620,6 @@ lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs
 
 class lib__File
 	int h
-	char[1024] buf
 	int buf_pos
 	int pos
 	
@@ -1627,7 +1632,6 @@ class lib__File
 	bool open(string filename)
 		h = xxx_open(filename, O_RDONLY)
 		pos = 0
-		buf_pos = 0
 		return h >= 0
 	
 	void close()

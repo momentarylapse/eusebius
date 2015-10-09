@@ -11,9 +11,17 @@ string i2h(int i)
 
 
 void _read(File *f, char[0]* p, int size)
-	string s = f.read(size)
+	/*string s = f.read(size)
 	for i in 0:size
-		p[i] = s[i]
+		p[i] = s[i]*/
+	int pos = 0
+	while size > 0
+		int chunk = min(128, size)
+		string s = f.read(chunk)
+		for i in 0:chunk
+			p[i + pos] = s[i]
+		pos += chunk
+		size -= chunk
 
 class TTFContour
 	int start, num
@@ -76,6 +84,7 @@ class TTFFont
 		
 	
 	TTFGlyph* get(int code)
+		print "get "
 		for g,i in glyphs
 			if g.code == code
 				print "" + i + "\n"

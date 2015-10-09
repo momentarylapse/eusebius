@@ -69,6 +69,7 @@ extern int stdin, stdout
 extern int lib_error
 
 extern string cs2s(cstring cs)
+extern string binary(void *p, int num)
 
 extern bool exit(int r)
 extern int execute(string[] arg, int fd_in, int fd_out)

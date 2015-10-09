@@ -140,10 +140,11 @@ class XPainter
 	void draw_spline(complex a, complex b, complex c)
 		int n = 12
 		complex z1 = a
+		complex z2
 		for i in 1:n
 			float t = i2f(i) / n
 			float s = 1 - t
-			complex z2 = a * (s*s) + b * (s*t*2.0) + c * (t*t)
+			z2 = a * (s*s) + b * (s*t*2.0) + c * (t*t)
 			draw_line(z1, z2)
 			z1 = z2
 		draw_line(z2, c)
@@ -169,7 +170,7 @@ class XPainter
 				y1 = min(y1, height)
 				y2 = max(y2, 0)
 				for y in y2:y1
-					hx = y*m + a
+					int hx = y*m + a
 					hit[y].add(hx)
 		
 		for y in 0:height

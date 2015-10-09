@@ -189,9 +189,9 @@ class Variable
 		delete v
 	void show()
 		if v.type == TYPE_NONE
-			print "variable " + name
+			print "variable " + name + "\n"
 		else
-			print "variable " + name + " = " + v.str()
+			print "variable " + name + " = " + v.str() + "\n"
 	void setType(int _type)
 		if v.type != _type
 			delete v
@@ -246,16 +246,16 @@ class Variable
 		else if b.v.type == TYPE_FLOAT
 			DynamicValueFloat *bf = b.v
 			if v.type == TYPE_INT
-				ai = v
+				DynamicValueInt* ai = v
 				setFloat(ai.v + bf.v)
 			else if v.type == TYPE_FLOAT
-				af = v
+				DynamicValueFloat* af = v
 				af.v += bf.v
 		else if b.v.type == TYPE_STRING
 			DynamicValueString *bs = b.v
 			if v.type == TYPE_STRING
 				DynamicValueString *as = v
-				ai.v += bf.v
+				as.v += bs.v
 
 	void __isub__(Variable b)
 		if b.v.type == TYPE_INT
@@ -269,10 +269,10 @@ class Variable
 		else if b.v.type == TYPE_FLOAT
 			DynamicValueFloat *bf = b.v
 			if v.type == TYPE_INT
-				ai = v
+				DynamicValueInt* ai = v
 				setFloat(ai.v - bf.v)
 			else if v.type == TYPE_FLOAT
-				af = v
+				DynamicValueFloat* af = v
 				af.v -= bf.v
 
 	void __imul__(Variable b)
@@ -288,10 +288,10 @@ class Variable
 		else if b.v.type == TYPE_FLOAT
 			DynamicValueFloat *bf = b.v
 			if v.type == TYPE_INT
-				ai = v
+				DynamicValueInt* ai = v
 				setFloat(ai.v * bf.v)
 			else if v.type == TYPE_FLOAT
-				af = v
+				DynamicValueFloat* af = v
 				af.v *= bf.v
 
 	void __idiv__(Variable b)
@@ -306,10 +306,10 @@ class Variable
 		else if b.v.type == TYPE_FLOAT
 			DynamicValueFloat *bf = b.v
 			if v.type == TYPE_INT
-				ai = v
+				DynamicValueInt* ai = v
 				setFloat(ai.v / bf.v)
 			else if v.type == TYPE_FLOAT
-				af = v
+				DynamicValueFloat* af = v
 				af.v /= bf.v
 
 	int compare(Variable b)
@@ -324,19 +324,19 @@ class Variable
 		else if b.v.type == TYPE_FLOAT
 			DynamicValueFloat *bf = b.v
 			if v.type == TYPE_INT
-				ai = v
+				DynamicValueInt* ai = v
 				return (ai.v - bf.v)*1000.0
 			else if v.type == TYPE_FLOAT
-				af = v
+				DynamicValueFloat* af = v
 				return (af.v - bf.v)*1000.0
 		else if b.v.type == TYPE_STRING
 			DynamicValueString *bs = b.v
 			if v.type == TYPE_STRING
 				DynamicValueString *as = v
-				if ai.v < bf.v
-					return -1
-				if ai.v > bf.v
-					return 1
+				//if as.v < bs.v
+				//	return -1
+				//if as.v > bs.v
+				//	return 1
 				return 0
 				//return ai.v.compare(bf.v)
 		return 0
@@ -365,7 +365,7 @@ void FuncPrint(Variable *r, Variable*[] p)
 		else
 			s += "-empty-"
 		s += " "
-	print s
+	print s + "\n"
 
 enum
 	TYPE_OPERATOR
@@ -385,7 +385,7 @@ class SyntaxNode
 		string s
 		for i in 0:indent
 			s += "    "
-		print s + str()
+		print s + str() + "\n"
 		for p in params
 			p.show(indent + 1)
 		showPost(indent)
@@ -489,9 +489,10 @@ class SyntaxTree
 	
 	bool error
 	void setError(string msg)
-		print "---Fehler---"
-		print "Zeile " + (cur_line.physical_line_no + 1) + " bei " + cur
+		print "---Fehler---\n"
+		print "Zeile " + (cur_line.physical_line_no + 1) + " bei " + cur + "\n"
 		print msg
+		print "\n"
 		error = true
 	
 	Variable* getVar(string name)
@@ -568,7 +569,7 @@ class SyntaxTree
 		if cur_word+1 < cur_line.words.num
 			if cur_line.words[cur_word+1] == "("
 				return getOperandFunc()
-		sn = getNuclearOperand()
+		SyntaxNode* sn = getNuclearOperand()
 		return sn
 	SyntaxNode* getOperandGreedy()
 		SyntaxNode*[] sn
@@ -692,8 +693,9 @@ class SyntaxTree
 class Interpreter
 	bool error
 	void setError(string msg)
-		print "----Fehler beim Ausführen----"
+		print "----Fehler beim Ausführen----\n"
 		print msg
+		print "\n"
 		error = true
 	void doNode(SyntaxTree syntax, SyntaxNode *sn, Variable *ret)
 		Variable*[] params
@@ -776,6 +778,7 @@ class Interpreter
 			else if _if.block_else
 				doNode(syntax, _if.block_else, &dummy)
 		else if sn.type == TYPE_WHILE
+			Variable dummy
 			SyntaxNodeWhile *_while = sn
 			while params[0].v.int() > 0
 				doNode(syntax, _while.block, &dummy)
@@ -789,6 +792,7 @@ class Interpreter
 			if is_temp[i]
 				delete p
 	void run(SyntaxTree syntax)
+		error = false
 		Variable dummy
 		doNode(syntax, syntax.block, &dummy)
 
@@ -808,10 +812,11 @@ void main()
 	init_lib()
 	string[] arg
 	get_args(arg)
-	
 	verbose = false
 	string filename
-	for a in arg
+	for a,i in arg
+		if i == 0
+			continue
 		if a == "verbose"
 			verbose = true
 		else

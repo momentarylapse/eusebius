@@ -73,8 +73,8 @@ class Prompt
 			if !jobs.fg
 				show()
 		else if c == 0x7f // BACKSPACE
-			string s
 			if cur.num > 0
+				string s
 				s.add(c)
 				print(s)
 				cur.resize(cur.num - 1)
@@ -87,6 +87,7 @@ class Prompt
 		else if c == 0x1b5b44 // ^[D right
 			nil//print "----right---"
 		else if c >= 0x20 and c <= 0x7e
+			string s
 			s.add(c)
 			print(s)
 			cur.add(c)

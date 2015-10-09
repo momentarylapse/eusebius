@@ -1,17 +1,28 @@
 use "lib/std.kaba"
 
 
-void hd(int h)
+void hd(int h, int skip, int length)
 	string s
+	while skip > 0
+		s.resize(128)
+		int n = min(128, skip)
+		int r = read(h, &s[0], n)
+		if r < 0
+			print("\nFehler beim Lesen...\n")
+		if r <= 0
+			return
+		skip -= r
 	while true
 		s.resize(128)
-		int r = read(h, &s[0], 128)
+		int n = min(128, length)
+		int r = read(h, &s[0], n)
 		if r < 0
 			print("\nFehler beim Lesen...\n")
 		if r <= 0
 			break
 		s.resize(r)
 		print(s.hex(false))
+		length -= r
 	print("\n")
 
 
@@ -20,15 +31,32 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	if arg.num == 1
-		hd(stdin)
+	string[] files
+	
+	int length = 2000000000
+	int skip = 0
 	
 	for i in 1:arg.num
-		int h = open(arg[i], O_RDONLY)
+		if arg[i] == "-n"
+			i ++
+			if i < arg.num
+				length = arg[i].int()
+		else if arg[i] == "-s"
+			i ++
+			if i < arg.num
+				skip = arg[i].int()
+		else
+			files.add(arg[i])
+	
+	if files.num == 0
+		hd(stdin, skip, length)
+	
+	for f in files
+		int h = open(f, O_RDONLY)
 		if h < 0
-			print("hd: kann Datei nicht oeffnen: " + arg[i] + "\n")
+			print("hd: kann Datei nicht oeffnen: " + f + "\n")
 			exit(-1)
-		hd(h)
+		hd(h, skip, length)
 		close(h)
 	
 	exit(0)

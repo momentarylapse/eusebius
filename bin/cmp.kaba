@@ -1,0 +1,55 @@
+use "lib/std.kaba"
+
+
+void cmp(int h1, int h2)
+	string s1, s2
+	while true
+		s1.resize(128)
+		s2.resize(128)
+		
+		int r1 = read(h1, &s1[0], 128)
+		if r1 < 0
+			print("\nFehler beim Lesen...(1)\n")
+		
+		int r2 = read(h2, &s2[0], 128)
+		if r2 < 0
+			print("\nFehler beim Lesen...(2)\n")
+			
+			
+		if r1 <= 0 or r2 <= 0
+			if r1 == r2
+				print "gleich\n"
+				return
+			print "ungleich\n"
+			return
+			
+		s1.resize(r1)
+		s2.resize(r2)
+		if s1 != s2
+			print "ungleich\n"
+			return
+
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	if arg.num != 3
+		print "Aufruf: cmp DATEI1 DATEI2\n"
+		exit(-1)
+		
+	int h1 = open(arg[1], O_RDONLY)
+	if h1 < 0
+		print("cat: kann Datei nicht oeffnen: " + arg[1] + "\n")
+		exit(-1)
+	int h2 = open(arg[2], O_RDONLY)
+	if h2 < 0
+		print("cat: kann Datei nicht oeffnen: " + arg[2] + "\n")
+		exit(-1)
+	cmp(h1, h2)
+	close(h1)
+	close(h2)
+	//print FileRead(arg[i])
+	
+	exit(0)

@@ -167,8 +167,9 @@ class OpenFileData
 	int seek(int _offset, int mode)
 		int block_size = entry.mount.block_size
 		int old_block_no = offset / block_size
+		int new_offset
 		if mode == SEEK_SET
-			int new_offset = _offset
+			new_offset = _offset
 		else if mode == SEEK_CUR
 			new_offset = offset + _offset
 		else if mode == SEEK_END

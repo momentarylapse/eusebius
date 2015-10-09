@@ -72,7 +72,7 @@ void ProcessWaitingTasks()
 					t.tss.eax = r // return r
 					t.activate()
 			else if t.waiting_mode == WAITING_MODE_FILE_WRITE
-				r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
+				int r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
 				if r >= 0
 					t.tss.eax = r // return r
 					t.activate()
@@ -80,7 +80,7 @@ void ProcessWaitingTasks()
 				TimeValue *rem = &t.waiting_param_i1
 				rem.dec_nanosec(kernel_timer.dt_nanosec)
 				if rem.sec < 0
-					t.tss.eax = r // return r
+					t.tss.eax = 0 // return r
 					t.activate()
 
 

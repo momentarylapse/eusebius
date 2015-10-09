@@ -37,7 +37,7 @@ void main(string[] arg)
 		s+="' of='"+arg[0]
 		s+="' bs=2048 seek="+cluster
 		_exec_(s)
-		num_clusters = (e.size - 1) / ClusterSize + 1
+		int num_clusters = (e.size - 1) / ClusterSize + 1
 		cluster += num_clusters
 		/*string t = FileRead(arg[1] + e.name)
 		t += "        "

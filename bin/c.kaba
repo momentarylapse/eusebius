@@ -3,38 +3,59 @@ use "lib/x.kaba"
 use "lib/draw.kaba"
 use "lib/ttfx.kaba"
 
-void redraw(XPainter *p)
+class CWindow : XWindow
+	int x, y
+	XPainter *p
+	void __init__(int x, int y, int w, int h)
+		super.__init__(xcon, x, y, w, h)
+		p = new XPainter(self)
+		p.font = LoadTTF("/home/x.font")
+		self.x = x
+		self.y = y
+	
+	overwrite void onKey(int key)
+		if key == 'w'
+			y -= 5
+		if key == 's'
+			y += 5
+		if key == 'a'
+			x -= 5
+		if key == 'd'
+			x += 5
+		move(x, y)
+			
 
-	p.set_color(color(1, 0,0,0))
-	p.rectangle(p.all)
-	p.fill()
-	p.line_width = 1
+	void redraw()
+		p.set_color(color(1, 0,0,0))
+		p.rectangle(p.all)
+		p.fill()
+		p.line_width = 1
 	
-	p.set_color(color(1, 0.2, 0.2, 0.2))
-	p.move_to(20,20)
-	p.line_to(220,50)
-	p.line_to(250,220)
-	p.line_to(40,210)
-	p.path_close()
-	//p.strike()
-	p.fill()
-	
-	/*for x in 0:10
-		for y in 0:10
-			p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)*/
-
-	p.set_color(White)
-	p.draw_str(20,  50, "Hallo Welt", 0.02)
-	p.draw_str(20, 100, "Hallo Welt", 0.02)
-	
-	/*for c in g.contours
-		for i in c.start:c.start+c.num
-			p.path_add(100+ttf.points[i].x*0.1, 100+ttf.points[i].y*0.1)
+		p.set_color(color(1, 0.2, 0.2, 0.2))
+		p.move_to(20,20)
+		p.line_to(220,50)
+		p.line_to(250,220)
+		p.line_to(40,210)
 		p.path_close()
+		//p.strike()
+		p.fill()
+	
+		/*for x in 0:10
+			for y in 0:10
+				p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)*/
+
 		p.set_color(White)
-		p.strike()*/
-	//p.spline(complex(0,0), complex(100, 0), complex(100, 100))
-	p.end()
+		p.draw_str(20,  50, "Hallo Welt", 0.03)
+		p.draw_str(20, 140, "ABCDEFG", 0.03)
+	
+		/*for c in g.contours
+			for i in c.start:c.start+c.num
+				p.path_add(100+ttf.points[i].x*0.1, 100+ttf.points[i].y*0.1)
+			p.path_close()
+			p.set_color(White)
+			p.strike()*/
+		//p.spline(complex(0,0), complex(100, 0), complex(100, 100))
+		p.end()
 
 
 XConnection *xcon
@@ -64,17 +85,15 @@ void main()
 		print "client: kann nicht mit x verbinden\n"
 		exit(-1)
 	
-	XWindow *win = new XWindow(xcon, 10 + randi(100), 10 + randi(100), 400, 400)
+	CWindow *win = new CWindow(10 + randi(100), 10 + randi(100), 400, 400)
 	if !win.buf
 		print "client: kann kein Fenster erstellen\n"
 		exit(-2)
 		
 		
 		
-	XPainter *p = new XPainter(win)
-	p.font = LoadTTF("/home/x.font")
 	
-	redraw(p)
+	win.redraw()
 	
 	while true
 		xcon.poll()
