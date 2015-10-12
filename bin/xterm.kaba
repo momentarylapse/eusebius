@@ -39,8 +39,8 @@ class Job
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
 		
 		// debug
-		string s = "ls\n"
-		write(pipe_in[1], &s[0], s.num)
+		//string s = "ls\n"
+		//write(pipe_in[1], &s[0], s.num)
 	
 	void __delete__()
 		close(pipe_in[1])
@@ -76,15 +76,7 @@ class CWindow : XWindow
 		self.y = y
 	
 	overwrite void onKey(int key)
-		if key == 'w'
-			y -= 5
-		if key == 's'
-			y += 5
-		if key == 'a'
-			x -= 5
-		if key == 'd'
-			x += 5
-		move(x, y)
+		write(shell.pipe_in[1], &key, 1)
 			
 
 	void redraw(History *h)
@@ -95,7 +87,7 @@ class CWindow : XWindow
 
 		p.set_color(White)
 		for l,i in h.lines
-			p.draw_str(5, i*20+5, l, 0.01)
+			p.draw_str(5, i*20+5, l, 0.007)
 			
 		p.end()
 
