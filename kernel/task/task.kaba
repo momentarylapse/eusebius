@@ -105,6 +105,7 @@ enum
 	WAITING_MODE_FILE_READ
 	WAITING_MODE_FILE_WRITE
 	WAITING_MODE_TIME
+	WAITING_MODE_MESSAGE
 
 class TaskSharedMemoryRef
 	SharedMemory *s
@@ -600,6 +601,17 @@ class Task
 					page_dir.unmap(r.dest, r.s.size, false)
 					r.s.unref()
 					r.s = nil
+					return 0
+			return -1
+		if cmd == 1001 // wait-for-message
+			set_wait(WAITING_MODE_MESSAGE, nil, 0, 0, 0)
+			return 0
+		if cmd == 1002 // yield / wake-up
+			Task*t = get_task(p1)
+			if t
+				t.activate()
+			set_wait(WAITING_MODE_TIME, nil, 0, 0, 0)
+			return 0
 		return -EINVAL
 	
 	int sys_sigaction(int sig, int addr)

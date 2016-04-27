@@ -180,3 +180,8 @@ class XConnection
 		
 		
 		clear()
+	
+	void run()
+		while true
+			poll()
+			usleep(5000)

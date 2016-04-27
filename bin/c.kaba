@@ -95,11 +95,7 @@ void main()
 	
 	win.redraw()
 	
-	while true
-		xcon.poll()
-		usleep(5000)
-		
-		//win.move(randi(500), randi(400))
+	xcon.run()
 	
 	delete xcon
 	

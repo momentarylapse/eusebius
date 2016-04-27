@@ -414,6 +414,26 @@ bool shmdt(void* addr)
 		mov lib_error, eax
 	}
 	return lib_error == 0
+	
+bool waitmsg()
+	asm{
+		mov eax, 0x00000075 // ipc
+		mov ebx, 0x000003e9 // 1001 = wait-msg
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+	
+bool yield(int pid)
+	__temp_i__ = pid
+	asm{
+		mov eax, 0x00000075 // ipc
+		mov ebx, 0x000003ea // 1002 = yield
+		mov ecx, __temp_i__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
 
 bool sysinfo(void *buf)
 	__temp_p__ = buf
