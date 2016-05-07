@@ -1160,13 +1160,33 @@ int string::icompare(const string &s) const
 			i0 = 1
 		for i in i0:num
 			int c = data[i]
-			r = r * 10 + c - 48
+			r = r * 10 + (c - 48)
 		if !sign
 			return -r
 		return r
 	
 	float float()
-		return 0.0
+		if num == 0
+			return 0.0
+		bool sign = (data[0] != '-')
+		float r = 0.0
+		int i0 = 0
+		if !sign
+			i0 = 1
+		for i in i0:num
+			int c = data[i]
+			if c == '.'
+				i0 = i + 1
+				break
+			r = r * 10.0 + (c - 48)
+		float factor = 0.1
+		for i in i0:num
+			int c = data[i]
+			r += (c - 48) * factor
+			factor /= 10.0
+		if !sign
+			return -r
+		return r
 
 lib__string binary(void *p, int num)
 	lib__string s
@@ -1361,13 +1381,23 @@ class lib__float
 	lib__string str()
 		return lib__@f2s(f, 6)
 
-// TODO
 float lib__sin(float f)
-	return 123.0
+	__temp_f__ = f
+	asm{
+		fld __temp_f__
+		fsin
+		fst __temp_f__
+	}
+	return __temp_f__
 
-// TODO
 float lib__cos(float f)
-	return 42.0
+	__temp_f__ = f
+	asm{
+		fld __temp_f__
+		fcos
+		fst __temp_f__
+	}
+	return __temp_f__
 
 float lib__min(float a, float b)
 	if a < b
