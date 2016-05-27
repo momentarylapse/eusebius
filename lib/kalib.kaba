@@ -801,7 +801,7 @@ void __lib_fatal__(string s)
 
 void __lib_free_error__()
 	__free_error__ = true
-	lib__print "\n\nkalib: invalid call to free()"
+	lib__print("\n\nkalib: invalid call to free()")
 	exit(-1)
 
 
@@ -937,10 +937,10 @@ class lib__@DynamicArray
 		num = 0
 
 class lib__string : lib__@DynamicArray
-	overwrite char[0]* data
-	void __init__()
+	override char[0]* data
+	override void __init__()
 		__mem_init__(1)
-	void __delete__()
+	override void __delete__()
 		__mem_clear__()
 	void resize(int size)
 		__mem_resize__(size)
@@ -1195,10 +1195,10 @@ lib__string binary(void *p, int num)
 	return s
 
 class lib__int@list : lib__@DynamicArray
-	overwrite int[0]* data
-	void __init__()
+	override int[0]* data
+	override void __init__()
 		__mem_init__(sizeof(int))
-	void __delete__()
+	override void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1228,10 +1228,10 @@ class lib__int@list : lib__@DynamicArray
 					data[j] = t
 
 class lib__float@list : lib__@DynamicArray
-	overwrite float[0]* data
-	void __init__()
+	override float[0]* data
+	override void __init__()
 		__mem_init__(sizeof(float))
-	void __delete__()
+	override void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1261,10 +1261,10 @@ class lib__float@list : lib__@DynamicArray
 					data[j] = t
 
 class lib__bool@list : lib__@DynamicArray
-	overwrite bool[0]* data
-	void __init__()
+	override bool[0]* data
+	override void __init__()
 		__mem_init__(sizeof(bool))
-	void __delete__()
+	override void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1287,10 +1287,10 @@ class lib__bool@list : lib__@DynamicArray
 			data[i] = o.data[i]
 
 class lib__string@list : lib__@DynamicArray
-	overwrite lib__string[0]* data
-	void __init__()
+	override lib__string[0]* data
+	override void __init__()
 		__mem_init__(sizeof(lib__string))
-	/*overwrite*/ void __delete__()
+	override void __delete__()
 		for i in 0:num
 			data[i].__delete__()
 		//clear()
@@ -1543,10 +1543,10 @@ lib__string _complex2s(lib__complex c)
 
 
 class lib__complex@list : lib__@DynamicArray
-	overwrite complex[0]* data
-	void __init__()
+	override complex[0]* data
+	override void __init__()
 		__mem_init__(sizeof(complex))
-	void __delete__()
+	override void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1597,10 +1597,10 @@ class lib__DirEntry
 
 
 class lib__DirEntry@list : lib__@DynamicArray
-	overwrite lib__DirEntry[0]* data
-	void __init__()
+	override lib__DirEntry[0]* data
+	override void __init__()
 		__mem_init__(sizeof(lib__DirEntry))
-	/*overwrite*/ void __delete__()
+	override void __delete__()
 		for i in 0:num
 			data[i].__delete__()
 		//clear()

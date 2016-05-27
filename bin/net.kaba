@@ -44,37 +44,37 @@ void show_cpu()
 		s.add(o[3] >> (j*8))
 	for j in 0:4
 		s.add(o[2] >> (j*8))
-	print s
-	print "\n"
+	print(s)
+	print("\n")
 	
 	//cpuid(0x8000000, o)
 	cpuid(1, o)
 	
-	print "  sse="
-	print (o[3] & 1<<25) != 0
-	print "  sse2="
-	print (o[3] & 1<<26) != 0
-	print "  sse3="
-	print (o[2] & 1<<0) != 0
+	print("  sse=")
+	print((o[3] & 1<<25) != 0)
+	print("  sse2=")
+	print((o[3] & 1<<26) != 0)
+	print("  sse3=")
+	print((o[2] & 1<<0) != 0)
 	
 	cpuid(0x8000001, o)
 	
-	print "  x87="
-	print (o[3] & 1<<0) != 0
-	print "  mmx="
-	print (o[3] & 1<<23) != 0
-	print "  3dnow="
-	print (o[3] & 1<<31) != 0
-	print "  fxrestore="
-	print (o[3] & 1<<24) != 0
-	print "  sse4a="
-	print (o[2] & 1<<6) != 0
-	print "  64="
-	print (o[3] & 1<<29) != 0
-	print "\n"
+	print("  x87=")
+	print((o[3] & 1<<0) != 0)
+	print("  mmx=")
+	print((o[3] & 1<<23) != 0)
+	print("  3dnow=")
+	print((o[3] & 1<<31) != 0)
+	print("  fxrestore=")
+	print((o[3] & 1<<24) != 0)
+	print("  sse4a=")
+	print((o[2] & 1<<6) != 0)
+	print("  64=")
+	print((o[3] & 1<<29) != 0)
+	print("\n")
 
 void handler()
-	print "---user handler---\n"
+	print("---user handler---\n")
 
 void main()
 	init_lib()
@@ -88,16 +88,16 @@ void main()
 	dev = pci.get(0x8029, 0x10ec)
 	if dev
 		dev.show()
-		printh dev.getIOAddr0()
-		print "\n"
+		printh(dev.getIOAddr0())
+		print("\n")
 	
 	show_cpu()
 	
 	if !sigaction(23, &handler)
-		print "---E1\n"
+		print("---E1\n")
 	if !mapirq(1, 23) // key
-		print "---E2\n"
-	print "ok\n"
+		print("---E2\n")
+	print("ok\n")
 	while true
 		sleep(1)
 	

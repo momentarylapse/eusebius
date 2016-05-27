@@ -18,15 +18,15 @@ void cmp(int h1, int h2)
 			
 		if r1 <= 0 or r2 <= 0
 			if r1 == r2
-				print "gleich\n"
+				print("gleich\n")
 				return
-			print "ungleich\n"
+			print("ungleich\n")
 			return
 			
 		s1.resize(r1)
 		s2.resize(r2)
 		if s1 != s2
-			print "ungleich\n"
+			print("ungleich\n")
 			return
 
 
@@ -36,7 +36,7 @@ void main()
 	get_args(arg)
 	
 	if arg.num != 3
-		print "Aufruf: cmp DATEI1 DATEI2\n"
+		print("Aufruf: cmp DATEI1 DATEI2\n")
 		exit(-1)
 		
 	int h1 = open(arg[1], O_RDONLY)

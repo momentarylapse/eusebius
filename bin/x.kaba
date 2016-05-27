@@ -121,7 +121,7 @@ class XWindow
 	int level
 	
 	void __init__(int x, int y, int w, int h, int flags)
-		kprint "x: new win\n"
+		kprint("x: new win\n")
 		r.x0 = x
 		r.y0 = y
 		r.x1 = x + w
@@ -133,7 +133,7 @@ class XWindow
 		shm_key = next_window_id + 0x0f810000 // randi()
 		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
 		if shm_id < 0
-			print "x: ERROR can't create shared memory for window\n"
+			print("x: ERROR can't create shared memory for window\n")
 			// TODO clean-up
 		else
 			buf = shmat(shm_id, 0)
@@ -143,7 +143,7 @@ class XWindow
 				invalidated.add(r)
 		
 	void __delete__()
-		kprint "x: del win\n"
+		kprint("x: del win\n")
 		if buf
 			invalidated.add(r)
 			shmdt(buf)
@@ -271,34 +271,34 @@ class Client
 	void __init__(int _key)
 		key = _key
 		kill_me = false
-		kprint "x: new client key=" + key + " \n"
+		kprint("x: new client key=" + key + " \n")
 		int id = shmget(key, 0, 0)
 		buf = shmat(id, 0)
 		if !buf
-			kprint "  -- x: Fehler shmat (2) --\n"
+			kprint("  -- x: Fehler shmat (2) --\n")
 	
 	void __delete__()
-		kprint "x: del client\n"
+		kprint("x: del client\n")
 		shmdt(buf)
 		for w in win
 			delete w
 	
 	void wait_clear()
-		kprint " x:wc "
+		kprint(" x:wc ")
 		while buf[0] != CON_STATUS_CLEAR
 			poll()
-		kprint " x:/wc "
+		kprint(" x:/wc ")
 	
 	void __wait_clear_poll()
 		while buf[0] != CON_STATUS_CLEAR
 			poll()
 	
 	void clear()
-		kprint " x:clear "
+		kprint(" x:clear ")
 		buf[0] = CON_STATUS_CLEAR
 	
 	void just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		kprint " x:send "
+		kprint(" x:send ")
 		wait_clear()
 		buf[0] = CON_STATUS_BUSY
 		buf[1] = cmd
@@ -316,21 +316,21 @@ class Client
 		clear()
 	
 	void send_mouse()
-		kprint "x: send mouse\n"
+		kprint("x: send mouse\n")
 		send(XCMD_EVENT_MOUSE, mouse.x, mouse.y, mouse.flags, 0, 0)
 	
 	void send_key()
-		kprint "x: send key\n"
+		kprint("x: send key\n")
 		send(XCMD_EVENT_KEY, keyboard.key, 0, 0, 0, 0)
 	
 	void poll()
 		if buf[0] != 0
-			kprint "    x:" + buf[0]
+			kprint("    x:" + buf[0])
 		if buf[0] != CON_STATUS_CLIENT_SEND
 			return
 		buf[0] = CON_STATUS_BUSY
 		buf[32] = -1
-		kprint "x: empfange\n"
+		kprint("x: empfange\n")
 		int end_status = CON_STATUS_CLEAR
 		if buf[1] == XCMD_KILL
 			buf[32] = 0
@@ -341,7 +341,7 @@ class Client
 			buf[32] = 0
 			buf[33] = ww.id
 			buf[34] = ww.shm_key
-			kprint "x: c.key=" + key + " w.key=" + ww.shm_key + "\n"
+			kprint("x: c.key=" + key + " w.key=" + ww.shm_key + "\n")
 			end_status = CON_STATUS_SERVER_ANSWER
 		else if buf[1] == XCMD_WINDOW_INVALIDATE
 			for w in win
@@ -382,7 +382,7 @@ class CommandController
 		int id = shmget(0x7bcd0123, 1024, SHM_DEST | IPC_CREAT)
 		buf = shmat(id, 0)
 		if !buf
-			print "x: Fehler shmat (1)\n"
+			print("x: Fehler shmat (1)\n")
 			exit(-1)
 		
 		buf[0] = CON_STATUS_CLEAR
@@ -442,7 +442,7 @@ void main()
 	execute(["/bin/xterm"], -1, -1)
 	//execute(["/bin/c"], -1, -1)
 	
-	print "x: running\n"
+	print("x: running\n")
 	while true
 		cmds.update()
 		mouse.poll()

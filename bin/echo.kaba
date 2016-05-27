@@ -7,7 +7,7 @@ void main()
 	
 	for i in 1:arg.num
 		if i > 1
-			print " "
+			print(" ")
 		print(arg[i])
-	print "\n"
+	print("\n")
 	exit(0)

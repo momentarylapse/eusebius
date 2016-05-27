@@ -16,11 +16,11 @@ void ls(string dirname)
 	
 	for e in l
 		if e.is_dir
-			print "Verzeichnis "
+			print("Verzeichnis ")
 		else
-			print "Datei       "
-		print i2s2(e.size, 8)
-		print " " + e.name + "\n"
+			print("Datei       ")
+		print(i2s2(e.size, 8))
+		print(" " + e.name + "\n")
 
 
 void main()

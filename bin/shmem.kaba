@@ -3,35 +3,35 @@ use "lib/std.kaba"
 
 void main()
 	init_lib()
-	print "shmget: "
+	print("shmget: ")
 	int id = shmget(13, 1024, IPC_CREAT)
-	print id
-	print "\n"
+	print(id)
+	print("\n")
 	
-	print "shmat: "
+	print("shmat: ")
 	void *p = shmat(id, 0)
-	print p2s(p)
-	print "\n"
+	print(p2s(p))
+	print("\n")
 	
-	print "shmat: "
+	print("shmat: ")
 	p = shmat(id, 0)
-	print p2s(p)
-	print "\n"
+	print(p2s(p))
+	print("\n")
 	
-	print "shmat: "
+	print("shmat: ")
 	p = shmat(id, 0)
-	print p2s(p)
-	print "\n"
+	print(p2s(p))
+	print("\n")
 	
 	int[0]* ip = p
 	
-	print "lese: "
-	print ip[0]
-	print "\n"
+	print("lese: ")
+	print(ip[0])
+	print("\n")
 	
-	print "schreibe: "
+	print("schreibe: ")
 	ip[0] = 13
-	print "ok\n"
+	print("ok\n")
 	
 	
 	exit(0)

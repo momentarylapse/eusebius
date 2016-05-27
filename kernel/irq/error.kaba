@@ -34,11 +34,11 @@ void handle_kernel_error(Task* t, int i)
 	cstring s
 	get_error_text(i, s)
 	
-	prints "\neip="
+	prints("\neip=")
 	printh(t.tss.eip, 4)
-	prints "  esp="
+	prints("  esp=")
 	printh(t.tss.esp, 4)
-	prints "\n"
+	prints("\n")
 	
 	/*if i == 0
 		prints("   eflags=")

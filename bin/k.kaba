@@ -35,8 +35,8 @@ class Line
 	int physical_line_no
 	string[] words
 	void show()
-		print indent
-		print words
+		print(indent)
+		print(words)
 
 class Lines
 	Line[] lines
@@ -141,40 +141,40 @@ class DynamicValue
 
 class DynamicValueInt : DynamicValue
 	int v
-	void __init__()
+	override void __init__()
 		type = TYPE_INT
 		v = 0
-	virtual void __delete__()
-	overwrite string str()
+	override void __delete__()
+	override string str()
 		return v.str()
-	overwrite int int()
+	override int int()
 		return v
 
 class DynamicValueBool : DynamicValue
 	bool v
-	void __init__()
+	override void __init__()
 		type = TYPE_BOOL
 		v = false
-	virtual void __delete__()
-	overwrite string str()
+	override void __delete__()
+	override string str()
 		return v.str()
 
 class DynamicValueFloat : DynamicValue
 	float v
-	void __init__()
+	override void __init__()
 		type = TYPE_FLOAT
 		v = 0.0
-	virtual void __delete__()
-	overwrite string str()
+	override void __delete__()
+	override string str()
 		return v.str()
 
 class DynamicValueString : DynamicValue
 	string v
-	void __init__()
+	override void __init__()
 		type = TYPE_STRING
 		v.__init__()
-	virtual void __delete__()
-	overwrite string str()
+	override void __delete__()
+	override string str()
 		return v
 
 class Variable
@@ -189,9 +189,9 @@ class Variable
 		delete v
 	void show()
 		if v.type == TYPE_NONE
-			print "variable " + name + "\n"
+			print("variable " + name + "\n")
 		else
-			print "variable " + name + " = " + v.str() + "\n"
+			print("variable " + name + " = " + v.str() + "\n")
 	void setType(int _type)
 		if v.type != _type
 			delete v
@@ -365,7 +365,7 @@ void FuncPrint(Variable *r, Variable*[] p)
 		else
 			s += "-empty-"
 		s += " "
-	print s + "\n"
+	print(s + "\n")
 
 enum
 	TYPE_OPERATOR
@@ -385,7 +385,7 @@ class SyntaxNode
 		string s
 		for i in 0:indent
 			s += "    "
-		print s + str() + "\n"
+		print(s + str() + "\n")
 		for p in params
 			p.show(indent + 1)
 		showPost(indent)
@@ -395,7 +395,7 @@ class SyntaxNodeVariable : SyntaxNode
 	void __init__(Variable *_v)
 		v = _v
 		type = TYPE_VARIABLE
-	overwrite string str()
+	override string str()
 		return "variable " + v.name
 
 class SyntaxNodeOperator : SyntaxNode
@@ -403,7 +403,7 @@ class SyntaxNodeOperator : SyntaxNode
 	void __init__(string _op)
 		op = _op
 		type = TYPE_OPERATOR
-	overwrite string str()
+	override string str()
 		return "operator " + op
 	int rank()
 		if op == "*"
@@ -423,37 +423,37 @@ class SyntaxNodeFunction : SyntaxNode
 	void __init__(string _func)
 		func = _func
 		type = TYPE_FUNCTION
-	overwrite string str()
+	override string str()
 		return "function " + func
 
 class SyntaxNodeBlock : SyntaxNode
-	void __init__()
+	override void __init__()
 		type = TYPE_BLOCK
-	overwrite string str()
+	override string str()
 		return "block"
 
 class SyntaxNodeIf : SyntaxNode
 	SyntaxNode* block, block_else
-	void __init__()
+	override void __init__()
 		type = TYPE_IF
 		block = nil
 		block_else = nil
-	overwrite string str()
+	override string str()
 		return "if"
-	overwrite void showPost(int indent)
+	override void showPost(int indent)
 		block.show(indent+1)
 		if block_else
 			block_else.show(indent+1)
 
 class SyntaxNodeWhile : SyntaxNode
 	SyntaxNode* block, block_else
-	void __init__()
+	override void __init__()
 		type = TYPE_WHILE
 		block = nil
 		block_else = nil
-	overwrite string str()
+	override string str()
 		return "while"
-	overwrite void showPost(int indent)
+	override void showPost(int indent)
 		block.show(indent+1)
 		if block_else
 			block_else.show(indent+1)
@@ -489,10 +489,10 @@ class SyntaxTree
 	
 	bool error
 	void setError(string msg)
-		print "---Fehler---\n"
-		print "Zeile " + (cur_line.physical_line_no + 1) + " bei " + cur + "\n"
-		print msg
-		print "\n"
+		print("---Fehler---\n")
+		print("Zeile " + (cur_line.physical_line_no + 1) + " bei " + cur + "\n")
+		print(msg)
+		print("\n")
 		error = true
 	
 	Variable* getVar(string name)
@@ -693,9 +693,9 @@ class SyntaxTree
 class Interpreter
 	bool error
 	void setError(string msg)
-		print "----Fehler beim Ausführen----\n"
-		print msg
-		print "\n"
+		print("----Fehler beim Ausführen----\n")
+		print(msg)
+		print("\n")
 		error = true
 	void doNode(SyntaxTree syntax, SyntaxNode *sn, Variable *ret)
 		Variable*[] params

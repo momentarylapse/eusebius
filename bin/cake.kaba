@@ -36,12 +36,12 @@ void main()
 	
 	xcon = new XConnection
 	if xcon.error
-		print "client: kann nicht mit x verbinden\n"
+		print("client: kann nicht mit x verbinden\n")
 		exit(-1)
 	
 	XWindow *win = new XWindow(xcon, 10 + randi(200), 10 + randi(200), 300, 300)
 	if !win.buf
-		print "client: kann kein Fenster erstellen\n"
+		print("client: kann kein Fenster erstellen\n")
 		exit(-2)
 		
 	XPainter *p = new XPainter(win)

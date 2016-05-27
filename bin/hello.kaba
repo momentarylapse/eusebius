@@ -1,7 +1,7 @@
 use "lib/std.kaba"
 
 void handler()
-	print "---user handler---   \\(^_^)/\n"
+	print("---user handler---   \\(^_^)/\n")
 
 void main()
 	init_lib()

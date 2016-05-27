@@ -5,9 +5,9 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	print "sterbe...\n"
+	print("sterbe...\n")
 	int* p = nil
 	*p = 13
-	print "sollte schon tot sein???...\n"
+	print("sollte schon tot sein???...\n")
 	
 	exit(0)

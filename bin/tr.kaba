@@ -14,8 +14,8 @@ void main()
 		if r <= 0
 			break
 		s.resize(r)
-		print "<"
-		print s
-		print ">"
+		print("<")
+		print(s)
+		print(">")
 	
 	exit(0)

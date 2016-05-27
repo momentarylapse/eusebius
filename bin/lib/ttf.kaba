@@ -148,7 +148,7 @@ class TTF
 			tdentries.add(e)
 	
 		for ee in tdentries
-			print ee.name() + " " + ee.offset.int() + "\n"
+			print(ee.name() + " " + ee.offset.int() + "\n")
 		return true
 	
 	bool read_mapping()
@@ -159,12 +159,12 @@ class TTF
 		
 		_read(f, &mh, 4)
 		int n = mh.num_tables.int()
-		print "map-----------------------------\n"
-		print i2h(f.getPos()) + "\n"
+		print("map-----------------------------\n")
+		print(i2h(f.getPos()) + "\n")
 		//print mh.version.int()
 		//print n
 		if n > 100000
-			print "too many mapping tables\n"
+			print("too many mapping tables\n")
 			return false
 			
 		for i in 0:n
@@ -175,16 +175,16 @@ class TTF
 			map_tables.add(t)
 		
 		for m in map_tables
-			print "--------------\n"
+			print("--------------\n")
 			f.seek(te.offset.int() + m.offset, true)
 			m.format = readUS()
 			int length = readUS()
-			print "l " + length + "\n"
+			print("l " + length + "\n")
 			int version = readUS()
 			
 			if m.format == 4
 				int seg_count = readUS() / 2
-				print "s " + seg_count + "\n"
+				print("s " + seg_count + "\n")
 				int search_range = readUS()
 				int entry_selector = readUS()
 				int range_shift = readUS()
@@ -198,7 +198,7 @@ class TTF
 				for i in 0:seg_count
 					m.id_range_offset.add(readUS())
 				int rs = seg_count * 8 + 16
-				print "r: " + (length - rs) + "\n"
+				print("r: " + (length - rs) + "\n")
 				f.read(length - rs)
 				
 				/*print start_count
@@ -214,7 +214,7 @@ class TTF
 				
 				for i in 0:seg_count
 					if m.id_range_offset[i] != 0
-						print "id_range_offset != 0\n"
+						print("id_range_offset != 0\n")
 						return false
 					
 				//int length = readUS(f)
@@ -228,7 +228,7 @@ class TTF
 					m.glyph_id_array.add(readUS())
 				//print m.glyph_id_array
 			else
-				print "unhandled format: " + m.format + "\n"
+				print("unhandled format: " + m.format + "\n")
 				return false
 				
 				
@@ -245,7 +245,7 @@ class TTF
 			//print "--empty"
 			return true
 		if num_contours > 100
-			print "too many contours: " + num_contours + "\n"
+			print("too many contours: " + num_contours + "\n")
 			return false
 		
 		g.xmin = readSS()
@@ -262,10 +262,11 @@ class TTF
 	bool read_glyph_compound(TTFGlyph *g)
 		//print "---compound\n"
 		int n = 0
+		int flags
 		
 		while true
 			//print "C"
-			int flags = readUS()
+			flags = readUS()
 			int glyph_index = readUS()
 			//print glyph_index
 		
@@ -273,8 +274,8 @@ class TTF
 				int arg1 = readSS()
 				int arg2 = readSS()
 			else
-				arg1 = readUB()
-				arg2 = readUB()
+				int arg1 = readUB()
+				int arg2 = readUB()
 		
 			if (flags & 0x0008) != 0
 				float scale = readF214()
@@ -291,13 +292,13 @@ class TTF
 				break
 			n ++
 			if n > 50
-				print "too many sub glyphs: " + n + "\n"
+				print("too many sub glyphs: " + n + "\n")
 				return false
 		
 		if (flags & 0x0100) != 0
 			int instrlen = readUS()
 			if instrlen > 10000
-				print "too many instructions: " + instrlen + "\n"
+				print("too many instructions: " + instrlen + "\n")
 				return false
 			f.read(instrlen)
 			
@@ -315,14 +316,14 @@ class TTF
 		for e in endpoints
 			//print "e " + e
 			if e > 1000
-				print "invalid endpoint: " + e + "\n"
+				print("invalid endpoint: " + e + "\n")
 				return false
 		//print "b\n"
 		
 		// instructions???
 		int instrlen = readUS()
 		if instrlen > 1000
-			print "too many instructions: " + instrlen + "\n"
+			print("too many instructions: " + instrlen + "\n")
 			return false
 		//print "instr: " + instrlen
 		f.read(instrlen) // instr
@@ -427,10 +428,10 @@ class TTF
 		return x
 	
 	bool read_glyphs()
-		print "---------------------------glyphs\n"
+		print("---------------------------glyphs\n")
 		TTFTableDirectoryEntry *te = get_table("glyf")
 		if !te
-			print "no glyf table\n"
+			print("no glyf table\n")
 			return false
 		f.seek(te.offset.int(), true)
 		int _max = te.offset.int() + te.length.int() - 32
@@ -440,9 +441,9 @@ class TTF
 			if !read_glyph(g)
 				return false
 			glyphs.add(g)
-			print "  " + glyphs.num
+			print("  " + glyphs.num)
 			//g.contours.clear()
-		print "Glyphs: " + glyphs.num + "\n"
+		print("Glyphs: " + glyphs.num + "\n")
 		/*for gg in glyphs
 			print "---- " + gg.contours.num
 			for c in gg.contours
@@ -459,7 +460,7 @@ class TTF
 
 		f = FileOpen(filename)
 		if !f
-			print "kann Datei nicht lesen\n"
+			print("kann Datei nicht lesen\n")
 			return false
 		f.setBinaryMode(true)
 		
@@ -483,17 +484,17 @@ class TTF
 		for m in map_tables
 			int n = m.map(code)
 			if code >= glyphs.num
-				print "mapping error: " + code + " => " + n + "\n"
+				print("mapping error: " + code + " => " + n + "\n")
 				return -1
 			if code >= 0
 				return code
 		return -1
 	
 	TTFGlyph* get(int code)
-		print "get " + code + "\n"
+		print("get " + code + "\n")
 		int n = map(code)
-		print n
-		print "\n"
+		print(n)
+		print("\n")
 		if n < 0
 			return &glyphs[0]
 		return &glyphs[n]

@@ -60,7 +60,7 @@ class TTFFont
 
 		f = FileOpen(filename)
 		if !f
-			print "kann Datei nicht lesen\n"
+			print("kann Datei nicht lesen\n")
 			return false
 		f.setBinaryMode(true)
 		
@@ -84,10 +84,10 @@ class TTFFont
 		
 	
 	TTFGlyph* get(int code)
-		print "get "
+		print("get ")
 		for g,i in glyphs
 			if g.code == code
-				print "" + i + "\n"
+				print("" + i + "\n")
 				return &g
 		return &glyphs[0]
 

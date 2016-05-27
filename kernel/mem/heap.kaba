@@ -59,7 +59,7 @@ void *malloc(int size)
 			//prints ">"
 			return hh.payload()
 		cur = cur.next
-	panic "malloc: fail"
+	panic("malloc: fail")
 	return nil
 
 void _cleanup(MallocHeader *h)
@@ -115,7 +115,7 @@ void free(void *p)
 			//prints(">")
 			return
 		cur = cur.next
-	panic "free: fail"
+	panic("free: fail")
 
 
 
@@ -123,9 +123,9 @@ void memcheck()
 	MallocHeader *h = malloc_first_free
 	while h.next
 		if _p2i(h.next) < _p2i(h) + h.size
-			panic "memcheck: h.next<h+size"
+			panic("memcheck: h.next<h+size")
 		if h != h.next.prev
-			panic "memcheck: h!=h.next.prev"
+			panic("memcheck: h!=h.next.prev")
 		h = h.next
 
 void* realloc(void* po, int old_size, int new_size)

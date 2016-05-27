@@ -11,7 +11,7 @@ void clear()
 	s.add(0x7f)
 	for y in 0:HEIGHT
 		for x in 0:WIDTH
-			print s
+			print(s)
 
 void show()
 	clear()
@@ -24,7 +24,7 @@ void show()
 			line.resize(WIDTH)
 		else if y < HEIGHT-1
 			line += "\n"
-		print line
+		print(line)
 	
 	
 
@@ -38,7 +38,7 @@ void main()
 	cur_line = 0
 	
 	if arg.num < 2
-		print "less: Datei?\n"
+		print("less: Datei?\n")
 		exit(1)
 	int h = open(arg[1], O_RDONLY)
 	if h < 0

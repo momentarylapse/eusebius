@@ -75,7 +75,7 @@ class CWindow : XWindow
 		self.x = x
 		self.y = y
 	
-	overwrite void onKey(int key)
+	override void onKey(int key)
 		write(shell.pipe_in[1], &key, 1)
 			
 
@@ -102,12 +102,12 @@ void main()
 	
 	xcon = new XConnection
 	if xcon.error
-		print "client: kann nicht mit x verbinden\n"
+		print("client: kann nicht mit x verbinden\n")
 		exit(-1)
 	
 	window = new CWindow(50, 50, 600, 400)
 	if !window.buf
-		print "client: kann kein Fenster erstellen\n"
+		print("client: kann kein Fenster erstellen\n")
 		exit(-2)
 		
 		

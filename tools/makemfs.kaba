@@ -2,10 +2,10 @@ const int ClusterSize = 2048
 
 void main(string[] arg)
 	if arg.num < 2
-		print "usage: kaba makemfs.kaba <out-file> <in-dir>"
+		print("usage: kaba makemfs.kaba <out-file> <in-dir>")
 		return
 	DirEntry[] list = DirSearch(arg[1], "*", false)
-	print list.str()
+	print(list.str())
 	File *f = FileCreate(arg[0])
 	f.setBinaryMode(true)
 	f.seek(ClusterSize, true)

@@ -73,6 +73,6 @@ void printh(int i)
 	string s
 	for n in 0:8
 		s.add(geth0((i >> ((7-n)*4)) & 0xf))
-	print s
+	print(s)
 
 

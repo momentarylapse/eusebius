@@ -29,25 +29,25 @@ class PCIDevice
 		return 0
 	
 	void show()
-		print bus
-		print ":"
-		print slot
-		print ":"
-		print function
-		print " "
-		printh vendor
-		print ":"
-		printh device
-		print "   class="
-		print _class
-		print ":"
-		print subclass
-		print "  ht="
-		print header_type
+		print(bus)
+		print(":")
+		print(slot)
+		print(":")
+		print(function)
+		print(" ")
+		printh(vendor)
+		print(":")
+		printh(device)
+		print("   class=")
+		print(_class)
+		print(":")
+		print(subclass)
+		print("  ht=")
+		print(header_type)
 		if irq >= 0
-			print "  irq="
-			print irq
-		print "\n"
+			print("  irq=")
+			print(irq)
+		print("\n")
 
 class PCIController
 	int read_config(int bus, int slot, int func, int offset)

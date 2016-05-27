@@ -17,7 +17,7 @@ class Prompt
 		string s
 		s.add(0x7f)
 		for i in 0:cur.num
-			print s
+			print(s)
 		cur.clear()
 	void add_to_history()
 		if history.num > 1
@@ -32,7 +32,7 @@ class Prompt
 		history_pos = pos
 		clear()
 		cur = history[history_pos]
-		print cur
+		print(cur)
 	void history_up()
 		if history_pos > 0
 			history_jump(history_pos - 1)
@@ -50,7 +50,7 @@ class Prompt
 			if c == 0x1a // '^Z'
 				kill(jobs.fg.pid, 19)
 				jobs.fg = nil
-				print "angehalten\n"
+				print("angehalten\n")
 				show()
 			else if c == 0x03 // '^C'
 				kill(jobs.fg.pid, 9)
@@ -110,7 +110,7 @@ class VariableSet
 		return v
 	void show()
 		for v in var
-			print v.name + " = " + v.value + "\n"
+			print(v.name + " = " + v.value + "\n")
 VariableSet vars
 
 class Job
@@ -131,7 +131,7 @@ class Job
 		for i in 0:c.num
 			if c[i] == ">" or c[i] == ">>"
 				if i == c.num - 1
-					print "Dateiname nach > erwartet"
+					print("Dateiname nach > erwartet")
 					return
 				if c[i] == ">"
 					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY | O_TRUNC)
@@ -142,7 +142,7 @@ class Job
 		for i in 0:c.num
 			if c[i] == "<"
 				if i == c.num - 1
-					print "Dateiname nach < erwartet"
+					print("Dateiname nach < erwartet")
 					return
 				pipe_in[0] = open(c[i+1], O_RDONLY)
 				c.remove(i+1)
@@ -161,9 +161,9 @@ class Job
 		close(pipe_in[0])
 		close(pipe_out[1])
 		if as_bg
-			print "[" + id + "]: "
+			print("[" + id + "]: ")
 			//print pid
-			print "\n"
+			print("\n")
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	void __delete__()
@@ -176,7 +176,7 @@ class Job
 		int r = read(pipe_out[0], &s[0], s.num)
 		if r > 0
 			s.resize(r)
-			print s
+			print(s)
 			return
 		
 		int status
@@ -184,7 +184,7 @@ class Job
 			return
 		vars.get("?").value = status
 		if self != jobs.fg
-			print "[" + id + "] Fertig: " + cmd + "\n"
+			print("[" + id + "] Fertig: " + cmd + "\n")
 	//	if status < -600//-652
 	//		print("  -- Programm hat was boeses gemacht! --\n")
 		//print(" status " + status)
@@ -231,7 +231,7 @@ class JobManager
 				i --
 	void show()
 		for j in job
-			print "" + j.id + " - " + j.cmd + "\n"
+			print("" + j.id + " - " + j.cmd + "\n")
 
 JobManager jobs
 
@@ -290,9 +290,9 @@ void do_fg(string[] c)
 	if j
 		kill(j.pid, 18)
 		jobs.fg = j
-		print j.cmd + "\n"
+		print(j.cmd + "\n")
 	else
-		print "kein Job\n"
+		print("kein Job\n")
 
 void do_bg(string[] c)
 	int id = -1
@@ -301,14 +301,14 @@ void do_bg(string[] c)
 	Job *j = jobs.get(id)
 	if j
 		kill(j.pid, 18)
-		print "im Hintergrund: " + j.cmd + "\n"
+		print("im Hintergrund: " + j.cmd + "\n")
 	else
-		print "kein Job\n"
+		print("kein Job\n")
 
 void do_cd(string[] c)
 	if c.num > 1
 		if !chdir(c[1])
-			print "kein gueltiges Verzeichnis: " + c[1] + "\n"
+			print("kein gueltiges Verzeichnis: " + c[1] + "\n")
 	else
 		print("Verzeichnis?\n")
 
