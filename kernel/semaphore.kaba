@@ -1,8 +1,4 @@
-#define __OS__
 use "base.kaba"
-use "text_mode.kaba"
-use "base_mem.kaba"
-#define __STRING_CONST_AS_CSTRING__
 
 const int MAX_SEMAPHORES_PER_SET = 32
 const int MAX_SEMAPHORE_SETS = 64

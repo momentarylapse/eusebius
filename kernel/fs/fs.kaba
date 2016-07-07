@@ -367,7 +367,7 @@ class FileSystemData
 
 FileSystemData FileSystem
 
-class MountPointMichiFS : MountPoint
+class MountPointMichiFS extends MountPoint
 	
 	int read_int()
 		int *p = &buf[buf_used]
@@ -400,7 +400,7 @@ class MountPointMichiFS : MountPoint
 				e.add_block(first_block + i)
 
 
-class MountPointExt2 : MountPoint
+class MountPointExt2 extends MountPoint
 	
 	int mount()
 		buf = malloc(4096)

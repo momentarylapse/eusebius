@@ -139,7 +139,7 @@ class DynamicValue
 	virtual int int()
 		return 0
 
-class DynamicValueInt : DynamicValue
+class DynamicValueInt extends DynamicValue
 	int v
 	override void __init__()
 		type = TYPE_INT
@@ -150,7 +150,7 @@ class DynamicValueInt : DynamicValue
 	override int int()
 		return v
 
-class DynamicValueBool : DynamicValue
+class DynamicValueBool extends DynamicValue
 	bool v
 	override void __init__()
 		type = TYPE_BOOL
@@ -159,7 +159,7 @@ class DynamicValueBool : DynamicValue
 	override string str()
 		return v.str()
 
-class DynamicValueFloat : DynamicValue
+class DynamicValueFloat extends DynamicValue
 	float v
 	override void __init__()
 		type = TYPE_FLOAT
@@ -168,7 +168,7 @@ class DynamicValueFloat : DynamicValue
 	override string str()
 		return v.str()
 
-class DynamicValueString : DynamicValue
+class DynamicValueString extends DynamicValue
 	string v
 	override void __init__()
 		type = TYPE_STRING
@@ -390,7 +390,7 @@ class SyntaxNode
 			p.show(indent + 1)
 		showPost(indent)
 
-class SyntaxNodeVariable : SyntaxNode
+class SyntaxNodeVariable extends SyntaxNode
 	Variable *v
 	void __init__(Variable *_v)
 		v = _v
@@ -398,7 +398,7 @@ class SyntaxNodeVariable : SyntaxNode
 	override string str()
 		return "variable " + v.name
 
-class SyntaxNodeOperator : SyntaxNode
+class SyntaxNodeOperator extends SyntaxNode
 	string op
 	void __init__(string _op)
 		op = _op
@@ -418,7 +418,7 @@ class SyntaxNodeOperator : SyntaxNode
 			return 10
 		return 5
 
-class SyntaxNodeFunction : SyntaxNode
+class SyntaxNodeFunction extends SyntaxNode
 	string func
 	void __init__(string _func)
 		func = _func
@@ -426,13 +426,13 @@ class SyntaxNodeFunction : SyntaxNode
 	override string str()
 		return "function " + func
 
-class SyntaxNodeBlock : SyntaxNode
+class SyntaxNodeBlock extends SyntaxNode
 	override void __init__()
 		type = TYPE_BLOCK
 	override string str()
 		return "block"
 
-class SyntaxNodeIf : SyntaxNode
+class SyntaxNodeIf extends SyntaxNode
 	SyntaxNode* block, block_else
 	override void __init__()
 		type = TYPE_IF
@@ -445,7 +445,7 @@ class SyntaxNodeIf : SyntaxNode
 		if block_else
 			block_else.show(indent+1)
 
-class SyntaxNodeWhile : SyntaxNode
+class SyntaxNodeWhile extends SyntaxNode
 	SyntaxNode* block, block_else
 	override void __init__()
 		type = TYPE_WHILE

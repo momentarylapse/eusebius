@@ -936,7 +936,7 @@ class lib__@DynamicArray
 		memcpy(data, a.data, num * element_size)
 		num = 0
 
-class lib__string : lib__@DynamicArray
+class lib__string extends lib__@DynamicArray
 	override char[0]* data
 	override void __init__()
 		__mem_init__(1)
@@ -1194,7 +1194,7 @@ lib__string binary(void *p, int num)
 	s.data = p
 	return s
 
-class lib__int@list : lib__@DynamicArray
+class lib__int@list extends lib__@DynamicArray
 	override int[0]* data
 	override void __init__()
 		__mem_init__(sizeof(int))
@@ -1227,7 +1227,7 @@ class lib__int@list : lib__@DynamicArray
 					data[i] = data[j]
 					data[j] = t
 
-class lib__float@list : lib__@DynamicArray
+class lib__float@list extends lib__@DynamicArray
 	override float[0]* data
 	override void __init__()
 		__mem_init__(sizeof(float))
@@ -1260,7 +1260,7 @@ class lib__float@list : lib__@DynamicArray
 					data[i] = data[j]
 					data[j] = t
 
-class lib__bool@list : lib__@DynamicArray
+class lib__bool@list extends lib__@DynamicArray
 	override bool[0]* data
 	override void __init__()
 		__mem_init__(sizeof(bool))
@@ -1286,7 +1286,7 @@ class lib__bool@list : lib__@DynamicArray
 		for i in 0:num
 			data[i] = o.data[i]
 
-class lib__string@list : lib__@DynamicArray
+class lib__string@list extends lib__@DynamicArray
 	override lib__string[0]* data
 	override void __init__()
 		__mem_init__(sizeof(lib__string))
@@ -1542,7 +1542,7 @@ lib__string _complex2s(lib__complex c)
 	return r
 
 
-class lib__complex@list : lib__@DynamicArray
+class lib__complex@list extends lib__@DynamicArray
 	override complex[0]* data
 	override void __init__()
 		__mem_init__(sizeof(complex))
@@ -1596,7 +1596,7 @@ class lib__DirEntry
 		is_dir = o.is_dir
 
 
-class lib__DirEntry@list : lib__@DynamicArray
+class lib__DirEntry@list extends lib__@DynamicArray
 	override lib__DirEntry[0]* data
 	override void __init__()
 		__mem_init__(sizeof(lib__DirEntry))

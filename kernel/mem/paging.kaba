@@ -17,7 +17,7 @@ class Page
 		for i in 0:PAGE_TABLE_ENTRIES
 			e[i] = 0
 
-class PageTable : Page
+class PageTable extends Page
 	
 	int count_entries()
 		int num_entries = 0
@@ -31,7 +31,7 @@ void page_params(int addr, int* dir_no, int* page_no, int* offset)
 	*page_no = (addr >> 12) & 0x000003ff
 	*offset = addr & 0x00000fff
 
-class PageDirectory : PageTable
+class PageDirectory extends PageTable
 
 	// source = task-space
 	// dest = kernel-space

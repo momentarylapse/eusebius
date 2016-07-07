@@ -65,7 +65,7 @@ class Job
 		//print(" status " + status)
 		done = true
 
-class CWindow : XWindow
+class CWindow extends XWindow
 	int x, y
 	XPainter *p
 	void __init__(int x, int y, int w, int h)

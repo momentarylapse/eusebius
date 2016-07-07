@@ -8,9 +8,9 @@ use "../io/io.kaba"
 //--------------------------------------------------------------
 // Ata Treiber
 
-#define AtaMaskBusy		0x80
-#define AtaMaskReady		0x40
-#define AtaMaskData		0x08
+const int ATA_MASK_BUSY = 0x80
+const int ATA_MASK_READY = 0x40
+const int ATA_MASK_DATA = 0x08
 
 class AtaDiskInfo
 	bool isAvailable
@@ -93,7 +93,7 @@ class AtaController
 		wait_400_ns()
 
 		//sub_atapi_delay( 0 )
-		wait_status(AtaMaskBusy, 0)
+		wait_status(ATA_MASK_BUSY, 0)
 		outportb(IOBase + 6, MSMask)
 		wait_400_ns()
 
@@ -132,7 +132,7 @@ class AtaController
 
 		outportb(IOCtrl, 0x0a) // ?+NoInt
 		wait_400_ns()
-		wait_status(AtaMaskBusy, 0)
+		wait_status(ATA_MASK_BUSY, 0)
 		outportb(IOBase+1, 0) //?
 		outportb(IOBase+2, 0) // NumSectors
  		outportb(IOBase+3, 0) // S0
@@ -146,7 +146,7 @@ class AtaController
 			outportb(IOBase+7, 0xec) // IdentifyDrive
 		wait_400_ns()
 
-		wait_status(0x88, AtaMaskData)
+		wait_status(0x88, ATA_MASK_DATA)
 		wait_400_ns()
 
 		BufferDW = &Buffer
@@ -225,7 +225,7 @@ class AtaController
 		
 		outportb(IOCtrl, 0x0a) // ?+NoInt
 		wait_400_ns()
-		wait_status(AtaMaskBusy, 0)
+		wait_status(ATA_MASK_BUSY, 0)
 
 		outportb(IOBase+1, 0) // Features
 		outportb(IOBase+2, num_sectors) // NumSectors
@@ -236,7 +236,7 @@ class AtaController
 		outportb(IOBase+7, 0x20 ) // ReadSector
 		wait_400_ns()
 
-		wait_status(0x88, AtaMaskData)
+		wait_status(0x88, ATA_MASK_DATA)
 		//wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
 		wait_400_ns()
 
@@ -272,7 +272,7 @@ class AtaController
 		
 		outportb(IOCtrl, 0x0a) // ?+NoInt
 		wait_400_ns()
-		wait_status(AtaMaskBusy, 0)
+		wait_status(ATA_MASK_BUSY, 0)
 
 		outportb(IOBase+1, 0) // Features
 		outportb(IOBase+2, num_sectors) // NumSectors
@@ -283,7 +283,7 @@ class AtaController
 		outportb(IOBase+7, 0x30 ) // WriteSector
 		wait_400_ns()
 
-		wait_status(0x88, AtaMaskData)
+		wait_status(0x88, ATA_MASK_DATA)
 		//wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
 		wait_400_ns()
 
