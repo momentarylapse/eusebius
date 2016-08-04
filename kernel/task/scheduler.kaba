@@ -66,22 +66,14 @@ int GetNextTask(int pid)
 void ProcessWaitingTasks()
 	for t in Tasks
 		if t.status == TASK_STATUS_WAITING
-			if t.waiting_mode == WAITING_MODE_FILE_READ
-				int r = t.sys_read(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
-				if r >= 0
-					t.tss.eax = r // return r
-					t.activate()
-			else if t.waiting_mode == WAITING_MODE_FILE_WRITE
-				int r = t.sys_write(t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
-				if r >= 0
-					t.tss.eax = r // return r
-					t.activate()
-			else if t.waiting_mode == WAITING_MODE_TIME
+			if t.waiting_mode == WAITING_MODE_TIME
 				TimeValue *rem = &t.waiting_param_i1
 				rem.dec_nanosec(kernel_timer.dt_nanosec)
 				if rem.sec < 0
-					t.tss.eax = 0 // return r
+					t.tss.eax = 0 // return 0
 					t.activate()
+			else
+				t.do_wait_update()
 
 
 void ReconnectTasks(int pid_next, Task* irq_task)

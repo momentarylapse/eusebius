@@ -15,7 +15,7 @@ use "irq/irq.kaba"
 use "irq/error.kaba"
 use "syscall.kaba"
 
-const int KALIB_LOCATION = 0x00030000
+const int KALIB_LOCATION = 0x00050000
 
 
 

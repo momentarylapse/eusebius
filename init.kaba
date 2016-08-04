@@ -101,7 +101,7 @@ void main()	//-------------------------------------------------------------	// R
 		
 		mov ax, 0x2000
 		mov es, ax
-		mov bx, 0x0000 // 0x200000
+		mov bx, 0x0000 // 0x20000
 		mov ah, 0x02 // "ReadSector"
 		mov al, 0x80 // 128 sectors * 512 bytes = 64k
 		mov cx, 0x001f // sector 0x1f, cylinder 0
@@ -110,16 +110,16 @@ void main()	//-------------------------------------------------------------	// R
 		
 		mov ax, 0x3000
 		mov es, ax
-		mov bx, 0x0000 // 0x300000
+		mov bx, 0x0000 // 0x30000
 		mov ah, 0x02 // "ReadSector"
 		mov al, 0x80 // 128 sectors * 512 bytes = 64k
 		mov cx, 0x0021 // sector 0x21, cylinder 0
 		mov dx, 0x0480 // head 4, disc 0
 		int 0x13
 		
-		mov ax, 0x3000
+		mov ax, 0x4000
 		mov es, ax
-		mov bx, 0x0000 // 0x400000
+		mov bx, 0x0000 // 0x40000
 		mov ah, 0x02 // "ReadSector"
 		mov al, 0x80 // 128 sectors * 512 bytes = 64k
 		mov cx, 0x0023 // sector 0x23, cylinder 0

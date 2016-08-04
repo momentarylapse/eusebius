@@ -27,6 +27,7 @@ const int ENOTEMPTY = 113
 const int ENOTSOCK = 112
 const int EADDRINUSE = 111
 const int ECONNREFUSED = 110
+const int ENOTCONN = 109
 
 const int F_GETFL = 1
 const int F_SETFL = 2

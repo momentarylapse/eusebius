@@ -620,7 +620,7 @@ class Task
 				return -ENFILE
 			if !create_socket(e, p1)
 				return -3
-			OpenFileData *of = kernel_open_entry(e, O_RDONLY)
+			OpenFileData *of = kernel_open_entry(e, O_RDWR)
 			return add_handle(of)
 		else if cmd == SYS_BIND
 			OpenFileData *of = get_handle(p1)
@@ -652,7 +652,7 @@ class Task
 			int e = of.socket.accept_start()
 			if e < 0
 				return e
-			set_wait(WAITING_MODE_SOCKET_ACCEPT, p1, 0, 0)
+			set_wait(WAITING_MODE_SOCKET_ACCEPT, of.socket.port, 0, 0)
 			return 0
 		return -EINVAL
 	
@@ -669,6 +669,33 @@ class Task
 		in_signal = false
 		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
 		return 0
+	
+	void do_wait_update()
+		if waiting_mode == WAITING_MODE_FILE_READ
+			int r = sys_read(waiting_param_i1, waiting_param_i2, waiting_param_i3)
+			if r >= 0
+				tss.eax = r // return r
+				activate()
+		else if waiting_mode == WAITING_MODE_FILE_WRITE
+			int r = sys_write(waiting_param_i1, waiting_param_i2, waiting_param_i3)
+			if r >= 0
+				tss.eax = r // return r
+				activate()
+		/*else if waiting_mode == WAITING_MODE_TIME
+			TimeValue *rem = &waiting_param_i1
+			rem.dec_nanosec(kernel_timer.dt_nanosec)
+			if rem.sec < 0
+				tss.eax = 0 // return 0
+				activate()*/
+		else if waiting_mode == WAITING_MODE_SOCKET_ACCEPT
+			KSocket *s = get_socket_by_port(waiting_param_i1)
+			if !s
+				tss.eax = -EINVAL // return ...
+				activate()
+			if s.state == SOCK_STATE_ACCEPTED
+				OpenFileData *of = kernel_open_entry(s.e, O_RDWR)
+				tss.eax = add_handle(of) // return 0
+				activate()
 
 Task *get_task(int pid)
 	if pid < 0 or pid >= MAX_TASKS

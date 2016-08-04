@@ -30,16 +30,24 @@ class KSocket
 	
 	int _accepted_port
 	
-	/*int write(PageDirectory *page_dir, int addr, int size)
-		if buffer_used + size > SOCKET_BUFFER_SIZE
+	int write(PageDirectory *page_dir, int addr, int size)
+		if peer_port < 0
+			prints("  WRITE NON CONN ")
+			return -ENOTCONN
+		KSocket *s = get_socket_by_port(peer_port)
+		if !s
+			prints("  WRITE NON CONN2 ")
+			return -ENOTCONN
+		if s.buffer_used + size > SOCKET_BUFFER_SIZE
+			prints("  WRITE BLOCK ")
 			return -EWOULDBLOCK
-		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
-		buffer_used += size
+		page_dir.memcpy2kernel(&s.buffer[s.buffer_used], addr, size)
+		s.buffer_used += size
 		return size
 	int read(PageDirectory *page_dir, int addr, int size)
 		if buffer_used == 0
-			// no data... block if we have a writer
-			if write_ref_count > 0
+			// no data... block if we're not connected
+			if peer_port < 0
 				return -EWOULDBLOCK
 			// else "empty"
 			return 0
@@ -49,7 +57,7 @@ class KSocket
 		buffer_used -= size
 		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]
-		return size*/
+		return size
 		
 	int bind(int _port)
 		if get_socket_by_port(_port)

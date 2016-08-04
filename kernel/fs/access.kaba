@@ -50,6 +50,8 @@ class OpenFileData
 			return call_ppii(entry.op._read, entry, page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.read(page_dir, addr, size)
+		else if entry.type == FILE_TYPE_SOCKET
+			return socket.read(page_dir, addr, size)
 		
 		int block_size = entry.mount.block_size
 		int pos_in_block = offset % block_size
@@ -101,6 +103,8 @@ class OpenFileData
 			return call_ppii(entry.op._write, entry, page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.write(page_dir, addr, size)
+		else if entry.type == FILE_TYPE_SOCKET
+			return socket.write(page_dir, addr, size)
 		
 		int block_size = entry.mount.block_size
 		int pos_in_block = offset % block_size
