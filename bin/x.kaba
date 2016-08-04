@@ -263,60 +263,33 @@ void draw_invalidated()
 
 
 class Client
-	int[0]* buf
+	int sock
 	bool kill_me
 	XWindow*[] win
-	int key
+	int[8] buf
 	
-	void __init__(int _key)
-		key = _key
+	void __init__(int _sock)
+		sock = _sock
 		kill_me = false
-		kprint("x: new client key=" + key + " \n")
-		int id = shmget(key, 0, 0)
-		buf = shmat(id, 0)
-		if !buf
-			kprint("  -- x: Fehler shmat (2) --\n")
+		kprint("x: new client sock=" + sock + " \n")
 	
 	void __delete__()
 		kprint("x: del client\n")
-		shmdt(buf)
 		for w in win
 			delete w
-	
-	void wait_clear()
-		kprint(" x:wc ")
-		while buf[0] != CON_STATUS_CLEAR
-			nil
-		kprint(" x:/wc ")
-	
-	void wait_clear_poll()
-		kprint(" x:wcp ")
-		while buf[0] != CON_STATUS_CLEAR
-			poll()
-		kprint(" x:/wcp ")
-	
-	void clear()
-		kprint(" x:clear ")
-		buf[0] = CON_STATUS_CLEAR
-	
-	void just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		kprint(" x:send ")
-		wait_clear_poll()
-		buf[0] = CON_STATUS_BUSY
-		buf[1] = cmd
-		buf[2] = p1
-		buf[3] = p2
-		buf[4] = p3
-		buf[5] = p4
-		buf[6] = p5
-		buf[0] = CON_STATUS_SERVER_SEND
-		wait_clear()
-		//return buf[32]
-		kprint(" x:/send ")
+		close(sock)
 	
 	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		just_send(cmd, p1, p2, p3, p4, p5)
-		clear()
+		kprint(" x:send ")
+		buf[0] = cmd
+		buf[1] = p1
+		buf[2] = p2
+		buf[3] = p3
+		buf[4] = p4
+		buf[5] = p5
+		kprint(write(sock, &buf[0], 4*8))
+		//return buf[32]
+		kprint(" x:/send ")
 	
 	void send_mouse()
 		kprint("x: send mouse\n")
@@ -327,76 +300,61 @@ class Client
 		send(XCMD_EVENT_KEY, keyboard.key, 0, 0, 0, 0)
 	
 	void poll()
-		if buf[0] != 0
-			nil//kprint("    x:" + buf[0])
-		if buf[0] != CON_STATUS_CLIENT_SEND
+		int n = read(sock, &buf[0], 4*8)
+		if n <= 0
 			return
-		buf[0] = CON_STATUS_BUSY
-		buf[32] = -1
 		kprint("x: empfange\n")
-		int end_status = CON_STATUS_CLEAR
-		if buf[1] == XCMD_KILL
-			buf[32] = 0
+		if buf[0] == XCMD_KILL
 			kill_me = true
-		else if buf[1] == XCMD_WINDOW_NEW
-			XWindow* ww = new XWindow(buf[2], buf[3], buf[4], buf[5], 2 | WF_DONT_INVALIDATE)
+		else if buf[0] == XCMD_WINDOW_NEW
+			XWindow* ww = new XWindow(buf[1], buf[2], buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
 			win.add(ww)
-			buf[32] = 0
-			buf[33] = ww.id
-			buf[34] = ww.shm_key
-			kprint("x: c.key=" + key + " w.key=" + ww.shm_key + "\n")
-			end_status = CON_STATUS_SERVER_ANSWER
-		else if buf[1] == XCMD_WINDOW_INVALIDATE
+			send(XCMD_WINDOW_NEW, ww.id, ww.shm_key, 0, 0, 0)
+			kprint("x: c.sock=" + sock + " w.key=" + ww.shm_key + "\n")
+		else if buf[0] == XCMD_WINDOW_INVALIDATE
 			for w in win
-				if w.id == buf[2]
+				if w.id == buf[1]
 					invalidated.add(w.r)
-					buf[32] = 0
-		else if buf[1] == XCMD_WINDOW_MOVE
+		else if buf[0] == XCMD_WINDOW_MOVE
 			for w in win
-				if w.id == buf[2]
-					w.move(buf[3], buf[4])
-					buf[32] = 0
-		else if buf[1] == XCMD_WINDOW_GET_POS
+				if w.id == buf[1]
+					w.move(buf[2], buf[3])
+		else if buf[0] == XCMD_WINDOW_GET_POS
 			for w in win
-				if w.id == buf[2]
-					buf[32] = 0
-					buf[33] = w.r.x0
-					buf[34] = w.r.y0
+				if w.id == buf[1]
+					send(XCMD_WINDOW_GET_POS, w.r.x0, w.r.y0, 0, 0, 0)
 					break
-		else if buf[1] == XCMD_WINDOW_GET_SIZE
+		else if buf[0] == XCMD_WINDOW_GET_SIZE
 			for w in win
-				if w.id == buf[2]
-					buf[32] = 0
-					buf[33] = w.r.w()
-					buf[34] = w.r.h()
+				if w.id == buf[1]
+					send(XCMD_WINDOW_GET_SIZE, w.r.w(), w.r.h(), 0, 0, 0)
 					break
-		buf[0] = end_status
 		
 
 class CommandController
-	int[0]* buf
+	int sock
 	//int connection
 	Client*[] clients
 	
 	void __init__()
 	
+		sock = socket(0)
+		if !bind(sock, 0x7bcd0123)
+			print("x: Fehler bind()\n")
+			exit(-1)
+		if !listen(sock)
+			print("x: Fehler listen()\n")
+			exit(-1)
+		fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK)
+		
 		//mkfifo("/tmp/x")
 		//connection = open("/tmp/x", O_RDONLY)
-		int id = shmget(0x7bcd0123, 1024, SHM_DEST | IPC_CREAT)
-		buf = shmat(id, 0)
-		if !buf
-			print("x: Fehler shmat (1)\n")
-			exit(-1)
-		
-		buf[0] = CON_STATUS_CLEAR
 	
 	void update()
-		//kprinti buf[0]
-		if buf[0] == CON_STATUS_CLIENT_SEND
-			buf[0] = CON_STATUS_BUSY
-			//kprint "  x:new client "
-			clients.add(new Client(buf[1]))
-			buf[0] = CON_STATUS_CLEAR
+		int ss = accept(sock)
+		if ss >= 0
+			fcntl(ss, F_SETFL, O_RDWR | O_NONBLOCK)
+			clients.add(new Client(ss))
 			
 		for c in clients
 			c.poll()

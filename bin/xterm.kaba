@@ -95,7 +95,8 @@ class CWindow extends XWindow
 			offset = 0
 		float scale = i2f(LINE_HEIGHT) * 0.00035
 		for l,i in h.lines
-			p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l, scale)
+			if i >= -offset
+				p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l, scale)
 			
 		p.end()
 

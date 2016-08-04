@@ -45,18 +45,17 @@ class XWindow
 		buf = shmat(mem_id, 0)
 		if !buf
 			kprint("  -- client: konnte Fenster-Puffer nicht anlegen --\n")
-	bool invalidate(int x0, int y0, int x1, int y1)
-		return con.send(XCMD_WINDOW_INVALIDATE, id, x0, y0, x1, y1) == 0
-	bool invalidate_all()
-		return con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1) == 0
-	bool move(int x, int y)
-		return con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0) == 0
-	bool get_size(int *w, int *h)
-		int r = con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
-		*w = con.buf[33]
-		*h = con.buf[34]
-		con.wait_clear()
-		return r == 0
+	void invalidate(int x0, int y0, int x1, int y1)
+		con.send(XCMD_WINDOW_INVALIDATE, id, x0, y0, x1, y1)
+	void invalidate_all()
+		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
+	void move(int x, int y)
+		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
+	void get_size(int *w, int *h)
+		con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
+		con.wait_recv(XCMD_WINDOW_GET_SIZE)
+		*w = con.buf[1]
+		*h = con.buf[2]
 	virtual void onKey(int key)
 		print("c-win: key " + key + "\n")
 	virtual void onMouse(int x, int y, int flags)
@@ -64,90 +63,67 @@ class XWindow
 		
 
 class XConnection
-	int[0]* buf
+	int sock
+	int[8] buf
 	bool error
 	XWindow*[] windows
 	
 	void __init__()
 		error = true
 	
-		int key = randi(1000000)
-		kprint("client: key=" + key + "\n")
-		int id = shmget(key, 1024, SHM_DEST | IPC_CREAT)
-		buf = shmat(id, 0)
-		if !buf
-			kprint("client: shmat (1) fehlgeschlagen\n")
-			return
-		buf[0] = CON_STATUS_CLEAR
-	
 		// connect
-		int id0 = shmget(0x7bcd0123, 0, 0)
-		int[0]* buf0 = shmat(id0, 0)
-		if !buf0
-			kprint("client: shmat (2) fehlgeschlagen\n")
+		sock = socket(0)
+		if !connect(sock, 0x7bcd0123)
+			kprint("client: connect (2) fehlgeschlagen\n")
 			return
+		fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK)
 	
-		while buf0[0] != CON_STATUS_CLEAR
-			nil
-		buf0[0] = CON_STATUS_BUSY
-		buf0[1] = key
-		buf0[0] = CON_STATUS_CLIENT_SEND
-		shmdt(buf0)
 		error = false
 		
 	void __delete__()
 		if error
 			return
 		send_exit()
+		close(sock)
 	
-	void wait_clear()
-		kprint(" c:wc ")
-		while buf[0] != CON_STATUS_CLEAR and buf[0] != CON_STATUS_SERVER_ANSWER
-			nil
-		kprint(" c:/wc ")
-	
-	void wait_clear_poll()
-		kprint(" c:wcp ")
-		while buf[0] != CON_STATUS_CLEAR
-			poll()
-		kprint(" c:/wcp ")
-	
-	void clear()
-		kprint(" c:clear ")
-		buf[0] = CON_STATUS_CLEAR
-	
-	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
+	void just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		kprint(" c:send ")
-		wait_clear_poll()
-		buf[0] = CON_STATUS_BUSY
-		buf[1] = cmd
-		buf[2] = p1
-		buf[3] = p2
-		buf[4] = p3
-		buf[5] = p4
-		buf[6] = p5
-		buf[0] = CON_STATUS_CLIENT_SEND
-		wait_clear()
+		buf[0] = cmd
+		buf[1] = p1
+		buf[2] = p2
+		buf[3] = p3
+		buf[4] = p4
+		buf[5] = p5
+		kprint(write(sock, &buf[0], 4*8))
 		kprint(" c:/send ")
-		return buf[32]
 	
-	int send(int cmd, int p1, int p2, int p3, int p4, int p5)
-		int r = just_send(cmd, p1, p2, p3, p4, p5)
-		clear()
-		return r
+	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
+		just_send(cmd, p1, p2, p3, p4, p5)
+	
+	void wait_recv(int cmd)
+		kprint(" WAIT ")
+		while true
+			if poll()
+				if buf[0] == cmd
+					break
+			usleep(100)
+		kprint(" /WAIT ")
 
 	void send_exit()
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
 	bool _create_win(XWindow *win, int x, int y, int w, int h)
 		kprint("client: send new win\n")
-		if just_send(XCMD_NEW_WINDOW, x, y, w, h, 0) != 0
+		just_send(XCMD_NEW_WINDOW, x, y, w, h, 0)
+		
+		wait_recv(XCMD_NEW_WINDOW)
+		kprint("....client///  ")
+		if buf[0] != XCMD_NEW_WINDOW
 			kprint("   -- client: kein neues Fenster --\n")
 			return false
 		kprint("ok")
-		int win_id = buf[33]
-		int win_key = buf[34]
-		clear()
+		int win_id = buf[1]
+		int win_key = buf[2]
 		win.create_buf(win_id, win_key)
 		if !win.buf
 			return false
@@ -155,36 +131,32 @@ class XConnection
 		//print "client: ok\n"// " + key + " " + id + "\n"
 		return true
 	
-	void poll()
-		if buf[0] != 0
-			kprint("    c:" + buf[0])
-		if buf[0] != CON_STATUS_SERVER_SEND
-			return
+	bool poll()
+		int n = read(sock, &buf, 4*8)
+		if n <= 0
+			return false
 		kprint("  c:poll  ")
-		buf[0] = CON_STATUS_BUSY
-		if buf[1] == XCMD_EVENT_MOUSE
+		if buf[0] == XCMD_EVENT_MOUSE
 			kprint("client: mouse\n")
-			int x = buf[2]
-			int y = buf[3]
-			int flags = buf[4]
+			int x = buf[1]
+			int y = buf[2]
+			int flags = buf[3]
 			kprint(x)
 			kprint("/" + y)
 			kprint(" - " + flags + "\n")
-			clear()
 			for w in windows
 				w.onMouse(x, y, flags)
-		if buf[1] == XCMD_EVENT_KEY
+		else if buf[0] == XCMD_EVENT_KEY
 			kprint("client: key\n")
-			int key = buf[2]
-			clear()
+			int key = buf[1]
 			for w in windows
 				w.onKey(key)
-		if buf[1] == XCMD_EVENT_DRAW
+		else if buf[0] == XCMD_EVENT_DRAW
 			kprint("client: draw\n")
 		
 		
-		clear()
 		kprint("  c:/poll  ")
+		return true
 	
 	void run()
 		while true
