@@ -1744,8 +1744,8 @@ lib__string lib__FileRead(string filename)
 		return content
 	int size = 0
 	while true
-		content.resize(size + 128)
-		int r = read(h, &content.data[size], 128)
+		content.resize(size + 1024)
+		int r = read(h, &content.data[size], 1024)
 		if r < 0
 			lib__print("Fehler beim Lesen...\n")
 		if r <= 0

@@ -218,7 +218,7 @@ class XPainter
 		last_path_start = 0
 	
 	void strike()
-		for l,i in path
+		for l in path
 			draw_line(l.a, l.b)
 		clear_data()
 	

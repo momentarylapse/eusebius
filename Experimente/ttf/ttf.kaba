@@ -147,7 +147,7 @@ class TTF
 			tdentries.add(e)
 	
 		for ee in tdentries
-			print ee.name() + " " + ee.offset.int()
+			print(ee.name() + " " + ee.offset.int())
 		return true
 	
 	bool read_mapping()
@@ -158,12 +158,12 @@ class TTF
 		
 		read(f, &mh, 4)
 		int n = mh.num_tables.int()
-		print "map-----------------------------"
-		print i2h(f.getPos())
+		print("map-----------------------------")
+		print(i2h(f.getPos()))
 		//print mh.version.int()
 		//print n
 		if n > 100000
-			print "too many mapping tables"
+			print("too many mapping tables")
 			return false
 			
 		for i in 0:n
@@ -174,19 +174,19 @@ class TTF
 			map_tables.add(t)
 		
 		for m in map_tables
-			print "--------------"
-			print m.offset
-			print m.platform
-			print m.encoding
+			print("--------------")
+			print(m.offset)
+			print(m.platform)
+			print(m.encoding)
 			f.seek(te.offset.int() + m.offset, true)
 			m.format = readUS()
 			int length = readUS()
-			print "l " + length
+			print("l " + length)
 			int version = readUS()
 			
 			if m.format == 4
 				int seg_count = readUS() / 2
-				print "s " + seg_count
+				print("s " + seg_count)
 				int search_range = readUS()
 				int entry_selector = readUS()
 				int range_shift = readUS()
@@ -200,7 +200,7 @@ class TTF
 				for i in 0:seg_count
 					m.id_range_offset.add(readUS())
 				int rs = seg_count * 8 + 16
-				print "r: " + (length - rs)
+				print("r: " + (length - rs))
 				f.read(length - rs)
 				
 				/*print start_count
@@ -216,7 +216,7 @@ class TTF
 				
 				for i in 0:seg_count
 					if m.id_range_offset[i] != 0
-						print "id_range_offset != 0"
+						print("id_range_offset != 0")
 						return false
 					
 				//int length = readUS(f)
@@ -230,22 +230,22 @@ class TTF
 					m.glyph_id_array.add(readUS())
 				//print m.glyph_id_array
 			else
-				print "unhandled format: " + m.format
+				print("unhandled format: " + m.format)
 				return false
 				
 				
 		return true
 	
 	bool read_glyph(TTFGlyph g)
-		print "glyph---------------------------------"
-		print i2h(f.getPos())
+		print("glyph---------------------------------")
+		print(i2h(f.getPos()))
 		int num_contours = readSS()
 		//print num_contours
 		if num_contours == 0
 			//print "--empty"
 			return true
 		if num_contours > 100
-			print "too many contours: " + num_contours
+			print("too many contours: " + num_contours)
 			return false
 		
 		g.code = -1
@@ -293,13 +293,13 @@ class TTF
 				break
 			n ++
 			if n > 50
-				print "too many sub glyphs: " + n
+				print("too many sub glyphs: " + n)
 				return false
 		
 		if (flags & 0x0100) != 0
 			int instrlen = readUS()
 			if instrlen > 10000
-				print "too many instructions: " + instrlen
+				print("too many instructions: " + instrlen)
 				return false
 			f.read(instrlen)
 			
@@ -315,13 +315,13 @@ class TTF
 		for e in endpoints
 			//print "e " + e
 			if e > 1000
-				print "invalid endpoint: " + e
+				print("invalid endpoint: " + e)
 				return false
 		
 		// instructions???
 		int instrlen = readUS()
 		if instrlen > 1000
-			print "too many instructions: " + instrlen
+			print("too many instructions: " + instrlen)
 			return false
 		//print "instr: " + instrlen
 		f.read(instrlen) // instr
@@ -407,7 +407,7 @@ class TTF
 	bool read_glyphs()
 		TTFTableDirectoryEntry *te = get_table("glyf")
 		if !te
-			print "no glyf table"
+			print("no glyf table")
 			return false
 		f.seek(te.offset.int(), true)
 		int _max = te.offset.int() + te.length.int() - 32
@@ -418,7 +418,7 @@ class TTF
 				return false
 			glyphs.add(g)
 			g.contours.clear()
-		print "Glyphs: " + glyphs.num
+		print("Glyphs: " + glyphs.num)
 		/*for gg in glyphs
 			print "---- " + gg.contours.num
 			for c in gg.contours
@@ -458,16 +458,16 @@ class TTF
 		for m in map_tables
 			int n = m.map(code)
 			if n >= glyphs.num
-				print "mapping error: " + code + " => " + n
+				print("mapping error: " + code + " => " + n)
 				return -1
 			if n >= 0
 				return n
 		return -1
 	
 	TTFGlyph* get(int code)
-		print "get " + code
+		print("get " + code)
 		int n = map(code)
-		print n
+		print(n)
 		if n < 0
 			return &glyphs[0]
 		return &glyphs[n]
@@ -476,26 +476,26 @@ class TTF
 	
 		for m in map_tables
 			if m.format == 6
-				print "----------------------- 666"
+				print("----------------------- 666")
 				for n,i in m.glyph_id_array
 					if n < glyphs.num
 						glyphs[n].code = m.first_code + i
 					//else
-					print "E: " + n + " => " + (m.first_code + i)
+					print("E: " + n + " => " + (m.first_code + i))
 			else if m.format == 4
-				print "----------------------- 444"
-				print m.end_code.num
+				print("----------------------- 444")
+				print(m.end_code.num)
 				for i in 0:m.end_code.num
-					print "----"
-					print m.start_code[i]
-					print m.end_code[i]
-					print m.id_delta[i]
+					print("----")
+					print(m.start_code[i])
+					print(m.end_code[i])
+					print(m.id_delta[i])
 					for code in m.start_code[i]:(m.end_code[i]+1)
 						int n = (code + m.id_delta[i]) & 0x0000ffff
 						if n < glyphs.num
 							glyphs[n].code = code
 					//	else
-						print "E: " + n + " => " + code
+						print("E: " + n + " => " + code)
 	
 	
 	void export(string filename)
@@ -505,7 +505,7 @@ class TTF
 		
 		f << glyphs.num
 		int num_p = 0
-		for g,i in glyphs
+		for g in glyphs
 			f << g.code
 			f << g.contours.num
 			for c in g.contours
@@ -514,9 +514,11 @@ class TTF
 				num_p += c.p.num
 		f << num_p
 		int xx = 0
-		for g,i in glyphs
-			for c,ci in g.contours
+		complex[] pp
+		for g in glyphs
+			for c in g.contours
 				for p in c.p
+					pp.add(p)
 					f << p.x
 					f << p.y
 					xx ++
@@ -524,21 +526,21 @@ class TTF
 			for c in g.contours
 				if c.flags.num > 0
 					if (c.flags[0] & 1) == 0
-						print "-----[0] not on curve!"
+						print("-----[0] not on curve!")
 				for x in c.flags
 					f << ((x & 1) != 0)
 		
 		
 		delete(f)
 
-class FontWindow : Window
+class FontWindow extends Window
 	int index
 	void __init__()
 		super.__init__("test", -1, -1, 500, 500)
 		addDrawingArea("!grabfocus", 0, 0, 0, 0, "area")
 		index = 0
 	
-	overwrite void onKeyDown()
+	override void onKeyDown()
 		if HuiGetEvent().key == KeyLeft
 			index --
 		if HuiGetEvent().key == KeyRight
@@ -552,8 +554,8 @@ class FontWindow : Window
 	float yy(float y)
 		return 100 + (1000-y)*0.1
 	
-	overwrite void onDraw()
-		Painter *p = beginDraw("area")
+	override void onDraw(Painter *p)
+		//Painter *p = beginDraw("area")
 		float w = p.width
 		float h = p.height
 		
@@ -571,8 +573,10 @@ class FontWindow : Window
 		
 		for c in g.contours
 			p.setColor(Black)
+			print("--")
 			for i in 0:c.p.num
 				int i1 = (i+1) % c.p.num
+				print("" + c.p[i].x + "  " + c.p[i].y + "       ")
 				p.drawLine(xx(c.p[i].x), yy(c.p[i].y), xx(c.p[i1].x), yy(c.p[i1].y))
 				
 			for i in 0:c.p.num
@@ -583,8 +587,6 @@ class FontWindow : Window
 				else
 					p.setColor(Blue)
 				p.drawCircle(xx(c.p[i].x), yy(c.p[i].y), 3)
-		
-		p.end()
 		
 		
 TTF *font
@@ -605,6 +607,6 @@ void main(string[] arg)
 	FontWindow *w = new FontWindow
 	w.show()
 	w.run()
-	print "ok"
+	print("ok")
 
 

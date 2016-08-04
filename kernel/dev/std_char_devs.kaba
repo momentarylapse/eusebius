@@ -111,7 +111,8 @@ int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	return size
 int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	for i in 0:size
-		cstring *buf = _i2p(page_dir.addr2kernel(addr + i))
+		int offset
+		cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
 		prints_low(buf, 1)
 	return size
 

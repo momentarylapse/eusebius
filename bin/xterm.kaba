@@ -3,6 +3,8 @@ use "lib/x.kaba"
 use "lib/draw.kaba"
 use "lib/ttfx.kaba"
 
+const int LINE_HEIGHT = 20
+
 
 class History
 	string[] lines
@@ -66,14 +68,16 @@ class Job
 		done = true
 
 class CWindow extends XWindow
-	int x, y
+	int w, h
+	int max_lines
 	XPainter *p
 	void __init__(int x, int y, int w, int h)
 		super.__init__(xcon, x, y, w, h)
 		p = new XPainter(self)
 		p.font = LoadTTF("/home/x.font")
-		self.x = x
-		self.y = y
+		self.w = w
+		self.h = h
+		max_lines = (h - 10) / LINE_HEIGHT
 	
 	override void onKey(int key)
 		write(shell.pipe_in[1], &key, 1)
@@ -86,8 +90,12 @@ class CWindow extends XWindow
 		p.line_width = 1
 
 		p.set_color(White)
+		int offset = max_lines - h.lines.num
+		if offset > 0
+			offset = 0
+		float scale = i2f(LINE_HEIGHT) * 0.00035
 		for l,i in h.lines
-			p.draw_str(5, i*20+5, l, 0.007)
+			p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l, scale)
 			
 		p.end()
 

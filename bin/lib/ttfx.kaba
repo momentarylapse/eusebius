@@ -11,17 +11,9 @@ string i2h(int i)
 
 
 void _read(File *f, char[0]* p, int size)
-	/*string s = f.read(size)
+	string s = f.read(size)
 	for i in 0:size
-		p[i] = s[i]*/
-	int pos = 0
-	while size > 0
-		int chunk = min(128, size)
-		string s = f.read(chunk)
-		for i in 0:chunk
-			p[i + pos] = s[i]
-		pos += chunk
-		size -= chunk
+		p[i] = s[i]
 
 class TTFContour
 	int start, num
@@ -62,7 +54,7 @@ class TTFFont
 		if !f
 			print("kann Datei nicht lesen\n")
 			return false
-		f.setBinaryMode(true)
+		//f.setBinaryMode(true)
 		
 		int n = readI()
 		glyphs.resize(n)

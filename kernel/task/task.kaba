@@ -144,7 +144,6 @@ class Task
 	int return_status
 	int waiting_mode
 	int waiting_param_i1, waiting_param_i2, waiting_param_i3
-	int *waiting_param_p
 	bool sleep_and_wait
 	Task* parent
 	cstring name
@@ -232,8 +231,8 @@ class Task
 			//call_far [eax]
 			//jmp_far 0x004000000000 //0x0040:0x00000000
 		}
-	int addr2kernel(int addr)
-		return page_dir.addr2kernel(addr)
+	int addr2kernel(int addr, int* offset)
+		return page_dir.addr2kernel(addr, offset)
 	
 	int set_cur_dir(cstring dir)
 		FileEntry *e = get_file(dir)
@@ -285,17 +284,16 @@ class Task
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
 					t.tss.eax = 0// // return waitpid()
-					*t.waiting_param_p = return_status
+					t.page_dir.memcpy2task(t.waiting_param_i2, &return_status, 4)
 					clean_up_deep()
 					t.activate()
 		
 	void *get_initial_stack_pos()
 		return _i2p(_p2i(stack) + stack_size)
 	
-	void set_wait(int mode, void *param_p, int param_i1, int param_i2, int param_i3)
+	void set_wait(int mode, int param_i1, int param_i2, int param_i3)
 		status = TASK_STATUS_WAITING
 		waiting_mode = mode
-		waiting_param_p = param_p
 		waiting_param_i1 = param_i1
 		waiting_param_i2 = param_i2
 		waiting_param_i3 = param_i3
@@ -375,7 +373,7 @@ class Task
 			return -EBADF
 		int r = of.read(page_dir, addr, size)
 		if r == -EWOULDBLOCK and of.blocking
-			set_wait(WAITING_MODE_FILE_READ, nil, handle, addr, size)
+			set_wait(WAITING_MODE_FILE_READ, handle, addr, size)
 		return r
 
 
@@ -385,7 +383,7 @@ class Task
 			return -EBADF
 		int r = of.write(page_dir, addr, size)
 		if r == -EWOULDBLOCK and of.blocking
-			set_wait(WAITING_MODE_FILE_WRITE, nil, handle, addr, size)
+			set_wait(WAITING_MODE_FILE_WRITE, handle, addr, size)
 		return r
 
 	int sys_getdents(int handle, int addr, int num)
@@ -500,15 +498,14 @@ class Task
 		Task* t = get_task(_pid)
 		if !t
 			return -ECHILD
-		int *_status = _i2p(addr2kernel(status_addr))
 		if t.status == TASK_STATUS_ZOMBIE
-			*_status = t.return_status
+			page_dir.memcpy2task(status_addr, &t.return_status, 4)
 			t.clean_up_deep()
 			activate()
 			return 0
 		if (options & 1) > 0
 			return -2
-		set_wait(WAITING_MODE_TASK_EXIT, _status, _pid, 0, 0)
+		set_wait(WAITING_MODE_TASK_EXIT, _pid, status_addr, 0)
 		return 0
 
 	int sys_kill(int _pid, int signal)
@@ -521,7 +518,7 @@ class Task
 		TimeValue tv
 		if !page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
 			return -EFAULT
-		set_wait(WAITING_MODE_TIME, nil, tv.sec, tv.nanosec, 0)
+		set_wait(WAITING_MODE_TIME, tv.sec, tv.nanosec, 0)
 		return 0
 
 	int sys_brk(int new_top)
@@ -604,13 +601,13 @@ class Task
 					return 0
 			return -1
 		if cmd == 1001 // wait-for-message
-			set_wait(WAITING_MODE_MESSAGE, nil, 0, 0, 0)
+			set_wait(WAITING_MODE_MESSAGE, 0, 0, 0)
 			return 0
 		if cmd == 1002 // yield / wake-up
 			Task*t = get_task(p1)
 			if t
 				t.activate()
-			set_wait(WAITING_MODE_TIME, nil, 0, 0, 0)
+			set_wait(WAITING_MODE_TIME, 0, 0, 0)
 			return 0
 		return -EINVAL
 	
