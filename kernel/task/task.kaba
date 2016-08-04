@@ -656,8 +656,11 @@ class Task
 				return -ENOTSOCK
 			int e = of.socket.accept()
 			if e == -EWOULDBLOCK
-				set_wait(WAITING_MODE_SOCKET_ACCEPT, of.socket.port, 0, 0)
-				return 0
+				if of.socket.blocking
+					set_wait(WAITING_MODE_SOCKET_ACCEPT, of.socket.port, 0, 0)
+					return 0
+				else
+					return e
 			if e < 0
 				return e
 			// port

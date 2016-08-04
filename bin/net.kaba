@@ -12,32 +12,40 @@ void main()
 		print("client")*/
 	
 	if arg.num > 1
-		print("server\nsocket ")
 		int s = socket(0)
-		print(s)
-		print("\nbind ")
-		print(bind(s, 123))
-		print("\nlisten ")
-		print(listen(s))
+		bind(s, 123)
+		listen(s)
+		fcntl(s, F_SETFL, O_RDWR | O_NONBLOCK)
+		print("server laeuft\n")
 		while true
-			print("\naccept ")
+			print(".")
 			int ss = accept(s)
-			print(ss)
-			print("\nread ")
+			if ss < 0
+				sleep(1)
+				continue
+			fcntl(ss, F_SETFL, O_RDWR | O_NONBLOCK)
+			print("client!\nread ")
 			string t
 			t.resize(10)
-			print(read(ss, &t[0], t.num))
-			print(t)
-			close(ss)
+			
+			while true
+				print("-")
+				int n = read(ss, &t[0], t.num)
+				if n > 0
+					t.resize(n)
+					print(t)
+					close(ss)
+					break
+				sleep(1)
 	else
-		print("client\nsocket ")
 		int s = socket(0)
-		print(s)
-		print("\nconnect ")
-		print(connect(s, 123))
-		print("\nwrite ")
-		string t = "hallo"
-		print(write(s, &t[0], t.num))
+		if connect(s, 123)
+			sleep(4)
+			string t = "hallo"
+			if write(s, &t[0], t.num) < 0
+				print("kann nicht senden!\n")
+		else
+			print("kann nicht verbinden!\n")
 		
 	
 	exit(0)
