@@ -1,0 +1,162 @@
+use "../base.kaba"
+use "../fs/fs.kaba"
+use "../io/text.kaba"
+use "../mem/heap.kaba"
+use "../mem/paging.kaba"
+
+
+
+const int MAX_SOCKETS = 64
+const int SOCKET_BUFFER_SIZE = 1024
+
+
+enum
+	SOCK_STATE_NONE
+	SOCK_STATE_ACCEPTING
+	SOCK_STATE_ACCEPTED
+	SOCK_STATE_RECV
+
+
+class KSocket
+	bool used
+	FileEntry *e
+	int type // ...
+	int port
+	int peer_port
+	int state
+	int ref_count
+	char[0]* buffer
+	int buffer_used
+	
+	int _accepted_port
+	
+	/*int write(PageDirectory *page_dir, int addr, int size)
+		if buffer_used + size > SOCKET_BUFFER_SIZE
+			return -EWOULDBLOCK
+		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
+		buffer_used += size
+		return size
+	int read(PageDirectory *page_dir, int addr, int size)
+		if buffer_used == 0
+			// no data... block if we have a writer
+			if write_ref_count > 0
+				return -EWOULDBLOCK
+			// else "empty"
+			return 0
+		if size > buffer_used
+			size = buffer_used
+		page_dir.memcpy2task(addr, buffer, size)
+		buffer_used -= size
+		for i in 0:buffer_used
+			buffer[i] = buffer[i + size]
+		return size*/
+		
+	int bind(int _port)
+		if get_socket_by_port(_port)
+			return -EADDRINUSE
+		port = _port
+		prints(" bind ")
+		printi(port)
+		return 0
+		
+	int listen()
+		return 0
+		
+	int accept_start()
+		if port < 0
+			return -EINVAL
+		state = SOCK_STATE_ACCEPTING
+		return 0
+		
+	int accept(int from_port)
+		if state != SOCK_STATE_ACCEPTING
+			return -ECONNREFUSED
+		FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+		if !e
+			return -ENFILE
+		KSocket* s = create_socket(e, type)
+		s.assign_available_port()
+		s.peer_port = from_port
+		state = SOCK_STATE_ACCEPTED
+		_accepted_port = s.port
+		return 0
+		
+	int connect(int _port)
+		KSocket *s = get_socket_by_port(_port)
+		if !s
+			return -ECONNREFUSED
+		int e = s.accept(self.port)
+		if e < 0
+			return e
+		peer_port = _port
+		return 0
+		
+	void assign_available_port()
+		for p in 10000:20000
+			if !get_socket_by_port(p)
+				port = p
+		
+	/*void show()
+		prints("  ")
+		printi(_p2i(self))
+		prints("  ")
+		printi read_ref_count
+		prints(":")
+		printi write_ref_count
+		prints("  ")*/
+		
+	void unref()
+		ref_count --
+			
+		if ref_count < 0
+			panic("Socket.ref_count < 0")
+			
+		if ref_count == 0
+			clean_up()
+	
+	void clean_up()
+		if peer_port >= 0
+			// "unconnect"
+			KSocket *s = get_socket_by_port(peer_port)
+			if s
+				s.peer_port = -1
+		FileSystem.del(e)
+		free(buffer)
+		used = false
+
+KSocket[MAX_SOCKETS] Sockets
+
+
+
+KSocket* create_socket(FileEntry *e, int type)
+	for s in Sockets
+		if !s.used
+			s.used = true
+			s.e = e
+			s.type = type
+			s.state = SOCK_STATE_NONE
+			s.port = -1
+			s.peer_port = -1
+			s.ref_count = 0
+			s.buffer_used = 0
+			s.buffer = malloc(SOCKET_BUFFER_SIZE)
+			return &s
+	return nil
+
+
+KSocket* get_socket_by_port(int port)
+	for s in Sockets
+		if s.used and s.port == port
+			return &s
+	return nil
+	
+KSocket* get_socket(FileEntry *e)
+	for s in Sockets
+		if s.used and s.e == e
+			return &s
+	return nil
+
+
+void InitSockets()
+	for s in Sockets
+		s.used = false

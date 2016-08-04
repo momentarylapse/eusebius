@@ -2,6 +2,7 @@ use "../base.kaba"
 use "../io/text.kaba"
 use "fs.kaba"
 use "pipe.kaba"
+use "../net/socket.kaba"
 use "../mem/heap.kaba"
 use "../mem/paging.kaba"
 
@@ -20,6 +21,7 @@ class OpenFileData
 	//int block_size
 	char[0]* buffer
 	Pipe* pipe
+	KSocket *socket
 	int ref_count
 	
 	bool buffer_dirty, inode_dirty
@@ -214,6 +216,8 @@ class OpenFileData
 			call_p(entry.op._close, entry)
 		if entry.type == FILE_TYPE_PIPE
 			pipe.unref(writing)
+		else if entry.type == FILE_TYPE_SOCKET
+			socket.unref()
 		
 		used = false
 		entry = nil
@@ -264,6 +268,12 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 			of.pipe.read_ref_count ++
 		else
 			of.pipe.write_ref_count ++
+	else if of.entry.type == FILE_TYPE_SOCKET
+		of.socket = get_socket(of.entry)
+		if !of.socket
+			of.used = false
+			return nil
+		of.socket.ref_count ++
 	else if of.entry.type == FILE_TYPE_CHAR
 		call_p(of.entry.op._open, of.entry)
 	return of

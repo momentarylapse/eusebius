@@ -106,9 +106,11 @@ class XConnection
 			nil
 		kprint(" c:/wc ")
 	
-	void __wait_clear_poll()
+	void wait_clear_poll()
+		kprint(" c:wcp ")
 		while buf[0] != CON_STATUS_CLEAR
 			poll()
+		kprint(" c:/wcp ")
 	
 	void clear()
 		kprint(" c:clear ")
@@ -116,7 +118,7 @@ class XConnection
 	
 	int just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		kprint(" c:send ")
-		wait_clear()
+		wait_clear_poll()
 		buf[0] = CON_STATUS_BUSY
 		buf[1] = cmd
 		buf[2] = p1
@@ -126,6 +128,7 @@ class XConnection
 		buf[6] = p5
 		buf[0] = CON_STATUS_CLIENT_SEND
 		wait_clear()
+		kprint(" c:/send ")
 		return buf[32]
 	
 	int send(int cmd, int p1, int p2, int p3, int p4, int p5)
@@ -157,6 +160,7 @@ class XConnection
 			kprint("    c:" + buf[0])
 		if buf[0] != CON_STATUS_SERVER_SEND
 			return
+		kprint("  c:poll  ")
 		buf[0] = CON_STATUS_BUSY
 		if buf[1] == XCMD_EVENT_MOUSE
 			kprint("client: mouse\n")
@@ -180,6 +184,7 @@ class XConnection
 		
 		
 		clear()
+		kprint("  c:/poll  ")
 	
 	void run()
 		while true

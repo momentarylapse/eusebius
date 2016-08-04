@@ -539,6 +539,36 @@ bool mapirq(int irq, int signal)
 	}
 	return lib_error == 0
 
+
+int sys_socket(int cmd, int p1, int p2)
+	__temp_i__ = cmd
+	__temp_i2__ = p1
+	__temp_i3__ = p2
+	asm{
+		mov eax, 0x00000066
+		mov ebx, __temp_i__
+		mov ecx, __temp_i2__
+		mov edx, __temp_i3__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error
+
+int socket(int type)
+	return sys_socket(1, type, 0)
+
+bool bind(int fd, int port)
+	return sys_socket(2, fd, port) == 0
+
+bool connect(int fd, int port)
+	return sys_socket(3, fd, port) == 0
+
+bool listen(int fd)
+	return sys_socket(4, fd, 0) == 0
+
+int accept(int fd)
+	return sys_socket(5, fd, 0)
+
 void get_args(lib__string@list arg)
 	cstring cs
 	__temp_p__ = &cs

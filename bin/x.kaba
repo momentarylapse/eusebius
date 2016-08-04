@@ -286,12 +286,14 @@ class Client
 	void wait_clear()
 		kprint(" x:wc ")
 		while buf[0] != CON_STATUS_CLEAR
-			poll()
+			nil
 		kprint(" x:/wc ")
 	
-	void __wait_clear_poll()
+	void wait_clear_poll()
+		kprint(" x:wcp ")
 		while buf[0] != CON_STATUS_CLEAR
 			poll()
+		kprint(" x:/wcp ")
 	
 	void clear()
 		kprint(" x:clear ")
@@ -299,7 +301,7 @@ class Client
 	
 	void just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		kprint(" x:send ")
-		wait_clear()
+		wait_clear_poll()
 		buf[0] = CON_STATUS_BUSY
 		buf[1] = cmd
 		buf[2] = p1
@@ -310,6 +312,7 @@ class Client
 		buf[0] = CON_STATUS_SERVER_SEND
 		wait_clear()
 		//return buf[32]
+		kprint(" x:/send ")
 	
 	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		just_send(cmd, p1, p2, p3, p4, p5)
@@ -325,7 +328,7 @@ class Client
 	
 	void poll()
 		if buf[0] != 0
-			kprint("    x:" + buf[0])
+			nil//kprint("    x:" + buf[0])
 		if buf[0] != CON_STATUS_CLIENT_SEND
 			return
 		buf[0] = CON_STATUS_BUSY

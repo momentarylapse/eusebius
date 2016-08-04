@@ -18,7 +18,7 @@ all : bochs/c.img
 init : init.kaba
 	$(KABA) $(INITFLAGS) -o init init.kaba
 
-kernel/kernel : kernel/*.kaba kernel/dev/*.kaba kernel/fs/*.kaba kernel/io/*.kaba kernel/irq/*.kaba kernel/mem/*.kaba kernel/task/*.kaba kernel/time/*.kaba
+kernel/kernel : kernel/*.kaba kernel/dev/*.kaba kernel/fs/*.kaba kernel/io/*.kaba kernel/irq/*.kaba kernel/mem/*.kaba kernel/task/*.kaba kernel/time/*.kaba kernel/net/*.kaba
 	$(KABA) $(KERNELFLAGS) -o kernel/kernel kernel/kernel.kaba
  
 loader_fake : loader_fake.kaba

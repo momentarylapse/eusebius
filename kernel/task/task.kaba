@@ -6,6 +6,7 @@ use "../fs/access.kaba"
 use "../mem/heap.kaba"
 use "../mem/paging.kaba"
 use "../mem/shared.kaba"
+use "../net/socket.kaba"
 use "../time/timevalue.kaba"
 
 
@@ -106,6 +107,7 @@ enum
 	WAITING_MODE_FILE_WRITE
 	WAITING_MODE_TIME
 	WAITING_MODE_MESSAGE
+	WAITING_MODE_SOCKET_ACCEPT
 
 class TaskSharedMemoryRef
 	SharedMemory *s
@@ -577,7 +579,7 @@ class Task
 	int sys_ipc(int cmd, int p1, int p2, int p3)
 		if cmd == SHMGET
 			return SharedMem.shm_get(p1, p2, p3, pid)
-		if cmd == SHMAT
+		else if cmd == SHMAT
 			for r in shmem
 				if !r.s
 					r.s = SharedMem.get(p1)
@@ -592,7 +594,7 @@ class Task
 						return -EFAULT
 					return 0
 			return -1
-		if cmd == SHMDT
+		else if cmd == SHMDT
 			for r in shmem
 				if r.s and r.dest == p1
 					page_dir.unmap(r.dest, r.s.size, false)
@@ -600,14 +602,57 @@ class Task
 					r.s = nil
 					return 0
 			return -1
-		if cmd == 1001 // wait-for-message
+		else if cmd == 1001 // wait-for-message
 			set_wait(WAITING_MODE_MESSAGE, 0, 0, 0)
 			return 0
-		if cmd == 1002 // yield / wake-up
+		else if cmd == 1002 // yield / wake-up
 			Task*t = get_task(p1)
 			if t
 				t.activate()
 			set_wait(WAITING_MODE_TIME, 0, 0, 0)
+			return 0
+		return -EINVAL
+	
+	int sys_socket(int cmd, int p1, int p2)
+		if cmd == SYS_SOCKET
+			FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+			if !e
+				return -ENFILE
+			if !create_socket(e, p1)
+				return -3
+			OpenFileData *of = kernel_open_entry(e, O_RDONLY)
+			return add_handle(of)
+		else if cmd == SYS_BIND
+			OpenFileData *of = get_handle(p1)
+			if !of
+				return -EBADF
+			if of.entry.type != FILE_TYPE_SOCKET
+				return -ENOTSOCK
+			return of.socket.bind(p2)
+		else if cmd == SYS_CONNECT
+			OpenFileData *of = get_handle(p1)
+			if !of
+				return -EBADF
+			if of.entry.type != FILE_TYPE_SOCKET
+				return -ENOTSOCK
+			return of.socket.connect(p2)
+		else if cmd == SYS_LISTEN
+			OpenFileData *of = get_handle(p1)
+			if !of
+				return -EBADF
+			if of.entry.type != FILE_TYPE_SOCKET
+				return -ENOTSOCK
+			return of.socket.listen()
+		else if cmd == SYS_ACCEPT
+			OpenFileData *of = get_handle(p1)
+			if !of
+				return -EBADF
+			if of.entry.type != FILE_TYPE_SOCKET
+				return -ENOTSOCK
+			int e = of.socket.accept_start()
+			if e < 0
+				return e
+			set_wait(WAITING_MODE_SOCKET_ACCEPT, p1, 0, 0)
 			return 0
 		return -EINVAL
 	

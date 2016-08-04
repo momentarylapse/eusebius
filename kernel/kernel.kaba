@@ -8,6 +8,7 @@ use "fs/pipe.kaba"
 use "mem/heap.kaba"
 use "mem/paging.kaba"
 use "mem/shared.kaba"
+use "net/socket.kaba"
 use "task/task.kaba"
 use "task/scheduler.kaba"
 use "irq/irq.kaba"
@@ -87,6 +88,7 @@ void main()
 	
 	InitFileAccessData()
 	InitPipes()
+	InitSockets()
 	
 	FileSystem.init()
 	

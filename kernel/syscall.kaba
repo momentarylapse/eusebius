@@ -156,6 +156,8 @@ void int_syscall()
 			r = caller.sys_sigaction(param1, param2)
 		else if index == 88 // reboot
 			nil
+		else if index == 102 // socket
+			r = caller.sys_socket(param1, param2, param3)
 		else if index == 116 // sysinfo
 			_sys_info.get()
 			caller.page_dir.memcpy2task(param1, &_sys_info, sizeof(_sys_info))

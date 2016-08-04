@@ -87,7 +87,7 @@ Pipe* create_pipe(FileEntry *e)
 
 Pipe* get_pipe(FileEntry *e)
 	for p in Pipes
-		if p.e == e
+		if p.used and p.e == e
 			return &p
 	return nil
 

@@ -73,6 +73,7 @@ extern string binary(void *p, int num)
 
 extern bool exit(int r)
 extern int execute(string[] arg, int fd_in, int fd_out)
+extern int fork()
 extern int open(string filename, int flags)
 extern int create(string filename)
 extern bool close(int h)
@@ -109,3 +110,10 @@ extern bool mapirq(int irq, int signal)
 
 extern void kprint(string s)
 extern void kprinti(int i)
+
+extern int socket(int type)
+extern bool bind(int fd, int port)
+extern bool connect(int fd, int port)
+extern bool listen(int fd)
+extern int accept(int fd)
+
