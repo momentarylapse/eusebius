@@ -12,45 +12,43 @@ const int SOCKET_BUFFER_SIZE = 1024
 
 enum
 	SOCK_STATE_NONE
-	SOCK_STATE_ACCEPTING
-	SOCK_STATE_ACCEPTED
+	SOCK_STATE_LISTENING
+	SOCK_STATE_CONNECTING
+	SOCK_STATE_WAIT_ACCEPT
 	SOCK_STATE_RECV
 
 
 class KSocket
+	int _index
 	bool used
 	FileEntry *e
 	int type // ...
 	int port
 	int peer_port
 	int state
+	bool blocking
 	int ref_count
 	char[0]* buffer
 	int buffer_used
 	
-	int _accepted_port
+	int _accept_wait_port
 	
 	int write(PageDirectory *page_dir, int addr, int size)
 		if peer_port < 0
-			prints("  WRITE NON CONN ")
 			return -ENOTCONN
 		KSocket *s = get_socket_by_port(peer_port)
 		if !s
-			prints("  WRITE NON CONN2 ")
 			return -ENOTCONN
 		if s.buffer_used + size > SOCKET_BUFFER_SIZE
-			prints("  WRITE BLOCK ")
 			return -EWOULDBLOCK
 		page_dir.memcpy2kernel(&s.buffer[s.buffer_used], addr, size)
 		s.buffer_used += size
 		return size
+	
 	int read(PageDirectory *page_dir, int addr, int size)
 		if buffer_used == 0
-			// no data... block if we're not connected
-			if peer_port < 0
-				return -EWOULDBLOCK
-			// else "empty"
-			return 0
+			// no data... block
+			return -EWOULDBLOCK
 		if size > buffer_used
 			size = buffer_used
 		page_dir.memcpy2task(addr, buffer, size)
@@ -58,60 +56,66 @@ class KSocket
 		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]
 		return size
+	
+	void set_state(int _state)
+		state = _state
 		
 	int bind(int _port)
 		if get_socket_by_port(_port)
 			return -EADDRINUSE
 		port = _port
-		prints(" bind ")
-		printi(port)
 		return 0
+		
+	void link(KSocket *s)
+		s.peer_port = port
+		peer_port = s.port
 		
 	int listen()
-		return 0
-		
-	int accept_start()
 		if port < 0
 			return -EINVAL
-		state = SOCK_STATE_ACCEPTING
+		set_state(SOCK_STATE_LISTENING)
 		return 0
 		
-	int accept(int from_port)
-		if state != SOCK_STATE_ACCEPTING
+	int accept()
+		if state == SOCK_STATE_WAIT_ACCEPT
+			// "remote socket"
+			KSocket *rs = get_socket_by_port(_accept_wait_port)
+			if !rs
+				return -1
+			// "return socket"
+			FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+			if !e
+				self.set_state(SOCK_STATE_LISTENING)
+				return -ENFILE
+			KSocket* s = create_socket(e, type)
+			s.assign_available_port()
+			s.link(rs)
+			self.set_state(SOCK_STATE_LISTENING)
+			rs.set_state(SOCK_STATE_NONE)
+			return s.port
+		if state != SOCK_STATE_LISTENING
 			return -ECONNREFUSED
-		FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
-		if !e
-			return -ENFILE
-		KSocket* s = create_socket(e, type)
-		s.assign_available_port()
-		s.peer_port = from_port
-		state = SOCK_STATE_ACCEPTED
-		_accepted_port = s.port
-		return 0
+		return -EWOULDBLOCK
 		
 	int connect(int _port)
-		KSocket *s = get_socket_by_port(_port)
-		if !s
+		KSocket *rs = get_socket_by_port(_port)
+		if !rs
 			return -ECONNREFUSED
-		int e = s.accept(self.port)
-		if e < 0
-			return e
-		peer_port = _port
-		return 0
+		if rs.state != SOCK_STATE_LISTENING
+			return -ECONNREFUSED
+		
+		self.assign_available_port()
+		rs.set_state(SOCK_STATE_WAIT_ACCEPT)
+		rs._accept_wait_port = port
+		self.set_state(SOCK_STATE_CONNECTING)
+		
+		return -EWOULDBLOCK
 		
 	void assign_available_port()
 		for p in 10000:20000
 			if !get_socket_by_port(p)
-				port = p
-		
-	/*void show()
-		prints("  ")
-		printi(_p2i(self))
-		prints("  ")
-		printi read_ref_count
-		prints(":")
-		printi write_ref_count
-		prints("  ")*/
+				bind(p)
+				return
 		
 	void unref()
 		ref_count --
@@ -143,6 +147,7 @@ KSocket* create_socket(FileEntry *e, int type)
 			s.e = e
 			s.type = type
 			s.state = SOCK_STATE_NONE
+			s.blocking = true
 			s.port = -1
 			s.peer_port = -1
 			s.ref_count = 0
@@ -166,5 +171,6 @@ KSocket* get_socket(FileEntry *e)
 
 
 void InitSockets()
-	for s in Sockets
+	for s,i in Sockets
+		s._index = i
 		s.used = false

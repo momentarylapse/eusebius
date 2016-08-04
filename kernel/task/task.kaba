@@ -108,6 +108,7 @@ enum
 	WAITING_MODE_TIME
 	WAITING_MODE_MESSAGE
 	WAITING_MODE_SOCKET_ACCEPT
+	WAITING_MODE_SOCKET_CONNECT
 
 class TaskSharedMemoryRef
 	SharedMemory *s
@@ -635,7 +636,11 @@ class Task
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
 				return -ENOTSOCK
-			return of.socket.connect(p2)
+			int e = of.socket.connect(p2)
+			if e != -EWOULDBLOCK
+				return e
+			set_wait(WAITING_MODE_SOCKET_CONNECT, of.socket.port, 0, 0)
+			return 0
 		else if cmd == SYS_LISTEN
 			OpenFileData *of = get_handle(p1)
 			if !of
@@ -649,11 +654,18 @@ class Task
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
 				return -ENOTSOCK
-			int e = of.socket.accept_start()
+			int e = of.socket.accept()
+			if e == -EWOULDBLOCK
+				set_wait(WAITING_MODE_SOCKET_ACCEPT, of.socket.port, 0, 0)
+				return 0
 			if e < 0
 				return e
-			set_wait(WAITING_MODE_SOCKET_ACCEPT, of.socket.port, 0, 0)
-			return 0
+			// port
+			KSocket *s = get_socket_by_port(e)
+			if !s
+				return -1
+			of = kernel_open_entry(s.e, O_RDWR)
+			return add_handle(of)
 		return -EINVAL
 	
 	int sys_sigaction(int sig, int addr)
@@ -692,9 +704,27 @@ class Task
 			if !s
 				tss.eax = -EINVAL // return ...
 				activate()
-			if s.state == SOCK_STATE_ACCEPTED
-				OpenFileData *of = kernel_open_entry(s.e, O_RDWR)
-				tss.eax = add_handle(of) // return 0
+			if s.state == SOCK_STATE_WAIT_ACCEPT
+				int e = s.accept()
+				if e == -EWOULDBLOCK
+					return
+				if e < 0
+					tss.eax = e // return e
+				else
+					s = get_socket_by_port(e)
+					if !s
+						tss.eax = -2  // return -2
+					else
+						OpenFileData *of = kernel_open_entry(s.e, O_RDWR)
+						tss.eax = add_handle(of) // return 0
+				activate()
+		else if waiting_mode == WAITING_MODE_SOCKET_CONNECT
+			KSocket *s = get_socket_by_port(waiting_param_i1)
+			if !s
+				tss.eax = -EINVAL // return ...
+				activate()
+			if s.state != SOCK_STATE_CONNECTING
+				tss.eax = 0 // return 0
 				activate()
 
 Task *get_task(int pid)

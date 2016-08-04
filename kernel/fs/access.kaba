@@ -39,6 +39,8 @@ class OpenFileData
 		reading = (flags & O_RDONLY) > 0
 		writing = (flags & O_WRONLY) > 0
 		blocking = (flags & O_NONBLOCK) == 0
+		if socket
+			socket.blocking = blocking
 
 	int read(PageDirectory *page_dir, int addr, int size)
 		int r = 0
