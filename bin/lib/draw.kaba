@@ -33,6 +33,7 @@ class XLine
 class XPainter
 	int[0]* buf
 	int width, height
+	int buf_width
 	rect all
 	bool error
 	
@@ -56,12 +57,30 @@ class XPainter
 		/*if !win.get_size(&width, &height)
 			print("Draw-Fehler: get_size()\n")
 			return*/
+		buf_width = width
 		error = false
+		
+		font = nil
 		set_color(Black)
 		all = rect(0, width, 0, height)
 		pos = complex(0, 0)
 		line_width = 1.0
-		font = nil
+		last_path_start = 0
+	
+	void __init__(XPainter* p, int x, int y, int w, int h)
+		win = p.win
+		error = false
+		buf_width = p.buf_width
+		buf = &p.buf[x + y * buf_width]
+		width = w
+		height = h
+		
+		font = p.font
+		line_width = p.line_width
+		
+		set_color(Black)
+		all = rect(0, width, 0, height)
+		pos = complex(0, 0)
 		last_path_start = 0
 	
 	void set_color(color c)
@@ -75,7 +94,7 @@ class XPainter
 			return
 		if y < 0 or y >= height
 			return
-		int index = x + y * width
+		int index = x + y * buf_width
 		buf[index] = cur_color
 	
 	void draw_rect(rect r)
@@ -84,7 +103,7 @@ class XPainter
 		int x1 = min(r.x2, width)
 		int y1 = min(r.y2, height)
 		for y in y0:y1
-			int index = x0 + y * width
+			int index = x0 + y * buf_width
 			for x in x0:x1
 				buf[index] = cur_color
 				index ++
@@ -98,7 +117,7 @@ class XPainter
 		float rr_i = sqr(r - 1)
 		float rr_o = sqr(r)
 		for y in y0:y1
-			int index = x0 + y * width
+			int index = x0 + y * buf_width
 			float dy = y - my
 			float dx = x0 - mx
 			for x in x0:x1
@@ -124,7 +143,7 @@ class XPainter
 		float f2 = ll * ll
 		
 		for y in y0:y1
-			int index = x0 + y * width
+			int index = x0 + y * buf_width
 			float dy = y - a.y
 			float dx = x0 - a.x
 			for x in x0:x1
@@ -181,7 +200,7 @@ class XPainter
 			for i in 0:hit[y].num:2
 				int x0 = max(hit[y][i], 0)
 				int x1 = min(hit[y][i+1], width)
-				int index = x0 + y * width
+				int index = x0 + y * buf_width
 				for x in x0:x1
 					buf[index] = cur_color
 					index ++

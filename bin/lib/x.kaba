@@ -29,6 +29,7 @@ class XRect
 		return x >= x0 and x < x1 and y >= y0 and y < y1
 
 class XWindow
+	int w, h
 	int id
 	int[0]* buf
 	XConnection *con
@@ -36,6 +37,8 @@ class XWindow
 		con = c
 		buf = nil
 		c._create_win(self, x, y, w, h)
+		self.w = w
+		self.h = h
 	void __delete__()
 		if buf
 			shmdt(buf)

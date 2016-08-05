@@ -1,0 +1,63 @@
+use "../std.kaba"
+use "../x.kaba"
+use "../draw.kaba"
+use "../ttfx.kaba"
+
+const int FRAME_BAR = 30
+const int FRAME_WIDTH = 10
+
+class MtkWindow extends XWindow
+	XPainter *p_outer
+	XPainter *p
+	string title
+	void __init__(string title, int x, int y, int w, int h)
+		super.__init__(xcon, x, y, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
+		
+		self.title = title
+		
+		p_outer = new XPainter(self)
+		p_outer.font = LoadTTF("/home/x.font")
+		p = new XPainter(p_outer, FRAME_WIDTH, FRAME_BAR, w, h)
+		
+		draw_frame()
+	
+	void set_title(string _title)
+		title = _title
+		draw_frame()
+	
+	void draw_frame()
+		p_outer.set_color(White)
+		p_outer.rectangle(p_outer.all)
+		p_outer.fill()
+		p_outer.set_color(Black)
+		p_outer.draw_str(20.0, 10.0, title, 0.007)
+
+
+class MtkIdle
+	virtual void do()
+		nil
+
+XConnection *xcon
+MtkIdle*[] idles
+
+void mtk_init()
+	init_lib()
+	
+	xcon = new XConnection
+	if xcon.error
+		print("client: kann nicht mit x verbinden\n")
+		exit(-1)
+	idles.__init__()
+
+void mtk_add_idle(MtkIdle *i)
+	idles.add(i)
+
+void mtk_run()
+	while true
+		xcon.poll()
+		usleep(50000)
+		for i in idles
+			i.do()
+		
+	delete xcon
+	exit(0)
