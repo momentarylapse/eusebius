@@ -6,8 +6,10 @@ const int LINE_HEIGHT = 20
 
 
 class History
+	ShellView* view
 	string[] lines
 	void __init__()
+		view = nil
 		lines.add("")
 	void add(string s)
 		for c in s
@@ -15,9 +17,10 @@ class History
 				lines.add("")
 			else
 				lines[lines.num - 1].add(c)
-		window.redraw(self)
-History *history
-Job *shell
+		if view
+			view.draw()
+			view.p.end()
+		
 
 class Job extends MtkIdle
 	int pid
@@ -56,30 +59,29 @@ class Job extends MtkIdle
 		int r = read(pipe_out[0], &s[0], s.num)
 		if r > 0
 			s.resize(r)
-			history.add(s)
+			window.history.add(s)
 			//print s
 			return
 		
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
-		history.add("---xxx---")
+		window.history.add("---xxx---")
 	//	if status < -600//-652
 	//		print("  -- Programm hat was boeses gemacht! --\n")
 		//print(" status " + status)
 		done = true
 
-class ShellWindow extends MtkWindow
+class ShellView extends MtkWidget
+	History *hist
 	int max_lines
-	override void __init__()
-		super.__init__("XTerm", 50, 50, 600, 400)
-		max_lines = 0
 	
-	override void onKey(int key)
-		write(shell.pipe_in[1], &key, 1)
-			
-
-	void redraw(History *h)
+	void __init__(History *_hist)
+		hist = _hist
+		max_lines = 0
+		hist.view = self
+		
+	override void draw()
 		max_lines = (p.height - 10) / LINE_HEIGHT
 		p.set_color(color(1, 0,0,0))
 		p.rectangle(p.all)
@@ -87,15 +89,30 @@ class ShellWindow extends MtkWindow
 		p.line_width = 1
 
 		p.set_color(White)
-		int offset = max_lines - h.lines.num
+		int offset = max_lines - hist.lines.num
 		if offset > 0
 			offset = 0
 		float scale = i2f(LINE_HEIGHT) * 0.00035
-		for l,i in h.lines
+		for l,i in hist.lines
 			if i >= -offset
 				p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l, scale)
-			
-		p.end()
+	
+
+class ShellWindow extends MtkWindow
+	History* history
+	Job* shell
+	ShellView* view
+	override void __init__()
+		super.__init__("XTerm", 600, 400)
+		history = new History
+		view = new ShellView(history)
+		put(view)
+		
+		shell = new Job(["/bin/shell"])
+		mtk_add_idle(shell)
+	
+	override void onKey(int key)
+		write(shell.pipe_in[1], &key, 1)
 
 ShellWindow *window
 
@@ -104,19 +121,15 @@ void main()
 	
 	stdout = open("/dev/tty", O_WRONLY)
 	
+	
 	window = new ShellWindow
 	if !window.buf
 		print("client: kann kein Fenster erstellen\n")
 		exit(-2)
+	window.show()
 		
 		
 	
-	history = new History
-		
-	
-	shell = new Job(["/bin/shell"])
-	window.redraw(history)
-	mtk_add_idle(shell)
 	
 	mtk_run()
 	

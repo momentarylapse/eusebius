@@ -2,121 +2,31 @@ use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
 
-const int LINE_HEIGHT = 20
-
-
-class History
-	string[] lines
-	void __init__()
-		lines.add("")
-	void add(string s)
-		for c in s
-			if c == 10
-				lines.add("")
-			else
-				lines[lines.num - 1].add(c)
-		window.redraw(self)
-History *history
-Job *shell
-
-class Job extends MtkIdle
-	int pid
-	bool done
-	int[2] pipe_in, pipe_out // from job's point of view
-	void __init__(string[] c)
-		done = false
-		pipe_in[0] = -1
-		pipe_in[1] = -1
-		pipe_out[0] = -1
-		pipe_out[1] = -1
-		pid = -1
-		
-		pipe(pipe_in)
-		pipe(pipe_out)
-		
-		pid = execute(c, pipe_in[0], pipe_out[1])
-		close(pipe_in[0])
-		close(pipe_out[1])
-		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
-		
-		// debug
-		//string s = "ls\n"
-		//write(pipe_in[1], &s[0], s.num)
-	
-	override void __delete__()
-		close(pipe_in[1])
-		close(pipe_out[0])
-
-	override void do()
-		test()
-	
-	void test()
-		string s
-		s.resize(512)
-		int r = read(pipe_out[0], &s[0], s.num)
-		if r > 0
-			s.resize(r)
-			history.add(s)
-			//print s
-			return
-		
-		int status
-		if waitpid(pid, &status, false) == -2
-			return
-		history.add("---xxx---")
-	//	if status < -600//-652
-	//		print("  -- Programm hat was boeses gemacht! --\n")
-		//print(" status " + status)
-		done = true
-
-class ShellWindow extends MtkWindow
-	int max_lines
+class TestWindow extends MtkWindow
 	override void __init__()
-		super.__init__("XTerm", 50, 50, 600, 400)
-		max_lines = 0
-	
-	override void onKey(int key)
-		write(shell.pipe_in[1], &key, 1)
-			
+		super.__init__("Test", 600, 400)
 
-	void redraw(History *h)
-		max_lines = (p.height - 10) / LINE_HEIGHT
-		p.set_color(color(1, 0,0,0))
-		p.rectangle(p.all)
-		p.fill()
-		p.line_width = 1
-
-		p.set_color(White)
-		int offset = max_lines - h.lines.num
-		if offset > 0
-			offset = 0
-		float scale = i2f(LINE_HEIGHT) * 0.00035
-		for l,i in h.lines
-			if i >= -offset
-				p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l, scale)
-			
-		p.end()
-
-ShellWindow *window
+TestWindow *window
 
 void main()
 	mtk_init()
 	
-	stdout = open("/dev/tty", O_WRONLY)
-	
-	window = new ShellWindow
+	window = new TestWindow
 	if !window.buf
 		print("client: kann kein Fenster erstellen\n")
 		exit(-2)
-		
-		
 	
-	history = new History
-		
 	
-	shell = new Job(["/bin/shell"])
-	window.redraw(history)
-	mtk_add_idle(shell)
+	MtkGrid *g = new MtkGrid(2, 1)
+	window.put(g)
+	
+	MtkLabel *l = new MtkLabel("test")
+	g.put(0, 0, l)
+	
+	l = new MtkLabel("hallo")
+	g.put(1, 0, l)
+	
+	window.show()
 	
 	mtk_run()
 	

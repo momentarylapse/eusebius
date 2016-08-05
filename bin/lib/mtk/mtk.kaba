@@ -5,32 +5,125 @@ use "../ttfx.kaba"
 
 const int FRAME_BAR = 30
 const int FRAME_WIDTH = 10
+const int GRID_MARGIN = 10
+
+color col_frame
+color col_text
+color col_background
+color col_title
+
+class MtkWidget
+	MtkWindow* owner
+	XPainter *p
+	int offset_x, offset_y
+	int width, height
+	
+	void __init__()
+		owner = nil
+		p = nil
+	
+	virtual void __delete__()
+		if p
+			delete p
+	
+	void set_win(MtkWindow* win, int x, int y, int w, int h)
+		owner = win
+		p = new XPainter(win.p_outer, x, y, w, h)
+		offset_x = x
+		offset_y = y
+		width = w
+		height = h
+	
+	virtual void draw()
+
+class MtkLabel extends MtkWidget
+	string text
+	void __init__(string text)
+		self.text = text
+	void set_text(string text)
+		self.text = text
+		if p
+			draw()
+	override void draw()
+		p.set_color(col_background)
+		p.rectangle(p.all)
+		p.fill()
+		p.set_color(col_text)
+		p.draw_str(5, 5, text, 0.007)
+
+class MtkGrid extends MtkWidget
+	int nx, ny
+	MtkWidget*[] children
+	void __init__(int _nx, int _ny)
+		nx = _nx
+		ny = _ny
+		children.resize(nx * ny)
+		for c in children
+			c = nil
+	override void draw()
+		p.set_color(col_background)
+		p.rectangle(p.all)
+		p.fill()
+		for c in children
+			if c
+				c.draw()
+	void put(int x, int y, MtkWidget *c)
+		children[x + y * nx] = c
+		int ww = (width - (nx - 1) * GRID_MARGIN) / nx
+		int hh = (height - (ny - 1) * GRID_MARGIN) / ny
+		int dx = (ww + GRID_MARGIN) * x
+		int dy = (hh + GRID_MARGIN) * y
+		c.set_win(owner, offset_x + dx, offset_y + dy, ww, hh)
 
 class MtkWindow extends XWindow
-	XPainter *p_outer
-	XPainter *p
+	XPainter* p_outer
 	string title
-	void __init__(string title, int x, int y, int w, int h)
-		super.__init__(xcon, x, y, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
+	MtkWidget* widget
+	bool shown
+	
+	void __init__(string title, int w, int h)
+		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
+		widget = nil
+		shown = false
 		
 		self.title = title
 		
 		p_outer = new XPainter(self)
 		p_outer.font = LoadTTF("/home/x.font")
-		p = new XPainter(p_outer, FRAME_WIDTH, FRAME_BAR, w, h)
-		
+	
+	override void __delete__()
+		if widget
+			delete widget
+	
+	void show()
+		shown = true
+		draw()
+		p_outer.end()
+	
+	void draw()
+		shown = true
 		draw_frame()
+		if widget
+			widget.draw()
 	
 	void set_title(string _title)
 		title = _title
-		draw_frame()
+		if shown
+			show()
+	
+	void put(MtkWidget* widget)
+		self.widget = widget
+		widget.set_win(self, FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
+		
+		if shown
+			widget.draw()
 	
 	void draw_frame()
-		p_outer.set_color(White)
+		p_outer.set_color(col_frame)
 		p_outer.rectangle(p_outer.all)
 		p_outer.fill()
-		p_outer.set_color(Black)
-		p_outer.draw_str(20.0, 10.0, title, 0.007)
+		p_outer.set_color(col_title)
+		p_outer.draw_str(FRAME_WIDTH, 12.0, title, 0.008)
 
 
 class MtkIdle
@@ -42,6 +135,11 @@ MtkIdle*[] idles
 
 void mtk_init()
 	init_lib()
+	
+	col_frame = White
+	col_text = Black
+	col_background = color(1, 0.8, 0.8, 0.8)
+	col_title = Black
 	
 	xcon = new XConnection
 	if xcon.error

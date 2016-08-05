@@ -122,6 +122,10 @@ class XWindow
 	
 	void __init__(int x, int y, int w, int h, int flags)
 		kprint("x: new win\n")
+		if x < 0
+			x = randi(screen_width - w)
+		if y < 0
+			y = randi(screen_height - h)
 		r.x0 = x
 		r.y0 = y
 		r.x1 = x + w
