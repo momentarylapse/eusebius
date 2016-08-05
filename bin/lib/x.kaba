@@ -29,16 +29,18 @@ class XRect
 		return x >= x0 and x < x1 and y >= y0 and y < y1
 
 class XWindow
-	int w, h
+	int x, y, w, h
 	int id
 	int[0]* buf
 	XConnection *con
 	void __init__(XConnection *c, int x, int y, int w, int h)
 		con = c
 		buf = nil
-		c._create_win(self, x, y, w, h)
+		self.x = x
+		self.y = y
 		self.w = w
 		self.h = h
+		c._create_win(self, x, y, w, h)
 	void __delete__()
 		if buf
 			shmdt(buf)
@@ -130,6 +132,9 @@ class XConnection
 		win.create_buf(win_id, win_key)
 		if !win.buf
 			return false
+		win.x = buf[3]
+		win.y = buf[4]
+		
 		windows.add(win)
 		//print "client: ok\n"// " + key + " " + id + "\n"
 		return true
@@ -148,7 +153,7 @@ class XConnection
 			kprint("/" + y)
 			kprint(" - " + flags + "\n")
 			for w in windows
-				w.onMouse(x, y, flags)
+				w.onMouse(x - w.x, y - w.y, flags)
 		else if buf[0] == XCMD_EVENT_KEY
 			kprint("client: key\n")
 			int key = buf[1]

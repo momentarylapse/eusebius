@@ -4,14 +4,11 @@ use "lib/draw.kaba"
 use "lib/ttfx.kaba"
 
 class CWindow extends XWindow
-	int x, y
 	XPainter *p
 	void __init__(int x, int y, int w, int h)
 		super.__init__(xcon, x, y, w, h)
 		p = new XPainter(self)
 		p.font = LoadTTF("/home/x.font")
-		self.x = x
-		self.y = y
 	
 	override void onKey(int key)
 		if key == 'w'

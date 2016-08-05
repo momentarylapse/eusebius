@@ -14,7 +14,7 @@ color col_title
 
 class MtkWidget
 	MtkWindow* owner
-	XPainter *p
+	XPainter* p
 	int offset_x, offset_y
 	int width, height
 	
@@ -35,6 +35,8 @@ class MtkWidget
 		height = h
 	
 	virtual void draw()
+	virtual void onMouse(int x, int y, int flags)
+	virtual void onKey(int key)
 
 class MtkLabel extends MtkWidget
 	string text
@@ -44,6 +46,7 @@ class MtkLabel extends MtkWidget
 		self.text = text
 		if p
 			draw()
+			p.end()
 	override void draw()
 		p.set_color(col_background)
 		p.rectangle(p.all)
@@ -67,6 +70,10 @@ class MtkGrid extends MtkWidget
 		for c in children
 			if c
 				c.draw()
+	override void onMouse(int x, int y, int flags)
+		for c in children
+			if c
+				c.onMouse(x + offset_x - c.offset_x, y + offset_y - c.offset_y, flags)
 	void put(int x, int y, MtkWidget *c)
 		children[x + y * nx] = c
 		int ww = (width - (nx - 1) * GRID_MARGIN) / nx
@@ -74,6 +81,55 @@ class MtkGrid extends MtkWidget
 		int dx = (ww + GRID_MARGIN) * x
 		int dy = (hh + GRID_MARGIN) * y
 		c.set_win(owner, offset_x + dx, offset_y + dy, ww, hh)
+
+enum
+	BUTTON_STATE_DEFAULT
+	BUTTON_STATE_HOVER
+	BUTTON_STATE_CLICK
+
+class MtkButton extends MtkWidget
+	string text
+	int state
+	void __init__(string text)
+		self.text = text
+		state = BUTTON_STATE_DEFAULT
+	void set_text(string text)
+		self.text = text
+		if p
+			draw()
+			p.end()
+	override void draw()
+		p.set_color(col_text)
+		if state == BUTTON_STATE_HOVER
+			p.set_color(Blue)
+		if state == BUTTON_STATE_CLICK
+			p.set_color(Red)
+		p.rectangle(p.all)
+		p.fill()
+		p.set_color(col_background)
+		p.rectangle(rect(5, width-5, 5, height-5))
+		p.fill()
+		p.set_color(col_text)
+		p.draw_str(10, 10, text, 0.007)
+	void set_state(int _state)
+		if _state == state
+			return
+		state = _state
+		draw()
+		p.end()
+		if state == BUTTON_STATE_CLICK
+			onClick()
+	virtual void onClick()
+	override void onMouse(int x, int y, int flags)
+		bool inside = (x >= 0) and (x < width) and (y >= 0) and (y < height)
+		if inside
+			if (flags & 1) > 0
+				set_state(BUTTON_STATE_CLICK)
+			else
+				set_state(BUTTON_STATE_HOVER)
+		if !inside
+			set_state(BUTTON_STATE_DEFAULT)
+		// not the best way :P
 
 class MtkWindow extends XWindow
 	XPainter* p_outer
@@ -124,17 +180,25 @@ class MtkWindow extends XWindow
 		p_outer.fill()
 		p_outer.set_color(col_title)
 		p_outer.draw_str(FRAME_WIDTH, 12.0, title, 0.008)
+		
+	override void onMouse(int x, int y, int flags)
+		if widget
+			widget.onMouse(x - widget.offset_x, y - widget.offset_y, flags)
+	/*override void onKey(int key)
+		if widget
+			widget.onKey(key)*/
 
 
 class MtkIdle
 	virtual void do()
 		nil
 
-XConnection *xcon
+XConnection* xcon
 MtkIdle*[] idles
 
 void mtk_init()
 	init_lib()
+	idles.__init__()
 	
 	col_frame = White
 	col_text = Black
@@ -145,7 +209,6 @@ void mtk_init()
 	if xcon.error
 		print("client: kann nicht mit x verbinden\n")
 		exit(-1)
-	idles.__init__()
 
 void mtk_add_idle(MtkIdle *i)
 	idles.add(i)
