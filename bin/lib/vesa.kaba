@@ -117,8 +117,9 @@ void vesa_init()
 		print("pci dev found, mem=")
 		printh(dev.getMemAddr0())
 		print("\n")
-	
-		int id = shmget(dev.getMemAddr0(), 0x00200000, IPC_CREAT | SHM_ABSOLUTE)
+
+		// 3mb... enough for 1024*768*32	
+		int id = shmget(dev.getMemAddr0(), 0x00300000, IPC_CREAT | SHM_ABSOLUTE)
 		if id >= 0
 			vga_mem2 = shmat(id, 0)
 		else

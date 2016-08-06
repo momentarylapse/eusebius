@@ -11,6 +11,12 @@ color col_frame
 color col_text
 color col_background
 color col_title
+color col_button
+color col_button_frame
+color col_button_hover
+color col_button_hover_frame
+color col_button_click
+color col_button_click_frame
 
 class MtkWidget
 	MtkWindow* owner
@@ -43,6 +49,8 @@ class MtkLabel extends MtkWidget
 	void __init__(string text)
 		self.text = text
 	void set_text(string text)
+		if self.text == text
+			return
 		self.text = text
 		if p
 			draw()
@@ -94,23 +102,34 @@ class MtkButton extends MtkWidget
 		self.text = text
 		state = BUTTON_STATE_DEFAULT
 	void set_text(string text)
+		if self.text == text
+			return
 		self.text = text
 		if p
 			draw()
 			p.end()
 	override void draw()
-		p.set_color(col_text)
+		p.set_color(col_button)
 		if state == BUTTON_STATE_HOVER
-			p.set_color(Blue)
+			p.set_color(col_button_hover)
 		if state == BUTTON_STATE_CLICK
-			p.set_color(Red)
+			p.set_color(col_button_click)
 		p.rectangle(p.all)
 		p.fill()
-		p.set_color(col_background)
-		p.rectangle(rect(5, width-5, 5, height-5))
-		p.fill()
+		
+		p.set_color(col_button_frame)
+		if state == BUTTON_STATE_HOVER
+			p.set_color(col_button_hover_frame)
+		if state == BUTTON_STATE_CLICK
+			p.set_color(col_button_click_frame)
+		p.line_width = 4
+		p.rectangle(rect(3, width-3, 3, height-3))
+		p.strike()
+		p.line_width = 1
+		
 		p.set_color(col_text)
-		p.draw_str(10, 10, text, 0.007)
+		p.draw_str(15, 15, text, 0.007)
+		
 	void set_state(int _state)
 		if _state == state
 			return
@@ -136,11 +155,13 @@ class MtkWindow extends XWindow
 	string title
 	MtkWidget* widget
 	bool shown
+	bool lb
 	
 	void __init__(string title, int w, int h)
 		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
 		widget = nil
 		shown = false
+		lb = false
 		
 		self.title = title
 		
@@ -163,6 +184,8 @@ class MtkWindow extends XWindow
 			widget.draw()
 	
 	void set_title(string _title)
+		if title == _title
+			return
 		title = _title
 		if shown
 			show()
@@ -182,6 +205,23 @@ class MtkWindow extends XWindow
 		p_outer.draw_str(FRAME_WIDTH, 12.0, title, 0.008)
 		
 	override void onMouse(int x, int y, int flags)
+		bool lb_new = ((flags & 1) > 0)
+		//kprint("-- ff " + flags + "  ")
+		if !lb and lb_new
+			//kprint(" ============= DOWN ================")
+			//kprint(id)
+			XWindow* ww = xcon.get_at_cursor()
+			if ww == self
+				raise_top()
+				if y < FRAME_BAR
+					drag_start()
+		if lb and !lb_new
+			//kprint(" ============= UP ================")
+			//kprint(id)
+			drag_stop()
+		lb = lb_new
+		//kprint(">>")
+		
 		if widget
 			widget.onMouse(x - widget.offset_x, y - widget.offset_y, flags)
 	/*override void onKey(int key)
@@ -202,8 +242,14 @@ void mtk_init()
 	
 	col_frame = White
 	col_text = Black
-	col_background = color(1, 0.8, 0.8, 0.8)
+	col_background = color(1, 0.9, 0.9, 0.9)
 	col_title = Black
+	col_button = color(1, 0.6, 0.6, 0.95)
+	col_button_frame = color(1, 0.4, 0.4, 0.80)
+	col_button_hover = color(1, 0.7, 0.7, 1.0)
+	col_button_hover_frame = color(1, 0.5, 0.5, 0.85)
+	col_button_click = color(1, 0.4, 0.4, 0.8)
+	col_button_click_frame = color(1, 0.2, 0.2, 0.5)
 	
 	xcon = new XConnection
 	if xcon.error
@@ -216,7 +262,7 @@ void mtk_add_idle(MtkIdle *i)
 void mtk_run()
 	while true
 		xcon.poll()
-		usleep(50000)
+		usleep(5000)
 		for i in idles
 			i.do()
 		

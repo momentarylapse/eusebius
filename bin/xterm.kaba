@@ -15,6 +15,9 @@ class History
 		for c in s
 			if c == 10
 				lines.add("")
+			else if c == 0x7f or c == 8
+				if lines[lines.num - 1].num > 0
+					lines[lines.num - 1].resize(lines[lines.num - 1].num - 1)
 			else
 				lines[lines.num - 1].add(c)
 		if view

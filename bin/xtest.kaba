@@ -3,17 +3,23 @@ use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
 
 class TestWindow extends MtkWindow
+	MtkLabel* l
 	override void __init__()
 		super.__init__("Test", 600, 400)
 		
 		MtkGrid* g = new MtkGrid(2, 2)
 		put(g)
 	
-		MtkLabel* l = new MtkLabel("test")
+		l = new MtkLabel("test")
 		g.put(0, 0, l)
 	
 		MtkButton* b = new MtkButton("hallo")
 		g.put(1, 0, b)
+
+class Idle extends MtkIdle
+	override void do()
+		window.l.set_text("" + window.x + " / " + window.y)
+		
 
 TestWindow* window
 
@@ -22,6 +28,8 @@ void main()
 	
 	window = new TestWindow
 	window.show()
+	
+	mtk_add_idle(new Idle)
 	
 	mtk_run()
 	

@@ -6,12 +6,16 @@ use "lib/vesa.kaba"
 
 
 const int XCMD_KILL = 666
-const int XCMD_WINDOW_NEW = 1024
-const int XCMD_WINDOW_DELETE = 1025
+const int XCMD_NEW_WINDOW= 1024
+const int XCMD_DEL_WINDOW = 1025
 const int XCMD_WINDOW_MOVE = 1026
 const int XCMD_WINDOW_INVALIDATE = 1027
 const int XCMD_WINDOW_GET_SIZE = 2048
 const int XCMD_WINDOW_GET_POS = 2049
+const int XCMD_WINDOW_DRAG_START = 2050
+const int XCMD_WINDOW_DRAG_STOP = 2051
+const int XCMD_WINDOW_RAISE = 2052
+const int XCMD_POINTER_GET_WINDOW = 3072
 
 const int XCMD_EVENT_MOUSE = 3072
 const int XCMD_EVENT_KEY = 3073
@@ -30,8 +34,10 @@ const int WF_DONT_INVALIDATE = 2048
 class MouseController
 	int x, y, flags
 	XWindow* cursor
+	XWindow* drag_win
 	
 	int dev
+	bool sending
 	
 	void __init__()
 	
@@ -40,17 +46,20 @@ class MouseController
 		dev = open("/dev/mouse", O_RDONLY | O_NONBLOCK)
 		//fcntl(dev, F_SETFL, O_RDONLY | O_NONBLOCK)
 		
+		drag_win = nil
+		sending = false
+		
 	void create()
 
 		Image *im = LoadImage("/images/cursor.tga")
 	
 		if im
-			cursor = new XWindow(x - im.width/2, y - im.height/2, im.width, im.height, WF_TRANSPARENT | 7)
+			cursor = new XWindow(nil, x - im.width/2, y - im.height/2, im.width, im.height, WF_TRANSPARENT | 7)
 			cursor.fill_image(0, 0, im)
 		
 			delete im
 		else
-			cursor = new XWindow(x-16, y-16, 32, 32, WF_TRANSPARENT | 7)
+			cursor = new XWindow(nil, x-16, y-16, 32, 32, WF_TRANSPARENT | 7)
 			cursor.fill(0xffc0c0c0)
 
 	bool poll_single()
@@ -72,15 +81,22 @@ class MouseController
 		return true
 
 	void poll()
+		int x0 = x
+		int y0 = y
 		bool need_update = false
 		for i in 0:8
 			if !poll_single()
 				break
 			need_update = true
 		if need_update
-			for c in cmds.clients
-				c.send_mouse()
+			if !sending
+				sending = true
+				for c in cmds.clients
+					c.send_mouse()
+				sending = false
 			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
+			if drag_win
+				drag_win.move(drag_win.r.x0 + x - x0, drag_win.r.y0 + y - y0)
 
 MouseController* mouse
 
@@ -112,6 +128,7 @@ class XRect
 
 
 class XWindow
+	Client* client
 	int id
 	XRect r
 	int shm_key
@@ -120,8 +137,9 @@ class XWindow
 	bool transparent
 	int level
 	
-	void __init__(int x, int y, int w, int h, int flags)
+	void __init__(Client* client, int x, int y, int w, int h, int flags)
 		kprint("x: new win\n")
+		self.client = client
 		if x < 0
 			x = randi(screen_width - w)
 		if y < 0
@@ -164,6 +182,8 @@ class XWindow
 		r.y0 = y
 		invalidated.add(r)
 		invalidated.add(r0)
+		if client
+			client.send(XCMD_WINDOW_MOVE, id, r.x0, r.y0, 0, 0)
 	
 	//void draw_rect(int x, int y, int w, int h, int c)
 	void fill(int c)
@@ -199,6 +219,14 @@ void sort_windows()
 		windows_r[windows.num - i - 1] = w
 
 XRect[] invalidated
+
+XWindow* find_top_most_window(int x, int y)
+	for w in windows_r
+		if w.level != 2
+			continue
+		if w.r.inside(x, y)
+			return w
+	return nil
 
 void draw(XRect rr)
 	XRect r = rr
@@ -310,10 +338,10 @@ class Client
 		kprint("x: empfange\n")
 		if buf[0] == XCMD_KILL
 			kill_me = true
-		else if buf[0] == XCMD_WINDOW_NEW
-			XWindow* ww = new XWindow(buf[1], buf[2], buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
+		else if buf[0] == XCMD_NEW_WINDOW
+			XWindow* ww = new XWindow(self, buf[1], buf[2], buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
 			win.add(ww)
-			send(XCMD_WINDOW_NEW, ww.id, ww.shm_key, ww.r.x0, ww.r.y0, 0)
+			send(XCMD_NEW_WINDOW, ww.id, ww.shm_key, ww.r.x0, ww.r.y0, 0)
 			kprint("x: c.sock=" + sock + " w.key=" + ww.shm_key + "\n")
 		else if buf[0] == XCMD_WINDOW_INVALIDATE
 			for w in win
@@ -326,13 +354,37 @@ class Client
 		else if buf[0] == XCMD_WINDOW_GET_POS
 			for w in win
 				if w.id == buf[1]
-					send(XCMD_WINDOW_GET_POS, w.r.x0, w.r.y0, 0, 0, 0)
+					send(XCMD_WINDOW_GET_POS, w.id, w.r.x0, w.r.y0, 0, 0)
 					break
 		else if buf[0] == XCMD_WINDOW_GET_SIZE
 			for w in win
 				if w.id == buf[1]
-					send(XCMD_WINDOW_GET_SIZE, w.r.w(), w.r.h(), 0, 0, 0)
+					send(XCMD_WINDOW_GET_SIZE, w.id, w.r.w(), w.r.h(), 0, 0)
 					break
+		else if buf[0] == XCMD_WINDOW_DRAG_START
+			for w in win
+				if w.id == buf[1]
+					mouse.drag_win = w
+					break
+		else if buf[0] == XCMD_WINDOW_DRAG_STOP
+			for w in win
+				if w.id == buf[1]
+					mouse.drag_win = nil
+					break
+		else if buf[0] == XCMD_WINDOW_RAISE
+			for w in win
+				if w.id == buf[1]
+					w.level = 3
+					sort_windows()
+					w.level = 2
+					invalidated.add(w.r)
+					break
+		else if buf[0] == XCMD_POINTER_GET_WINDOW
+			XWindow* w = find_top_most_window(mouse.x, mouse.y)
+			if w
+				send(XCMD_POINTER_GET_WINDOW, w.id, 0, 0, 0, 0)
+			else
+				send(XCMD_POINTER_GET_WINDOW, -1, 0, 0, 0, 0)
 		
 
 class CommandController
@@ -389,11 +441,12 @@ void main()
 	keyboard = new KeyboardController
 	
 	if arg.num == 1
-		BgaSetVideoMode(800, 600, 32)
+		//BgaSetVideoMode(800, 600, 32)
+		BgaSetVideoMode(1024, 768, 32)
 		mouse.x = screen_width / 2
 		mouse.y = screen_height / 2
 	
-	desktop = new XWindow(0, 0, screen_width, screen_height, 1)
+	desktop = new XWindow(nil, 0, 0, screen_width, screen_height, 1)
 	if vga_mem2
 		desktop.fill(0xff402040)
 	else
