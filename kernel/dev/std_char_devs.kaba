@@ -83,6 +83,7 @@ int dev_mouse_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 		return -EWOULDBLOCK
 	if size < 16
 		return 0
+	mouse_temp_no = 0 // CHEAP BUG FIX...
 	size = 16
 	if size > dev_mouse_num
 		size = dev_mouse_num
@@ -208,8 +209,6 @@ void InitDrivers()
 	// Enable Packet Streaming
 	mouse_write(0xf4)
 	mouse_read() // acknowledge
-	
-	mouse_temp_no = 0
 	
 	prints("ok\n")
 

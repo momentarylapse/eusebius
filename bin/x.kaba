@@ -32,6 +32,8 @@ const int WF_TRANSPARENT = 1024
 const int WF_DONT_INVALIDATE = 2048
 
 class MouseController
+	float xx, yy
+	float scale
 	int x, y, flags
 	XWindow* cursor
 	XWindow* drag_win
@@ -40,14 +42,23 @@ class MouseController
 	bool sending
 	
 	void __init__()
+		scale = 3.5
 	
 		x = screen_width / 2
 		y = screen_height / 2
+		xx = x * scale
+		yy = y * scale
 		dev = open("/dev/mouse", O_RDONLY | O_NONBLOCK)
 		//fcntl(dev, F_SETFL, O_RDONLY | O_NONBLOCK)
 		
 		drag_win = nil
 		sending = false
+	
+	void set(int x, int y)
+		self.x = x
+		self.y = y
+		xx = x * scale
+		yy = y * scale
 		
 	void create()
 
@@ -67,16 +78,20 @@ class MouseController
 		if read(dev, &m, 4*4) < 16
 			return false
 		flags = m[0]
-		x += m[1]
-		y -= m[2]
-		if x < 0
-			x = 0
-		if x >= screen_width
-			x = screen_width - 1
-		if y < 0
-			y = 0
-		if y >= screen_height
-			y = screen_height - 1
+		xx += m[1]
+		yy -= m[2]
+		float max_x = (screen_width - 1) * scale
+		float max_y = (screen_height - 1) * scale
+		if xx < 0
+			xx = 0
+		if xx > max_x
+			xx = max_x
+		if yy < 0
+			yy = 0
+		if yy > max_y
+			yy = max_y
+		x = xx / scale
+		y = yy / scale
 	
 		return true
 
@@ -460,8 +475,7 @@ void main()
 	if arg.num == 1
 		//BgaSetVideoMode(800, 600, 32)
 		BgaSetVideoMode(1024, 768, 32)
-		mouse.x = screen_width / 2
-		mouse.y = screen_height / 2
+		mouse.set(screen_width / 2, screen_height / 2)
 	
 	desktop = new XWindow(nil, 0, 0, screen_width, screen_height, 1)
 	if vga_mem2
@@ -474,7 +488,8 @@ void main()
 	draw_invalidated()
 	
 	// make our debugging life easier...
-	execute(["/bin/xterm"], -1, -1)
+	//execute(["/bin/xterm"], -1, -1)
+	execute(["/bin/xdesktop"], -1, -1)
 	//execute(["/bin/c"], -1, -1)
 	
 	print("x: running\n")

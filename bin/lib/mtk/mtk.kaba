@@ -210,17 +210,31 @@ class MtkWindow extends XWindow
 	MtkWidget*[] widgets
 	bool shown
 	bool dragging
+	bool frame
 	
 	void __init__(string title, int w, int h)
 		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
 		widget = nil
 		shown = false
 		dragging = false
+		frame = true
 		
 		self.title = title
 		
 		p = new XPainter(self)
 		p.font = LoadTTF("/home/x.font")
+		
+	/*void __init__(string title, int x, int y, int w, int h)
+		super.__init__(xcon, x, y, w+20, h+30)
+		widget = nil
+		shown = false
+		dragging = false
+		frame = true
+		
+		self.title = title
+		
+		p = new XPainter(self)
+		p.font = LoadTTF("/home/x.font")*/
 	
 	override void __delete__()
 		if widget
@@ -233,7 +247,8 @@ class MtkWindow extends XWindow
 	
 	void draw()
 		shown = true
-		draw_frame()
+		if frame
+			draw_frame()
 		if widget
 			widget.draw()
 	
@@ -271,10 +286,7 @@ class MtkWindow extends XWindow
 		//XWindow* ww = xcon.get_at_cursor()
 		if self == xcon.cursor_win
 			activate()
-			if my < FRAME_BAR
-				kprint("------ ")
-				kprint(my)
-				kprint("  -----")
+			if frame and my < FRAME_BAR
 				drag_start()
 				dragging = true
 			else
@@ -310,7 +322,6 @@ void mtk_init()
 	col_frame = White
 	col_text = Black
 	col_background = color(1, 0.9, 0.9, 0.9)
-	//col_background = color(1, 0.3, 0.7, 0.8)
 	col_title = Black
 	col_button = color(1, 0.6, 0.6, 0.95)
 	col_button_frame = color(1, 0.4, 0.4, 0.80)
