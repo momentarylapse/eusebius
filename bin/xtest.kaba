@@ -15,6 +15,12 @@ class TestWindow extends MtkWindow
 	
 		MtkButton* b = new MtkButton("hallo")
 		g.put(1, 0, b)
+		
+		MtkEdit* e1 = new MtkEdit
+		g.put(0, 1, e1)
+		
+		MtkEdit* e2 = new MtkEdit
+		g.put(1, 1, e2)
 
 class Idle extends MtkIdle
 	override void do()
@@ -29,7 +35,7 @@ void main()
 	window = new TestWindow
 	window.show()
 	
-	mtk_add_idle(new Idle)
+	//mtk_add_idle(new Idle)
 	
 	mtk_run()
 	

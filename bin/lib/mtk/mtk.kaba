@@ -19,29 +19,38 @@ color col_button_click
 color col_button_click_frame
 
 class MtkWidget
-	MtkWindow* owner
+	MtkWindow* win
 	XPainter* p
-	int offset_x, offset_y
-	int width, height
+	XRect r // relative to window
+	int mx, my
+	/*int offset_x, offset_y
+	int width, height*/
 	
 	void __init__()
-		owner = nil
+		win = nil
 		p = nil
+		mx = 0
+		my = 0
 	
 	virtual void __delete__()
 		if p
 			delete p
 	
 	void set_win(MtkWindow* win, int x, int y, int w, int h)
-		owner = win
-		p = new XPainter(win.p_outer, x, y, w, h)
-		offset_x = x
-		offset_y = y
-		width = w
-		height = h
+		self.win = win
+		win.widgets.add(self)
+		p = new XPainter(win.p, x, y, w, h)
+		r.x0 = x
+		r.y0 = y
+		r.x1 = x + w
+		r.y1 = y + h
+		//width = w
+		//height = h
 	
 	virtual void draw()
-	virtual void onMouse(int x, int y, int flags)
+	virtual void onMouseMove()
+	virtual void onMouseLeftButtonDown()
+	virtual void onMouseLeftButtonUp()
 	virtual void onKey(int key)
 
 class MtkLabel extends MtkWidget
@@ -78,17 +87,13 @@ class MtkGrid extends MtkWidget
 		for c in children
 			if c
 				c.draw()
-	override void onMouse(int x, int y, int flags)
-		for c in children
-			if c
-				c.onMouse(x + offset_x - c.offset_x, y + offset_y - c.offset_y, flags)
 	void put(int x, int y, MtkWidget *c)
 		children[x + y * nx] = c
-		int ww = (width - (nx - 1) * GRID_MARGIN) / nx
-		int hh = (height - (ny - 1) * GRID_MARGIN) / ny
+		int ww = (r.w() - (nx - 1) * GRID_MARGIN) / nx
+		int hh = (r.h() - (ny - 1) * GRID_MARGIN) / ny
 		int dx = (ww + GRID_MARGIN) * x
 		int dy = (hh + GRID_MARGIN) * y
-		c.set_win(owner, offset_x + dx, offset_y + dy, ww, hh)
+		c.set_win(win, r.x0 + dx, r.y0 + dy, ww, hh)
 
 enum
 	BUTTON_STATE_DEFAULT
@@ -123,7 +128,7 @@ class MtkButton extends MtkWidget
 		if state == BUTTON_STATE_CLICK
 			p.set_color(col_button_click_frame)
 		p.line_width = 4
-		p.rectangle(rect(3, width-3, 3, height-3))
+		p.rectangle(rect(3, r.w()-3, 3, r.h()-3))
 		p.strike()
 		p.line_width = 1
 		
@@ -139,10 +144,10 @@ class MtkButton extends MtkWidget
 		if state == BUTTON_STATE_CLICK
 			onClick()
 	virtual void onClick()
-	override void onMouse(int x, int y, int flags)
-		bool inside = (x >= 0) and (x < width) and (y >= 0) and (y < height)
+	override void onMouseMove()
+		bool inside = r.inside(win.mx, win.my)
 		if inside
-			if (flags & 1) > 0
+			if win.lbut
 				set_state(BUTTON_STATE_CLICK)
 			else
 				set_state(BUTTON_STATE_HOVER)
@@ -150,23 +155,72 @@ class MtkButton extends MtkWidget
 			set_state(BUTTON_STATE_DEFAULT)
 		// not the best way :P
 
+class MtkEdit extends MtkWidget
+	string text
+	int cursor_pos
+	override void __init__()
+		cursor_pos = 0
+	void set_text(string text)
+		self.text = text
+		cursor_pos = text.num
+		if p
+			draw()
+			p.end()
+	override void draw()
+		p.set_color(col_background)
+		p.rectangle(p.all)
+		p.fill()
+		
+		p.set_color(col_button_frame)
+		p.line_width = 4
+		p.rectangle(rect(3, r.w()-3, 3, r.h()-3))
+		p.strike()
+		p.line_width = 1
+		
+		int cx = p.get_str_width(text.substr(0, cursor_pos), 0.007)
+		p.set_color(col_text)
+		p.draw_str(10, 10, text, 0.007)
+		p.move_to(10 + cx, 5)
+		p.line_to(10 + cx, 20)
+		p.strike()
+	override void onKey(int key)
+		if key == 0x7f
+			if cursor_pos > 0
+				text.remove(cursor_pos - 1)
+				cursor_pos --
+				notify_change()
+		else if key >= 20
+			string s
+			s.add(key)
+			text = text.head(cursor_pos) + s + text.tail(text.num - cursor_pos)
+			//text.insert(cursor_pos, key)
+			cursor_pos ++
+			notify_change()
+	void notify_change()
+		if p
+			draw()
+			p.end()
+		onEdit()
+	virtual void onEdit()
+
 class MtkWindow extends XWindow
-	XPainter* p_outer
+	XPainter* p
 	string title
 	MtkWidget* widget
+	MtkWidget*[] widgets
 	bool shown
-	bool lb
+	bool dragging
 	
 	void __init__(string title, int w, int h)
 		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
 		widget = nil
 		shown = false
-		lb = false
+		dragging = false
 		
 		self.title = title
 		
-		p_outer = new XPainter(self)
-		p_outer.font = LoadTTF("/home/x.font")
+		p = new XPainter(self)
+		p.font = LoadTTF("/home/x.font")
 	
 	override void __delete__()
 		if widget
@@ -175,7 +229,7 @@ class MtkWindow extends XWindow
 	void show()
 		shown = true
 		draw()
-		p_outer.end()
+		p.end()
 	
 	void draw()
 		shown = true
@@ -198,35 +252,48 @@ class MtkWindow extends XWindow
 			widget.draw()
 	
 	void draw_frame()
-		p_outer.set_color(col_frame)
-		p_outer.rectangle(p_outer.all)
-		p_outer.fill()
-		p_outer.set_color(col_title)
-		p_outer.draw_str(FRAME_WIDTH, 12.0, title, 0.008)
+		if active
+			p.set_color(col_frame)
+		else
+			p.set_color(col_background)
+		p.rectangle(p.all)
+		p.fill()
+		p.set_color(col_title)
+		p.draw_str(FRAME_WIDTH, 12.0, title, 0.008)
 		
-	override void onMouse(int x, int y, int flags)
-		bool lb_new = ((flags & 1) > 0)
-		//kprint("-- ff " + flags + "  ")
-		if !lb and lb_new
-			//kprint(" ============= DOWN ================")
-			//kprint(id)
-			XWindow* ww = xcon.get_at_cursor()
-			if ww == self
-				raise_top()
-				if y < FRAME_BAR
-					drag_start()
-		if lb and !lb_new
-			//kprint(" ============= UP ================")
-			//kprint(id)
+	override void onMouseMove()
+		for w in widgets
+			w.mx = mx - w.r.x0
+			w.my = my - w.r.y0
+			w.onMouseMove()
+			
+	override void onMouseLeftButtonDown()
+		//XWindow* ww = xcon.get_at_cursor()
+		if self == xcon.cursor_win
+			activate()
+			if my < FRAME_BAR
+				kprint("------ ")
+				kprint(my)
+				kprint("  -----")
+				drag_start()
+				dragging = true
+			else
+				for w in widgets
+					w.onMouseLeftButtonDown()
+					
+	override void onMouseLeftButtonUp()
+		if dragging
 			drag_stop()
-		lb = lb_new
-		//kprint(">>")
-		
-		if widget
-			widget.onMouse(x - widget.offset_x, y - widget.offset_y, flags)
-	/*override void onKey(int key)
-		if widget
-			widget.onKey(key)*/
+			dragging = false
+		for w in widgets
+			w.onMouseLeftButtonUp()
+			
+	override void onKey(int key)
+		for w in widgets
+			w.onKey(key)
+	
+	override void handleActivate()
+		show()
 
 
 class MtkIdle
@@ -243,6 +310,7 @@ void mtk_init()
 	col_frame = White
 	col_text = Black
 	col_background = color(1, 0.9, 0.9, 0.9)
+	//col_background = color(1, 0.3, 0.7, 0.8)
 	col_title = Black
 	col_button = color(1, 0.6, 0.6, 0.95)
 	col_button_frame = color(1, 0.4, 0.4, 0.80)

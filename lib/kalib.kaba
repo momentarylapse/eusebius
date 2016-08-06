@@ -979,6 +979,13 @@ class lib__string extends lib__@DynamicArray
 	void add(char c)
 		__mem_resize__(num + 1)
 		data[num - 1] = c
+	/*void insert(int index, char c)
+		__mem_resize__(num + 1)
+		for i in 1:num-index-1
+			data[num - i] = data[num - i - 1]
+		data[index] = c*/
+	void remove(int index)
+		__mem_remove__(index)
 	void __assign__(lib__string o)
 		__mem_resize__(o.num)
 		memcpy(data, o.data, num)

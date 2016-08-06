@@ -53,7 +53,9 @@ class XPainter
 		win = _win
 		error = true
 		buf = win.buf
-		win.get_size(&width, &height)
+		width = win.w
+		height = win.h
+		//win.get_size(&width, &height)
 		/*if !win.get_size(&width, &height)
 			print("Draw-Fehler: get_size()\n")
 			return*/

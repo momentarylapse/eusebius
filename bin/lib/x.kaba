@@ -9,7 +9,7 @@ const int XCMD_WINDOW_GET_SIZE = 2048
 const int XCMD_WINDOW_GET_POS = 2049
 const int XCMD_WINDOW_DRAG_START = 2050
 const int XCMD_WINDOW_DRAG_STOP = 2051
-const int XCMD_WINDOW_RAISE = 2052
+const int XCMD_WINDOW_ACTIVATE = 2052
 const int XCMD_POINTER_GET_WINDOW = 3072
 
 const int XCMD_EVENT_MOUSE = 3072
@@ -37,6 +37,11 @@ class XWindow
 	int id
 	int[0]* buf
 	XConnection *con
+	
+	bool active
+	bool lbut, mbut, rbut
+	int mx, my
+	
 	void __init__(XConnection *c, int x, int y, int w, int h)
 		con = c
 		buf = nil
@@ -44,6 +49,12 @@ class XWindow
 		self.y = y
 		self.w = w
 		self.h = h
+		lbut = false
+		mbut = false
+		rbut = false
+		mx = 0
+		my = 0
+		active = false
 		c._create_win(self, x, y, w, h)
 	void __delete__()
 		if buf
@@ -65,16 +76,23 @@ class XWindow
 		con.wait_recv(XCMD_WINDOW_GET_SIZE)
 		*w = con.buf[2]
 		*h = con.buf[3]
-	void raise_top()
-		con.send(XCMD_WINDOW_RAISE, id, 0, 0, 0, 0)
+	void activate()
+		con.send(XCMD_WINDOW_ACTIVATE, id, 0, 0, 0, 0)
 	void drag_start()
 		con.just_send(XCMD_WINDOW_DRAG_START, id, 0, 0, 0, 0)
 	void drag_stop()
 		con.just_send(XCMD_WINDOW_DRAG_STOP, id, 0, 0, 0, 0)
 	virtual void onKey(int key)
-		print("c-win: key " + key + "\n")
-	virtual void onMouse(int x, int y, int flags)
-		print("c-win: mouse " + x + "/" + y + "   " + flags + "\n")
+		//print("c-win: key " + key + "\n")
+	virtual void onMouseMove()
+	virtual void onMouseLeftButtonDown()
+	virtual void onMouseLeftButtonUp()
+	virtual void onMouseMiddleButtonDown()
+	virtual void onMouseMiddleButtonUp()
+	virtual void onMouseRightButtonDown()
+	virtual void onMouseRightButtonUp()
+		//print("c-win: mouse " + x + "/" + y + "   " + flags + "\n")
+	virtual void handleActivate()
 		
 
 class XConnection
@@ -82,9 +100,16 @@ class XConnection
 	int[8] buf
 	bool error
 	XWindow*[] windows
+	int mx, my
+	bool lbut, mbut, rbut
+	XWindow* cursor_win
 	
 	void __init__()
 		error = true
+		
+		lbut = false
+		mbut = false
+		rbut = false
 	
 		// connect
 		sock = socket(0)
@@ -149,47 +174,84 @@ class XConnection
 		//print "client: ok\n"// " + key + " " + id + "\n"
 		return true
 	
-	XWindow* get_at_cursor()
+	/*XWindow* get_at_cursor()
 		just_send(XCMD_POINTER_GET_WINDOW, 0, 0, 0, 0, 0)
 		wait_recv(XCMD_POINTER_GET_WINDOW)
 		int id = buf[1]
 		for w in windows
 			if w.id == id
 				return w
-		return nil
+		return nil*/
 	
 	bool poll()
 		int n = read(sock, &buf, 4*8)
-		if n <= 0
+		if n < 32
 			return false
-		kprint("  c:poll  ")
+		//kprint("  c:poll  ")
 		if buf[0] == XCMD_EVENT_MOUSE
-			kprint("client: mouse\n")
+			//kprint("client: mouse\n")
 			int x = buf[1]
 			int y = buf[2]
 			int flags = buf[3]
-			kprint(x)
+			int win_id = buf[4]
+			cursor_win = nil
+			for w in windows
+				if w.id == win_id
+					cursor_win = w
+			kprint("MM " + x)
 			kprint("/" + y)
 			kprint(" - " + flags + "\n")
+			bool new_lbut = (flags & 1) > 0
+			bool new_mbut = (flags & 2) > 0
+			bool new_rbut = (flags & 4) > 0
 			for w in windows
-				w.onMouse(x - w.x, y - w.y, flags)
+				w.mx = x - w.x
+				kprint("mmmm " + y + "  " + w.y + "  ")
+				w.my = y - w.y
+				w.lbut = new_lbut
+				w.mbut = new_mbut
+				w.rbut = new_rbut
+				w.onMouseMove()
+				if !lbut and new_lbut
+					w.onMouseLeftButtonDown()
+				if !mbut and new_mbut
+					w.onMouseMiddleButtonDown()
+				if !rbut and new_rbut
+					w.onMouseRightButtonDown()
+				if lbut and !new_lbut
+					w.onMouseLeftButtonUp()
+				if mbut and !new_mbut
+					w.onMouseMiddleButtonUp()
+				if rbut and !new_rbut
+					w.onMouseRightButtonUp()
+			lbut = new_lbut
+			mbut = new_mbut
+			rbut = new_rbut
+			kprint(" /MM ")
 		else if buf[0] == XCMD_EVENT_KEY
-			kprint("client: key\n")
+			//kprint("client: key\n")
 			int key = buf[1]
 			for w in windows
-				w.onKey(key)
+				if w.active
+					w.onKey(key)
 		else if buf[0] == XCMD_EVENT_DRAW
-			kprint("client: draw\n")
+			//kprint("client: draw\n")
+			nil
 		else if buf[0] == XCMD_WINDOW_MOVE
-			kprint("client: move\n")
+			//kprint("client: move\n")
 			int id = buf[1]
 			for w in windows
 				if w.id == id
-					print("move -> " + buf[2] + " / " + buf[3] + "\n")
 					w.x = buf[2]
 					w.y = buf[3]
-			
-		
+		else if buf[0] == XCMD_WINDOW_ACTIVATE
+			kprint(" activate  ")
+			int id = buf[1]
+			for w in windows
+				bool old_active = w.active
+				w.active = (w.id == id)
+				if w.active != old_active
+					w.handleActivate()
 		
 		kprint("  c:/poll  ")
 		return true
