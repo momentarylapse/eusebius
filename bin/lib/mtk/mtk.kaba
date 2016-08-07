@@ -7,7 +7,7 @@ const int FRAME_BAR = 30
 const int FRAME_WIDTH = 10
 const int GRID_MARGIN = 10
 
-color col_frame
+color col_window_frame
 color col_text
 color col_background
 color col_title
@@ -17,6 +17,8 @@ color col_button_hover
 color col_button_hover_frame
 color col_button_click
 color col_button_click_frame
+color col_frame
+color col_frame_active
 
 class MtkWidget
 	MtkWindow* win
@@ -207,14 +209,17 @@ class MtkEdit extends MtkWidget
 		return pos
 			
 	override void draw()
-		if has_input()
-			p.set_color(col_frame)
+		if win.active
+			p.set_color(col_window_frame)
 		else
 			p.set_color(col_background)
 		p.rectangle(p.all)
 		p.fill()
 		
-		p.set_color(col_button_frame)
+		if has_input()
+			p.set_color(col_frame_active)
+		else
+			p.set_color(col_frame)
 		p.line_width = 2
 		p.rectangle(rect(2, r.w()-2, 2, r.h()-2))
 		p.strike()
@@ -327,7 +332,7 @@ class MtkWindow extends XWindow
 	
 	void draw_frame()
 		if active
-			p.set_color(col_frame)
+			p.set_color(col_window_frame)
 		else
 			p.set_color(col_background)
 		p.rectangle(p.all)
@@ -387,7 +392,7 @@ void mtk_init()
 	init_lib()
 	idles.__init__()
 	
-	col_frame = White
+	col_window_frame = White
 	col_text = Black
 	col_background = color(1, 0.9, 0.9, 0.9)
 	col_title = Black
@@ -397,6 +402,8 @@ void mtk_init()
 	col_button_hover_frame = color(1, 0.5, 0.5, 0.85)
 	col_button_click = color(1, 0.4, 0.4, 0.8)
 	col_button_click_frame = color(1, 0.2, 0.2, 0.5)
+	col_frame = color(1, 0.6, 0.6, 0.6)
+	col_frame_active = color(1, 0.4, 0.4, 0.80)
 	
 	xcon = new XConnection
 	if xcon.error
