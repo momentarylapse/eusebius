@@ -23,8 +23,14 @@ class TestWindow extends MtkWindow
 		g.put(1, 1, e2)
 
 class Idle extends MtkIdle
+	int n
+	override void __init__()
+		n = 0
 	override void do()
-		window.l.set_text("" + window.x + " / " + window.y)
+		//window.l.set_text("" + window.x + " / " + window.y)
+		n ++
+		if n > 1000
+			window.close()
 		
 
 TestWindow* window

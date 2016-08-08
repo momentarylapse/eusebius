@@ -20,9 +20,13 @@ class FilesView extends MtkWidget
 		p.rectangle(p.all)
 		p.fill()
 		
-		p.set_color(col_text)
 		for e,i in list
-			p.draw_str(10, 10 + i * 20, e.name, 0.007)
+			if e.is_dir
+				p.draw_image(10, 10 + i * 20, icon_dir)
+			else
+				p.draw_image(10, 10 + i * 20, icon_file)
+			p.set_color(col_text)
+			p.draw_str(30, 10 + i * 20, e.name)
 	
 	override void onMouseMove()
 	override void onMouseLeftButtonDown()
@@ -41,11 +45,15 @@ class FilesWindow extends MtkWindow
 		
 
 FilesWindow* window
+Image* icon_dir, icon_file
 
 void main()
 	mtk_init()
 	string[] arg
 	get_args(arg)
+	
+	icon_dir = new Image(16, 16, color(1, 0.5, 0.5, 0))
+	icon_file = new Image(16, 16, color(1, 0.8, 0.8, 0.8))
 	
 	if arg.num > 1
 		window = new FilesWindow(arg[1])

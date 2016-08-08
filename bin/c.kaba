@@ -42,8 +42,9 @@ class CWindow extends XWindow
 				p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)*/
 
 		p.set_color(White)
-		p.draw_str(20,  50, "Hallo Welt", 0.03)
-		p.draw_str(20, 140, "ABCDEFG", 0.03)
+		p.font_size = 60
+		p.draw_str(20,  50, "Hallo Welt")
+		p.draw_str(20, 140, "ABCDEFG")
 	
 		/*for c in g.contours
 			for i in c.start:c.start+c.num

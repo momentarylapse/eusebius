@@ -77,7 +77,7 @@ class MtkLabel extends MtkWidget
 		p.rectangle(p.all)
 		p.fill()
 		p.set_color(col_text)
-		p.draw_str(5, 5, text, 0.007)
+		p.draw_str(5, 5, text)
 
 class MtkGrid extends MtkWidget
 	int nx, ny
@@ -146,7 +146,7 @@ class MtkButton extends MtkWidget
 		p.line_width = 1
 		
 		p.set_color(col_text)
-		p.draw_str(15, 15, text, 0.007)
+		p.draw_str(15, 15, text)
 		
 	void set_state(int _state)
 		if _state == state
@@ -193,7 +193,7 @@ class MtkEdit extends MtkWidget
 		*x = 10
 		if lines.num > 0
 			*y = 10 + 20*(lines.num - 1)
-			*x = 10 + p.get_str_width(lines[lines.num - 1], 0.007)
+			*x = 10 + p.get_str_width(lines[lines.num - 1])
 	
 	int to_text(int x, int y)
 		string[] lines = text.explode("\n")
@@ -228,13 +228,13 @@ class MtkEdit extends MtkWidget
 		p.set_color(col_text)
 		string[] lines = text.explode("\n")
 		for l,i in lines
-			p.draw_str(10, 10 + i * 20, l, 0.007)
+			p.draw_str(10, 10 + i * 20, l)
 		
 		if has_input()
 			int cx, cy
 			to_screen(cursor_pos, &cx, &cy)
-			p.move_to(cx, cy - 5)
-			p.line_to(cx, cy + 10)
+			p.move_to(cx, cy - 3)
+			p.line_to(cx, cy + 16)
 			p.strike()
 	
 	override void onMouseLeftButtonDown()
@@ -338,7 +338,9 @@ class MtkWindow extends XWindow
 		p.rectangle(p.all)
 		p.fill()
 		p.set_color(col_title)
-		p.draw_str(FRAME_WIDTH, 12.0, title, 0.008)
+		p.font_size = 17
+		p.draw_str(FRAME_WIDTH, 8.0, title)
+		p.font_size = 15
 		
 	override void onMouseMove()
 		for w in widgets
@@ -351,8 +353,12 @@ class MtkWindow extends XWindow
 		if self == xcon.cursor_win
 			activate()
 			if frame and my < FRAME_BAR
-				drag_start()
-				dragging = true
+				if mx > w - FRAME_BAR - FRAME_WIDTH
+					if onCloseRequest()
+						exit(0)//close()
+				else
+					drag_start()
+					dragging = true
 			else
 				for w in widgets
 					if w.r.inside(mx, my)
@@ -376,6 +382,9 @@ class MtkWindow extends XWindow
 	override void onKey(int key)
 		if input_widget
 			input_widget.onKey(key)
+	
+	virtual bool onCloseRequest()
+		return true
 	
 	override void handleActivate()
 		show()

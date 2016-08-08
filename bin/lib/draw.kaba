@@ -48,6 +48,7 @@ class XPainter
 	float line_width
 	XWindow *win
 	TTFFont *font
+	float font_size
 	
 	void __init__(XWindow *_win)
 		win = _win
@@ -63,6 +64,7 @@ class XPainter
 		error = false
 		
 		font = nil
+		font_size = 15.0
 		set_color(Black)
 		all = rect(0, width, 0, height)
 		pos = complex(0, 0)
@@ -78,6 +80,7 @@ class XPainter
 		height = h
 		
 		font = p.font
+		font_size = p.font_size
 		line_width = p.line_width
 		
 		set_color(Black)
@@ -256,14 +259,15 @@ class XPainter
 		TTFGlyph *g = &font.glyphs[index]
 	
 		for c in g.contours
-			move_to(x + font.points[c.start].x * scale, y + (1000 - font.points[c.start].y) * scale)
+			move_to(x + font.points[c.start].x * scale, y + (1500 - font.points[c.start].y) * scale)
 			for i in c.start+1:c.start+c.num
-				line_to(x + font.points[i].x * scale, y + (1000 - font.points[i].y) * scale)
+				line_to(x + font.points[i].x * scale, y + (1500 - font.points[i].y) * scale)
 			path_close()
 		strike()
 		//fill()
 	
-	void draw_str(float x, float y, string text, float scale)
+	void draw_str(float x, float y, string text)
+		float scale = font_size * 0.007/15.0
 		for c in text
 			int code = c2i(c) & 0x000000ff
 			int index = 0
@@ -279,7 +283,8 @@ class XPainter
 				draw_glyph(x, y, index, scale)
 			x += scale * 1500.0
 	
-	float get_str_width(string text, float scale)
+	float get_str_width(string text)
+		float scale = font_size * 0.007/15.0
 		float w = 0
 		for c in text
 			/*int code = c2i(c) & 0x000000ff
@@ -290,7 +295,19 @@ class XPainter
 					break*/
 			w += scale * 1500.0
 		return w
-		
+	
+	void draw_image(int _x, int _y, Image *im)
+		int x0 = max(_x, 0)
+		int y0 = max(_y, 0)
+		int x1 = min(_x+im.width, width)
+		int y1 = min(_y+im.height, height)
+		for y in y0:y1
+			int index = x0 + y * buf_width
+			int _index = x0 - _x + (y0 - _y) * im.width
+			for x in x0:x1
+				buf[index] = im.data[_index]
+				index ++
+				_index ++
 		
 	void end()
 		win.invalidate_all()

@@ -95,10 +95,10 @@ class ShellView extends MtkWidget
 		int offset = max_lines - hist.lines.num
 		if offset > 0
 			offset = 0
-		float scale = i2f(LINE_HEIGHT) * 0.00035
+		p.font_size = i2f(LINE_HEIGHT) * 0.9
 		for l,i in hist.lines
 			if i >= -offset
-				p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l, scale)
+				p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l)
 	
 
 class ShellWindow extends MtkWindow

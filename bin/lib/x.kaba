@@ -82,6 +82,8 @@ class XWindow
 		con.just_send(XCMD_WINDOW_DRAG_START, id, 0, 0, 0, 0)
 	void drag_stop()
 		con.just_send(XCMD_WINDOW_DRAG_STOP, id, 0, 0, 0, 0)
+	void close()
+		con.just_send(XCMD_DEL_WINDOW, id, 0, 0, 0, 0)
 	virtual void onKey(int key)
 		//print("c-win: key " + key + "\n")
 	virtual void onMouseMove()

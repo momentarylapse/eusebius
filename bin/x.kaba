@@ -410,6 +410,12 @@ class Client
 					activate_window(w)
 					invalidated.add(w.r)
 					break
+		else if buf[0] == XCMD_DEL_WINDOW
+			for w,i in win
+				if w.id == buf[1]
+					delete w
+					win.remove(i)
+					break
 		else if buf[0] == XCMD_POINTER_GET_WINDOW
 			XWindow* w = find_top_most_window(mouse.x, mouse.y)
 			if w

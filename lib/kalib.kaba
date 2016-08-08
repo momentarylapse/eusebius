@@ -1803,6 +1803,9 @@ class lib__Image
 	bool error
 	void __init__(int w, int h, color c)
 		data.resize(w * h)
+		int ic = 0xff000000 + f2i(255.0 * c.b) + (f2i(255.0 * c.g) << 8) + (f2i(255.0 * c.r) << 16)
+		for i in 0:data.num
+			data.data[i] = ic
 		width = w
 		height = h
 		error = false

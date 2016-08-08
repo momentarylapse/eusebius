@@ -53,8 +53,9 @@ void main()
 	p.fill()
 	
 	p.set_color(White)
-	p.draw_str(10, 30, "Herzlichen", 0.015)
-	p.draw_str(20, 65, "Glueckwunsch", 0.015)
+	p.font_size = 30
+	p.draw_str(10, 30, "Herzlichen")
+	p.draw_str(20, 65, "Glueckwunsch")
 	
 	p.draw_spline(complex( 50, 200), complex( 50, 170), complex(150, 170))
 	p.draw_spline(complex(150, 170), complex(250, 170), complex(250, 200))
