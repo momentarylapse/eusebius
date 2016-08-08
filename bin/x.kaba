@@ -42,7 +42,7 @@ class MouseController
 	bool sending
 	
 	void __init__()
-		scale = 3.5
+		scale = 1.5
 	
 		x = screen_width / 2
 		y = screen_height / 2

@@ -24,8 +24,9 @@ class LauncherBar extends MtkWindow
 	
 		g.put(0, 0, new LauncherButton("Term", ["/bin/xterm"]))
 		g.put(1, 0, new LauncherButton("Test", ["/bin/xtest"]))
-		g.put(2, 0, new LauncherButton("Edit", ["/bin/xedit", "/home/a.k2"]))
-		g.put(3, 0, new LauncherButton("Cake", ["/bin/cake"]))
+		g.put(2, 0, new LauncherButton("Files", ["/bin/xfiles", "/home"]))
+		g.put(3, 0, new LauncherButton("Edit", ["/bin/xedit", "/home/a.k2"]))
+		g.put(4, 0, new LauncherButton("Cake", ["/bin/cake"]))
 		
 
 //TestWindow* window

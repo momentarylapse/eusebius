@@ -1,0 +1,57 @@
+use "lib/std.kaba"
+use "lib/mtk/mtk.kaba"
+use "lib/draw.kaba"
+
+class FilesView extends MtkWidget
+	string dir
+	DirEntry[] list
+	void __init__(string dir)
+		self.dir = dir
+		list = DirSearch(dir, "*", true)
+	
+	override bool can_grab_input()
+		return true
+	
+	override void draw()
+		if win.active
+			p.set_color(col_window_frame)
+		else
+			p.set_color(col_background)
+		p.rectangle(p.all)
+		p.fill()
+		
+		p.set_color(col_text)
+		for e,i in list
+			p.draw_str(10, 10 + i * 20, e.name, 0.007)
+	
+	override void onMouseMove()
+	override void onMouseLeftButtonDown()
+	override void onMouseLeftButtonUp()
+	override void onKey(int key)
+		
+
+class FilesWindow extends MtkWindow
+	FilesView* v
+	void __init__(string dir)
+		super.__init__("XFiles", 600, 400)
+		
+		v = new FilesView(dir)
+		put(v)
+		
+		
+
+FilesWindow* window
+
+void main()
+	mtk_init()
+	string[] arg
+	get_args(arg)
+	
+	if arg.num > 1
+		window = new FilesWindow(arg[1])
+	else
+		window = new FilesWindow("/")
+	window.show()
+	
+	mtk_run()
+	
