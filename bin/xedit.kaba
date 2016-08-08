@@ -19,7 +19,8 @@ class EditWindow extends MtkWindow
 			delete f
 		else
 			e.set_text("kann " + filename + " nicht oeffnen")*/
-		e.set_text(FileRead(filename))
+		if filename != ""
+			e.set_text(FileRead(filename))
 		
 
 EditWindow* window

@@ -389,6 +389,23 @@ class MtkWindow extends XWindow
 	override void handleActivate()
 		show()
 
+class MtkErrorBox extends MtkWindow
+	void __init__(string message)
+		super.__init__("Fehler", 300, 100)
+			MtkGrid* g = new MtkGrid(1, 2)
+			put(g)
+			
+			MtkLabel* l = new MtkLabel(message)
+			g.put(0, 0, l)
+			
+			MtkButton* b = new MtkButton("Ok")
+			g.put(0, 1, b)
+			
+
+void mtk_error_box(string message)
+	MtkWindow *win = new MtkErrorBox(message)
+	win.show()
+
 
 class MtkIdle
 	virtual void do()
