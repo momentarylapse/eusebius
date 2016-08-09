@@ -291,7 +291,7 @@ class XPainter
 		int y1 = min(_y+im.height, height)
 		for y in y0:y1
 			int index = x0 + y * buf_width
-			int _index = x0 - _x + (y0 - _y) * im.width
+			int _index = x0 - _x + (y - _y) * im.width
 			for x in x0:x1
 				buf[index] = im.data[_index]
 				index ++

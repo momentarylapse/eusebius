@@ -2,22 +2,24 @@ use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
 
-string dir_append(string dir, string e)
-	string r = dir
-	if r.tail(1) != "/"
-		r += "/"
-	return r + e
-
 class FilesView extends MtkWidget
 	string dir
 	DirEntry[] list
 	void __init__(string dir)
-		self.dir = dir
-		list = DirSearch(dir, "*", true)
+		set_dir(dir)
 		snd = MtkSizeNegotiationData(30, 30, true, true)
 	
 	override bool can_grab_input()
 		return true
+	
+	void set_dir(string dir)
+		self.dir = dir
+		list = DirSearch(dir, "*", true)
+		if win
+			win.set_title(dir)
+		if p
+			draw()
+		//p.end()
 	
 	override void draw()
 		if win.active
@@ -34,26 +36,21 @@ class FilesView extends MtkWidget
 				p.draw_image(10, 10 + i * 20, icon_file)
 			p.set_color(col_text)
 			p.draw_str(30, 10 + i * 20, e.name)
-		p.draw_str(200, 10, dir)
+		//p.draw_str(200, 10, dir)
 	
 	override void onMouseMove()
 	override void onMouseLeftButtonDown()
 		for e,i in list
 			if mx >= 10 and mx < 200 and my >= 10+i*20 and my < 30+i*20
 				if e.is_dir
-					dir = dir_append(dir, e.name)
-					list = DirSearch(dir, "*", true)
-					draw()
-					//p.end()
+					set_dir(dir_append(dir, e.name))
 					break
 				else
-					string[] cmd
-					cmd.add("/bin/xedit")
-					cmd.add(dir_append(dir, e.name))
-					if execute(cmd, -1, -1) < 0
-						mtk_error_box("execute..." + lib_error)
+					mtk_open(dir_append(dir, e.name))
 	override void onMouseLeftButtonUp()
 	override void onKey(int key)
+	override void onResize()
+		win.set_title(dir)
 		
 
 class FilesWindow extends MtkWindow

@@ -1822,19 +1822,28 @@ lib__Image* lib__LoadImage(string filename)
 		return nil
 	lib__Image* im = lib__@malloc(sizeof(Image))
 	int offset = temp.data[0]
-	int width = temp.data[12] + (temp.data[13]<<8)
-	int height = temp.data[14] + (temp.data[15]<<8)
+	int ww = temp.data[13]
+	int width = temp.data[12]
+	width += (ww*256)
+	int hh = temp.data[15]
+	int height = temp.data[14]
+	height += (hh*256)
 	
-	im.__init__(width, height, Black)
+	im.__init__(width, height, Red)
 	
 	for i in 0:offset
 		read(h, &temp.data[0], 1)
 	
 	for y in 0:height
+		read(h, &im.data.data[y * width], 4*width)
+				
+	/*for y in 0:height
 		for x in 0:width
 			int c
-			read(h, &c, 4)
-			im.data.data[x + y * width] = c
+			if read(h, &c, 4) == 4
+				im.data.data[x + y * width] = c
+			else
+				im.data.data[x + y * width] = 0xffff0000*/
 			
 	close(h)
 	return im

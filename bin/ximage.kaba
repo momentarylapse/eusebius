@@ -1,0 +1,35 @@
+use "lib/std.kaba"
+use "lib/mtk/mtk.kaba"
+use "lib/draw.kaba"
+
+class ImageView extends MtkWidget
+	Image* im
+	void __init__(Image* im)
+		self.im = im
+	override void draw()
+		p.draw_image(0, 0, im)
+
+class ImageWindow extends MtkWindow
+	void __init__(string filename, Image* im)
+		super.__init__("XImage", im.width, im.height)
+		
+		ImageView* v = new ImageView(im)
+		put(v)
+		
+		set_title(filename + " - " + im.width + "x" + im.height)
+		
+
+ImageWindow* window
+
+void main()
+	mtk_init()
+	string[] arg
+	get_args(arg)
+	
+	if arg.num > 1
+		window = new ImageWindow(arg[1], LoadImage(arg[1]))
+		
+	window.show()
+	
+	mtk_run()
+	

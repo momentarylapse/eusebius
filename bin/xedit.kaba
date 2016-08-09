@@ -21,6 +21,9 @@ class EditWindow extends MtkWindow
 			e.set_text("kann " + filename + " nicht oeffnen")*/
 		if filename != ""
 			v.set_text(FileRead(filename))
+			set_title(filename)
+		else
+			set_title("neues Dokument")
 		
 
 EditWindow* window

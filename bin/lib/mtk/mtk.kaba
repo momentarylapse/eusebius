@@ -22,6 +22,13 @@ color col_button_click_frame
 color col_frame
 color col_frame_active
 
+
+string dir_append(string dir, string e)
+	string r = dir
+	if r.tail(1) != "/"
+		r += "/"
+	return r + e
+
 class MtkSizeNegotiationData
 	int min_width
 	int min_height
@@ -259,7 +266,7 @@ class MtkButton extends MtkWidget
 		
 		p.set_color(col_text)
 		p.font_size = FONT_SIZE
-		p.draw_str(15, 15, text)
+		p.draw_str(15, (r.h() - FONT_SIZE) / 2, text)
 		
 	void set_state(int _state)
 		if _state == state
@@ -594,6 +601,16 @@ void mtk_init()
 
 void mtk_add_idle(MtkIdle *i)
 	idles.add(i)
+
+void mtk_open(string filename)
+	string[] cmd
+	if filename.tail(4) == ".tga"
+		cmd.add("/bin/ximage")
+	else
+		cmd.add("/bin/xedit")
+	cmd.add(filename)
+	if execute(cmd, -1, -1) < 0
+		mtk_error_box("execute..." + lib_error)
 
 void mtk_run()
 	while true
