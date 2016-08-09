@@ -34,6 +34,7 @@ class XPainter
 	int[0]* buf
 	int width, height
 	int buf_width
+	int buf_x, buf_y
 	rect all
 	bool error
 	
@@ -61,6 +62,8 @@ class XPainter
 			print("Draw-Fehler: get_size()\n")
 			return*/
 		buf_width = width
+		buf_x = 0
+		buf_y = 0
 		error = false
 		
 		font = nil
@@ -71,10 +74,10 @@ class XPainter
 		line_width = 1.0
 		last_path_start = 0
 	
-	void __init__(XPainter* p, int x, int y, int w, int h)
-		win = p.win
-		error = false
+	void set_as_ref(XPainter* p, int x, int y, int w, int h)
 		buf_width = p.buf_width
+		buf_x = x
+		buf_y = y
 		buf = &p.buf[x + y * buf_width]
 		width = w
 		height = h
@@ -82,11 +85,6 @@ class XPainter
 		font = p.font
 		font_size = p.font_size
 		line_width = p.line_width
-		
-		set_color(Black)
-		all = rect(0, width, 0, height)
-		pos = complex(0, 0)
-		last_path_start = 0
 	
 	void set_color(color c)
 		cur_color = col2i(c)
@@ -284,17 +282,7 @@ class XPainter
 			x += scale * 1500.0
 	
 	float get_str_width(string text)
-		float scale = font_size * 0.007/15.0
-		float w = 0
-		for c in text
-			/*int code = c2i(c) & 0x000000ff
-			int index = 0
-			for g,i in font.glyphs
-				if g.code == code
-					index = i
-					break*/
-			w += scale * 1500.0
-		return w
+		return font.get_str_width(text, font_size)
 	
 	void draw_image(int _x, int _y, Image *im)
 		int x0 = max(_x, 0)
@@ -310,5 +298,6 @@ class XPainter
 				_index ++
 		
 	void end()
-		win.invalidate_all()
+		//win.invalidate_all()
+		win.invalidate(buf_x, buf_y, buf_x + width, buf_y + height)
 		

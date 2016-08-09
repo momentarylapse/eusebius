@@ -39,9 +39,9 @@ void show_task(TaskInfo t)
 	s += cs2s(t.name)
 	fill(s, 30)
 	if t.mode == 0
-		s += "U "
-	else
 		s += "K "
+	else
+		s += "U "
 	if t.status == TASK_STATUS_RUNNING
 		s += "R"
 	else if t.status == TASK_STATUS_SLEEPING

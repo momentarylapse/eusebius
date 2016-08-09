@@ -47,6 +47,8 @@ class KSocket
 	
 	int read(PageDirectory *page_dir, int addr, int size)
 		if buffer_used == 0
+			if peer_port < 0
+				return -ENOTCONN
 			// no data... block
 			return -EWOULDBLOCK
 		if size > buffer_used

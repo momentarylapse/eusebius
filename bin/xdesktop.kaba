@@ -15,18 +15,18 @@ class LauncherButton extends MtkButton
 
 class LauncherBar extends MtkWindow
 	override void __init__()
-		super.__init__("", 300, 42)
+		super.__init__("", 95, 200)
 		//super.__init__("Test", 1024, 32)
 		move(0, -30)
 		
-		MtkGrid* g = new MtkGrid(5, 1)
+		MtkGrid* g = new MtkGrid(1, 5)
 		put(g)
 	
 		g.put(0, 0, new LauncherButton("Term", ["/bin/xterm"]))
-		g.put(1, 0, new LauncherButton("Test", ["/bin/xtest"]))
-		g.put(2, 0, new LauncherButton("Files", ["/bin/xfiles", "/home"]))
-		g.put(3, 0, new LauncherButton("Edit", ["/bin/xedit"]))
-		g.put(4, 0, new LauncherButton("Cake", ["/bin/cake"]))
+		g.put(0, 1, new LauncherButton("Test", ["/bin/xtest"]))
+		g.put(0, 2, new LauncherButton("Files", ["/bin/xfiles", "/home"]))
+		g.put(0, 3, new LauncherButton("Edit", ["/bin/xedit"]))
+		g.put(0, 4, new LauncherButton("Cake", ["/bin/cake"]))
 		
 
 //TestWindow* window

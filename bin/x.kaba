@@ -362,6 +362,9 @@ class Client
 	
 	void poll()
 		int n = read(sock, &buf[0], 4*8)
+		if n == -ENOTCONN
+			kill_me = true
+			return
 		if n <= 0
 			return
 		kprint("x: empfange\n")
@@ -493,10 +496,8 @@ void main()
 	
 	draw_invalidated()
 	
-	// make our debugging life easier...
-	//execute(["/bin/xterm"], -1, -1)
 	execute(["/bin/xdesktop"], -1, -1)
-	//execute(["/bin/c"], -1, -1)
+	//execute(["/bin/xtest"], -1, -1)
 	
 	print("x: running\n")
 	while true

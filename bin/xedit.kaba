@@ -8,8 +8,8 @@ class EditWindow extends MtkWindow
 		super.__init__("XEdit", 600, 400)
 		self.filename = filename
 		
-		MtkEdit* e = new MtkEdit
-		put(e)
+		MtkTextView* v = new MtkTextView
+		put(v)
 		
 		/*File* f = FileOpen(filename)
 		if f
@@ -20,7 +20,7 @@ class EditWindow extends MtkWindow
 		else
 			e.set_text("kann " + filename + " nicht oeffnen")*/
 		if filename != ""
-			e.set_text(FileRead(filename))
+			v.set_text(FileRead(filename))
 		
 
 EditWindow* window

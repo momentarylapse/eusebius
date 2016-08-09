@@ -6,6 +6,8 @@ use "../ttfx.kaba"
 const int FRAME_BAR = 30
 const int FRAME_WIDTH = 10
 const int GRID_MARGIN = 10
+const float FONT_SIZE = 15.0
+const float FONT_SIZE_BAR = 17.0
 
 color col_window_frame
 color col_text
@@ -20,19 +22,32 @@ color col_button_click_frame
 color col_frame
 color col_frame_active
 
+class MtkSizeNegotiationData
+	int min_width
+	int min_height
+	bool expand_x
+	bool expand_y
+MtkSizeNegotiationData MtkSizeNegotiationData(int min_w, int min_h, bool exp_x, bool exp_y)
+	MtkSizeNegotiationData snd
+	snd.min_width = min_w
+	snd.min_height = min_h
+	snd.expand_x = exp_x
+	snd.expand_y = exp_y
+	return snd
+
 class MtkWidget
 	MtkWindow* win
 	XPainter* p
 	XRect r // relative to window
 	int mx, my
-	/*int offset_x, offset_y
-	int width, height*/
+	MtkSizeNegotiationData snd
 	
 	void __init__()
 		win = nil
 		p = nil
 		mx = 0
 		my = 0
+		snd = MtkSizeNegotiationData(10, 10, true, true)
 	
 	virtual void __delete__()
 		if p
@@ -47,14 +62,19 @@ class MtkWidget
 	void set_win(MtkWindow* win, int x, int y, int w, int h)
 		self.win = win
 		win.widgets.add(self)
-		p = new XPainter(win.p, x, y, w, h)
+		p = new XPainter(win)
+		resize(x, y, w, h)
+	
+	void resize(int x, int y, int w, int h)
+		p.set_as_ref(win.p, x, y, w, h)
 		r.x0 = x
 		r.y0 = y
 		r.x1 = x + w
 		r.y1 = y + h
-		//width = w
-		//height = h
 	
+		onResize()
+	
+	virtual void onResize()
 	virtual void draw()
 	virtual void onMouseMove()
 	virtual void onMouseLeftButtonDown()
@@ -65,6 +85,7 @@ class MtkLabel extends MtkWidget
 	string text
 	void __init__(string text)
 		self.text = text
+		snd = MtkSizeNegotiationData(default_font.get_str_width(text, FONT_SIZE)+10, 25, false, false)
 	void set_text(string text)
 		if self.text == text
 			return
@@ -72,6 +93,7 @@ class MtkLabel extends MtkWidget
 		if p
 			draw()
 			p.end()
+		snd.min_width = default_font.get_str_width(text, FONT_SIZE)+10
 	override void draw()
 		p.set_color(col_background)
 		p.rectangle(p.all)
@@ -82,12 +104,34 @@ class MtkLabel extends MtkWidget
 class MtkGrid extends MtkWidget
 	int nx, ny
 	MtkWidget*[] children
+	bool[] child_exp_x, child_exp_y
+	int[] child_min_w, child_min_h
+	int[] child_w, child_h
 	void __init__(int _nx, int _ny)
 		nx = _nx
 		ny = _ny
 		children.resize(nx * ny)
 		for c in children
 			c = nil
+		child_exp_x.resize(nx)
+		child_exp_y.resize(ny)
+		child_min_w.resize(nx)
+		child_w.resize(nx)
+		child_min_h.resize(ny)
+		child_h.resize(ny)
+		for w in child_min_w
+			w = 0
+		for h in child_min_h
+			h = 0
+		for w in child_w
+			w = 0
+		for h in child_h
+			h = 0
+		for b in child_exp_x
+			b = false
+		for b in child_exp_y
+			b = false
+		snd = MtkSizeNegotiationData((nx-1) * GRID_MARGIN, (ny-1) * GRID_MARGIN, false, false)
 	override void draw()
 		p.set_color(col_background)
 		p.rectangle(p.all)
@@ -96,12 +140,78 @@ class MtkGrid extends MtkWidget
 			if c
 				c.draw()
 	void put(int x, int y, MtkWidget *c)
+		// update snd
+		if c.snd.expand_x
+			child_exp_x[x] = true
+			snd.expand_x = true
+		if c.snd.expand_y
+			child_exp_y[y] = true
+			snd.expand_y = true
+		child_min_w[x] = max(child_min_w[x], c.snd.min_width)
+		child_min_h[y] = max(child_min_h[y], c.snd.min_height)
+		snd.min_width = (nx-1) * GRID_MARGIN
+		for i in 0:nx
+			snd.min_width += child_min_w[i]
+		snd.min_height = (ny-1) * GRID_MARGIN
+		for j in 0:ny
+			snd.min_height += child_min_h[j]
+	
 		children[x + y * nx] = c
 		int ww = (r.w() - (nx - 1) * GRID_MARGIN) / nx
 		int hh = (r.h() - (ny - 1) * GRID_MARGIN) / ny
 		int dx = (ww + GRID_MARGIN) * x
 		int dy = (hh + GRID_MARGIN) * y
 		c.set_win(win, r.x0 + dx, r.y0 + dy, ww, hh)
+		
+	override void onResize()
+		// plan child sizes...
+		
+		// min
+		int sum_min_w = 0
+		for w in child_min_w
+			sum_min_w += w
+		int sum_min_h = 0
+		for h in child_min_h
+			sum_min_h += h
+			
+		// expansion
+		int n_exp_x = 0
+		int n_exp_y = 0
+		for b in child_exp_x
+			if b
+				n_exp_x ++
+		for b in child_exp_y
+			if b
+				n_exp_y ++
+		int exp_x = 0
+		if n_exp_x > 0
+			exp_x = (r.w() - (nx-1)*GRID_MARGIN - sum_min_w) / n_exp_x
+		int exp_y = 0
+		if n_exp_y > 0
+			exp_y = (r.h() - (ny-1)*GRID_MARGIN - sum_min_h) / n_exp_y
+	
+		// actual sizes
+		int[] child_x, child_y
+		int x0 = r.x0, y0 = r.y0
+		for w,i in child_w
+			child_x.add(x0)
+			w = child_min_w[i]
+			if child_exp_x[i]
+				w += exp_x
+			x0 += w + GRID_MARGIN
+		for h,j in child_h
+			child_y.add(y0)
+			h = child_min_h[j]
+			if child_exp_y[j]
+				h += exp_y
+			y0 += h + GRID_MARGIN
+			
+		// apply
+		for c,ci in children
+			if c
+				int i = ci % nx
+				int j = ci / nx
+				c.resize(child_x[i], child_y[j], child_w[i], child_h[j])
 
 enum
 	BUTTON_STATE_DEFAULT
@@ -114,6 +224,7 @@ class MtkButton extends MtkWidget
 	void __init__(string text)
 		self.text = text
 		state = BUTTON_STATE_DEFAULT
+		snd = MtkSizeNegotiationData(default_font.get_str_width(text, FONT_SIZE)+30, 30, false, false)
 	
 	override bool can_grab_input()
 		return true
@@ -125,6 +236,7 @@ class MtkButton extends MtkWidget
 		if p
 			draw()
 			p.end()
+		snd.min_width = default_font.get_str_width(text, FONT_SIZE)+30
 			
 	override void draw()
 		p.set_color(col_button)
@@ -146,6 +258,7 @@ class MtkButton extends MtkWidget
 		p.line_width = 1
 		
 		p.set_color(col_text)
+		p.font_size = FONT_SIZE
 		p.draw_str(15, 15, text)
 		
 	void set_state(int _state)
@@ -170,12 +283,15 @@ class MtkButton extends MtkWidget
 		
 	virtual void onClick()
 
-class MtkEdit extends MtkWidget
+class MtkTextView extends MtkWidget
 	string text
 	int cursor_pos
+	bool multi_line
 	
 	override void __init__()
 		cursor_pos = 0
+		multi_line = true
+		snd = MtkSizeNegotiationData(30, 30, true, true)
 	
 	override bool can_grab_input()
 		return true
@@ -192,6 +308,7 @@ class MtkEdit extends MtkWidget
 		*y = 10
 		*x = 10
 		if lines.num > 0
+			p.font_size = FONT_SIZE
 			*y = 10 + 20*(lines.num - 1)
 			*x = 10 + p.get_str_width(lines[lines.num - 1])
 	
@@ -243,6 +360,8 @@ class MtkEdit extends MtkWidget
 		p.end()
 		
 	override void onKey(int key)
+		if key == 10 and !multi_line
+			return
 		if key == 0x7f
 			if cursor_pos > 0
 				text.remove(cursor_pos - 1)
@@ -263,6 +382,12 @@ class MtkEdit extends MtkWidget
 		onEdit()
 		
 	virtual void onEdit()
+	
+
+class MtkEdit extends MtkTextView
+	override void __init__()
+		multi_line = false
+		snd = MtkSizeNegotiationData(30, 30, true, false)
 
 class MtkWindow extends XWindow
 	XPainter* p
@@ -273,6 +398,8 @@ class MtkWindow extends XWindow
 	bool shown
 	bool dragging
 	bool frame
+	bool killed
+	bool button_close_hover
 	
 	void __init__(string title, int w, int h)
 		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
@@ -281,11 +408,14 @@ class MtkWindow extends XWindow
 		shown = false
 		dragging = false
 		frame = true
+		killed = false
+		button_close_hover = false
+		mtk_windows.add(self)
 		
 		self.title = title
 		
 		p = new XPainter(self)
-		p.font = LoadTTF("/home/x.font")
+		p.font = default_font
 		
 	/*void __init__(string title, int x, int y, int w, int h)
 		super.__init__(xcon, x, y, w+20, h+30)
@@ -301,13 +431,22 @@ class MtkWindow extends XWindow
 		p.font = LoadTTF("/home/x.font")*/
 	
 	override void __delete__()
+		if !killed
+			close()
 		if widget
 			delete widget
+		delete p
 	
 	void show()
 		shown = true
+		if widget
+			widget.resize(FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
 		draw()
 		p.end()
+	
+	override void close()
+		super.close()
+		killed = true
 	
 	void draw()
 		shown = true
@@ -338,24 +477,32 @@ class MtkWindow extends XWindow
 		p.rectangle(p.all)
 		p.fill()
 		p.set_color(col_title)
-		p.font_size = 17
+		p.font_size = FONT_SIZE_BAR
 		p.draw_str(FRAME_WIDTH, 8.0, title)
-		p.font_size = 15
+		if button_close_hover
+			p.draw_str(w - 20, 8, "X")
+		p.font_size = FONT_SIZE
 		
 	override void onMouseMove()
 		for w in widgets
 			w.mx = mx - w.r.x0
 			w.my = my - w.r.y0
 			w.onMouseMove()
+		bool new_button_close_hover = frame and (my < FRAME_BAR) and (mx > w - FONT_SIZE_BAR - FRAME_WIDTH)
+		if new_button_close_hover != button_close_hover
+			button_close_hover = new_button_close_hover
+			draw()
+			invalidate(w - 30, 0, w, FRAME_BAR)
 			
 	override void onMouseLeftButtonDown()
 		//XWindow* ww = xcon.get_at_cursor()
 		if self == xcon.cursor_win
 			activate()
 			if frame and my < FRAME_BAR
-				if mx > w - FRAME_BAR - FRAME_WIDTH
+				if button_close_hover
 					if onCloseRequest()
-						exit(0)//close()
+						//exit(0)
+						close()
 				else
 					drag_start()
 					dragging = true
@@ -389,6 +536,10 @@ class MtkWindow extends XWindow
 	override void handleActivate()
 		show()
 
+class MtkErrorBoxOkButton extends MtkButton
+	override void onClick()
+		win.close()
+
 class MtkErrorBox extends MtkWindow
 	void __init__(string message)
 		super.__init__("Fehler", 300, 100)
@@ -398,7 +549,7 @@ class MtkErrorBox extends MtkWindow
 			MtkLabel* l = new MtkLabel(message)
 			g.put(0, 0, l)
 			
-			MtkButton* b = new MtkButton("Ok")
+			MtkButton* b = new MtkErrorBoxOkButton("Ok")
 			g.put(0, 1, b)
 			
 
@@ -413,10 +564,13 @@ class MtkIdle
 
 XConnection* xcon
 MtkIdle*[] idles
+TTFFont* default_font
+MtkWindow*[] mtk_windows
 
 void mtk_init()
 	init_lib()
 	idles.__init__()
+	mtk_windows.__init__()
 	
 	col_window_frame = White
 	col_text = Black
@@ -435,6 +589,8 @@ void mtk_init()
 	if xcon.error
 		print("client: kann nicht mit x verbinden\n")
 		exit(-1)
+	
+	default_font = LoadTTF("/home/x.font")
 
 void mtk_add_idle(MtkIdle *i)
 	idles.add(i)
@@ -445,6 +601,16 @@ void mtk_run()
 		usleep(5000)
 		for i in idles
 			i.do()
+		
+		for w,i in mtk_windows
+			if w.killed
+				mtk_windows.remove(i)
+				delete(w)
+				break
+			
+		// nothing more to do...
+		if mtk_windows.num + idles.num == 0
+			break
 		
 	delete xcon
 	exit(0)

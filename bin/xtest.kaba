@@ -29,8 +29,9 @@ class Idle extends MtkIdle
 	override void do()
 		//window.l.set_text("" + window.x + " / " + window.y)
 		n ++
-		if n > 1000
-			window.close()
+		if n > 2000
+			//window.close()
+			exit(0)
 		
 
 TestWindow* window

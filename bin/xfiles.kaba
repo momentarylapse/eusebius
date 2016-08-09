@@ -14,6 +14,7 @@ class FilesView extends MtkWidget
 	void __init__(string dir)
 		self.dir = dir
 		list = DirSearch(dir, "*", true)
+		snd = MtkSizeNegotiationData(30, 30, true, true)
 	
 	override bool can_grab_input()
 		return true
