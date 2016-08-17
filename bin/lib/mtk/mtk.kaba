@@ -4,7 +4,8 @@ use "../draw.kaba"
 use "../ttfx.kaba"
 
 const int FRAME_BAR = 30
-const int FRAME_WIDTH = 10
+const int FRAME_WIDTH = 2
+const float WIDGET_FRAME_WIDTH = 2.0
 const int GRID_MARGIN = 10
 const float FONT_SIZE = 15.0
 const float FONT_SIZE_BAR = 17.0
@@ -259,8 +260,9 @@ class MtkButton extends MtkWidget
 			p.set_color(col_button_hover_frame)
 		if state == BUTTON_STATE_CLICK
 			p.set_color(col_button_click_frame)
-		p.line_width = 2
-		p.rectangle(rect(2, r.w()-2, 2, r.h()-2))
+		float fr = WIDGET_FRAME_WIDTH / 2.0
+		p.line_width = fr
+		p.rectangle(rect(fr, r.w()-fr, fr, r.h()-fr))
 		p.strike()
 		p.line_width = 1
 		
@@ -344,8 +346,9 @@ class MtkTextView extends MtkWidget
 			p.set_color(col_frame_active)
 		else
 			p.set_color(col_frame)
-		p.line_width = 2
-		p.rectangle(rect(2, r.w()-2, 2, r.h()-2))
+		float fr = WIDGET_FRAME_WIDTH / 2.0
+		p.line_width = fr
+		p.rectangle(rect(fr, r.w()-fr, fr, r.h()-fr))
 		p.strike()
 		p.line_width = 1
 		
@@ -554,6 +557,7 @@ class MtkErrorBox extends MtkWindow
 			put(g)
 			
 			MtkLabel* l = new MtkLabel(message)
+			l.snd.expand_y = true
 			g.put(0, 0, l)
 			
 			MtkButton* b = new MtkErrorBoxOkButton("Ok")

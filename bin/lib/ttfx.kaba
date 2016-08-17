@@ -20,7 +20,8 @@ class TTFContour
 	
 
 class TTFGlyph
-	//int xmin, ymin, xmax, ymax
+	//float xmin, ymin, xmax, ymax
+	float width
 	int code
 	TTFContour[] contours
 
@@ -29,6 +30,7 @@ class TTFFont
 	complex[] points
 	bool[] on_curve
 	TTFGlyph[] glyphs
+	float kerning
 	
 	File *f
 	
@@ -59,7 +61,9 @@ class TTFFont
 		int n = readI()
 		glyphs.resize(n)
 		for g,i in glyphs
-			g.code = readI() + 3
+			g.code = readI() + 3 // FIXME!!!!
+			g.width = readF()
+			readF()
 			n = readI()
 			g.contours.resize(n)
 			for c in g.contours
@@ -70,31 +74,38 @@ class TTFFont
 		_read(f, &points[0], n*8)
 		on_curve.resize(n)
 		_read(f, &on_curve[0], n)
+		
+		kerning = 0.2
 	
 		delete f
 		return true
 		
 	
 	TTFGlyph* get(int code)
-		print("get ")
+		//print("get ")
 		for g,i in glyphs
 			if g.code == code
-				print("" + i + "\n")
+				//print("" + i + "\n")
 				return &g
 		return &glyphs[0]
 		
 	float get_str_width(string text, float font_size)
-		float scale = font_size * 0.007/15.0
+		float scale = font_size
 		float w = 0
-		for c in text
-			/*int code = c2i(c) & 0x000000ff
+		for c,i in text
+			int code = c2i(c) & 0x000000ff
+			if code == 9
+				w += 4
+				continue
+				
+			if i > 0
+				w += kerning
 			int index = 0
-			for g,i in font.glyphs
+			for g in glyphs
 				if g.code == code
-					index = i
-					break*/
-			w += scale * 1500.0
-		return w
+					w += g.width
+					break
+		return w * scale
 
 TTFFont *LoadTTF(string filename)
 	TTFFont *f = new TTFFont

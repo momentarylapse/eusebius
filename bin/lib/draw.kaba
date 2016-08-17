@@ -251,35 +251,34 @@ class XPainter
 			draw_line(l.a, l.b)
 		clear_data()
 	
-	void draw_glyph(float x, float y, int index, float scale)
+	void draw_glyph(float x, float y, TTFGlyph *g, float scale)
 		if !font
 			return
-		TTFGlyph *g = &font.glyphs[index]
 	
 		for c in g.contours
-			move_to(x + font.points[c.start].x * scale, y + (1500 - font.points[c.start].y) * scale)
+			move_to(x + font.points[c.start].x * scale, y + (1.0 - font.points[c.start].y) * scale)
 			for i in c.start+1:c.start+c.num
-				line_to(x + font.points[i].x * scale, y + (1500 - font.points[i].y) * scale)
+				line_to(x + font.points[i].x * scale, y + (1.0 - font.points[i].y) * scale)
 			path_close()
 		strike()
 		//fill()
 	
 	void draw_str(float x, float y, string text)
-		float scale = font_size * 0.007/15.0
-		for c in text
+		float scale = font_size
+		for c,i in text
 			int code = c2i(c) & 0x000000ff
-			int index = 0
-			for g,i in font.glyphs
-				if g.code == code
-					index = i
-					break
-			/*if code >= 'a' and code <= 'z'
-				index = code - 32
-			else if code >= 'A' and code <= 'Z'
-				index = code - 32*/
-			if index != 0 and code != 32
-				draw_glyph(x, y, index, scale)
-			x += scale * 1500.0
+			
+			if code == 9
+				x += scale * 4
+				continue
+			
+			if i > 0
+				x += scale * font.kerning
+				
+			TTFGlyph* g = font.get(code)
+			if code != 32
+				draw_glyph(x, y, g, scale)
+			x += scale * g.width
 	
 	float get_str_width(string text)
 		return font.get_str_width(text, font_size)

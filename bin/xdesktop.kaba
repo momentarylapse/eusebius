@@ -17,7 +17,7 @@ class LauncherBar extends MtkWindow
 	override void __init__()
 		super.__init__("", 95, 200)
 		//super.__init__("Test", 1024, 32)
-		move(0, -30)
+		move(0, 0)//-30)
 		
 		MtkGrid* g = new MtkGrid(1, 5)
 		put(g)
