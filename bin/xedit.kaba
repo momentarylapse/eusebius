@@ -9,6 +9,7 @@ class EditWindow extends MtkWindow
 		self.filename = filename
 		
 		MtkTextView* v = new MtkTextView
+		//v.set_font(font_db.get("FreeMono", 15))
 		put(v)
 		
 		/*File* f = FileOpen(filename)

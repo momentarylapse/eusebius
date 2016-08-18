@@ -80,8 +80,8 @@ class XPainter
 		width = w
 		height = h
 		
-		font = p.font
-		line_width = p.line_width
+		//font = p.font
+		//line_width = p.line_width
 	
 	void set_color(color c)
 		cur_color = col2i(c)

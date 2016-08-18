@@ -50,6 +50,7 @@ class MtkWidget
 	XRect r // relative to window
 	int mx, my
 	MtkSizeNegotiationData snd
+	FontDescriptor* font
 	
 	void __init__()
 		win = nil
@@ -57,6 +58,7 @@ class MtkWidget
 		mx = 0
 		my = 0
 		snd = MtkSizeNegotiationData(10, 10, true, true)
+		font = default_font
 	
 	virtual void __delete__()
 		if p
@@ -72,7 +74,7 @@ class MtkWidget
 		self.win = win
 		win.widgets.add(self)
 		p = new XPainter(win)
-		p.font = default_font
+		p.font = font
 		resize(x, y, w, h)
 	
 	void resize(int x, int y, int w, int h)
@@ -83,6 +85,11 @@ class MtkWidget
 		r.y1 = y + h
 	
 		onResize()
+		
+	void set_font(FontDescriptor* f)
+		font = f
+		if p
+			p.font = f
 	
 	virtual void onResize()
 	virtual void draw()
