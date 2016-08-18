@@ -125,6 +125,7 @@ class TTFGlyph
 	int xmin, ymin, xmax, ymax
 	TTFContour[] contours
 	int[] codes
+	float lsb, width
 
 class TTF
 	TTFTableDirectory td
@@ -134,6 +135,9 @@ class TTF
 	TTFMapHeader mh
 	TTFMapTable[] map_tables
 	TTFGlyph[] glyphs
+	
+	int[] lsb
+	int[] advance
 	
 	File *f
 	
@@ -187,6 +191,33 @@ class TTF
 		
 		read(f, &head, 32)
 		print(head.units_per_em.int())
+		
+		return true
+	
+	bool try_read_hhead()
+		TTFTableDirectoryEntry *te = get_table("hhea")
+		if !te
+			return false
+		f.seek(te.offset.int(), true)
+		print("hhead-----------------------------")
+		
+		f.seek(34, false)
+		int n = readUS()
+		print(n)
+		lsb.resize(n)
+		advance.resize(n)
+		
+		return true
+		
+	bool try_read_hmetrix()
+		TTFTableDirectoryEntry *te = get_table("hmtx")
+		if !te
+			return false
+		f.seek(te.offset.int(), true)
+		print("hmetrix-----------------------------")
+		for i in 0:lsb.num
+			advance[i] = readUS()
+			lsb[i] = readSS()
 		
 		return true
 	
@@ -290,43 +321,16 @@ class TTF
 				int length = readL()
 				print("l " + length)
 				int version = readL()
-				print("format 12")
-				return false
 				
-				int seg_count = readL() / 2
-				print("s " + seg_count)
-				int search_range = readUS()
-				int entry_selector = readUS()
-				int range_shift = readUS()
-				for i in 0:seg_count
-					m.end_code.add(readUS())
-				readUS()
-				for i in 0:seg_count
-					m.start_code.add(readUS())
-				for i in 0:seg_count
-					m.id_delta.add(readUS())
-				for i in 0:seg_count
-					m.id_range_offset.add(readUS())
-				int rs = seg_count * 8 + 16
-				print("r: " + (length - rs))
-				f.read(length - rs)
+				int group_count = readL() / 2
+				print("s " + group_count)
 				
-				/*print start_count
-				print end_count
-				print id_delta
-				print id_range_offset
-				for i in 0:seg_count
-					print "--"
-					print start_count[i]
-					print end_count[i]
-					print id_delta[i]
-					print id_range_offset[i]*/
-				
-				for i in 0:seg_count
-					if m.id_range_offset[i] != 0
-						print("id_range_offset != 0...")
-						print(m.id_range_offset)
-						return false
+				for i in 0:group_count
+					int start_code = readL()
+					m.start_code.add(start_code)
+					m.end_code.add(readL())
+					m.id_delta.add(readL() - start_code)
+					
 			else
 				print("unhandled format: " + m.format)
 				return false
@@ -335,8 +339,8 @@ class TTF
 		return true
 	
 	bool read_glyph(TTFGlyph g)
-		//print("glyph---------------------------------")
-		//print(i2h(f.getPos()))
+		print("glyph---------------------------------")
+		print(i2h(f.getPos()))
 		int num_contours = readSS()
 		print(num_contours)
 		if num_contours == 0
@@ -419,7 +423,7 @@ class TTF
 		
 		// instructions???
 		int instrlen = readUS()
-		if instrlen > 1000
+		if instrlen > 10000
 			print("too many instructions: " + instrlen)
 			return false
 		//print "instr: " + instrlen
@@ -511,6 +515,11 @@ class TTF
 		f.seek(te.offset.int(), true)
 		int _max = te.offset.int() + te.length.int() - 32
 		
+		TTFGlyph gg
+		glyphs.add(gg)
+		glyphs.add(gg)
+		glyphs.add(gg)
+		
 		while f.getPos() < _max
 			TTFGlyph g
 			if !read_glyph(g)
@@ -542,8 +551,13 @@ class TTF
 			return false
 		if !read_mapping()
 			return false
+		if try_read_hhead()
+			try_read_hmetrix()
 		if !read_glyphs()
 			return false
+			
+		update_codes()
+		update_size()
 	
 		delete f
 		return true
@@ -606,8 +620,32 @@ class TTF
 							int index = (code - m.start_code[i]) + m.id_range_offset[i]/2 - (m.id_range_offset.num - i)
 							n = m.glyph_id_array[index]
 						map_code(n, code)
+			else if m.format == 12
+				print("----------------------- 12 12 12")
+				print(m.end_code.num)
+				for i in 0:m.end_code.num
+					print("----")
+					print(m.start_code[i])
+					print(m.end_code[i])
+					print(m.id_delta[i])
+					for code in m.start_code[i]:(m.end_code[i]+1)
+						map_code(code + m.id_delta[i], code)
 			else
 				print("---------------- UNHANDLED " + m.format)
+	
+	void update_size()
+		float scale = 1.0 / head.units_per_em.int()
+		float w = 0
+		for g,i in glyphs
+			g.lsb = 0
+			g.width = g.xmax - g.xmin
+			if i < lsb.num
+				g.lsb = lsb[i]
+				g.width = advance[i]
+				w = g.width
+			else if lsb.num > 0
+				g.width = w
+			
 	
 	
 	void export(string filename)
@@ -621,11 +659,11 @@ class TTF
 		
 		f << num_glyphs
 		int num_p = 0
-		float scale = 1.0 / font.head.units_per_em.int()
+		float scale = 1.0 / head.units_per_em.int()
 		for g in glyphs
 			for code in g.codes
 				f << code
-				f << (g.xmax - g.xmin) * scale
+				f << g.width * scale
 				f << 0.0
 				f << g.contours.num
 				for c in g.contours
@@ -640,7 +678,7 @@ class TTF
 				for c in g.contours
 					for p in c.p
 						pp.add(p)
-						f << (p.x - g.xmin) * scale
+						f << (p.x - g.xmin + g.lsb) * scale
 						f << p.y * scale
 						xx ++
 		for g in glyphs
@@ -687,7 +725,10 @@ class FontWindow extends Window
 		p.setColor(White)
 		p.drawRect(0, 0, w, h)
 		
-		p.setColor(Gray)
+		p.setColor(color(1, 0.9, 0.9, 0.9))
+		p.drawRect(xx(g.xmin - g.lsb), 0, xx(g.width) - xx(0.0), h)
+		
+		p.setColor(color(1, 0.7, 0.7, 0.7))
 		p.drawRect(xx(g.xmin), yy(g.ymin), xx(g.xmax) - xx(g.xmin), yy(g.ymax) - yy(g.ymin))
 		
 		p.setColor(Black)
@@ -725,8 +766,6 @@ void main(string[] arg)
 	font = new TTF
 	if !font.load(arg[0])
 		return
-	
-	font.update_codes()
 	
 	if arg.num > 1
 		font.export(arg[1])

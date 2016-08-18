@@ -8,7 +8,8 @@ class CWindow extends XWindow
 	void __init__(int x, int y, int w, int h)
 		super.__init__(xcon, x, y, w, h)
 		p = new XPainter(self)
-		p.font = LoadTTF("/home/x.font")
+		FontDB* font_db = new FontDB
+		p.font = font_db.get("Cantarell", 60)
 	
 	override void onKey(int key)
 		if key == 'w'
@@ -42,7 +43,6 @@ class CWindow extends XWindow
 				p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)*/
 
 		p.set_color(White)
-		p.font_size = 60
 		p.draw_str(20,  50, "Hallo Welt")
 		p.draw_str(20, 140, "ABCDEFG")
 	

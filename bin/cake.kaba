@@ -6,10 +6,10 @@ use "lib/ttfx.kaba"
 
 color bg
 
-XConnection *xcon
+XConnection* xcon
 
 
-void draw_cancle(XPainter *p, float x, float y)
+void draw_cancle(XPainter* p, float x, float y)
 	p.set_color(bg)
 	//p.rectangle(rect(x-12, x+12, y-60, y))
 	p.draw_circle(x, y-30, 20)
@@ -44,8 +44,9 @@ void main()
 		print("client: kann kein Fenster erstellen\n")
 		exit(-2)
 		
-	XPainter *p = new XPainter(win)
-	p.font = LoadTTF("/home/x.font")
+	XPainter* p = new XPainter(win)
+	FontDB* font_db = new FontDB
+	p.font = font_db.get("Cantarell", 30)
 
 	bg = color(1, 0.1765, 0.1608, 0.4706)
 	p.set_color(bg)
@@ -53,7 +54,6 @@ void main()
 	p.fill()
 	
 	p.set_color(White)
-	p.font_size = 30
 	p.draw_str(10, 30, "Herzlichen")
 	p.draw_str(20, 65, "Glueckwunsch")
 	

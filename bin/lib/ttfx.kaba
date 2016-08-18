@@ -27,10 +27,10 @@ class TTFGlyph
 
 class TTFFont
 	
+	string name
 	complex[] points
 	bool[] on_curve
 	TTFGlyph[] glyphs
-	float kerning
 	
 	File *f
 	
@@ -61,7 +61,7 @@ class TTFFont
 		int n = readI()
 		glyphs.resize(n)
 		for g,i in glyphs
-			g.code = readI() + 3 // FIXME!!!!
+			g.code = readI()
 			g.width = readF()
 			readF()
 			n = readI()
@@ -75,8 +75,6 @@ class TTFFont
 		on_curve.resize(n)
 		_read(f, &on_curve[0], n)
 		
-		kerning = 0.2
-	
 		delete f
 		return true
 		
@@ -95,11 +93,9 @@ class TTFFont
 		for c,i in text
 			int code = c2i(c) & 0x000000ff
 			if code == 9
-				w += 4
+				w += 4 * 0.5
 				continue
 				
-			if i > 0
-				w += kerning
 			int index = 0
 			for g in glyphs
 				if g.code == code
@@ -113,3 +109,36 @@ TTFFont *LoadTTF(string filename)
 		return f
 	delete f
 	return nil
+
+class FontDescriptor
+	TTFFont *font
+	float size
+	
+	float get_str_width(string text)
+		return font.get_str_width(text, size)
+
+class FontDB
+	TTFFont*[] fonts
+	FontDescriptor*[] descriptors
+	
+	FontDescriptor* get(string name, float size)
+		for d in descriptors
+			if d.font.name == name and d.size == size
+				return d
+		FontDescriptor* d = new FontDescriptor
+		d.size = size
+		for f in fonts
+			if f.name == name
+				d.font = f
+				return d
+		d.font = LoadTTF("/home/" + name + ".font")
+		if d.font
+			d.font.name = name
+			descriptors.add(d)
+			return d
+		if fonts.num > 0
+			d.font = fonts[0]
+			descriptors.add(d)
+			return d
+		delete d
+		return nil
