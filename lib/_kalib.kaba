@@ -20,7 +20,6 @@ int stdin, stdout
 
 int lib_error
 bool __free_error__
-bool lib_mem_debug
 
 int __temp_i__, __temp_i2__, __temp_i3__
 float __temp_f__
@@ -621,9 +620,7 @@ float lib__max(float a, float b)
 // memory management
 
 
-void memcpy(void* _dest, void* _source, int size)
-	char[0]* dest = _dest
-	char[0]* source = _source
+void memcpy(char[0]* dest, char[0]* source, int size)
 	for i in 0:size
 		dest[i] = source[i]
 		
@@ -671,10 +668,9 @@ void* lib__@malloc(int size)
 			return ppp
 
 	size = _align8_(size)
-	if lib_mem_debug
-		kprint(" [+")
-		kprinti(size)
-		kprint("] ")
+	/*kprint " [+"
+	kprinti(size)
+	kprint "] "*/
 	
 	// account for the allocation header
 	size += sizeof(MallocHeader)
@@ -695,27 +691,28 @@ void* lib__@malloc(int size)
 			hh.prev = nil
 			
 			MemHeapAllocated += size
-			if lib_mem_debug
-				kprint(" ")
-				kprinti(_p2i(hh.payload()))
+			//prints " "
+			//printi(_p2i(hh.payload()))
 			memcheck()
-			/*if lib_mem_debug
-				kprint(">")
-				kprinti(_p2i(hh.payload()))*/
+			//prints ">"
+//			kprinti(_p2i(hh.payload()))
 			return hh.payload()
 		cur = cur.next
+	
+	
+//	__lib_fatal__("malloc fail")
+//	return nil
 
 	
 	MallocHeader *last_before_end_new = _i2p(cur_break_value - sizeof(MallocHeader) - MALLOC_STOPPER)
  	
 	// request more memory from kernel
 	int new_break_value = cur_break_value + size + sizeof(MallocHeader) + 1024
-	if lib_mem_debug
-		kprint("  BREAK ")
-		kprinti(cur_break_value)
-		kprint(" - ")
-		kprinti(new_break_value)
-		kprint("  ")
+	/*kprint("  BREAK ")
+	kprinti(cur_break_value)
+	kprint(" - ")
+	kprinti(new_break_value)
+	kprint("  ")*/
 	int r = brk(new_break_value)
 	if r < 0
 		__lib_fatal__("malloc/brk()")
@@ -749,15 +746,13 @@ void* lib__@malloc(int size)
 void _cleanup(MallocHeader *h)
 	if h.after() == h.next
 		MemHeapAllocated -= sizeof(MallocHeader)
-		if lib_mem_debug
-			kprint(" merge after ")
+		//kprint(" merge after ")
 		h.size += h.next.size
 		h.next = h.next.next
 		h.next.prev = h
 	if h.prev.after() == h
 		MemHeapAllocated -= sizeof(MallocHeader)
-		if lib_mem_debug
-			kprint(" merge before ")
+		//kprint(" merge before ")
 		h.prev.size += h.size
 		h.next.prev = h.prev
 		h.prev.next = h.next
@@ -770,19 +765,17 @@ void lib__@free(void *p)
 		small_free(index)
 		return
 	int ip = _p2i(p)
-	if lib_mem_debug
-		kprint(" free ")
-		kprinti(ip)
+	/*kprint " free "
+	kprinti(ip)*/
 	
 	MallocHeader *hh = _i2p(ip - sizeof(MallocHeader))
 	if hh.magic != 0x12345678
 		kprint(" free___:  ")
 		kprinti(ip)
 		__lib_fatal__("evil free(1)")
-	
-	if lib_mem_debug
-		kprint(" ")
-		kprinti(hh.size)
+		
+	//kprint(" ")
+	//kprinti(hh.size)
 	
 	// find last free window before p
 	MallocHeader *cur = malloc_first_free
@@ -800,8 +793,7 @@ void lib__@free(void *p)
 			// turn allocated block into a free one
 			hh.magic = 0
 			
-			if lib_mem_debug
-				kprinti(hh.size)
+			//printi(hh.size)
 			MemHeapAllocated -= hh.size - sizeof(MallocHeader)
 			
 			// ..by linking it to its neighbors
@@ -812,8 +804,7 @@ void lib__@free(void *p)
 			
 			_cleanup(hh)
 			memcheck()
-			if lib_mem_debug
-				kprint(">")
+			//prints(">")
 			return
 		cur = cur.next
 	__lib_fatal__( "invalid call to free()")
@@ -1881,7 +1872,6 @@ void signal_handler_segv()
 
 void init_lib()
 	__free_error__ = false
-	lib_mem_debug = false
 	
 	int malloc_begin = 0x00b00000
 	cur_break_value = brk(-1)

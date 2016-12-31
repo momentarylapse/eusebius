@@ -166,7 +166,8 @@ class PageDirectory extends PageTable
 		int n = pt.e[page_no] & 0xfffff000
 		return n + *offset
 
-	bool memcpy2kernel(cstring *o, int addr, int size)
+	bool memcpy2kernel(void *_o, int addr, int size)
+		cstring *o = _o
 		while size > 0
 			int offset
 			int kaddr = addr2kernel(addr, &offset)
@@ -183,7 +184,8 @@ class PageDirectory extends PageTable
 			o = &o[num]
 		return true
 
-	bool memcpy2task(int addr, cstring *p, int size)
+	bool memcpy2task(int addr, void *_p, int size)
+		cstring *p = _p
 		while size > 0
 			int offset
 			int kaddr = addr2kernel(addr, &offset)

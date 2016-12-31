@@ -212,11 +212,13 @@ class MountPoint
 		block_offset = _bo
 		dev_block_offset = _bo / dev.block_size
 	
-	void read_block(int block_no, cstring *buf)
+	void read_block(int block_no, void *_buf)
+		cstring *buf = _buf
 		for i in 0:dev_blocks_per_block
 			ata.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 
-	void write_block(int block_no, cstring *buf)
+	void write_block(int block_no, void *_buf)
+		cstring *buf = _buf
 		for i in 0:dev_blocks_per_block
 			ata.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 	

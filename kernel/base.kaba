@@ -94,7 +94,9 @@ void read_data_from_init()
 			break
 
 
-void memcpy(cstring *dest, cstring *source, int size)
+void memcpy(void* _dest, void* _source, int size)
+	cstring* dest = _dest
+	cstring* source = _source
 	for n in 0:size
 		dest[n] = source[n]
 	/*if size > 0
@@ -113,23 +115,30 @@ void memcpy(cstring *dest, cstring *source, int size)
 				loop _mem_cpy_loop
 		}*/
 
-int strlen(cstring *s)
+int strlen(void* _s)
+	cstring* s = _s
 	for i in 0:256
 		if s[i] == 0
 			return i
 	return 256
 
-void strcpy(cstring *a, cstring *b)
+void strcpy(void* _a, void* _b)
+	cstring* a = _a
+	cstring* b = _b
 	for i in 0:256
 		a[i] = b[i]
 		if b[i] == 0
 			break
 
-void strcat(cstring *a, cstring *b)
+void strcat(void* _a, void* _b)
+	cstring* a = _a
+	cstring* b = _b
 	int n = strlen(a)
 	strcpy(&a[n], b)
 
-int strcmp(cstring *a, cstring *b)
+int strcmp(void* _a, void* _b)
+	cstring* a = _a
+	cstring* b = _b
 	for i in 0:256
 		if a[i] > b[i]
 			return 1

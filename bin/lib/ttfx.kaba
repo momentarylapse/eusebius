@@ -1,6 +1,7 @@
 use "std.kaba"
 
-string hex(char[0]* p, int size)
+string hex(void* _p, int size)
+	char[0]* p = _p
 	string s
 	for i in 0:size
 		s.add(p[i])
@@ -9,8 +10,14 @@ string i2h(int i)
 	return hex(&i, 4)
 
 
+float time_dif(TimeValue t1, TimeValue t2)
+	float d = t2.sec - t1.sec
+	d += i2f(t2.nanosec - t1.nanosec) * 0.000000001
+	return d
 
-void _read(File *f, char[0]* p, int size)
+
+void _read(File *f, void* _p, int size)
+	char[0]* p = _p
 	string s = f.read(size)
 	for i in 0:size
 		p[i] = s[i]
@@ -20,9 +27,10 @@ class TTFContour
 	
 
 class TTFGlyph
-	//float xmin, ymin, xmax, ymax
-	float width
 	int code
+	float width
+	float _dummy_
+	int _num_contours_
 	TTFContour[] contours
 
 class TTFFont
@@ -57,23 +65,35 @@ class TTFFont
 			print("kann Datei nicht lesen\n")
 			return false
 		//f.setBinaryMode(true)
+		/*TimeValue tv1
+		time(tv1)
+		kprint("load font ")*/
 		
 		int n = readI()
 		glyphs.resize(n)
 		for g,i in glyphs
-			g.code = readI()
+			/*g.code = readI()
 			g.width = readF()
 			readF()
-			n = readI()
-			g.contours.resize(n)
-			for c in g.contours
+			n = readI()*/
+			_read(f, &g.code, 4*4)
+			g.contours.resize(g._num_contours_)
+			_read(f, &g.contours[0], g.contours.num * 8)
+			/*for c in g.contours
 				c.start = readI()
-				c.num = readI()
+				c.num = readI()*/
+		/*TimeValue tv2
+		time(tv2)
+		kprint("[" + time_dif(tv1, tv2) + "]")*/
 		n = readI()
 		points.resize(n)
 		_read(f, &points[0], n*8)
 		on_curve.resize(n)
 		_read(f, &on_curve[0], n)
+		
+		/*TimeValue tv3
+		time(tv3)
+		kprint("[" + time_dif(tv2, tv3) + "]")*/
 		
 		delete f
 		return true

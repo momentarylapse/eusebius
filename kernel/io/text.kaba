@@ -101,7 +101,8 @@ void printi(int i)
 	_i2s(i, &s)
 	prints(s)
 
-int printh(cstring *data,int size)
+int printh(void* _data,int size)
+	cstring* data = _data
 	cstring ttt
 	for i in 0:size
 		int d = data[i]

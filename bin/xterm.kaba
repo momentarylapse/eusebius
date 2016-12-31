@@ -64,8 +64,10 @@ class Job extends MtkIdle
 			s.resize(r)
 			window.history.add(s)
 			//print s
+			s.clear()
 			return
 		
+		s.clear()
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
@@ -121,6 +123,8 @@ ShellWindow *window
 
 void main()
 	mtk_init()
+	//lib_mem_debug = true
+	//kprint("START XTERM")
 	
 	stdout = open("/dev/tty", O_WRONLY)
 	

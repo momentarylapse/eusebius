@@ -498,6 +498,7 @@ void main()
 	
 	execute(["/bin/xdesktop"], -1, -1)
 	//execute(["/bin/xtest"], -1, -1)
+	//execute(["/bin/xterm"], -1, -1)
 	
 	print("x: running\n")
 	while true

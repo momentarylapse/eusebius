@@ -13,8 +13,6 @@ class TimeValue
 			return true
 		if sec > t.sec
 			return false
-		if nanosec < t.nanosec
-			return true
 		return nanosec < t.nanosec
 
 	bool is_valid()

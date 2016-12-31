@@ -3,7 +3,7 @@ use "../io/text.kaba"
 use "heap.kaba"
 use "paging.kaba"
 
-const int MAX_SHARED_MEMORY_BLOCKS = 64
+const int MAX_SHARED_MEMORY_BLOCKS = 256
 
 class SharedMemory
 	int id

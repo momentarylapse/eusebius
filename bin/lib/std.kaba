@@ -71,6 +71,7 @@ extern int *malloc_first_free
 
 extern int stdin, stdout
 extern int lib_error
+extern bool lib_mem_debug
 
 extern string cs2s(cstring cs)
 extern string binary(void *p, int num)
@@ -81,8 +82,8 @@ extern int fork()
 extern int open(string filename, int flags)
 extern int create(string filename)
 extern bool close(int h)
-extern int read(int h, cstring *buf, int size)
-extern int write(int h, cstring *buf, int size)
+extern int read(int h, void *buf, int size)
+extern int write(int h, void *buf, int size)
 extern int seek(int h, int offset, int mode)
 extern bool mkdir(string filename)
 extern bool rmdir(string filename)
