@@ -1,5 +1,6 @@
-KABA  = kaba
-#KABA  = ~/Projekte/Kaba/Debug/Kaba
+#KABA  = kaba
+KABA  = ~/Projekte/Kaba/Debug/Kaba
+#KABA  = valgrind ~/Projekte/Kaba/Debug/Kaba --verbose
 MACHINE = --x86
 FLAGS =  $(MACHINE) --no-std-lib
 LOADERFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7c00
@@ -20,10 +21,10 @@ init : init.kaba
 
 kernel/kernel : kernel/*.kaba kernel/dev/*.kaba kernel/fs/*.kaba kernel/io/*.kaba kernel/irq/*.kaba kernel/mem/*.kaba kernel/task/*.kaba kernel/time/*.kaba kernel/net/*.kaba
 	$(KABA) $(KERNELFLAGS) -o kernel/kernel kernel/kernel.kaba
- 
+
 loader_fake : loader_fake.kaba
 	$(KABA) $(LOADERFLAGS) -o loader_fake loader_fake.kaba
- 
+
 loader_br : loader_br.kaba
 	$(KABA) $(LOADERFLAGS) -o loader_br loader_br.kaba
 
@@ -155,7 +156,9 @@ img.ext2: $(BINS) img.mfs
 	cp -r $(LIBS) img-src/lib
 	cp -r kernel/*.kaba img-src/src
 	cp data/images/cursor.tga img-src/images
-	genext2fs -b 4096 -N 256 -d img-src img.ext2 
+	# block-size 1k, 256 inodes, size 4M
+	#genext2fs -b 4096 -N 256 -d img-src img.ext2
+	mkfs.ext2 -b 1024 -N 256 -Fq -d img-src img.ext2 4M
 
 bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160

@@ -1,8 +1,9 @@
-class BinaryFile : File
-	int xread(cstring *p, int size)
+class BinaryFile extends File
+	int xread(void* p, int size)
+		cstring *pp = p
 		string r = read(size)
 		for i in 0:r.num
-			p[i] = r[i]
+			pp[i] = r[i]
 		return r.num
 
 class Word
@@ -99,13 +100,13 @@ class Ext2Reader
 		readable = false
 		writable = false
 		if (sb.feature_incompat & 0xfffffffd) > 0
-			print "---- nicht lesbar ----"
-			print sb.feature_incompat
+			print("---- nicht lesbar ----")
+			print(sb.feature_incompat)
 			return
 		readable = true
 		if (sb.feature_ro_compat & 0xfffffffe) > 0
-			print "---- nicht schreibbar ----"
-			print sb.feature_ro_compat
+			print("---- nicht schreibbar ----")
+			print(sb.feature_ro_compat)
 			return
 		writable = true
 	
@@ -130,7 +131,7 @@ class Ext2Reader
 		testCompatibility()
 		if readable
 			if filter.num == 0
-				print "Root:"
+				print("Root:")
 			showInodeRecursive(2, 0)
 		
 		delete f
@@ -180,9 +181,9 @@ class Ext2Reader
 		else
 			info += "  ???"
 		info += "  i=" + index
-		print indent + info
+		print(indent + info)
 		if show_details
-			print indent + inode.iblock[0]
+			print(indent + inode.iblock[0])
 		if inode.isDir()
 			string cont = readInodeContents(index)
 			int p = 0
@@ -207,27 +208,27 @@ class Ext2Reader
 				if filter.num > 0
 					if filter[level] != name
 						continue
-				print indent + info
+				print(indent + info)
 				
 				if name != "." and name != ".."
 				//	if ft == 2 or ft == 1
 						showInodeRecursive(d.inode, level+1)
 			
-			//print cont.substr(0, 32).hex(false)
+			//print(cont.substr(0, 32).hex(false))
 	
 	void showMetaData()
-		print block_size
-		print "--------"
-		print sb.inodes_count
-		print sb.blocks_count
-		print sb.log_block_size
-		print sb.first_data_block
-		print sb.blocks_per_group
-		print sb.inodes_per_group
-		print "--------"
-		print bg.block_bitmap
-		print bg.inode_bitmap
-		print bg.inode_table
+		print(block_size)
+		print("--------")
+		print(sb.inodes_count)
+		print(sb.blocks_count)
+		print(sb.log_block_size)
+		print(sb.first_data_block)
+		print(sb.blocks_per_group)
+		print(sb.inodes_per_group)
+		print("--------")
+		print(bg.block_bitmap)
+		print(bg.inode_bitmap)
+		print(bg.inode_table)
 
 void main(string[] arg)
 	string filename
