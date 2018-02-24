@@ -65,7 +65,7 @@ UTSName _uts_name
 
 class TaskInfo
 	cstring name
-	int pid, mode, status
+	int pid, ppid, mode, status
 	int mem
 	int cpu
 	TimeValue life
@@ -75,6 +75,9 @@ class TaskInfo
 			return -1
 		strcpy(&name, &t.name)
 		pid = t.pid
+		ppid = -1
+		if t.parent
+			ppid = t.parent.pid
 		status = t.status
 		mode = 1
 		if t.kernel_mode

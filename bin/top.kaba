@@ -32,12 +32,17 @@ string sec2s(int sec)
 		return i2s2(hour, 3) + ":" + s
 	return "   " + s
 
-void show_task(TaskInfo t)
+void show_task(TaskInfo t, bool show_parent)
 	string s
 	s = i2s2(t.pid, 3)
 	s += "   "
+	int d = 0
+	if show_parent
+		s += i2s2(t.ppid, 4)
+		s += "   "
+		d = 5
 	s += cs2s(t.name)
-	fill(s, 30)
+	fill(s, 30+d)
 	if t.mode == 0
 		s += "K "
 	else
@@ -54,7 +59,7 @@ void show_task(TaskInfo t)
 		s += "I"
 	else
 		s += t.status
-	fill(s, 38)
+	fill(s, 38+d)
 	s += i2s2(t.cpu/10, 3) + "%"
 	s += i2s2(t.mem*4, 9)+"k  "
 	s += sec2s(t.life.sec)
@@ -67,9 +72,12 @@ void main()
 	get_args(arg)
 	
 	bool allow_irq = false
+	bool show_parent = false
 	for a in arg
 		if a == "-a" or a == "--all"
 			allow_irq = true
+		if a == "-p" or a == "--parent"
+			show_parent = true
 	
 	SysInfo s
 	if !sysinfo(s)
@@ -102,8 +110,11 @@ void main()
 			if tt.status != TASK_STATUS_INTERRUPT or allow_irq
 				tasks.add(tt)
 	
-	print(" Pid   Name                 Status     CPU      Mem       Time\n")
+	print(" Pid  ")
+	if show_parent
+		print(" PPid")
+	print(" Name                 Status     CPU      Mem       Time\n")
 	for t in tasks
-		show_task(t)
+		show_task(t, show_parent)
 	
 	exit(0)

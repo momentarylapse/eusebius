@@ -11,6 +11,7 @@ const int XCMD_WINDOW_DRAG_START = 2050
 const int XCMD_WINDOW_DRAG_STOP = 2051
 const int XCMD_WINDOW_ACTIVATE = 2052
 const int XCMD_POINTER_GET_WINDOW = 3072
+const int XCMD_EXECUTE = 4096
 
 const int XCMD_EVENT_MOUSE = 3072
 const int XCMD_EVENT_KEY = 3073
@@ -148,6 +149,10 @@ class XConnection
 	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
 		just_send(cmd, p1, p2, p3, p4, p5)
 	
+	void send_string(string s)
+		write(sock, &s.num, 4)
+		write(sock, &s[0], s.num)
+	
 	void wait_recv(int cmd)
 		kprint(" WAIT ")
 		while true
@@ -192,7 +197,12 @@ class XConnection
 		return nil*/
 	
 	int execute(string[] cmd)
-		return -1
+		just_send(XCMD_EXECUTE, cmd.num, 0, 0, 0, 0)
+		for c in cmd
+			send_string(c)
+		
+		wait_recv(XCMD_EXECUTE)
+		return buf[1]
 	
 	bool poll()
 		int n = read(sock, &buf, 4*8)
@@ -249,7 +259,7 @@ class XConnection
 					w.onKey(key)
 		else if buf[0] == XCMD_EVENT_DRAW
 			//kprint("client: draw\n")
-			nil
+			pass
 		else if buf[0] == XCMD_WINDOW_MOVE
 			//kprint("client: move\n")
 			int id = buf[1]

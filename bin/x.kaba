@@ -16,6 +16,7 @@ const int XCMD_WINDOW_DRAG_START = 2050
 const int XCMD_WINDOW_DRAG_STOP = 2051
 const int XCMD_WINDOW_ACTIVATE = 2052
 const int XCMD_POINTER_GET_WINDOW = 3072
+const int XCMD_EXECUTE = 4096
 
 const int XCMD_EVENT_MOUSE = 3072
 const int XCMD_EVENT_KEY = 3073
@@ -426,6 +427,22 @@ class Client
 				send(XCMD_POINTER_GET_WINDOW, w.id, 0, 0, 0, 0)
 			else
 				send(XCMD_POINTER_GET_WINDOW, -1, 0, 0, 0, 0)
+		else if buf[0] == XCMD_EXECUTE
+			string[] cmd
+			for i in 0:buf[1]
+				cmd.add(read_string())
+			print("EXE  " + cmd[0] + "  ---\n")
+			int r = execute(cmd, -1, -1)
+			send(XCMD_EXECUTE, r, 0, 0, 0, 0)
+	
+	string read_string()
+		int num
+		read(sock, &num, 4)
+		string s
+		s.resize(num)
+		read(sock, &s[0], num)
+		return s
+			
 		
 
 class CommandController

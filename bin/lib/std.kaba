@@ -59,7 +59,7 @@ class SysInfo
 
 class TaskInfo
 	cstring name
-	int pid, mode, status
+	int pid, ppid, mode, status
 	int mem
 	int cpu
 	TimeValue life
@@ -121,4 +121,6 @@ extern bool bind(int fd, int port)
 extern bool connect(int fd, int port)
 extern bool listen(int fd)
 extern int accept(int fd)
+
+extern void memcpy(void* dest, void* source, int size)
 

@@ -10,7 +10,7 @@ class LauncherButton extends MtkButton
 		super.__init__(title)
 		self.program = program
 	override void onClick()
-		if execute(program, -1, -1) < 0
+		if xcon.execute(program) < 0
 			print("run " + program + " FAIL")
 
 class LauncherBar extends MtkWindow
@@ -33,9 +33,9 @@ class LauncherBar extends MtkWindow
 
 void main()
 	mtk_init()
-	
+
 	LauncherBar* bar = new LauncherBar
 	bar.show()
-	
+
 	mtk_run()
 	

@@ -59,7 +59,7 @@ const int IPC_EXCL = 1<<13
 int MemorySize // in bytes
 
 const cstring KERNEL_NAME = "Eusebius"
-const cstring KERNEL_VERSION = "0.2.2.0"
+const cstring KERNEL_VERSION = "0.2.2.1"
 const cstring MACHINE_TYPE = "x86"
 
 class BiosMemoryMapEntry
