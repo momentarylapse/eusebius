@@ -1,7 +1,10 @@
 use "lib/std.kaba"
 use "lib/pci.kaba"
+use "lib/io.kaba"
 
 PCIController *pci
+
+int io_base
 
 void main()
 	init_lib()
@@ -11,6 +14,55 @@ void main()
 	pci = new PCIController
 	
 	pci.scan()
-	pci.show()
-		
+	
+	pci = new PCIController
+	pci.scan()
+	PCIDevice *dev = pci.get(0x8029, 0x10ec)
+	if !dev
+		print("ERROR: pci dev not found\n")
+		return
+	
+	io_base = dev.get_io_addr(0)
+	print("pci dev found, io=")
+	printh(io_base)
+	print("\n")
+	
+	
+	// perform reset
+	int reset = inportb(io_base + 0x1f)
+	outportb(io_base + 0x1f, reset)
+	
+	// wait
+	while ((inportb(io_base + 0x07) & 0x80) == 0)
+		pass
+	outportb(io_base + 0x07, 0xff)                     // mask interrupts
+
+	char[32] prom
+	outportb(io_base, (1 << 5) | 1)	// page 0, no DMA, stop
+	outportb(io_base + 0x0e, 0x49)		// set word-wide access
+	outportb(io_base + 0x0a, 0)		// clear the count regs
+	outportb(io_base + 0x0b, 0)
+	outportb(io_base + 0x0f, 0)		// mask completion IRQ
+	outportb(io_base + 0x07, 0xff)
+	outportb(io_base + 0x0c, 0x20)		// set to monitor
+	outportb(io_base + 0x0d, 0x02)		// and loopback mode.
+	outportb(io_base + 0x0a, 32)		// reading 32 bytes
+	outportb(io_base + 0x0b, 0)		// count high
+	outportb(io_base + 0x08, 0)		// start DMA at 0
+	outportb(io_base + 0x09, 0)		// start DMA high
+	outportb(io_base, 0x0a)		// start the read
+
+	for i in 0:32
+		prom[i] = inportb(io_base + 0x10)
+	print("MAC: ")
+	print(binary(&prom, 6).hex(false))
+	print("\n")
+	
+
+	// program the PAR0..PAR5 registers to listen for packets to our MAC address!		
+/*	for (i=0; i<6; i++)
+	{
+  writeRegister(nif, 1, 0x01+i, prom[i]);
+};*/
+	
 	exit(0)

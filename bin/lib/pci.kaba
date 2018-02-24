@@ -25,7 +25,7 @@ class PCIDevice
 	int secondary_bus
 	int irq
 	
-	int getSecondaryBus()
+	int get_secondary_bus()
 		return -1
 		
 	void __init__()
@@ -33,14 +33,14 @@ class PCIDevice
 			bar[i] = 0
 		irq = -1
 	
-	int getMemAddr0()
-		if (bar[0] & 1) == 0
-			return bar[0] & 0xfffffff0
+	int get_mem_addr(int index)
+		if (bar[index] & 1) == 0
+			return bar[index] & 0xfffffff0
 		return 0
 	
-	int getIOAddr0()
-		if (bar[0] & 1) == 1
-			return bar[0] & 0xfffffffc
+	int get_io_addr(int index)
+		if (bar[index] & 1) == 1
+			return bar[index] & 0xfffffffc
 		return 0
 	
 	void show()
@@ -76,7 +76,7 @@ class PCIController
 
 	PCIDevice*[] devices
 
-	PCIDevice* checkDevice(int bus, int slot, int function)
+	PCIDevice* check_device(int bus, int slot, int function)
 		PCIDevice* p = getx(bus, slot, function)
 		if p
 			return p
@@ -112,29 +112,29 @@ class PCIController
 		for bus in 0:256
 			for slot in 0:32
 				for function in 0:8
-					checkDevice(bus, slot, function)
+					check_device(bus, slot, function)
 	
 	void scan()
-		PCIDevice *d = checkDevice(0, 0, 0)
+		PCIDevice *d = check_device(0, 0, 0)
 		if !d
 			return
 		if (d.header_type & 0x80) == 0
-			checkBus(0)
+			check_bus(0)
 		else
 			for function in 0:8
-				if !checkDevice(0, 0, function)
+				if !check_device(0, 0, function)
 					break
-				checkBus(function)
+				check_bus(function)
 	
-	void checkBus(int bus)
+	void check_bus(int bus)
  		for slot in 0:32
  			for function in 0:8
-				checkDevice(bus, slot, function)
+				check_device(bus, slot, function)
 	
-	void checkFunction(int bus, int slot, int function)
+	void check_function(int bus, int slot, int function)
 		PCIDevice* d = getx(bus, slot, function)
 		if (d._class == 0x06) and (d.subclass == 0x04)
-			checkBus(d.getSecondaryBus())
+			check_bus(d.get_secondary_bus())
 	
 	void show()
 		for d in devices
