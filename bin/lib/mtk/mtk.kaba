@@ -241,7 +241,7 @@ class MtkButton extends MtkWidget
 	void __init__(string text)
 		self.text = text
 		state = BUTTON_STATE_DEFAULT
-		snd = MtkSizeNegotiationData(default_font.get_str_width(text)+30, 30, false, false)
+		snd = MtkSizeNegotiationData(default_font.get_str_width(text)+30, 30, true, false)
 	
 	override bool can_grab_input()
 		return true
@@ -553,21 +553,23 @@ class MtkWindow extends XWindow
 		show()
 
 class MtkErrorBoxOkButton extends MtkButton
+	override void __init__()
+		super.__init__("Ok")
 	override void onClick()
 		win.close()
 
 class MtkErrorBox extends MtkWindow
 	void __init__(string message)
 		super.__init__("Fehler", 300, 100)
-			MtkGrid* g = new MtkGrid(1, 2)
-			put(g)
-			
-			MtkLabel* l = new MtkLabel(message)
-			l.snd.expand_y = true
-			g.put(0, 0, l)
-			
-			MtkButton* b = new MtkErrorBoxOkButton("Ok")
-			g.put(0, 1, b)
+		MtkGrid* g = new MtkGrid(1, 2)
+		put(g)
+		
+		MtkLabel* l = new MtkLabel(message)
+		l.snd.expand_y = true
+		g.put(0, 0, l)
+		
+		MtkButton* b = new MtkErrorBoxOkButton
+		g.put(0, 1, b)
 			
 
 void mtk_error_box(string message)

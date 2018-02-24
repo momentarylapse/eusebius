@@ -11,7 +11,8 @@ class LauncherButton extends MtkButton
 		self.program = program
 	override void onClick()
 		if xcon.execute(program) < 0
-			print("run " + program + " FAIL")
+			//print("run " + program + " FAIL")
+			mtk_error_box("run " + program + " FAIL")
 
 class LauncherBar extends MtkWindow
 	override void __init__()
@@ -24,7 +25,7 @@ class LauncherBar extends MtkWindow
 	
 		g.put(0, 0, new LauncherButton("Term", ["/bin/xterm"]))
 		g.put(0, 1, new LauncherButton("Test", ["/bin/xtest"]))
-		g.put(0, 2, new LauncherButton("Files", ["/bin/xfiles", "/home"]))
+		g.put(0, 2, new LauncherButton("Files", ["/bin/xfiles", "/"]))//"/home"]))
 		g.put(0, 3, new LauncherButton("Edit", ["/bin/xedit"]))
 		g.put(0, 4, new LauncherButton("Cake", ["/bin/cake"]))
 		

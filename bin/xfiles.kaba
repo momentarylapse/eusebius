@@ -75,10 +75,10 @@ void main()
 	icon_file = new Image(16, 16, color(1, 0.8, 0.8, 0.8))
 	
 	if arg.num > 1
-		window = new FilesWindow("/")//arg[1])
+		window = new FilesWindow(arg[1])
 	else
 		window = new FilesWindow("/")
 	window.show()
-	
+
 	mtk_run()
 	

@@ -431,8 +431,8 @@ class Client
 			string[] cmd
 			for i in 0:buf[1]
 				cmd.add(read_string())
-			print("EXE  " + cmd[0] + "  ---\n")
-			int r = execute(cmd, -1, -1)
+			//print("EXE  " + cmd[0] + "  ---\n")
+			int r = pm.run(cmd)
 			send(XCMD_EXECUTE, r, 0, 0, 0, 0)
 	
 	string read_string()
@@ -480,6 +480,26 @@ class CommandController
 
 CommandController *cmds
 
+class ProcessManager
+	int[] pids
+	int run(string[] cmd)
+		int r = execute(cmd, -1, -1)
+		if r >= 0
+			pids.add(r)
+		return r
+	void update()
+		for p in pids
+			int status
+			if waitpid(p, &status, false) == -2
+				continue
+			p = -1
+		for i in 0:pids.num
+			if pids[i] < 0
+				pids.remove(i)
+				i --
+
+ProcessManager *pm
+
 void main()
 	init_lib()
 	string[] arg
@@ -498,6 +518,7 @@ void main()
 	cmds = new CommandController
 	mouse = new MouseController
 	keyboard = new KeyboardController
+	pm = new ProcessManager
 	
 	if arg.num == 1
 		//bga_set_video_mode(800, 600, 32)
@@ -520,6 +541,7 @@ void main()
 	
 	print("x: running\n")
 	while true
+		pm.update()
 		cmds.update()
 		mouse.poll()
 		keyboard.poll()

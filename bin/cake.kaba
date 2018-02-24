@@ -78,7 +78,7 @@ void main()
 	p.end()
 	
 	while true
-		sleep(50)
+		sleep(5)
 		
 		win.move(randi(300), randi(200))
 	
