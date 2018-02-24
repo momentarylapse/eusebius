@@ -42,7 +42,7 @@ class MouseController
 	bool sending
 	
 	void __init__()
-		scale = 3.5
+		scale = 1.0 //3.5
 	
 		x = screen_width / 2
 		y = screen_height / 2
@@ -129,7 +129,7 @@ class KeyboardController
 KeyboardController* keyboard
 
 void XExit()
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
+	bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
 	exit(0)
 
 class XRect
@@ -297,18 +297,19 @@ void draw(XRect rr)
 							int c = w.buf[dx + dy*w.r.w()]
 							if w.transparent
 								if (c & 0xff000000) != 0
-									setPixel(x, y, c)
+									set_pixel(x, y, c)
 									break
 							else
-								setPixel(x, y, c)
+								set_pixel(x, y, c)
 								break
 			else
 				int dy = y-ww.r.y0
 				int dx = xs-ww.r.x0
 				int index = dx + dy*ww.r.w()
-				for x in xs:xe
-					setPixel(x, y, ww.buf[index])
-					index ++
+				set_pixels(xs, y, &ww.buf[index], xe-xs)
+				/*for x in xs:xe
+					set_pixel(x, y, ww.buf[index])
+					index ++*/
 			
 			xs = xe
 	
@@ -482,8 +483,8 @@ void main()
 	keyboard = new KeyboardController
 	
 	if arg.num == 1
-		//BgaSetVideoMode(800, 600, 32)
-		BgaSetVideoMode(1024, 768, 32)
+		//bga_set_video_mode(800, 600, 32)
+		bga_set_video_mode(1024, 768, 32)
 		mouse.set(screen_width / 2, screen_height / 2)
 	
 	desktop = new XWindow(nil, 0, 0, screen_width, screen_height, 1)

@@ -7,8 +7,7 @@ void main(string[] arg)
 	DirEntry[] list = DirSearch(arg[1], "*", false)
 	print(list.str())
 	File *f = FileCreate(arg[0])
-	f.setBinaryMode(true)
-	f.seek(ClusterSize, true)
+	f.seek(ClusterSize)
 
 	// root directory
 	int cluster = 2
@@ -27,7 +26,7 @@ void main(string[] arg)
 		f << num_clusters
 		cluster += num_clusters
 		offset += e.name.num + 22
-	f.seek(ClusterSize * cluster, true)
+	f.seek(ClusterSize * cluster)
 	delete(f)
 		
 	// files
@@ -36,7 +35,7 @@ void main(string[] arg)
 		string s="dd if='"+arg[1] + e.name
 		s+="' of='"+arg[0]
 		s+="' bs=2048 seek="+cluster
-		_exec_(s)
+		shell_execute(s)
 		int num_clusters = (e.size - 1) / ClusterSize + 1
 		cluster += num_clusters
 		/*string t = FileRead(arg[1] + e.name)
