@@ -25,6 +25,7 @@ void ls(string dirname)
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	string[] arg
 	get_args(arg)
 	

@@ -5,6 +5,7 @@ void handler()
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	print("Hallo Welt\n")
 	
 	sigaction(23, &handler)

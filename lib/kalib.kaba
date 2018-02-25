@@ -21,6 +21,7 @@ int stdin, stdout
 int lib_error
 bool __free_error__
 bool lib_mem_debug
+bool lib_print_endl
 
 int __temp_i__, __temp_i2__, __temp_i3__
 float __temp_f__
@@ -1067,6 +1068,10 @@ class lib__string extends lib__@DynamicArray
 		return compare(s) != 0
 	bool __ne__(lib__string s)
 		return compare(s) != 0
+	bool __lt__(lib__string s)
+		return compare(s) < 0
+	bool __gt__(lib__string s)
+		return compare(s) > 0
 
 /*int string::rfind(const string &s, int start) const
 {
@@ -1461,6 +1466,11 @@ float lib__max(float a, float b)
 	if a > b
 		return a
 	return b
+
+float lib__abs(float x)
+	if x < 0
+		return -x
+	return x
 	
 
 int lib__clampi(int i, int min, int max)
@@ -1629,6 +1639,8 @@ void lib__print(string s)
 			continue
 		if r > 0
 			done += r
+	if lib_print_endl
+		int r = write(stdout, &0x0000000a, 1)
 
 
 
@@ -1869,19 +1881,34 @@ lib__Image* lib__LoadImage(string filename)
 			
 	close(h)
 	return im
-		
+
+
+class lib__Exception
+	lib__string msg
+	void __init__(lib__string _msg)
+		msg = _msg
+	virtual lib__string message()
+		return msg
+
+void lib__raise(lib__Exception* e)
+	string* msg = &e.msg
+	lib_print_endl = true
+	lib__print(*msg)
+	exit(0)	
 
 //--------------------------------------------------------------------------
 // start
 
 void signal_handler_segv()
-	lib__print("  -- Segmentation Fault --\n")
+	lib_print_endl = true
+	lib__print("  -- Segmentation Fault --")
 	exit(0)
 	
 
 void init_lib()
 	__free_error__ = false
 	lib_mem_debug = false
+	lib_print_endl = true
 	
 	int malloc_begin = 0x00b00000
 	cur_break_value = brk(-1)

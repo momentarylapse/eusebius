@@ -171,7 +171,7 @@ class XWindow
 		shm_key = next_window_id + 0x0f810000 // randi()
 		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
 		if shm_id < 0
-			print("x: ERROR can't create shared memory for window\n")
+			print("x: ERROR can't create shared memory for window")
 			// TODO clean-up
 		else
 			buf = shmat(shm_id, 0)
@@ -431,7 +431,7 @@ class Client
 			string[] cmd
 			for i in 0:buf[1]
 				cmd.add(read_string())
-			//print("EXE  " + cmd[0] + "  ---\n")
+			//print("EXE  " + cmd[0] + "  ---")
 			int r = pm.run(cmd)
 			send(XCMD_EXECUTE, r, 0, 0, 0, 0)
 	
@@ -454,10 +454,10 @@ class CommandController
 	
 		sock = socket(0)
 		if !bind(sock, 0x7bcd0123)
-			print("x: Fehler bind()\n")
+			print("x: Fehler bind()")
 			exit(-1)
 		if !listen(sock)
-			print("x: Fehler listen()\n")
+			print("x: Fehler listen()")
 			exit(-1)
 		fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK)
 		
@@ -539,7 +539,7 @@ void main()
 	//execute(["/bin/xtest"], -1, -1)
 	//execute(["/bin/xterm"], -1, -1)
 	
-	print("x: running\n")
+	print("x: running")
 	while true
 		pm.update()
 		cmds.update()

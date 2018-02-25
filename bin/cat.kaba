@@ -16,6 +16,7 @@ void cat(int h)
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	string[] arg
 	get_args(arg)
 	
@@ -25,7 +26,7 @@ void main()
 	for i in 1:arg.num
 		int h = open(arg[i], O_RDONLY)
 		if h < 0
-			print("cat: kann Datei nicht oeffnen: " + arg[i] + "\n")
+			print("cat: kann Datei nicht oeffnen: " + arg[i])
 			exit(-1)
 		cat(h)
 		close(h)

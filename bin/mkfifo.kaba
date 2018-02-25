@@ -3,7 +3,7 @@ use "lib/std.kaba"
 
 void _mkfifo(string filename)
 	if !mkfifo(filename)
-		print("mkfifo: kann FIFO nicht anlegen: " + filename + "\n")
+		print("mkfifo: kann FIFO nicht anlegen: " + filename)
 		exit(lib_error)
 
 

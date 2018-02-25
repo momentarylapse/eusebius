@@ -365,6 +365,7 @@ int getkey()
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	prompt.__init__()
 	vars.__init__()
 	vars.get("PATH").value = "/bin/"

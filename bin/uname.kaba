@@ -10,6 +10,7 @@ class UTSName
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	
 	UTSName u
 	if uname(&u)

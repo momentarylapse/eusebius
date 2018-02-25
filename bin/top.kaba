@@ -68,6 +68,7 @@ void show_task(TaskInfo t, bool show_parent)
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	string[] arg
 	get_args(arg)
 	

@@ -72,6 +72,7 @@ extern int *malloc_first_free
 extern int stdin, stdout
 extern int lib_error
 extern bool lib_mem_debug
+extern bool lib_print_endl
 
 extern string cs2s(cstring cs)
 extern string binary(void *p, int num)

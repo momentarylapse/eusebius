@@ -3,7 +3,7 @@ use "lib/std.kaba"
 
 void _mkdir(string filename)
 	if !mkdir(filename)
-		print("mkdir: kann Verzeichnis nicht anlegen: " + filename + "\n")
+		print("mkdir: kann Verzeichnis nicht anlegen: " + filename)
 		exit(lib_error)
 
 

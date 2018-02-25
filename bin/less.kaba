@@ -32,6 +32,7 @@ void show()
 void main()
 	init_lib()
 	string[] arg
+	lib_print_endl = false
 	get_args(arg)
 	
 	lines.__init__()
