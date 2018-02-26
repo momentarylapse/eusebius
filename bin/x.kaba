@@ -170,6 +170,8 @@ class KeyboardController
 			return KEY_SPACE
 		if k == 0x0e
 			return KEY_BACKSPACE
+		if k == 0xe053
+			return KEY_DELETE
 		if k == 0xe048
 			return KEY_UP
 		if k == 0xe050

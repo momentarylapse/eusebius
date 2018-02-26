@@ -464,6 +464,7 @@ int getchar(int k)
 			return 0x79
 		if k == 0x15
 			return 0x7a
+	//printh(&k, 3)
 	return -1
 
 void ps2_read_key(int k)

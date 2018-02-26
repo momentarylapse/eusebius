@@ -477,6 +477,10 @@ class MtkTextView extends MtkWidget
 				text.remove(cursor_pos - 1)
 				cursor_pos --
 				notify_change()
+		else if key == KEY_DELETE
+			if cursor_pos < text.num
+				text.remove(cursor_pos)
+				notify_change()
 		else if key == KEY_LEFT
 			if cursor_pos > 0
 				cursor_pos --
