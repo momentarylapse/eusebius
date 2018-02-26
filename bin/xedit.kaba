@@ -4,11 +4,12 @@ use "lib/draw.kaba"
 
 class EditWindow extends MtkWindow
 	string filename
+	MtkTextView* v
 	void __init__(string filename)
 		super.__init__("XEdit", 600, 400)
 		self.filename = filename
 		
-		MtkTextView* v = new MtkTextView
+		v = new MtkTextView
 		v.set_font(font_db.get("FreeMono", 15))
 		put(v)
 		
@@ -25,6 +26,17 @@ class EditWindow extends MtkWindow
 			set_title(filename)
 		else
 			set_title("neues Dokument")
+	void save()
+		File* f = FileCreate(filename)
+		if f
+			f.write(v.text)
+			delete f
+	override void onKey(int key)
+		if key == KEY_CONTROL + KEY_S
+			mtk_error_box("save")
+			if filename.num > 0
+				save()
+			
 		
 
 EditWindow* window

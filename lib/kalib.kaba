@@ -1749,6 +1749,11 @@ class lib__File
 		pos = 0
 		return h >= 0
 	
+	bool create(string filename)
+		h = xxx_create(filename)
+		pos = 0
+		return h >= 0
+	
 	void close()
 		if h < 0
 			return
@@ -1768,6 +1773,12 @@ class lib__File
 		pos += r
 		return s
 	
+	int write(lib__string s)
+		int r = xxx_write(h, s.data, s.num)
+		if r > 0
+			pos += r
+		return r
+	
 	int getPos()
 		return pos
 		//return xxx_seek(h, 0, SEEK_CUR)
@@ -1785,8 +1796,14 @@ bool xxx_close(int h)
 int xxx_open(string filename, int flags)
 	return open(filename, flags)
 
+int xxx_create(string filename)
+	return create(filename)
+
 int xxx_read(int h, void* buf, int size)
 	return read(h, buf, size)
+
+int xxx_write(int h, void* buf, int size)
+	return write(h, buf, size)
 
 int xxx_seek(int h, int pos, int mode)
 	seek(h, pos, mode)
@@ -1795,6 +1812,14 @@ lib__File* lib__FileOpen(string filename)
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.open(filename)
+		lib__@free(f)
+		return nil
+	return f
+
+lib__File* lib__FileCreate(string filename)
+	lib__File* f = lib__@malloc(sizeof(lib__File))
+	f.__init__()
+	if !f.create(filename)
 		lib__@free(f)
 		return nil
 	return f

@@ -55,10 +55,13 @@ cstring dev_key_buf
 int dev_key_num
 bool dev_key_escaped
 bool dev_key_shift, dev_key_control, dev_key_altgr
+int dev_key_reading
 int dev_key_open(FileEntry *f)
 	dev_key_num = 0
+	dev_key_reading ++
 	return 0
 int dev_key_close(FileEntry *f)
+	dev_key_reading --
 	return 0
 int dev_key_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 	if dev_key_num == 0
@@ -125,6 +128,7 @@ void InitDrivers()
 	dev_key_control = false
 	dev_key_altgr = false
 	dev_tty_key_num = 0
+	dev_key_reading = 0
 	
 	//FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
 	FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
@@ -465,9 +469,11 @@ int getchar(int k)
 void ps2_read_key(int k)
 		
 	// add to low level device buffer
-	if dev_key_num < 64
-		dev_key_buf[dev_key_num] = k
-		dev_key_num ++
+	if dev_key_reading > 0
+		if dev_key_num < 64
+			dev_key_buf[dev_key_num] = k
+			dev_key_num ++
+		return
 		
 	if k == 0xe0
 		dev_key_escaped = true

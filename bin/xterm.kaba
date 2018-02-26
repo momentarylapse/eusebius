@@ -117,7 +117,26 @@ class ShellWindow extends MtkWindow
 		mtk_add_idle(shell)
 	
 	override void onKey(int key)
-		write(shell.pipe_in[1], &key, 1)
+		if key == KEY_BACKSPACE
+			write(shell.pipe_in[1], &0x7f, 1)
+		else if key == KEY_UP
+			write(shell.pipe_in[1], &0x00415b1b, 3) // ^[A
+		else if key == KEY_DOWN
+			write(shell.pipe_in[1], &0x00425b1b, 3) // ^[B
+		else if key == KEY_LEFT
+			write(shell.pipe_in[1], &0x00435b1b, 3) // ^[C
+		else if key == KEY_RIGHT
+			write(shell.pipe_in[1], &0x00445b1b, 3) // ^[D
+		else if key == KEY_CONTROL + KEY_Z
+			write(shell.pipe_in[1], &0x1a, 1)
+		else if key == KEY_CONTROL + KEY_C
+			write(shell.pipe_in[1], &0x03, 1)
+		else if key == KEY_CONTROL + KEY_D
+			write(shell.pipe_in[1], &0x04, 1)
+		else
+			string s = key_to_str(key)
+			if s.num > 0
+				write(shell.pipe_in[1], &s[0], s.num)
 
 ShellWindow *window
 
