@@ -56,6 +56,7 @@ int dev_key_num
 bool dev_key_escaped
 bool dev_key_shift, dev_key_control, dev_key_altgr
 int dev_key_open(FileEntry *f)
+	dev_key_num = 0
 	return 0
 int dev_key_close(FileEntry *f)
 	return 0

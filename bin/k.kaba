@@ -1,4 +1,5 @@
 use "lib/std.kaba"
+use "lib/io.kaba"
 
 const int CHAR_NL = 0x0a
 const int CHAR_TAB = 0x09
@@ -659,6 +660,16 @@ class FunctionMap extends FunctionInternal
 					inter.stack_pop()
 					ra.a.add(temp.v.copy())
 
+class FunctionOutport extends FunctionInternal
+	override void call(Interpreter *inter, Variable* r, Variable*[] p)
+		if p.num >= 2
+			outportb(p[0].v.int(), p[1].v.int())
+
+class FunctionInport extends FunctionInternal
+	override void call(Interpreter *inter, Variable* r, Variable*[] p)
+		if p.num >= 1
+			r.v.setInt(inportb(p[0].v.int()))
+
 enum
 	TYPE_OPERATOR
 	TYPE_VARIABLE
@@ -1199,6 +1210,8 @@ class SyntaxTree
 		add_internal_func("float", new FunctionFloat)
 		add_internal_func("bool", new FunctionBool)
 		add_internal_func("map", new FunctionMap)
+		add_internal_func("outportb", new FunctionOutport)
+		add_internal_func("inportb", new FunctionInport)
 		
 		lines = lp.parse(source)
 		

@@ -31,6 +31,98 @@ string dir_append(string dir, string e)
 		r += "/"
 	return r + e
 
+string key_to_str(int key)
+	if key == KEY_RETURN
+		return "\n"
+	if key == KEY_SPACE
+		return " "
+	if key == KEY_TAB
+		return "\t"
+	if key == KEY_SMALLER
+		return "<"
+	if key == KEY_PLUS
+		return "+"
+	if key == KEY_MINUS
+		return "-"
+	if key == KEY_FENCE
+		return "#"
+	if key == KEY_DOT
+		return "."
+	if key == KEY_COMMA
+		return ","
+	if key == KEY_AE
+		return "ä"
+	if key == KEY_OE
+		return "ö"
+	if key == KEY_UE
+		return "ü"
+	if key == KEY_SZ
+		return "ß"
+	if key >= KEY_A and key <= KEY_Z
+		string s
+		s.add('a' + key - KEY_A)
+		return s
+	if key >= KEY_0 and key <= KEY_9
+		string s
+		s.add('0' + key - KEY_0)
+		return s
+	if (key & KEY_SHIFT) > 0
+		key -= KEY_SHIFT
+		if key >= KEY_A and key <= KEY_Z
+			string s
+			s.add('A' + key - KEY_A)
+			return s
+		if key == KEY_0
+			return "="
+		if key == KEY_1
+			return "!"
+		if key == KEY_2
+			return "\""
+		if key == KEY_3
+			return "§"
+		if key == KEY_4
+			return "$"
+		if key == KEY_5
+			return "%"
+		if key == KEY_6
+			return "&"
+		if key == KEY_7
+			return "/"
+		if key == KEY_8
+			return "("
+		if key == KEY_9
+			return ")"
+		if key == KEY_PLUS
+			return "*"
+		if key == KEY_FENCE
+			return "'"
+		if key == KEY_COMMA
+			return ";"
+		if key == KEY_DOT
+			return ":"
+		if key == KEY_MINUS
+			return "_"
+		if key == KEY_SMALLER
+			return ">"
+	if (key & KEY_ALT) > 0
+		key -= KEY_ALT
+		if key == KEY_SZ
+			return "\\"
+		if key == KEY_7
+			return "{"
+		if key == KEY_8
+			return "["
+		if key == KEY_9
+			return "]"
+		if key == KEY_0
+			return "}"
+		if key == KEY_PLUS
+			return "~"
+		if key == KEY_SMALLER
+			return "|"
+		if key == KEY_Q
+			return "@"
+
 class MtkSizeNegotiationData
 	int min_width
 	int min_height
@@ -378,20 +470,31 @@ class MtkTextView extends MtkWidget
 		p.end()
 		
 	override void onKey(int key)
-		if key == 10 and !multi_line
-			return
-		if key == 0x7f
+		if key == KEY_RETURN and multi_line
+			insert("\n")
+		else if key == KEY_BACKSPACE
 			if cursor_pos > 0
 				text.remove(cursor_pos - 1)
 				cursor_pos --
 				notify_change()
-		else if key >= 20 or key == 10
-			string s
-			s.add(key)
-			text = text.head(cursor_pos) + s + text.tail(text.num - cursor_pos)
-			//text.insert(cursor_pos, key)
-			cursor_pos ++
-			notify_change()
+		else if key == KEY_LEFT
+			if cursor_pos > 0
+				cursor_pos --
+				notify_change()
+		else if key == KEY_RIGHT
+			if cursor_pos < text.num
+				cursor_pos ++
+				notify_change()
+		else
+			string s = key_to_str(key)
+			if s.num > 0
+				insert(s)
+	
+	void insert(string s)
+		text = text.head(cursor_pos) + s + text.tail(text.num - cursor_pos)
+		//text.insert(cursor_pos, key)
+		cursor_pos ++
+		notify_change()
 			
 	void notify_change()
 		if p
