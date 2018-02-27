@@ -21,6 +21,10 @@ void show_device(PCIDevice *d)
 		print("vga")
 	else if d._class == CLASS_DISPLAY and d.subclass == SUBCLASS_DISPLAY_XGA
 		print("xga")
+	else if d._class == CLASS_MULTIMEDIA and d.subclass == SUBCLASS_MULTIMEDIA_MAUDIO
+		print("sound")
+	else if d._class == CLASS_MULTIMEDIA and d.subclass == SUBCLASS_MULTIMEDIA_AUDIO
+		print("sound")
 	else if d._class == CLASS_STORAGE and d.subclass == SUBCLASS_STORAGE_IDE
 		print("ide")
 	else

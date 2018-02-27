@@ -13,8 +13,15 @@ const int CLASS_DISPLAY = 3
 const int SUBCLASS_DISPLAY_VGA = 0
 const int SUBCLASS_DISPLAY_XGA = 1
 
+const int CLASS_MULTIMEDIA = 4
+const int SUBCLASS_MULTIMEDIA_MAUDIO = 1
+const int SUBCLASS_MULTIMEDIA_AUDIO = 3
+
 const int CLASS_BRIDGE = 6
 const int SUBCLASS_BRIDGE_HOST = 0
+
+const int CLASS_SERIAL_BUS = 0x0c
+const int SUBCLASS_SERIAL_BUS_USB = 3
 
 class PCIDevice
 	int header_type

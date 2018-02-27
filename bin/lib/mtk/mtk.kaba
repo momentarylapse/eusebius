@@ -604,6 +604,7 @@ class MtkWindow extends XWindow
 		p.set_color(col_title)
 		p.draw_str(FRAME_WIDTH, 4.0, title)
 		if button_close_hover
+			p.set_color(Red)
 			p.draw_str(w - 20, 4, "X")
 		
 	override void onMouseMove()

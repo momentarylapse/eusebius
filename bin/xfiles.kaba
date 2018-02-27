@@ -12,13 +12,16 @@ class FilesView extends MtkWidget
 	override bool can_grab_input()
 		return true
 	
-	void set_dir(string dir)
-		self.dir = dir
+	void set_dir(string _dir)
+		dir = _dir
+		if dir[dir.num-1] == '/'
+			dir.remove(dir.num-1)
+		if dir == ""
+			dir = "/"
 		list = DirSearch(dir, "*", true)
 		if win
 			win.set_title(dir)
-		if p
-			draw()
+			win.invalidate_all()
 		//p.end()
 	
 	override void draw()
@@ -49,6 +52,14 @@ class FilesView extends MtkWidget
 					mtk_open(dir_append(dir, e.name))
 	override void onMouseLeftButtonUp()
 	override void onKey(int key)
+		if key == KEY_BACKSPACE
+			if dir.num > 2
+				string[] parts = dir.explode("/")
+				string d
+				for i in 1:parts.num-1
+					d += "/"
+					d += parts[i]
+				set_dir(d)
 	override void onResize()
 		win.set_title(dir)
 		
