@@ -1,0 +1,110 @@
+use "lib/std.kaba"
+use "lib/io.kaba"
+
+
+int io_base
+int mem_key
+int[0]* mem
+
+void sound_reset()
+	print("reset...")
+	outportb(io_base + 6, 1)
+	usleep(5)
+	outportb(io_base + 6, 0)
+	//print("wait 1")
+	while (inportb(io_base + 14) & 0x80) == 0
+		pass
+	//print("wait 2")
+	while inportb(io_base + 10) != 0xaa
+		pass
+	print("ok")
+
+void sound_write(int cmd)
+	while (inportb(io_base + 0x0c) & 0x80) != 0
+		pass
+	outportb(io_base + 0x0c, cmd)
+
+int sound_read()
+	while (inportb(io_base + 0x0e) & 0x80) == 0
+		pass
+	return inportb(io_base + 0x0a)
+
+void sound_setup_dma()
+	int channel = 5
+	// Disable the sound card DMA channel by setting the appropriate mask bit
+	outportb(0xd4, 4 + (channel % 4))
+	// Clear the byte pointer flip-flop
+	outportb(0xd8, 0)
+	// mode... single playback
+	outportb(0xd6, 0x48 + (channel % 4))
+	// base addr
+	outportb(0xc4, mem_key >> 1)
+	outportb(0xc4, mem_key >> 9)
+	// page
+	outportb(0x8b, mem_key >> 17) // ???
+	// count (64k div 2 - 1)
+	outportb(0xc6, 0xff) // lo
+	outportb(0xc6, 0x7f) // hi
+
+void sound_set_sample_rate(int sample_rate)
+	print("a")
+	sound_write(0x41)
+	print("b")
+	sound_write(sample_rate >> 8) // hi
+	print("c")
+	sound_write(sample_rate)      // lo
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	io_base = 0x220
+	
+	
+	
+	// 64k... enough
+	mem_key = 0x00700000//0x0e680000 // randi()
+	print(binary(&mem_key, 4).hex(false))
+	int shm_id = shmget(mem_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) // SHM_DEST)
+	if shm_id < 0
+		print("ERROR can't create shared memory")
+		return
+	else
+		mem = shmat(shm_id, 0)
+	print(p2s(mem))
+	
+
+	for i in 0:16384
+		mem[i] = 0
+		if (i % 128) > 64
+			mem[i] = 0x23452345
+
+	// todo IRQ...
+	
+	sound_reset()
+	
+	sound_write(0xe1)
+	int maj = sound_read()
+	int min = sound_read()
+	print("version " + maj + "." + min)
+	if maj < 4
+		print("ERROR")
+		exit(1)
+
+	print("dma")
+	sound_setup_dma()
+	
+	print("ssr")
+	sound_set_sample_rate(22050)
+	
+	print("start")
+	sound_write(0xb0) // play
+	sound_write(0x30) // mode = stereo + signed
+	sound_write(0xff) // block size??? lo
+	sound_write(0xff) // block size??? hi
+	print("done?")
+	
+	//sleep(5)
+	
+	exit(0)

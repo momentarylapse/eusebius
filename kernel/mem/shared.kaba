@@ -46,21 +46,25 @@ class SharedMemoryController
 		if key < 0 and !absolute
 			return -EINVAL
 		for b,i in blocks
-			if b.key == -1
-				if absolute
-					if !paging.alloc_chunk(key, size, true)
-						return -ENOMEM
-					b.p = key
-				else
-					b.p = paging.find_and_alloc_chunk(size)
-					if b.p == -1
-						return -ENOMEM
-				b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
-				b.key = key
-				b.pid = pid
-				b.refcount = 0
-				b.flags = flags
-				return i
+			if b.key != -1
+				continue
+			if absolute and key == 0x00700000
+				// :P
+				b.p = key
+			else if absolute
+				if !paging.alloc_chunk(key, size, true)
+					return -ENOMEM
+				b.p = key
+			else
+				b.p = paging.find_and_alloc_chunk(size)
+				if b.p == -1
+					return -ENOMEM
+			b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
+			b.key = key
+			b.pid = pid
+			b.refcount = 0
+			b.flags = flags
+			return i
 		return -ENOSPC
 		
 	SharedMemory* get_by_key(int key)

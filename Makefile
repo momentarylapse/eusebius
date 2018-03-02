@@ -10,7 +10,7 @@ PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offse
 LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
-BINS = bin/hello bin/shell bin/cat bin/cmp bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/date bin/sleep bin/uname bin/client bin/lspci bin/sock bin/net bin/error bin/k bin/rm bin/rmdir bin/cake bin/c bin/xterm bin/xtest bin/xedit bin/ximage bin/xfiles bin/xdesktop
+BINS = bin/hello bin/shell bin/cat bin/cmp bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/date bin/sleep bin/uname bin/client bin/lspci bin/sock bin/net bin/sound bin/error bin/k bin/rm bin/rmdir bin/cake bin/c bin/xterm bin/xtest bin/xedit bin/ximage bin/xfiles bin/xdesktop
 PDEP = lib/kalib.kaba kalib_symbols bin/lib/*.kaba bin/lib/*/*.kaba
 LIBS = lib/kalib
 
@@ -111,6 +111,9 @@ bin/lspci: bin/lspci.kaba $(PDEP)
 
 bin/net: bin/net.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/net bin/net.kaba
+
+bin/sound: bin/sound.kaba $(PDEP)
+	$(KABA) $(PFLAGS) -o bin/sound bin/sound.kaba
 
 bin/sock: bin/sock.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/sock bin/sock.kaba
