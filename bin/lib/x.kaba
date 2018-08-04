@@ -59,7 +59,7 @@ class XWindow
 		my = 0
 		active = false
 		c._create_win(self, x, y, w, h)
-	void __delete__()
+	virtual void __delete__()
 		if buf
 			shmdt(buf)
 		for w,i in con.windows
