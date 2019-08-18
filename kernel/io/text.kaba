@@ -26,6 +26,7 @@ void InitTextMode()
 		mov eax, 0x000b8000
 		mov VideoMemory, eax
 	}
+	
 	clrscr()
 	TextColor = 7
 

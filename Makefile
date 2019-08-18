@@ -1,6 +1,6 @@
 KABA  = kaba
 #KABA  = ~/Projekte/Kaba/kaba
-#KABA  = valgrind ~/Projekte/Kaba/Debug/Kaba --verbose
+#KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --x86
 FLAGS =  $(MACHINE) --no-std-lib
 LOADERFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7c00
@@ -18,6 +18,7 @@ all : bochs/c.img
 
 init : init.kaba
 	$(KABA) $(INITFLAGS) -o init init.kaba
+	echo "HALLO" >> init
 
 kernel/kernel : kernel/*.kaba kernel/dev/*.kaba kernel/fs/*.kaba kernel/io/*.kaba kernel/irq/*.kaba kernel/mem/*.kaba kernel/task/*.kaba kernel/time/*.kaba kernel/net/*.kaba
 	$(KABA) $(KERNELFLAGS) -o kernel/kernel kernel/kernel.kaba

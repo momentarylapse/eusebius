@@ -4,7 +4,7 @@ use "lib/draw.kaba"
 
 class TestWindow extends MtkWindow
 	MtkLabel* l
-	override void __init__()
+	void __init__()
 		super.__init__("Test", 600, 400)
 		
 		MtkGrid* g = new MtkGrid(2, 2)

@@ -1,8 +1,10 @@
+use image
 use "lib/std.kaba"
 use "lib/io.kaba"
 use "lib/pci.kaba"
 use "lib/vesa.kaba"
 //use "lib/x.kaba"
+use hui
 
 
 const int XCMD_KILL = 666

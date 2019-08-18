@@ -1,6 +1,7 @@
 use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
+use hui
 
 const int LINE_HEIGHT = 17
 
@@ -107,7 +108,7 @@ class ShellWindow extends MtkWindow
 	History* history
 	Job* shell
 	ShellView* view
-	override void __init__()
+	void __init__()
 		super.__init__("XTerm", 600, 400)
 		history = new History
 		view = new ShellView(history)

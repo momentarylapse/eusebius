@@ -13,7 +13,11 @@ void main()
 		// wir befinden uns noch im 16bit RealMode
 		bits_16
 		// Debug
-		mov al, 'a'
+		mov al, 'L'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		mov al, 'L'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
@@ -39,10 +43,11 @@ void main()
 		int 0x13
 		or ah, ah
 		//jnz _reset_drive
+		jnz _death
 
 		
 		// Debug
-		mov al, 'z'
+		mov al, 'J'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
@@ -50,6 +55,12 @@ void main()
 		// das Image ausführen
 		jmp_far 0x00007e00 // 0x0000:0x7e00
 
+	_death:
+		mov al, 'X'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		jmp $
 
 
 //--------------------------------------------------------------

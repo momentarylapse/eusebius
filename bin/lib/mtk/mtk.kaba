@@ -2,6 +2,7 @@ use "../std.kaba"
 use "../x.kaba"
 use "../draw.kaba"
 use "../ttfx.kaba"
+use hui
 
 const int FRAME_BAR = 30
 const int FRAME_WIDTH = 2
@@ -661,7 +662,7 @@ class MtkWindow extends XWindow
 		show()
 
 class MtkErrorBoxOkButton extends MtkButton
-	override void __init__()
+	void __init__()
 		super.__init__("Ok")
 	override void onClick()
 		win.close()

@@ -1,6 +1,9 @@
 use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
+use file
+use hui
+use image
 
 class FilesView extends MtkWidget
 	string dir
@@ -18,7 +21,7 @@ class FilesView extends MtkWidget
 			dir.remove(dir.num-1)
 		if dir == ""
 			dir = "/"
-		list = DirSearch(dir, "*", true)
+		list = Filesystem.search(dir, "*", true)
 		if win
 			win.set_title(dir)
 			win.invalidate_all()

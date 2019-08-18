@@ -13,7 +13,7 @@ void main()	//-------------------------------------------------------------	// R
 		bits_16
 		
 		// Debug
-		mov al, 'k'
+		mov al, 'I'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
@@ -34,6 +34,13 @@ void main()	//-------------------------------------------------------------	// R
 		mov [_var_mem_size], bx // #64kb
 		shr ax, 0x06
 		add [_var_mem_size], ax // #1kb
+		
+		
+		// Debug
+		mov al, 'a'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
 		
 //--------------------------------------------------------------
 // read memory map
@@ -76,6 +83,12 @@ void main()	//-------------------------------------------------------------	// R
 		xor ax, ax
 		mov [0x5106], ax
 
+		// Debug
+		mov al, 'b'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+
 
 //--------------------------------------------------------------
 // load kernel image
@@ -99,6 +112,12 @@ void main()	//-------------------------------------------------------------	// R
 		mov dx, 0x0080 // head 0, disc 0
 		int 0x13
 		
+		// Debug
+		mov al, '1'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		
 		mov ax, 0x2000
 		mov es, ax
 		mov bx, 0x0000 // 0x20000
@@ -107,6 +126,15 @@ void main()	//-------------------------------------------------------------	// R
 		mov cx, 0x001f // sector 0x1f, cylinder 0
 		mov dx, 0x0280 // head 2, disc 0
 		int 0x13
+		or ah, ah
+		//jnz _reset_drive
+		jnz _death
+		
+		// Debug
+		mov al, '2'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
 		
 		mov ax, 0x3000
 		mov es, ax
@@ -117,17 +145,42 @@ void main()	//-------------------------------------------------------------	// R
 		mov dx, 0x0480 // head 4, disc 0
 		int 0x13
 		
-		mov ax, 0x4000
-		mov es, ax
-		mov bx, 0x0000 // 0x40000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x0023 // sector 0x23, cylinder 0
-		mov dx, 0x0680 // head 6, disc 0
-		int 0x13
-		
 		or ah, ah
 		//jnz _reset_drive
+		jnz _death
+		
+		// Debug
+		mov al, '3'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		
+//		mov ax, 0x4000
+//		mov es, ax
+//		mov bx, 0x0000 // 0x40000
+//		mov ah, 0x02 // "ReadSector"
+//		mov al, 0x80 // 128 sectors * 512 bytes = 64k
+//		mov cx, 0x0023 // sector 0x23, cylinder 0
+//		mov dx, 0x0680 // head 6, disc 0
+//		int 0x13
+		
+//		or ah, ah
+//		//jnz _reset_drive
+//		jnz _death
+		
+//		// Debug
+//		mov al, '4'
+//		mov ah, 0x0e
+//		mov bx, 0x0000
+//		int 0x10
+		
+		
+		// Debug
+		mov al, 'c'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+
 
 
 //--------------------------------------------------------------
@@ -136,7 +189,7 @@ void main()	//-------------------------------------------------------------	// R
 		lgdt [_gdtr]
 
 		// Debug
-		mov al, '3'
+		mov al, 'd'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
@@ -176,7 +229,7 @@ void main()	//-------------------------------------------------------------	// R
 		//jmp $
 		
 		mov eax, 0x000b8000
-		mov [eax], 'M'
+		mov [eax], 'P'
 		add eax, 0x00000001
 		mov [eax], 0x20
 		
@@ -199,6 +252,12 @@ void main()	//-------------------------------------------------------------	// R
 		jmp eax
 
 
+	_death:
+		mov al, 'X'
+		mov ah, 0x0e
+		mov bx, 0x0000
+		int 0x10
+		
 
 		// zur Sicherheit....
 		jmp $

@@ -1,3 +1,4 @@
+use image
 use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"

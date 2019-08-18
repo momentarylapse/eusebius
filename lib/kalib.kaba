@@ -1,3 +1,5 @@
+use image
+
 const int MALLOC_OFFSET = 0x00b00000
 const int MALLOC_STOPPER = 8
 const int MALLOC_SMALL_SIZE = 8
@@ -985,7 +987,7 @@ class lib__@DynamicArray
 
 class lib__string extends lib__@DynamicArray
 	override char[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(1)
 	override void __delete__()
 		__mem_clear__()
@@ -1254,7 +1256,7 @@ lib__string binary(void *p, int num)
 
 class lib__int@list extends lib__@DynamicArray
 	override int[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(sizeof(int))
 	override void __delete__()
 		clear()
@@ -1287,7 +1289,7 @@ class lib__int@list extends lib__@DynamicArray
 
 class lib__float@list extends lib__@DynamicArray
 	override float[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(sizeof(float))
 	override void __delete__()
 		clear()
@@ -1320,7 +1322,7 @@ class lib__float@list extends lib__@DynamicArray
 
 class lib__bool@list extends lib__@DynamicArray
 	override bool[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(sizeof(bool))
 	override void __delete__()
 		clear()
@@ -1346,7 +1348,7 @@ class lib__bool@list extends lib__@DynamicArray
 
 class lib__string@list extends lib__@DynamicArray
 	override lib__string[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(sizeof(lib__string))
 	override void __delete__()
 		for i in 0:num
@@ -1607,7 +1609,7 @@ lib__string _complex2s(lib__complex c)
 
 class lib__complex@list extends lib__@DynamicArray
 	override complex[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(sizeof(complex))
 	override void __delete__()
 		clear()
@@ -1663,7 +1665,7 @@ class lib__DirEntry
 
 class lib__DirEntry@list extends lib__@DynamicArray
 	override lib__DirEntry[0]* data
-	override void __init__()
+	void __init__()
 		__mem_init__(sizeof(lib__DirEntry))
 	override void __delete__()
 		for i in 0:num
@@ -1704,7 +1706,7 @@ class dirent_struct
 		e.size = size
 		e.is_dir = (type == 1)
 
-lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs)
+lib__DirEntry@list lib__Filesystem@@search(string dirname, string filter, bool allow_dirs)
 	lib__DirEntry@list l
 	lib__print("") // ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
@@ -1808,7 +1810,7 @@ int xxx_write(int h, void* buf, int size)
 int xxx_seek(int h, int pos, int mode)
 	seek(h, pos, mode)
 
-lib__File* lib__FileOpen(string filename)
+lib__File* lib__Filesystem@@open(string filename)
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.open(filename)
@@ -1816,7 +1818,7 @@ lib__File* lib__FileOpen(string filename)
 		return nil
 	return f
 
-lib__File* lib__FileCreate(string filename)
+lib__File* lib__Filesystem@@create(string filename)
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.create(filename)
@@ -1824,7 +1826,7 @@ lib__File* lib__FileCreate(string filename)
 		return nil
 	return f
 
-lib__string lib__FileRead(string filename)
+lib__string lib__Filesystem@@read(string filename)
 	lib__string content
 	int h = open(filename, O_RDONLY)
 	if h < 0

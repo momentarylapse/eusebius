@@ -119,9 +119,9 @@ class Ext2Inode
 	int dummy
 	int[3] xx_high
 	bool isDir()
-		return (rights.int() & 0xf000) == 0x4000
+		return (rights._int() & 0xf000) == 0x4000
 	bool isFile()
-		return (rights.int() & 0xf000) == 0x8000
+		return (rights._int() & 0xf000) == 0x8000
 
 class Ext2SuperBlock
 	int inodes_count
@@ -537,13 +537,13 @@ class MountPointExt2 extends MountPoint
 		int p = 0
 		while p < dir.size
 			Ext2DirEntryHeader *d = &cont[p]
-			if d.rec_len.int() == 0
+			if d.rec_len._int() == 0
 				break
 			cstring name
 			int len = d.name_len
 			memcpy(&name, &cont[p + 8], len)
 			name[len] = 0
-			p += d.rec_len.int()
+			p += d.rec_len._int()
 			if d.name_len == 0 or d.inode == 0
 				continue
 				

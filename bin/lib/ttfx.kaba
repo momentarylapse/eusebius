@@ -1,3 +1,4 @@
+use file
 use "std.kaba"
 
 string hex(void* _p, int size)
@@ -60,7 +61,7 @@ class TTFFont
 	
 	bool load(string filename)
 
-		f = FileOpen(filename)
+		f = Filesystem.open(filename)
 		if !f
 			print("kann Datei nicht lesen\n")
 			return false

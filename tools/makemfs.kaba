@@ -1,12 +1,14 @@
+use file
+
 const int ClusterSize = 2048
 
 void main(string[] arg)
 	if arg.num < 2
 		print("usage: kaba makemfs.kaba <out-file> <in-dir>")
 		return
-	DirEntry[] list = DirSearch(arg[1], "*", false)
+	DirEntry[] list = Filesystem.search(arg[1], "*", false)
 	print(list.str())
-	File *f = FileCreate(arg[0])
+	File *f = Filesystem.create(arg[0])
 	f.seek(ClusterSize)
 
 	// root directory

@@ -1,3 +1,4 @@
+use file
 use "lib/std.kaba"
 use "lib/io.kaba"
 
@@ -551,7 +552,7 @@ class Function
 
 
 class FunctionInternal extends Function
-	override void __init__()
+	void __init__()
 		super.__init__("")
 		is_internal = true
 
@@ -1478,7 +1479,7 @@ void main()
 	if input.num > 0
 		string source = input
 		if from_file
-			source = FileRead(input)
+			source = Filesystem.read(input)
 		try
 			eval(source)
 		except Exception as e

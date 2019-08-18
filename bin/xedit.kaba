@@ -1,6 +1,8 @@
+use file
 use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
+use hui
 
 class EditWindow extends MtkWindow
 	string filename
@@ -13,7 +15,7 @@ class EditWindow extends MtkWindow
 		v.set_font(font_db.get("FreeMono", 15))
 		put(v)
 		
-		/*File* f = FileOpen(filename)
+		/*File* f = Filesystem.open(filename)
 		if f
 			string s
 			
@@ -22,12 +24,12 @@ class EditWindow extends MtkWindow
 		else
 			e.set_text("kann " + filename + " nicht oeffnen")*/
 		if filename != ""
-			v.set_text(FileRead(filename))
+			v.set_text(Filesystem.read(filename))
 			set_title(filename)
 		else
 			set_title("neues Dokument")
 	void save()
-		File* f = FileCreate(filename)
+		File* f = Filesystem.create(filename)
 		if f
 			f.write(v.text)
 			delete f
