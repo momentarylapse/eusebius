@@ -19,7 +19,7 @@ void main()
 		bind(s, 123)
 		listen(s)
 		fcntl(s, F_SETFL, O_RDWR | O_NONBLOCK)
-		print("server laeuft\n")
+		print("server running\n")
 		while true
 			print(".")
 			int ss = accept(s)
@@ -44,11 +44,11 @@ void main()
 		int s = socket(0)
 		if connect(s, 123)
 			sleep(4)
-			string t = "hallo"
+			string t = "hello"
 			if write(s, &t[0], t.num) < 0
-				print("kann nicht senden!\n")
+				print("can not send!\n")
 		else
-			print("kann nicht verbinden!\n")
+			print("can not connect!\n")
 		
 	
 	exit(0)

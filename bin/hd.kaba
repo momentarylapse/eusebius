@@ -8,7 +8,7 @@ void hd(int h, int skip, int length)
 		int n = min(128, skip)
 		int r = read(h, &s[0], n)
 		if r < 0
-			print("\nFehler beim Lesen...\n")
+			print("\nerror reading...\n")
 		if r <= 0
 			return
 		skip -= r
@@ -17,7 +17,7 @@ void hd(int h, int skip, int length)
 		int n = min(128, length)
 		int r = read(h, &s[0], n)
 		if r < 0
-			print("\nFehler beim Lesen...\n")
+			print("\nerror reading...\n")
 		if r <= 0
 			break
 		s.resize(r)
@@ -55,7 +55,7 @@ void main()
 	for f in files
 		int h = open(f, O_RDONLY)
 		if h < 0
-			print("hd: kann Datei nicht oeffnen: " + f + "\n")
+			print("hd: can not open file: " + f + "\n")
 			exit(-1)
 		hd(h, skip, length)
 		close(h)

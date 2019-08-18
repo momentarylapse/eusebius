@@ -831,7 +831,7 @@ void idle_func()
 		}
 
 void InitTasks()
-	prints("init Tasks...")
+	prints("init tasks...")
 	
 	// null descriptor
 	for g in GlobalDescriptorTable

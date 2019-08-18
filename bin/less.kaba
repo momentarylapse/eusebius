@@ -39,11 +39,11 @@ void main()
 	cur_line = 0
 	
 	if arg.num < 2
-		print("less: Datei?\n")
+		print("less: file?\n")
 		exit(1)
 	int h = open(arg[1], O_RDONLY)
 	if h < 0
-		print("less: kann Datei nicht oeffnen: " + arg[1] + "\n")
+		print("less: can not open file: " + arg[1] + "\n")
 		exit(-1)
 	
 	string cont
@@ -52,7 +52,7 @@ void main()
 		s.resize(128)
 		int r = read(h, &s[0], 128)
 		if r < 0
-			print("\nFehler beim Lesen...\n")
+			print("\nerror reading...\n")
 		if r <= 0
 			break
 		s.resize(r)

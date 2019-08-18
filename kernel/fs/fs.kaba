@@ -329,7 +329,7 @@ class FileSystemData
 			return -1
 		if !dir
 			return -1
-		prints("mounte ")
+		prints("mounting ")
 		prints(fs_name)
 		prints(" ")
 		prints(dev.name)

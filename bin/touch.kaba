@@ -4,7 +4,7 @@ use "lib/std.kaba"
 void touch(string filename)
 	int h = create(filename)
 	if h < 0
-		print("touch: kann Datei nicht anlegen: " + filename)
+		print("touch: can not create file: " + filename)
 		exit(h)
 	close(h)
 

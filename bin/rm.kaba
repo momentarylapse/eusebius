@@ -5,11 +5,11 @@ void _rm(string filename)
 	if unlink(filename)
 		return
 	if lib_error == -ENOENT
-		print("rm: " + filename + " existiert nicht")
+		print("rm: " + filename + " does not exist")
 	else if lib_error == -EISDIR
-		print("rm: " + filename + " ist ein Verzeichnis")
+		print("rm: " + filename + " is a directory")
 	else
-		print("rm: kann Datei nicht loeschen: " + filename)
+		print("rm: can not delete file: " + filename)
 	exit(lib_error)
 
 

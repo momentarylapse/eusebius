@@ -437,7 +437,7 @@ class PageController
 	PageDirectory *create_page_directory()
 		int pos = alloc_page()
 		if pos == -1
-			panic("kann PageDirectory nicht anlegen")
+			panic("can not create page directory")
 			return nil
 		PageDirectory *pd = _i2p(pos)
 		pd.clear()

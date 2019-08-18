@@ -10,18 +10,25 @@ string i2s2(int i, int n)
 	return r + s
 
 
-void ls(string dirname)
-	DirEntry[] l = Filesystem.search(dirname, "", true)
+void ls(string dirname, bool extended)
+	let l = Filesystem.search(dirname, "", true)
 	if lib_error != 0
-		print("ls: kann Verzeichnis nicht oeffnen: " + dirname + "\n")
-	
-	for e in l
-		if e.is_dir
-			print("Verzeichnis ")
-		else
-			print("Datei       ")
-		print(i2s2(e.size, 8))
-		print(" " + e.name + "\n")
+		print("ls: can not read directory: " + dirname + "\n")
+
+	if extended
+		for e in l
+			if e.is_dir
+				print("directory ")
+			else
+				print("file      ")
+			print(i2s2(e.size, 8))
+			print(" " + e.name + "\n")
+	else
+		for e,i in l
+			if i > 0
+				print("  ")
+			print(e.name)
+		print("\n")
 
 
 void main()
@@ -30,9 +37,16 @@ void main()
 	string[] arg
 	get_args(arg)
 	
+	bool extended = false
+	int n_shown = 0
+	
 	for i in 1:arg.num
-		ls(arg[i])
-	if arg.num == 1
-		ls(getcwd())
+		if arg[i] == "-l"
+			extended = true
+		else
+			ls(arg[i], extended)
+			n_shown ++
+	if n_shown == 0
+		ls(getcwd(), extended)
 	
 	exit(0)

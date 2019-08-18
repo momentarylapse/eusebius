@@ -198,7 +198,7 @@ class AtaController
 
 	void init()
 		NumPartitions = 0
-		prints("ATA Geraete:\n")
+		prints("ATA devices:\n")
 	
 		// set up Device Control register
 		outportb(0x3f6, 0x0a)
@@ -359,7 +359,7 @@ void ReadPartitions(int disk_no)
 		DrawHex(n*3,2,&AtaBuffer[n],1)*/
 		
 void ShowPartitions()
-	prints("Primaere Partitionen:     Offset   Groesse\n")
+	prints("primary partitions:       offset   size\n")
 	for n in 0:NumPartitions
 		PartitionData *p = &Partition[n]
 		prints("/dev/")
@@ -383,7 +383,7 @@ void ShowPartitions()
 		else if p.type == 0x07
 			prints("NTFS")
 		else if p.type == 0x0f
-			prints("Erweitert...")
+			prints("Extended...")
 		else
 			printh(&p.type, 1)
 		prints("\n")

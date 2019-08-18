@@ -58,35 +58,35 @@ void get_error_text(int i, cstring s)
 	_i2s(i, &nn)
 	strcat(&s, &nn)
 	if i==0
-		strcat(&s, &": Division durch Null")
+		strcat(&s, &": division by zero")
 	if i==1
-		strcat(&s, &": Debug")
+		strcat(&s, &": debug")
 	if i==3
-		strcat(&s, &": Breakpoint")
+		strcat(&s, &": breakpoint")
 	if i==4
-		strcat(&s, &": Overflow")
+		strcat(&s, &": overflow")
 	if i==5
-		strcat(&s, &": Bounds Check")
+		strcat(&s, &": bounds check")
 	if i==6
-		strcat(&s, &": Invalider Opcode")
+		strcat(&s, &": invalid opcode")
 	if i==7
-		strcat(&s, &": kein Ko-Prozessor")
+		strcat(&s, &": no coprocessor")
 	if i==8
-		strcat(&s, &": System-Fehler")
+		strcat(&s, &": system error")
 	if i==9
-		strcat(&s, &": Ko-Prozessor-Segment overrun")
+		strcat(&s, &": coprocessor segment overrun")
 	if i==10
-		strcat(&s, &": Invalides TSS")
+		strcat(&s, &": invalid TSS")
 	if i==11
-		strcat(&s, &": Segment fehlt")
+		strcat(&s, &": segment missing")
 	if i==12
-		strcat(&s, &": Stack-Fehler")
+		strcat(&s, &": stack error")
 	if i==13
-		strcat(&s, &": General Protection Fault")
+		strcat(&s, &": general protection fault")
 	if i==14
-		strcat(&s, &": Page-Fault")
+		strcat(&s, &": page fault")
 	if i==16
-		strcat(&s, &": Koprozessor-Fehler")
+		strcat(&s, &": coprocessor error")
 	strcat(&s, &"  8-P")
 
 void int_handler(int i)
@@ -167,7 +167,7 @@ class ErrorController
 	Task*[16] tasks
 
 	void init()
-		prints("setze Fehler-Handler")
+		prints("setting error handler")
 
 		handler[ 0] = &int_00
 		handler[ 1] = &int_01

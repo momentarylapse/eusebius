@@ -151,7 +151,7 @@ void main()
 	
 	window = new ShellWindow
 	if !window.buf
-		print("client: kann kein Fenster erstellen\n")
+		print("client: can not create a window\n")
 		exit(-2)
 	window.show()
 		

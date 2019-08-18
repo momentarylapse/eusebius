@@ -5,13 +5,13 @@ void _rmdir(string filename)
 	if !rmdir(filename)
 		return
 	if lib_error == -ENOENT
-		print("rm: " + filename + " existiert nicht")
+		print("rm: " + filename + " does not exist")
 	else if lib_error == -ENOTDIR
-		print("rm: " + filename + " ist kein Verzeichnis")
+		print("rm: " + filename + " is a directory")
 	else if lib_error == -ENOTEMPTY
-		print("rm: " + filename + " ist nicht leer")
+		print("rm: " + filename + " is not empty")
 	else
-		print("rm: kann " + filename + " nicht loeschen, aber weiss nicht, warum")
+		print("rm: can not delete " + filename + ", no idea why")
 	exit(lib_error)
 
 

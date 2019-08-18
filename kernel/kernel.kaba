@@ -35,7 +35,7 @@ void LoadKalib()
 	prints("loading kalib... ")
 	int h = KernelTask.sys_open(_p2i(&"/lib/kalib"), O_RDONLY)
 	if h < 0
-		panic("kann /lib/kalib nicht lesen!")
+		panic("can not read file /lib/kalib!")
 		return
 	int addr = KALIB_LOCATION
 	int size = 0
@@ -55,12 +55,12 @@ void main()
 	InitTextMode()
 	InitHeap()
 	
-	prints("Willkommen zu ")
+	prints("Welcome to ")
 	prints(KERNEL_NAME)
 	prints(" ")
 	prints(KERNEL_VERSION)
-	prints("   (c) by MichiSoft TM 2018\n")
-	prints("Speicher: ")
+	prints("   (c) by MichiSoft TM 2019\n")
+	prints("memory: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
 	
@@ -110,7 +110,7 @@ void main()
 	int stdout = KernelTask.sys_open(_p2i(&"/dev/tty"), O_WRONLY)
 	
 	if KernelTask.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
-		panic("kann /bin/shell-Datei nicht lesen!")
+		panic("can not read file /bin/shell!")
 	
 	StartScheduler()
 	panic("test")
@@ -118,5 +118,5 @@ void main()
 	while true
 		nil
 	
-	panic("keine Tasks")
+	panic("no tasks")
 

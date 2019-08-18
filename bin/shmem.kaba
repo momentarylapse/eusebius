@@ -26,11 +26,11 @@ void main()
 	
 	int[0]* ip = p
 	
-	print("lese: ")
+	print("read: ")
 	print(ip[0])
 	print("\n")
 	
-	print("schreibe: ")
+	print("write: ")
 	ip[0] = 13
 	print("ok\n")
 	

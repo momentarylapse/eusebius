@@ -42,7 +42,7 @@ void int_timer()
 
 void StartScheduler()
 	RunningPid = 0
-	prints("starte Scheduler\n")
+	prints("starting scheduler\n")
 	
 	SchedulerTask = AddTaskKernel("scheduler", &int_timer, SCHEDULER_STACK_SIZE, KernelTask)
 	

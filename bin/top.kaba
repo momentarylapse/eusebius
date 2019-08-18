@@ -82,7 +82,7 @@ void main()
 	
 	SysInfo s
 	if !sysinfo(s)
-		print("Fehler sysinfo\n")
+		print("sysinfo error\n")
 		exit(1)
 	print("uptime: ")
 	print(sec2s(s.uptime))
