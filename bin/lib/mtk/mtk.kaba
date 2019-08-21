@@ -177,19 +177,19 @@ class MtkWidget
 		r.x1 = x + w
 		r.y1 = y + h
 	
-		onResize()
+		on_resize()
 		
 	void set_font(FontDescriptor* f)
 		font = f
 		if p
 			p.font = f
 	
-	virtual void onResize()
+	virtual void on_resize()
 	virtual void draw()
-	virtual void onMouseMove()
-	virtual void onMouseLeftButtonDown()
-	virtual void onMouseLeftButtonUp()
-	virtual void onKey(int key)
+	virtual void on_mouse_move()
+	virtual void on_mouse_left_button_down()
+	virtual void on_mouse_left_button_up()
+	virtual void on_key(int key)
 
 class MtkLabel extends MtkWidget
 	string text
@@ -273,7 +273,7 @@ class MtkGrid extends MtkWidget
 		int dy = (hh + GRID_MARGIN) * y
 		c.set_win(win, r.x0 + dx, r.y0 + dy, ww, hh)
 		
-	override void onResize()
+	override void on_resize()
 		// plan child sizes...
 		
 		// min
@@ -379,9 +379,9 @@ class MtkButton extends MtkWidget
 		draw()
 		p.end()
 		if state == BUTTON_STATE_CLICK
-			onClick()
+			on_click()
 	
-	override void onMouseMove()
+	override void on_mouse_move()
 		bool inside = r.inside(win.mx, win.my)
 		if inside
 			if win.lbut
@@ -392,7 +392,7 @@ class MtkButton extends MtkWidget
 			set_state(BUTTON_STATE_DEFAULT)
 		// not the best way :P
 		
-	virtual void onClick()
+	virtual void on_click()
 
 class MtkTextView extends MtkWidget
 	string text
@@ -465,12 +465,12 @@ class MtkTextView extends MtkWidget
 			p.line_to(cx, cy + 20)
 			p.strike()
 	
-	override void onMouseLeftButtonDown()
+	override void on_mouse_left_button_down()
 		cursor_pos = to_text(mx, my)
 		draw()
 		p.end()
 		
-	override void onKey(int key)
+	override void on_key(int key)
 		if key == KEY_RETURN and multi_line
 			insert("\n")
 		else if key == KEY_BACKSPACE
@@ -608,24 +608,24 @@ class MtkWindow extends XWindow
 			p.set_color(Red)
 			p.draw_str(w - 20, 4, "X")
 		
-	override void onMouseMove()
+	override void on_mouse_move()
 		for w in widgets
 			w.mx = mx - w.r.x0
 			w.my = my - w.r.y0
-			w.onMouseMove()
+			w.on_mouse_move()
 		bool new_button_close_hover = frame and (my < FRAME_BAR) and (mx > w - FONT_SIZE_BAR - FRAME_WIDTH)
 		if new_button_close_hover != button_close_hover
 			button_close_hover = new_button_close_hover
 			draw()
 			invalidate(w - 30, 0, w, FRAME_BAR)
 			
-	override void onMouseLeftButtonDown()
+	override void on_mouse_left_button_down()
 		//XWindow* ww = xcon.get_at_cursor()
 		if self == xcon.cursor_win
 			activate()
 			if frame and my < FRAME_BAR
 				if button_close_hover
-					if onCloseRequest()
+					if on_close_request()
 						//exit(0)
 						close()
 				else
@@ -642,34 +642,34 @@ class MtkWindow extends XWindow
 									old.draw()
 								w.draw()
 								p.end()
-						w.onMouseLeftButtonDown()
+						w.on_mouse_left_button_down()
 					
-	override void onMouseLeftButtonUp()
+	override void on_mouse_left_button_up()
 		if dragging
 			drag_stop()
 			dragging = false
 		for w in widgets
-			w.onMouseLeftButtonUp()
+			w.on_mouse_left_button_up()
 			
-	override void onKey(int key)
+	override void on_key(int key)
 		if input_widget
-			input_widget.onKey(key)
+			input_widget.on_key(key)
 	
-	virtual bool onCloseRequest()
+	virtual bool on_close_request()
 		return true
 	
-	override void handleActivate()
+	override void handle_activate()
 		show()
 
 class MtkErrorBoxOkButton extends MtkButton
 	void __init__()
 		super.__init__("Ok")
-	override void onClick()
+	override void on_click()
 		win.close()
 
 class MtkErrorBox extends MtkWindow
 	void __init__(string message)
-		super.__init__("Fehler", 300, 100)
+		super.__init__("Error", 300, 100)
 		MtkGrid* g = new MtkGrid(1, 2)
 		put(g)
 		
@@ -699,6 +699,7 @@ MtkWindow*[] mtk_windows
 
 void mtk_init()
 	init_lib()
+	stdout = open("/dev/tty", O_WRONLY)
 	idles.__init__()
 	mtk_windows.__init__()
 	
@@ -717,7 +718,7 @@ void mtk_init()
 	
 	xcon = new XConnection
 	if xcon.error
-		print("client: kann nicht mit x verbinden\n")
+		print("client: can not connect to x\n")
 		exit(-1)
 	
 	font_db = new FontDB

@@ -44,8 +44,8 @@ class FilesView extends MtkWidget
 			p.draw_str(30, 10 + i * 20, e.name)
 		//p.draw_str(200, 10, dir)
 	
-	override void onMouseMove()
-	override void onMouseLeftButtonDown()
+	override void on_mouse_move()
+	override void on_mouse_left_button_down()
 		for e,i in list
 			if mx >= 10 and mx < 200 and my >= 10+i*20 and my < 30+i*20
 				if e.is_dir
@@ -53,8 +53,8 @@ class FilesView extends MtkWidget
 					break
 				else
 					mtk_open(dir_append(dir, e.name))
-	override void onMouseLeftButtonUp()
-	override void onKey(int key)
+	override void on_mouse_left_button_up()
+	override void on_key(int key)
 		if key == KEY_BACKSPACE
 			if dir.num > 2
 				string[] parts = dir.explode("/")
@@ -63,7 +63,7 @@ class FilesView extends MtkWidget
 					d += "/"
 					d += parts[i]
 				set_dir(d)
-	override void onResize()
+	override void on_resize()
 		win.set_title(dir)
 		
 

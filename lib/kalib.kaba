@@ -615,11 +615,6 @@ int lib__loopi(int i, int min, int max)
 		return i - d * n
 	return i
 
-float lib__max(float a, float b)
-	if a > b
-		return a
-	return b
-
 //--------------------------------------------------------------------------
 // memory management
 

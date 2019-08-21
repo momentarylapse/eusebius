@@ -523,7 +523,7 @@ class Client
 			return
 		if n <= 0
 			return
-		kprint("x: empfange\n")
+		kprint("x: recv\n")
 		if buf[0] == XCMD_KILL
 			kill_me = true
 		else if buf[0] == XCMD_NEW_WINDOW
@@ -608,10 +608,10 @@ class CommandController
 	
 		sock = socket(0)
 		if !bind(sock, 0x7bcd0123)
-			print("x: Fehler bind()")
+			print("x: bind() failed")
 			exit(-1)
 		if !listen(sock)
-			print("x: Fehler listen()")
+			print("x: listen() failed")
 			exit(-1)
 		fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK)
 		
@@ -691,6 +691,7 @@ void main()
 	
 	execute(["/bin/xdesktop"], -1, -1)
 	//execute(["/bin/xtest"], -1, -1)
+	//execute(["/bin/c"], -1, -1)
 	//execute(["/bin/xterm"], -1, -1)
 	
 	print("x: running")

@@ -117,7 +117,7 @@ class ShellWindow extends MtkWindow
 		shell = new Job(["/bin/shell"])
 		mtk_add_idle(shell)
 	
-	override void onKey(int key)
+	override void on_key(int key)
 		if key == KEY_BACKSPACE
 			write(shell.pipe_in[1], &0x7f, 1)
 		else if key == KEY_UP

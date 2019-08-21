@@ -73,8 +73,10 @@ class XWindow
 		if !buf
 			kprint("  -- client: konnte Fenster-Puffer nicht anlegen --\n")
 	void invalidate(int x0, int y0, int x1, int y1)
+		print("inval...")
 		con.send(XCMD_WINDOW_INVALIDATE, id, x0, y0, x1, y1)
 	void invalidate_all()
+		print("inval all...")
 		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
 	void move(int x, int y)
 		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
@@ -91,17 +93,17 @@ class XWindow
 		con.just_send(XCMD_WINDOW_DRAG_STOP, id, 0, 0, 0, 0)
 	void close()
 		con.just_send(XCMD_DEL_WINDOW, id, 0, 0, 0, 0)
-	virtual void onKey(int key)
+	virtual void on_key(int key)
 		//print("c-win: key " + key + "\n")
-	virtual void onMouseMove()
-	virtual void onMouseLeftButtonDown()
-	virtual void onMouseLeftButtonUp()
-	virtual void onMouseMiddleButtonDown()
-	virtual void onMouseMiddleButtonUp()
-	virtual void onMouseRightButtonDown()
-	virtual void onMouseRightButtonUp()
+	virtual void on_mouse_move()
+	virtual void on_mouse_left_button_down()
+	virtual void on_mouse_left_button_up()
+	virtual void on_mouse_middle_button_down()
+	virtual void on_mouse_middle_button_up()
+	virtual void on_mouse_right_button_down()
+	virtual void on_mouse_right_button_up()
 		//print("c-win: mouse " + x + "/" + y + "   " + flags + "\n")
-	virtual void handleActivate()
+	virtual void handle_activate()
 		
 
 class XConnection
@@ -123,7 +125,7 @@ class XConnection
 		// connect
 		sock = socket(0)
 		if !connect(sock, 0x7bcd0123)
-			kprint("client: connect (2) fehlgeschlagen\n")
+			kprint("client: connect (2) failed\n")
 			return
 		fcntl(sock, F_SETFL, O_RDWR | O_NONBLOCK)
 	
@@ -172,7 +174,7 @@ class XConnection
 		wait_recv(XCMD_NEW_WINDOW)
 		kprint("....client///  ")
 		if buf[0] != XCMD_NEW_WINDOW
-			kprint("   -- client: kein neues Fenster --\n")
+			kprint("   -- client: no new window --\n")
 			return false
 		kprint("ok")
 		int win_id = buf[1]
@@ -234,19 +236,19 @@ class XConnection
 				w.lbut = new_lbut
 				w.mbut = new_mbut
 				w.rbut = new_rbut
-				w.onMouseMove()
+				w.on_mouse_move()
 				if !lbut and new_lbut
-					w.onMouseLeftButtonDown()
+					w.on_mouse_left_button_down()
 				if !mbut and new_mbut
-					w.onMouseMiddleButtonDown()
+					w.on_mouse_middle_button_down()
 				if !rbut and new_rbut
-					w.onMouseRightButtonDown()
+					w.on_mouse_right_button_down()
 				if lbut and !new_lbut
-					w.onMouseLeftButtonUp()
+					w.on_mouse_left_button_up()
 				if mbut and !new_mbut
-					w.onMouseMiddleButtonUp()
+					w.on_mouse_middle_button_up()
 				if rbut and !new_rbut
-					w.onMouseRightButtonUp()
+					w.on_mouse_right_button_up()
 			lbut = new_lbut
 			mbut = new_mbut
 			rbut = new_rbut
@@ -256,7 +258,7 @@ class XConnection
 			int key = buf[1]
 			for w in windows
 				if w.active
-					w.onKey(key)
+					w.on_key(key)
 		else if buf[0] == XCMD_EVENT_DRAW
 			//kprint("client: draw\n")
 			pass
@@ -274,7 +276,7 @@ class XConnection
 				bool old_active = w.active
 				w.active = (w.id == id)
 				if w.active != old_active
-					w.handleActivate()
+					w.handle_activate()
 		
 		//kprint("  c:/poll  ")
 		return true

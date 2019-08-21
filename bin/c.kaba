@@ -11,7 +11,7 @@ class CWindow extends XWindow
 		FontDB* font_db = new FontDB
 		p.font = font_db.get("Cantarell", 60)
 	
-	override void onKey(int key)
+	override void on_key(int key)
 		if key == 'w'
 			y -= 5
 		if key == 's'

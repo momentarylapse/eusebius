@@ -33,7 +33,7 @@ class EditWindow extends MtkWindow
 		if f
 			f.write(v.text)
 			delete f
-	override void onKey(int key)
+	override void on_key(int key)
 		if key == KEY_CONTROL + KEY_S
 			mtk_error_box("save")
 			if filename.num > 0
@@ -41,7 +41,7 @@ class EditWindow extends MtkWindow
 		else
 			//super.onKey(key)
 			if input_widget
-				input_widget.onKey(key)
+				input_widget.on_key(key)
 			
 		
 

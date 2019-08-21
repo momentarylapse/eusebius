@@ -9,7 +9,7 @@ class LauncherButton extends MtkButton
 	void __init__(string title, string[] program)
 		super.__init__(title)
 		self.program = program
-	override void onClick()
+	override void on_click()
 		if xcon.execute(program) < 0
 			//print("run " + program + " FAIL")
 			mtk_error_box("run " + program + " FAIL")
