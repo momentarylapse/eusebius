@@ -75,7 +75,7 @@ class LiteralParser
 				j ++
 			else
 				r.add(source[j])
-				if source[j] == '"' or source[j] == 0x27 // " or '
+				if source[j] == '"' or source[j] == 0x27 # " or '
 					break
 		return r
 
@@ -99,7 +99,7 @@ class LiteralParser
 		for i in l.indent:source.num
 			if isWhitespace(source[i])
 				continue
-			if source[i] == '"' or source[i] == 0x27 // " or '
+			if source[i] == '"' or source[i] == 0x27 # " or '
 				temp = getString(source, i)
 			else if isNumber(source[i])
 				temp = getNumber(source, i)
@@ -164,7 +164,7 @@ class DynamicValue
 		return c
 	void setType(int _type)
 		if type != _type
-			//clear()
+			#clear()
 			delete s
 			type = _type
 			if type == TYPE_BOOL
@@ -307,7 +307,7 @@ class DynamicValue
 				if s.str() > b.str()
 					return 1
 				return 0
-				//return ai.v.compare(bf.v)
+				#return ai.v.compare(bf.v)
 		return -1
 
 
@@ -513,7 +513,7 @@ class Variable
 		else
 			s += "const "
 		
-		//s += v.s.type() + " "
+		#s += v.s.type() + " "
 		if name.num > 0
 			s += name + " = "
 		s += v.render()
@@ -531,17 +531,17 @@ class Function
 	string name
 	string[] params
 	bool is_internal
-	//Variable*[] params
-	//Variable*[] vars
+	#Variable*[] params
+	#Variable*[] vars
 	SyntaxNodeBlock* block
 	void __init__(string _name)
 		name = _name
 		block = nil
 		is_internal = false
-	//Variable* addVar(string name)
-	//	Variable *v = new Variable(name)
-	//	vars.add(v)
-	//	return v
+	#Variable* addVar(string name)
+	#	Variable *v = new Variable(name)
+	#	vars.add(v)
+	#	return v
 	virtual void call(Interpreter *inter, Variable* ret, Variable*[] p)
 			inter.stack_push(self, ret)
 			int n = min(p.num, params.num)
@@ -566,10 +566,10 @@ class FunctionCos extends FunctionInternal
 		if p.num > 0
 			r.v.setFloat(cos(p[0].v.float()))
 
-/*class FunctionTan extends FunctionInternal
-	override void call(Interpreter *inter, Variable* r, Variable*[] p)
-		if p.num > 0
-			r.v.setFloat(tan(p[0].v.float()))*/
+#class FunctionTan extends FunctionInternal
+#	override void call(Interpreter *inter, Variable* r, Variable*[] p)
+#		if p.num > 0
+#			r.v.setFloat(tan(p[0].v.float()))
 
 class FunctionSqrt extends FunctionInternal
 	override void call(Interpreter *inter, Variable* r, Variable*[] p)
@@ -864,12 +864,12 @@ class SyntaxTree
 		if endOfLine()
 			setError("unexpected end of line")
 	void next()
-		/*if endOfLine()
-			setError("unexpected end of line")
-			return*/
+		#if endOfLine()
+#			setError("unexpected end of line")
+#			return
 		cur = peek()
 		cur_word ++
-		//cur = cur_line.words[cur_word]
+		#cur = cur_line.words[cur_word]
 	string peek()
 		if cur_word+1 < cur_line.words.num
 			return cur_line.words[cur_word+1]
@@ -916,7 +916,7 @@ class SyntaxTree
 			SyntaxNodeVariable* sn = new SyntaxNodeConst(addConstNumber(cur))
 			next()
 			return sn
-		if cur[0] == '"' or cur[0] == 0x27 // " or '
+		if cur[0] == '"' or cur[0] == 0x27 # " or '
 			SyntaxNodeVariable* sn = new SyntaxNodeConst(addConstString(unescape(cur)))
 			next()
 			return sn
@@ -936,10 +936,10 @@ class SyntaxTree
 		return sn
 	SyntaxNode* getOperandFunc()
 		SyntaxNode* sn = new SyntaxNodeCall(cur)
-		next() // name
+		next() # name
 		if cur != "("
 			setError("( after function name expected")
-		next() // "("
+		next() # "("
 		if cur == ")"
 			return sn
 		while true
@@ -951,11 +951,11 @@ class SyntaxTree
 			if cur == ")"
 				break
 			next()
-		next() // ")"
+		next() # ")"
 		return sn
 	SyntaxNode* getOperandArrayBuilder()
 		SyntaxNodeArrayBuilder *sn = new SyntaxNodeArrayBuilder
-		next() // "["
+		next() # "["
 		while cur != "]"
 			SyntaxNode *sub = getOperandGreedy()
 			sn.params.add(sub)
@@ -963,66 +963,66 @@ class SyntaxTree
 				setError(", or ] expected")
 			if cur == ","
 				next()
-		next() // "]"
+		next() # "]"
 		return sn
 	SyntaxNode* getOperandDictBuilder()
 		SyntaxNodeDictBuilder *sn = new SyntaxNodeDictBuilder
-		next() // "{"
+		next() # "{"
 		while cur != "}"
 			SyntaxNode *key = getOperandGreedy()
 			sn.params.add(key)
 			if cur != ":"
 				setError(": expected")
-			next() // ":"
+			next() # ":"
 			SyntaxNode *val = getOperandGreedy()
 			sn.params.add(val)
 			if cur != "," and cur != "}"
 				setError(", or } expected")
 			if cur == ","
 				next()
-		next() // "}"
+		next() # "}"
 		return sn
 	SyntaxNode* checkOperandExtensions(SyntaxNode* sn)
 		if cur == "["
 			SyntaxNodeArrayElement* el = new SyntaxNodeArrayElement
 			el.params.add(sn)
-			next() // "["
+			next() # "["
 			SyntaxNode* index = getOperandGreedy()
 			el.params.add(index)
 			if cur != "]"
 				setError("] expected")
-			next() // "]"
+			next() # "]"
 			return checkOperandExtensions(el)
 		
 		return sn
 	SyntaxNode* getOperand()
-		// bracket?
+		# bracket?
 		if cur == "("
 			next()
 			SyntaxNode *sn = getOperandGreedy()
 			if cur != ")"
 				setError(") expected")
-			next() // ")"
+			next() # ")"
 			return checkOperandExtensions(sn)
 		
-		// [a,b,c]
+		# [a,b,c]
 		if cur == "["
 			return getOperandArrayBuilder()
 		
-		// {a,b,c}
+		# {a,b,c}
 		if cur == "{"
 			return getOperandDictBuilder()
 		
-		// function call?
+		# function call?
 		if peek() == "("
 			return checkOperandExtensions(getOperandFunc())
 		
-		// basic
+		# basic
 		SyntaxNode* sn = getNuclearOperand()
 		return checkOperandExtensions(sn)
 	
 	
-	// sequence of [operand operator operand ...]
+	# sequence of [operand operator operand ...]
 	SyntaxNode* getOperandGreedy()
 		SyntaxNode*[] sn
 		sn.add(getOperand())
@@ -1063,7 +1063,7 @@ class SyntaxTree
 	SyntaxNode *getSpecialCommandIf()
 		int indent0 = cur_line.indent
 		SyntaxNodeIf *sn = new SyntaxNodeIf
-		next() // "if"
+		next() # "if"
 		sn.params.add(getOperandGreedy())
 		sn.block = parseBlock()
 		if endOfFile()
@@ -1071,13 +1071,13 @@ class SyntaxTree
 		if lines.lines[cur_line_no + 1].indent != indent0 or lines.lines[cur_line_no + 1].words[0] != "else"
 			return sn
 		nextLine()
-		// else
+		# else
 		sn.block_else = parseBlock()
 		return sn
 	SyntaxNode *getSpecialCommandWhile()
 		int indent0 = cur_line.indent
 		SyntaxNodeWhile *sn = new SyntaxNodeWhile
-		next() // "while"
+		next() # "while"
 		sn.params.add(getOperandGreedy())
 		sn.block = parseBlock()
 		if endOfFile()
@@ -1085,13 +1085,13 @@ class SyntaxTree
 		if lines.lines[cur_line_no + 1].indent != indent0 or lines.lines[cur_line_no + 1].words[0] != "else"
 			return sn
 		nextLine()
-		// else
+		# else
 		sn.block_else = parseBlock()
 		return sn
 	SyntaxNode *getSpecialCommandFor()
 		int indent0 = cur_line.indent
 		SyntaxNodeFor *sn = new SyntaxNodeFor
-		next() // "for"
+		next() # "for"
 		SyntaxNodeVariable* var = new SyntaxNodeVariable(cur)
 		next()
 		var.allow_create = true
@@ -1106,7 +1106,7 @@ class SyntaxTree
 		if lines.lines[cur_line_no + 1].indent != indent0 or lines.lines[cur_line_no + 1].words[0] != "else"
 			return sn
 		nextLine()
-		// else
+		# else
 		sn.block_else = parseBlock()
 		return sn
 	SyntaxNode *getSpecialCommandBreak()
@@ -1126,7 +1126,7 @@ class SyntaxTree
 			setError("( expected")
 		next()
 		while cur != ")"
-			//Variable* v = ad
+			#Variable* v = ad
 			_func.params.add(cur)
 			next()
 			if cur == ")"
@@ -1200,7 +1200,7 @@ class SyntaxTree
 		
 		add_internal_func("sin", new FunctionSin)
 		add_internal_func("cos", new FunctionCos)
-		//add_internal_func("tan", new FunctionTan)
+		#add_internal_func("tan", new FunctionTan)
 		add_internal_func("sqrt", new FunctionSqrt)
 		add_internal_func("abs", new FunctionAbs)
 		add_internal_func("len", new FunctionLen)
@@ -1217,7 +1217,7 @@ class SyntaxTree
 		lines = lp.parse(source)
 		
 		cur_line_no = -1
-		//lines.show()
+		#lines.show()
 		cur_func = func_main
 		func_main.block = parseBlock()
 	void show()
@@ -1286,7 +1286,7 @@ class Interpreter
 		Variable*[] params
 		bool[] is_temp
 		
-		// parameters
+		# parameters
 		for p in sn.params
 			if p.type == TYPE_VARIABLE
 				SyntaxNodeVariable *vv = p
@@ -1312,7 +1312,7 @@ class Interpreter
 				if cur_context.flag_return or cur_context.flag_break or cur_context.flag_continue
 					break
 		
-		// execute
+		# execute
 		if sn.type == TYPE_OPERATOR
 			SyntaxNodeOperator *op = sn
 			if op.op == "="
@@ -1366,11 +1366,11 @@ class Interpreter
 			Function *f = fs._func
 			stack_push(f, ret)
 			f.call(self, ret, params)
-			/*if f.block
-				int n = min(sn.params.num,f.params.num)
-				for i in 0:n
-					*cur_context.vars[i].v = *params[i].v
-			else*/
+			#if f.block
+#				int n = min(sn.params.num,f.params.num)
+#				for i in 0:n
+#					*cur_context.vars[i].v = *params[i].v
+#			else
 			stack_pop()
 				
 		else if sn.type == TYPE_IF
@@ -1390,7 +1390,7 @@ class Interpreter
 				if cur_context.flag_return or cur_context.flag_break
 					break
 
-				// reevaluate
+				# reevaluate
 				if sn.params[0].type != TYPE_VARIABLE
 					doNode(sn.params[0], params[0])
 			cur_context.flag_break = false

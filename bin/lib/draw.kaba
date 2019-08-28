@@ -57,10 +57,10 @@ class XPainter
 		buf = win.buf
 		width = win.w
 		height = win.h
-		//win.get_size(&width, &height)
-		/*if !win.get_size(&width, &height)
-			print("Draw-Fehler: get_size()\n")
-			return*/
+		#win.get_size(&width, &height)
+		#if !win.get_size(&width, &height)
+#			print("Draw-Fehler: get_size()\n")
+#			return
 		buf_width = width
 		buf_x = 0
 		buf_y = 0
@@ -81,8 +81,8 @@ class XPainter
 		width = w
 		height = h
 		
-		//font = p.font
-		//line_width = p.line_width
+		#font = p.font
+		#line_width = p.line_width
 	
 	void set_color(color c)
 		cur_color = col2i(c)
@@ -261,7 +261,7 @@ class XPainter
 				line_to(x + f.points[i].x * scale, y + (1.0 - f.points[i].y) * scale)
 			path_close()
 		strike()
-		//fill()
+		#fill()
 	
 	void draw_str(float x, float y, string text)
 		float scale = font.size
@@ -291,6 +291,6 @@ class XPainter
 				_index ++
 		
 	void end()
-		//win.invalidate_all()
+		#win.invalidate_all()
 		win.invalidate(buf_x, buf_y, buf_x + width, buf_y + height)
 		

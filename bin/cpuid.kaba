@@ -24,12 +24,12 @@ void cpuid(int n, int[4] o)
 	o[3] = temp4
 	
 	
-	/*printh(n)
-	print ": "
-	for i in o
-		print " "
-		printh(i)
-	print("\n")*/
+	#printh(n)
+#	print ": "
+#	for i in o
+#		print " "
+#		printh(i)
+#	print("\n")
 
 void show_cpu()
 	print("   cpu:  ")
@@ -37,7 +37,7 @@ void show_cpu()
 	cpuid(0, o)
 	
 	string s
-	//for i in [1,3,2]
+	#for i in [1,3,2]
 	for j in 0:4
 		s.add(o[1] >> (j*8))
 	for j in 0:4
@@ -47,7 +47,7 @@ void show_cpu()
 	print(s)
 	print("\n")
 	
-	//cpuid(0x8000000, o)
+	#cpuid(0x8000000, o)
 	cpuid(1, o)
 	
 	print("  sse=")
@@ -96,7 +96,7 @@ void main()
 	
 	if !sigaction(23, &handler)
 		print("---E1\n")
-	if !mapirq(1, 23) // key
+	if !mapirq(1, 23) # key
 		print("---E2\n")
 	print("ok\n")
 	while true

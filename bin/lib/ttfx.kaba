@@ -65,46 +65,46 @@ class TTFFont
 		if !f
 			print("kann Datei nicht lesen\n")
 			return false
-		//f.setBinaryMode(true)
-		/*TimeValue tv1
-		time(tv1)
-		kprint("load font ")*/
+		#f.setBinaryMode(true)
+		#TimeValue tv1
+#		time(tv1)
+#		kprint("load font ")
 		
 		int n = readI()
 		glyphs.resize(n)
 		for g,i in glyphs
-			/*g.code = readI()
-			g.width = readF()
-			readF()
-			n = readI()*/
+			#g.code = readI()
+#			g.width = readF()
+#			readF()
+#			n = readI()
 			_read(f, &g.code, 4*4)
 			g.contours.resize(g._num_contours_)
 			_read(f, &g.contours[0], g.contours.num * 8)
-			/*for c in g.contours
-				c.start = readI()
-				c.num = readI()*/
-		/*TimeValue tv2
-		time(tv2)
-		kprint("[" + time_dif(tv1, tv2) + "]")*/
+			#for c in g.contours
+#				c.start = readI()
+#				c.num = readI()
+		#TimeValue tv2
+#		time(tv2)
+#		kprint("[" + time_dif(tv1, tv2) + "]")
 		n = readI()
 		points.resize(n)
 		_read(f, &points[0], n*8)
 		on_curve.resize(n)
 		_read(f, &on_curve[0], n)
 		
-		/*TimeValue tv3
-		time(tv3)
-		kprint("[" + time_dif(tv2, tv3) + "]")*/
+		#TimeValue tv3
+#		time(tv3)
+#		kprint("[" + time_dif(tv2, tv3) + "]")
 		
 		delete f
 		return true
 		
 	
 	TTFGlyph* get(int code)
-		//print("get ")
+		#print("get ")
 		for g,i in glyphs
 			if g.code == code
-				//print("" + i + "\n")
+				#print("" + i + "\n")
 				return &g
 		return &glyphs[0]
 		

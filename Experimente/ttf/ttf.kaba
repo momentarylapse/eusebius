@@ -83,13 +83,13 @@ class TTFMapTable
 	int offset
 	int format
 	
-	// format 4
+	# format 4
 	int[] end_code
 	int[] start_code
 	int[] id_delta
 	int[] id_range_offset
 	
-	// format 6
+	# format 6
 	int first_code
 	int[] glyph_id_array
 	
@@ -112,7 +112,7 @@ class TTFHeader
 	BELong magic
 	BEUShort flags
 	BEUShort units_per_em
-	// more
+	# more
 
 
 class TTFContour
@@ -232,8 +232,8 @@ class TTF
 		int n = mh.num_tables.int()
 		print("map-----------------------------")
 		print(i2h(f.getPos()))
-		//print mh.version.int()
-		//print n
+		#print mh.version.int()
+		#print n
 		if n > 100000
 			print("too many mapping tables")
 			return false
@@ -259,7 +259,7 @@ class TTF
 				int version = readUS()
 				for i in 0:256
 					m.glyph_id_array.add(readUB())
-				//print m.glyph_id_array
+				#print m.glyph_id_array
 			else if m.format == 4
 				int length = readUS()
 				print("l " + length)
@@ -284,28 +284,28 @@ class TTF
 				for i in 0:na
 					m.glyph_id_array.add(readUS())
 				
-				/*print start_count
-				print end_count
-				print id_delta
-				print id_range_offset
-				for i in 0:seg_count
-					print "--"
-					print start_count[i]
-					print end_count[i]
-					print id_delta[i]
-					print id_range_offset[i]*/
+				#print start_count
+#				print end_count
+#				print id_delta
+#				print id_range_offset
+#				for i in 0:seg_count
+#					print "--"
+#					print start_count[i]
+#					print end_count[i]
+#					print id_delta[i]
+#					print id_range_offset[i]
 				
-				/*for i in 0:seg_count
-					if m.id_range_offset[i] != 0
-						print("id_range_offset != 0")
-						
-						print(m.id_range_offset)
-						return false*/
+				#for i in 0:seg_count
+#					if m.id_range_offset[i] != 0
+#						print("id_range_offset != 0")
+#						
+#						print(m.id_range_offset)
+#						return false
 					
-				//int length = readUS(f)
-				//int length = readUS(f)
+				#int length = readUS(f)
+				#int length = readUS(f)
 				
-				//return false
+				#return false
 			else if m.format == 6
 				int length = readUS()
 				print("l " + length)
@@ -314,10 +314,10 @@ class TTF
 				int entry_count = readUS()
 				for i in 0:entry_count
 					m.glyph_id_array.add(readUS())
-				//print m.glyph_id_array
+				#print m.glyph_id_array
 			
 			else if m.format == 12
-				readUS() // "padding"
+				readUS() # "padding"
 				int length = readL()
 				print("l " + length)
 				int version = readL()
@@ -344,7 +344,7 @@ class TTF
 		int num_contours = readSS()
 		print(num_contours)
 		if num_contours == 0
-			//print("--empty")
+			#print("--empty")
 			return true
 		if num_contours > 200
 			print("too many contours: " + num_contours)
@@ -355,23 +355,23 @@ class TTF
 		g.ymin = readSS()
 		g.xmax = readSS()
 		g.ymin = readSS()
-		//print "" + g.xmin + ":" + g.xmax
-		//print "" + g.ymin + ":" + g.ymax
+		#print "" + g.xmin + ":" + g.xmax
+		#print "" + g.ymin + ":" + g.ymax
 		
 		if num_contours < 0
 			return read_glyph_compound(g)
 		return read_glyph_simple(g, num_contours)
 	
 	bool read_glyph_compound(TTFGlyph g)
-		//print("---compound")
+		#print("---compound")
 		int n = 0
 		int flags = 0
 		
 		while true
-			//print "C"
+			#print "C"
 			flags = readUS()
 			int glyph_index = readUS()
-			//print glyph_index
+			#print glyph_index
 		
 			if (flags & 0x0001) != 0
 				int arg1 = readSS()
@@ -408,40 +408,40 @@ class TTF
 		return true
 	
 	bool read_glyph_simple(TTFGlyph g, int num_contours)
-		//print("simple")
+		#print("simple")
 		
-		// endpoints
+		# endpoints
 		int[] endpoints
 		for i in 0:num_contours
 			endpoints.add(readUS())
 		
 		for e in endpoints
-			//print "e " + e
+			#print "e " + e
 			if e > 1000
 				print("invalid endpoint: " + e)
 				return false
 		
-		// instructions???
+		# instructions???
 		int instrlen = readUS()
 		if instrlen > 10000
 			print("too many instructions: " + instrlen)
 			return false
-		//print "instr: " + instrlen
-		f.read(instrlen) // instr
+		#print "instr: " + instrlen
+		f.read(instrlen) # instr
 		
 		if num_contours > 0
 			int num_points = endpoints[endpoints.num-1] + 1
-			//print "points: " + num_points
+			#print "points: " + num_points
 		
-			// flags
+			# flags
 			string flags = read_contour_flags(num_points)
-			//print flags.hex(false)
+			#print flags.hex(false)
 		
-			//print i2h(f.getPos())
+			#print i2h(f.getPos())
 			float[] x = read_contour_coords(num_points, flags, 0x02, 0x10)
 			float[] y = read_contour_coords(num_points, flags, 0x04, 0x20)
-			//print x
-			//print y
+			#print x
+			#print y
 			
 			int i0 = 0
 			for e,ci in endpoints
@@ -452,12 +452,12 @@ class TTF
 					c.p.add(complex(x[i], y[i]))
 				i0 = i1
 				g.contours.add(c)
-				c.__delete__() // TODO repair kaba :P
+				c.__delete__() # TODO repair kaba :P
 				c.__init__()
 		
-		//print i2h(f.getPos())
+		#print i2h(f.getPos())
 		
-		// 4byte alignment
+		# 4byte alignment
 		int n = f.getPos()
 		if (n & 3) != 0
 			f.read(4 - (n & 3))
@@ -468,13 +468,13 @@ class TTF
 		flags.resize(n)
 		
 		for i in 0:n
-			//print i
+			#print i
 			int c = readUB()
 			flags[i] = c
 			
 			if (c & 0x08) != 0x00
 				int cn = readUB()
-				//print "repeat " + cn
+				#print "repeat " + cn
 				for j in 0:cn
 					flags[i+j+1] = c
 				i += cn
@@ -491,16 +491,16 @@ class TTF
 			bool is_same = (ff & mask_same) != 0
 			bool is_short = (ff & mask_short) != 0
 			if is_same and !is_short
-				nil//print "rep"
+				nil#print "rep"
 			else
 				int t = 0
 				if is_short
-					//print "1b"
+					#print "1b"
 					t = readUB()
 					if !is_same
 						t = -t
 				else
-					//print "2b"
+					#print "2b"
 					t = readSS()
 				cur += t
 			x[i] = cur
@@ -526,14 +526,14 @@ class TTF
 				return false
 			glyphs.add(g)
 		print("Glyphs: " + glyphs.num)
-		/*for gg in glyphs
-			print "---- " + gg.contours.num
-			for c in gg.contours
-				print c.flags.hex(false)
-				string s = ""
-				for z in c.p
-					s += "" + z + ", "
-				print "[" + s + "]"*/
+		#for gg in glyphs
+#			print "---- " + gg.contours.num
+#			for c in gg.contours
+#				print c.flags.hex(false)
+#				string s = ""
+#				for z in c.p
+#					s += "" + z + ", "
+#				print "[" + s + "]"
 			
 		
 		return true
@@ -717,7 +717,7 @@ class FontWindow extends Window
 		return 400 -y*scale
 	
 	override void onDraw(Painter *p)
-		//Painter *p = beginDraw("area")
+		#Painter *p = beginDraw("area")
 		float w = p.width
 		float h = p.height
 		TTFGlyph *g = &font.glyphs[index]
@@ -736,15 +736,15 @@ class FontWindow extends Window
 		
 		p.drawStr(220, 20, g.code)
 		string s = utf32_to_utf8(g.codes)
-		//s.add(g.code)
+		#s.add(g.code)
 		p.drawStr(300, 20, s)
 		
 		for c in g.contours
 			p.setColor(Black)
-			//print("--")
+			#print("--")
 			for i in 0:c.p.num
 				int i1 = (i+1) % c.p.num
-				//print("" + c.p[i].x + "  " + c.p[i].y + "       ")
+				#print("" + c.p[i].x + "  " + c.p[i].y + "       ")
 				p.drawLine(xx(c.p[i].x), yy(c.p[i].y), xx(c.p[i1].x), yy(c.p[i1].y))
 				
 			for i in 0:c.p.num

@@ -25,7 +25,7 @@ class FilesView extends MtkWidget
 		if win
 			win.set_title(dir)
 			win.invalidate_all()
-		//p.end()
+		#p.end()
 	
 	override void draw()
 		if win.active
@@ -42,7 +42,7 @@ class FilesView extends MtkWidget
 				p.draw_image(10, 10 + i * 20, icon_file)
 			p.set_color(col_text)
 			p.draw_str(30, 10 + i * 20, e.name)
-		//p.draw_str(200, 10, dir)
+		#p.draw_str(200, 10, dir)
 	
 	override void on_mouse_move()
 	override void on_mouse_left_button_down()

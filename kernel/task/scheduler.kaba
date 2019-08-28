@@ -8,8 +8,8 @@ use "../irq/irq.kaba"
 
 const int SCHEDULER_STACK_SIZE = 8192
 
-const int TASK_SWITCH_DT = 5 // ms
-const int PERF_UPDATE_DT = 1000000000 // 1000 ns
+const int TASK_SWITCH_DT = 5 # ms
+const int PERF_UPDATE_DT = 1000000000 # 1000 ns
 
 Task* SchedulerTask
 
@@ -17,25 +17,25 @@ TimeValue next_perf_calc
 
 void int_timer()
 	while true
-		//prints("(")
+		#prints("(")
 		kernel_timer.tick()
 		
-		// IO-waits
+		# IO-waits
 		ProcessWaitingTasks()
 			
 		UpdateTimes()
-		//prints(" ")
+		#prints(" ")
 		
-		// pick next task
+		# pick next task
 		int pid_next = GetNextTask(RunningPid)
 		ReconnectTasks(pid_next, SchedulerTask)
 
-		//prints(")")
+		#prints(")")
 
-		// allow more timer IRQs
+		# allow more timer IRQs
 		outportb(0x20,0x20)
 
-		// return to (other) task
+		# return to (other) task
 		asm{
 			iret
 		}
@@ -53,7 +53,7 @@ void StartScheduler()
 
 
 
-// Scheduler
+# Scheduler
 int GetNextTask(int pid)
 	for i in pid + 1:MAX_TASKS
 		if Tasks[i].status == TASK_STATUS_RUNNING
@@ -70,21 +70,21 @@ void ProcessWaitingTasks()
 				TimeValue *rem = &t.waiting_param_i1
 				rem.dec_nanosec(kernel_timer.dt_nanosec)
 				if rem.sec < 0
-					t.tss.eax = 0 // return 0
+					t.tss.eax = 0 # return 0
 					t.activate()
 			else
 				t.do_wait_update()
 
 
 void ReconnectTasks(int pid_next, Task* irq_task)
-	//int pid_cur = irq_task.get_prev_task()
+	#int pid_cur = irq_task.get_prev_task()
 	GlobalDescriptorTable[Tasks[RunningPid].desc].set_busy(false)
 	GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
 	irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
 	RunningPid = pid_next
-	/*prints("<rec ")
-	printi pid_next
-	prints(">")*/
+	#prints("<rec ")
+#	printi pid_next
+#	prints(">")
 
 void UpdateTimes()
 	Tasks[RunningPid].time_all.inc_nanosec(kernel_timer.dt_nanosec)

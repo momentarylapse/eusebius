@@ -4,10 +4,10 @@ use "heap.kaba"
 
 const int PAGE_SIZE = 4096
 const int PAGE_TABLE_ENTRIES = 1024
-const int MAX_PAGE_MASKS = 32768 // 2^32 / PAGE_SIZE / 32
-// 1 mask = 32 pages = 128k
+const int MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
+# 1 mask = 32 pages = 128k
 
-//const int KERNEL_PAGE_DIRECTORY = 0x00200000
+#const int KERNEL_PAGE_DIRECTORY = 0x00200000
 PageDirectory *KernelPageDir
 
 class Page
@@ -33,9 +33,9 @@ void page_params(int addr, int* dir_no, int* page_no, int* offset)
 
 class PageDirectory extends PageTable
 
-	// source = task-space
-	// dest = kernel-space
-	// (does not allocate pages)
+	# source = task-space
+	# dest = kernel-space
+	# (does not allocate pages)
 	void map_lin(int source, int dest, int size, bool writable)
 		source = source & 0xfffff000
 		dest = dest & 0xfffff000
@@ -67,7 +67,7 @@ class PageDirectory extends PageTable
 			dir_no ++
 			page_no = 0
 
-	// start = task-space
+	# start = task-space
 	bool map_by_alloc(int start, int size, bool writable)
 		start = start & 0xfffff000
 		int dir_no, page_no, offset
@@ -141,7 +141,7 @@ class PageDirectory extends PageTable
 						if still_need == 0
 							return start
 					else
-						// restart search
+						# restart search
 						still_need = npages
 						start = pos + PAGE_SIZE
 					pos += PAGE_SIZE
@@ -209,9 +209,9 @@ class PageDirectory extends PageTable
 		page_params(start2, &dir_no2, &page_no2, &offset2)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		PageTable *pt1 = _i2p(e[dir_no1] & 0xfffff000)
-		//int n = pt.e[page_no] & 0xfffff000
+		#int n = pt.e[page_no] & 0xfffff000
 		PageTable *pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
-		//int n = pt.e[page_no] & 0xfffff000
+		#int n = pt.e[page_no] & 0xfffff000
 		while npages > 0
 			memcpy(_i2p(pt2.e[page_no2] & 0xfffff000), _i2p(pt1.e[page_no1] & 0xfffff000), PAGE_SIZE)
 			page_no1 ++
@@ -242,11 +242,11 @@ class PageController
 	void init()
 		prints("enable paging...")
 		num_masks = MemorySize / PAGE_SIZE / 32
-		MemorySize = num_masks * PAGE_SIZE * 32 // easier memory management...
+		MemorySize = num_masks * PAGE_SIZE * 32 # easier memory management...
 		for i in 0:num_masks
 			mask[i] = 0
 		
-		// reserve 8mb for kernel
+		# reserve 8mb for kernel
 		for i in 0:64
 			mask[i] = 0xffffffff
 		
@@ -255,7 +255,7 @@ class PageController
 		pages_allocated = 0
 		pages_usable = 0
 			
-		// kernel: flat paging
+		# kernel: flat paging
 		int nmax = MemorySize / PAGE_SIZE / 1024
 		KernelPageDir = create_page_directory()
 		KernelPageDir.map_lin(0, 0, MemorySize, true)
@@ -267,7 +267,7 @@ class PageController
 			or eax, 0x80000000
 			mov cr0, eax
 		
-			// flush cpu prefetch
+			# flush cpu prefetch
 			jmp _flush
 			_flush:
 		}
@@ -285,7 +285,7 @@ class PageController
 			int p1 = ceil_quot(m.offset + m.size, PAGE_SIZE)
 			alloc_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
-	// does not clear
+	# does not clear
 	int alloc_page()
 		bool ok = true
 		for i in 0:num_masks
@@ -305,7 +305,7 @@ class PageController
 		int mask_no = page_no / 32
 		if mask_no > num_masks or mask_no < 0
 			return
-		int offset = page_no & 0x0000001f // % 32
+		int offset = page_no & 0x0000001f # % 32
 		int m = 1 << offset
 		if (mask[mask_no] & m) != 0
 			pages_allocated ++
@@ -345,20 +345,20 @@ class PageController
 			return true
 		int npages = ceil_quot(size, PAGE_SIZE)
 		
-		// which pages/masks?
+		# which pages/masks?
 		int p0 = pos >> 12
-		int p1 = p0 + npages - 1 // inclusive
+		int p1 = p0 + npages - 1 # inclusive
 		
 		int m0 = p0 >> 5
 		int m1 = p1 >> 5
 		p0 = p0 & 0x0000001f
 		p1 = p1 & 0x0000001f
 		
-		// boundary masks
+		# boundary masks
 		int mask0 = 0xffffffff << p0
 		int mask1 = 0xffffffff >> (32 - p1 - 1)
 		
-		// special case
+		# special case
 		if m0 == m1
 			mask0 = mask0 & mask1
 			if test_free
@@ -369,7 +369,7 @@ class PageController
 			return true
 		
 		if test_free
-			// free?
+			# free?
 			if (mask[m0] & mask0) != 0
 				return false
 			if (mask[m1] & mask1) != 0
@@ -378,7 +378,7 @@ class PageController
 				if mask[m] != 0
 					return false
 		
-		// allocate
+		# allocate
 		mask[m0] = mask[m0] | mask0
 		mask[m1] = mask[m1] | mask1
 		for m in m0+1:m1
@@ -394,7 +394,7 @@ class PageController
 			return true
 		int npages = ceil_quot(size, PAGE_SIZE)
 		
-		// which pages/masks?
+		# which pages/masks?
 		int p0 = pos >> 12
 		int p1 = p0 + npages
 		int m0 = p0 >> 5
@@ -402,17 +402,17 @@ class PageController
 		p0 = p0 & 0x0000001f
 		p1 = p1 & 0x0000001f
 		
-		// boundary masks
+		# boundary masks
 		int mask0 = 0xffffffff >> (32 - p0)
 		int mask1 = 0xffffffff << p1
 		
-		// special case
+		# special case
 		if m0 == m1
 			mask[m0] = mask[m0] & mask0
 			pages_allocated -= npages
 			return true
 		
-		// free
+		# free
 		mask[m0] = mask[m0] & mask0
 		mask[m1] = mask[m1] & mask1
 		for m in m0+1:m1

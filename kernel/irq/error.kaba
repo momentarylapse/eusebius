@@ -8,18 +8,18 @@ const int ERROR_STACK_SIZE = 4096
 
 void handle_task_error(Task* t, Task* e, int i)
 	int pid = t.pid
-	/*prints("\n    -- Interrupt #")
-	printi(i)
-	prints(" pid=")
-	printi(pid)
-	prints "  eip="
-	printh(t.tss.eip, 4)
-	prints(" --\n")
-	cstring s
-	get_error_text(i, s)
-	prints(s)*/
+	#prints("\n    -- Interrupt #")
+#	printi(i)
+#	prints(" pid=")
+#	printi(pid)
+#	prints "  eip="
+#	printh(t.tss.eip, 4)
+#	prints(" --\n")
+#	cstring s
+#	get_error_text(i, s)
+#	prints(s)
 	
-	// TODO send signal
+	# TODO send signal
 	
 	if i == 13 or i == 14
 		t.handle_signal(SIGSEGV)
@@ -40,16 +40,16 @@ void handle_kernel_error(Task* t, int i)
 	printh(t.tss.esp, 4)
 	prints("\n")
 	
-	/*if i == 0
-		prints("   eflags=")
-		printh(&KernelTask.tss.eflags, 4)
-		prints(s)
-		prints("-y-")
-		return
-		asm{
-			iret
-		}
-		prints("xxxx")*/
+	#if i == 0
+#		prints("   eflags=")
+#		printh(&KernelTask.tss.eflags, 4)
+#		prints(s)
+#		prints("-y-")
+#		return
+#		asm{
+#			iret
+#		}
+#		prints("xxxx")
 	panic(s)
 
 void get_error_text(int i, cstring s)
@@ -91,12 +91,12 @@ void get_error_text(int i, cstring s)
 
 void int_handler(int i)
 	while true
-		// task?
+		# task?
 		Task* e = error.tasks[i]
 		int prev_pid = e.get_prev_pid()
 		Task *prev = &Tasks[prev_pid]
 		
-		// handle error
+		# handle error
 		if prev.kernel_mode
 			handle_kernel_error(prev, i)
 		else
@@ -154,7 +154,7 @@ void int_ignore_dummy()
 	asm{
 		_ignore_interrupt_handler:
 	}
-	//prints("  [ignore]")
+	#prints("  [ignore]")
 	asm{
 		db 0x0f
 		db 0x06
@@ -192,7 +192,7 @@ class ErrorController
 			irq.set_task(i, tasks[i])
 		
 		
-		// tell the cpu to ignore sse/task-switch-exceptions
+		# tell the cpu to ignore sse/task-switch-exceptions
 		asm{
 			mov eax, _ignore_interrupt_handler
 			mov __temp_p__, eax

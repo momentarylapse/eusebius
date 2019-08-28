@@ -22,7 +22,7 @@ class KSocket
 	int _index
 	bool used
 	FileEntry *e
-	int type // ...
+	int type # ...
 	int port
 	int peer_port
 	int state
@@ -49,7 +49,7 @@ class KSocket
 		if buffer_used == 0
 			if peer_port < 0
 				return -ENOTCONN
-			// no data... block
+			# no data... block
 			return -EWOULDBLOCK
 		if size > buffer_used
 			size = buffer_used
@@ -80,11 +80,11 @@ class KSocket
 		
 	int accept()
 		if state == SOCK_STATE_WAIT_ACCEPT
-			// "remote socket"
+			# "remote socket"
 			KSocket *rs = get_socket_by_port(_accept_wait_port)
 			if !rs
 				return -1
-			// "return socket"
+			# "return socket"
 			FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
 			if !e
 				self.set_state(SOCK_STATE_LISTENING)
@@ -130,7 +130,7 @@ class KSocket
 	
 	void clean_up()
 		if peer_port >= 0
-			// "unconnect"
+			# "unconnect"
 			KSocket *s = get_socket_by_port(peer_port)
 			if s
 				s.peer_port = -1

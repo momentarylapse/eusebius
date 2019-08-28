@@ -22,19 +22,19 @@ const int SIGSTOP = 19
 const int SIGX = 23
 
 
-//--------------------------------------------------------------
-// Tasks
+#--------------------------------------------------------------
+# Tasks
 
-const int KERNEL_STACK_SIZE = 0x00020000 // 128k
-const int KERNEL_MEM = 0x00800000 // 8mb
-const int IDLE_STACK_SIZE = 0x00001000 // 4k
+const int KERNEL_STACK_SIZE = 0x00020000 # 128k
+const int KERNEL_MEM = 0x00800000 # 8mb
+const int IDLE_STACK_SIZE = 0x00001000 # 4k
 
 const int MAX_TASKS = 256
 const int TASK_IMAGE_POS = KERNEL_MEM
-const int TASK_STACK_SIZE = 0x00080000 // 512k
+const int TASK_STACK_SIZE = 0x00080000 # 512k
 const int TASK_STACK_POS = 0x00880000
 const int NUM_PRE_GDT_ENTRIES = 5
-const int INITIAL_TASK_MEM = 0x00800000 // 8m
+const int INITIAL_TASK_MEM = 0x00800000 # 8m
 
 const int TASK_MAX_MESSAGES = 16
 
@@ -45,7 +45,7 @@ enum
 	TASK_STATUS_WAITING
 	TASK_STATUS_ZOMBIE
 	TASK_STATUS_INTERRUPT
-	//TASK_STATUS_DEAD
+	#TASK_STATUS_DEAD
 
 class TaskStateSegment
 	int prev
@@ -55,9 +55,9 @@ class TaskStateSegment
 	int ss1
 	void *esp2
 	int ss2
-	PageDirectory *cr3 // =PDPR
+	PageDirectory *cr3 # =PDPR
 	void *eip
-	int eflags // Iterrupt Flag
+	int eflags # Iterrupt Flag
 	int eax
 	int ecx
 	int edx
@@ -72,7 +72,7 @@ class TaskStateSegment
 	
 	void set(void *stack_pointer, int _cs, int _ds, int pvl, PageDirectory *page_dir, void *task)
 		int _ss = _ds
-		prev = 0 // previous TSS (dynamisch)
+		prev = 0 # previous TSS (dynamisch)
 		esp0 = stack_pointer
 		ss0 = _ss * 8
 		esp1 = stack_pointer
@@ -81,7 +81,7 @@ class TaskStateSegment
 		ss2 = _ss * 8
 		cr3 = page_dir
 		eip = task
-		eflags = 0x200 + pvl * 0x1000 // IterruptFlag + PVL
+		eflags = 0x200 + pvl * 0x1000 # IterruptFlag + PVL
 		eax = 0
 		ecx = 0
 		edx = 0
@@ -112,25 +112,25 @@ enum
 
 class TaskSharedMemoryRef
 	SharedMemory *s
-	int dest // task space
+	int dest # task space
 
 int __handler_p__
 
-void TaskSignalHandler()//void *p)
+void TaskSignalHandler()#void *p)
 	asm{
-		//mov __handler_p__, eax
+		#mov __handler_p__, eax
 	}
-	//__temp_p__ = p
-	//prints("-----signal-handler-----\n")
-	//printh(&__handler_p__, 4)
-	//__temp_p__ = p
+	#__temp_p__ = p
+	#prints("-----signal-handler-----\n")
+	#printh(&__handler_p__, 4)
+	#__temp_p__ = p
 	asm{
 		mov eax, __handler_p__
 		call eax
 	}
-	//prints("[fertig...return]\n")
+	#prints("[fertig...return]\n")
 	asm{	
-		// return from handler
+		# return from handler
 		mov eax, 0x00002006
 		int 0x80
 	}
@@ -142,7 +142,7 @@ class Task
 	TaskStateSegment tss
 	int[0]* stack
 	int stack_size
-	int desc // Index in GDT
+	int desc # Index in GDT
 	int pid, puid, status
 	int return_status
 	int waiting_mode
@@ -156,7 +156,7 @@ class Task
 	int mem_bottom, mem_size
 	
 	TimeValue time_all, time_temp
-	int load // 1/1000
+	int load # 1/1000
 	
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
@@ -185,16 +185,16 @@ class Task
 			cur_dir = FileSystem.root
 		kernel_mode = false
 	
-		/*t.stack_size = TASK_STACK_SIZE
-	t.stack = _i2p(TASK_STACK_POS)
-	t.mem_bottom = KERNEL_MEM
-	t.mem_size = INITIAL_TASK_MEM
-	t.page_dir = paging.create_page_directory()
-	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
-	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-		panic("incomplete page dir") // ...
-	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
-	GlobalDescriptorTable[t.desc].set_task(t)*/
+		#t.stack_size = TASK_STACK_SIZE
+#	t.stack = _i2p(TASK_STACK_POS)
+#	t.mem_bottom = KERNEL_MEM
+#	t.mem_size = INITIAL_TASK_MEM
+#	t.page_dir = paging.create_page_directory()
+#	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
+#	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+#		panic("incomplete page dir") # ...
+#	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+#	GlobalDescriptorTable[t.desc].set_task(t)
 	
 		time_all.clear()
 		load = 0
@@ -210,29 +210,29 @@ class Task
 		else
 			status = TASK_STATUS_RUNNING
 	
-	// nur um einmalig den Scheduler zu starten
+	# nur um einmalig den Scheduler zu starten
 	void run_forced()
-		/*prints("springe in ")
-		printi(t.pid)
-		prints(t.name)*/
-		// "Task Gate Descriptor" ---- falsch, kein gate!
+		#prints("springe in ")
+#		printi(t.pid)
+#		prints(t.name)
+		# "Task Gate Descriptor" ---- falsch, kein gate!
 		TaskCallData[0] = 0
 		TaskCallData[1] = 8 * desc
-		//printi(t.desc)
-		//prints(":\n")
+		#printi(t.desc)
+		#prints(":\n")
 		__temp_p__ = &TaskCallData[0]
 
-		// in Task springen
-		//t.status = TASK_STATUS_RUNNING
+		# in Task springen
+		#t.status = TASK_STATUS_RUNNING
 		asm{
 			mov eax, __temp_p__
-			//db 0xff
-			//db 0x28
-			//jmp_far [eax]
+			#db 0xff
+			#db 0x28
+			#jmp_far [eax]
 			db 0xff
 			db 0x18
-			//call_far [eax]
-			//jmp_far 0x004000000000 //0x0040:0x00000000
+			#call_far [eax]
+			#jmp_far 0x004000000000 #0x0040:0x00000000
 		}
 	int addr2kernel(int addr, int* offset)
 		return page_dir.addr2kernel(addr, offset)
@@ -286,7 +286,7 @@ class Task
 		for t in Tasks
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
-					t.tss.eax = 0// // return waitpid()
+					t.tss.eax = 0# # return waitpid()
 					t.page_dir.memcpy2task(t.waiting_param_i2, &return_status, 4)
 					clean_up_deep()
 					t.activate()
@@ -303,8 +303,8 @@ class Task
 	
 	int pages_alloced()
 		int n = mem_size / PAGE_SIZE
-		n += page_dir.count_entries() // all page tables
-		n ++ // page_dir itself
+		n += page_dir.count_entries() # all page tables
+		n ++ # page_dir itself
 		return n
 	
 	
@@ -322,7 +322,7 @@ class Task
 			return -EINVAL
 		
 		if in_signal
-			die(0) // we're very friendly :-P
+			die(0) # we're very friendly :-P
 
 
 		if signal_handlers[signal] != 0
@@ -334,7 +334,7 @@ class Task
 			tss.ebp = tss.esp
 			tss.eip = &TaskSignalHandler
 		else
-			// default actions
+			# default actions
 			if signal == SIGSTOP
 				if status == TASK_STATUS_RUNNING
 					status = TASK_STATUS_SLEEPING
@@ -349,8 +349,8 @@ class Task
 				die(0)
 		return 0
 
-//--------------------------------------------------------------
-// Dateizugriff
+#--------------------------------------------------------------
+# Dateizugriff
 	
 	OpenFileData *get_handle(int handle)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
@@ -471,7 +471,7 @@ class Task
 		OpenFileData *of = handles[h]
 		cstring filename
 		of.entry.get_path(filename)
-		int addr = TASK_IMAGE_POS // task space...
+		int addr = TASK_IMAGE_POS # task space...
 		Task* t = AddTaskUser(filename, _i2p(addr), self)
 		if !t
 			sys_close(h)
@@ -479,7 +479,7 @@ class Task
 		if !page_dir.memcpy2kernel(&t.arg, faddr, sizeof(cstring))
 			return -EFAULT
 		while true
-			//int r = sys_read(caller, h, addr, 1024)
+			#int r = sys_read(caller, h, addr, 1024)
 			int r = of.read(t.page_dir, addr, 1024)
 			if r <= 0
 				break
@@ -550,11 +550,11 @@ class Task
 		if !t
 			return -ENOMEM
 		
-		// copy "normal" memory
+		# copy "normal" memory
 		t.sys_brk(mem_bottom + mem_size)
 		page_dir.copy_pages_to(t.page_dir, mem_bottom, mem_bottom, mem_size)
 		
-		// link shared memory
+		# link shared memory
 		for r,i in shmem
 			if !r.s
 				t.shmem[i].s = r.s
@@ -562,17 +562,17 @@ class Task
 				r.s.refcount ++
 				t.page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
 		
-		// open files...
-		// TODO
+		# open files...
+		# TODO
 		
-		// data
+		# data
 		memcpy(&t.arg, &arg, sizeof(cstring))
 		strcpy(&t.name, &name)
 		strcpy(&t.cur_dir, &cur_dir)
 		t.parent = self
 		t.tss = tss
 		t.tss.cr3 = t.page_dir
-		t.tss.eax = 0 // fork() return for child
+		t.tss.eax = 0 # fork() return for child
 	
 		t.activate()
 		return t.pid
@@ -586,7 +586,7 @@ class Task
 					r.s = SharedMem.get(p1)
 					if !r.s
 						return -ENOENT
-					r.dest = page_dir.find_free_space(0xe0000000, r.s.size) //0xa0000000
+					r.dest = page_dir.find_free_space(0xe0000000, r.s.size) #0xa0000000
 					if r.dest == -1
 						return -ENOMEM
 					r.s.refcount ++
@@ -603,10 +603,10 @@ class Task
 					r.s = nil
 					return 0
 			return -1
-		else if cmd == 1001 // wait-for-message
+		else if cmd == 1001 # wait-for-message
 			set_wait(WAITING_MODE_MESSAGE, 0, 0, 0)
 			return 0
-		else if cmd == 1002 // yield / wake-up
+		else if cmd == 1002 # yield / wake-up
 			Task*t = get_task(p1)
 			if t
 				t.activate()
@@ -663,7 +663,7 @@ class Task
 					return e
 			if e < 0
 				return e
-			// port
+			# port
 			KSocket *s = get_socket_by_port(e)
 			if !s
 				return -1
@@ -689,45 +689,45 @@ class Task
 		if waiting_mode == WAITING_MODE_FILE_READ
 			int r = sys_read(waiting_param_i1, waiting_param_i2, waiting_param_i3)
 			if r >= 0
-				tss.eax = r // return r
+				tss.eax = r # return r
 				activate()
 		else if waiting_mode == WAITING_MODE_FILE_WRITE
 			int r = sys_write(waiting_param_i1, waiting_param_i2, waiting_param_i3)
 			if r >= 0
-				tss.eax = r // return r
+				tss.eax = r # return r
 				activate()
-		/*else if waiting_mode == WAITING_MODE_TIME
-			TimeValue *rem = &waiting_param_i1
-			rem.dec_nanosec(kernel_timer.dt_nanosec)
-			if rem.sec < 0
-				tss.eax = 0 // return 0
-				activate()*/
+		#else if waiting_mode == WAITING_MODE_TIME
+#			TimeValue *rem = &waiting_param_i1
+#			rem.dec_nanosec(kernel_timer.dt_nanosec)
+#			if rem.sec < 0
+#				tss.eax = 0 # return 0
+#				activate()
 		else if waiting_mode == WAITING_MODE_SOCKET_ACCEPT
 			KSocket *s = get_socket_by_port(waiting_param_i1)
 			if !s
-				tss.eax = -EINVAL // return ...
+				tss.eax = -EINVAL # return ...
 				activate()
 			if s.state == SOCK_STATE_WAIT_ACCEPT
 				int e = s.accept()
 				if e == -EWOULDBLOCK
 					return
 				if e < 0
-					tss.eax = e // return e
+					tss.eax = e # return e
 				else
 					s = get_socket_by_port(e)
 					if !s
-						tss.eax = -2  // return -2
+						tss.eax = -2  # return -2
 					else
 						OpenFileData *of = kernel_open_entry(s.e, O_RDWR)
-						tss.eax = add_handle(of) // return 0
+						tss.eax = add_handle(of) # return 0
 				activate()
 		else if waiting_mode == WAITING_MODE_SOCKET_CONNECT
 			KSocket *s = get_socket_by_port(waiting_param_i1)
 			if !s
-				tss.eax = -EINVAL // return ...
+				tss.eax = -EINVAL # return ...
 				activate()
 			if s.state != SOCK_STATE_CONNECTING
-				tss.eax = 0 // return 0
+				tss.eax = 0 # return 0
 				activate()
 
 Task *get_task(int pid)
@@ -748,9 +748,9 @@ int RunningPid
 class GlobalDescriptorData
 	int a, b
 	void set_base(int base, int limit, bool gran)
-		a = (base << 16) + (limit & 0xffff) // base[15..0] limit[15..0]
-		b = (base & 0xff000000) + (limit & 0x0f0000) + ((base >> 16) & 0xff)  // base[31..24],..limit[19..16] not busy, base[23..16]
-		b += 0x00008000 // present
+		a = (base << 16) + (limit & 0xffff) # base[15..0] limit[15..0]
+		b = (base & 0xff000000) + (limit & 0x0f0000) + ((base >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
+		b += 0x00008000 # present
 		if gran
 			b += 0x00800000
 	void set_data(int base, int limit, bool executable, int pvl)
@@ -761,7 +761,7 @@ class GlobalDescriptorData
 		b += 0x00002000 * pvl
 	void set_task(Task *t)
 		set_base(_p2i(&t.tss), 103, false)
-		b += 0x00000900 // not busy
+		b += 0x00000900 # not busy
 	void set_busy(bool busy)
 		if busy
 			b = b | 0x200
@@ -797,7 +797,7 @@ Task* AddTaskUser(cstring name, void *func, Task *parent)
 	t.page_dir = paging.create_page_directory()
 	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
 	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-		panic("incomplete page dir") // ...
+		panic("incomplete page dir") # ...
 	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 	GlobalDescriptorTable[t.desc].set_task(t)
 
@@ -825,7 +825,7 @@ Task* AddTaskKernel(cstring name, void *func, int stack_size, Task* parent)
 
 void idle_func()
 	while true
-		//prints("<idle>")
+		#prints("<idle>")
 		asm{
 			hlt
 		}
@@ -833,18 +833,18 @@ void idle_func()
 void InitTasks()
 	prints("init tasks...")
 	
-	// null descriptor
+	# null descriptor
 	for g in GlobalDescriptorTable
 		g.a = 0x00000000
 		g.b = 0x00000000
-	// kernel code
+	# kernel code
 	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true, 0)
-	// kernel data
+	# kernel data
 	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false, 0)
-	// user code
-	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 0)//3)
-	// user data
-	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)//3)
+	# user code
+	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 0)#3)
+	# user data
+	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)#3)
 
 	for t in Tasks
 		t.status = TASK_STATUS_UNUSED
@@ -855,13 +855,13 @@ void InitTasks()
 
 	NextPidToAssign = 0
 	NextPuidToAssign = 0
-	//UserMemMask = 0
+	#UserMemMask = 0
 	RunningPid = 0
 
 	KernelTask = AddTaskKernel("kernel", nil, KERNEL_STACK_SIZE, nil)
 	IdleTask = AddTaskKernel("idle", &idle_func, IDLE_STACK_SIZE, KernelTask)
 	
-	// GDT laden
+	# GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
 	__temp_p__ = &GlobalDescriptorTable
 	asm{
@@ -878,43 +878,43 @@ void InitTasks()
 		lgdt [_gdtr]
 	}
 
-	//prints("\n  setze Kernel-Task-Register")
+	#prints("\n  setze Kernel-Task-Register")
 	__temp_i__ = KernelTask.desc * 8
 	asm{
-		mov eax, __temp_i__ // Descriptor[n]
+		mov eax, __temp_i__ # Descriptor[n]
 		ltr ax
 	}
-	// markiert das aktuelle TSS als "busy"!
+	# markiert das aktuelle TSS als "busy"!
 	
-	// enable sse
+	# enable sse
 	asm{
 	
 		mov eax, cr0
-		and eax, 0xfffffffb // clear CR0.EM (don't emulate via IRQ)
-		or eax, 0x00000002 // set CR0.MP (inform about task-switches)
+		and eax, 0xfffffffb # clear CR0.EM (don't emulate via IRQ)
+		or eax, 0x00000002 # set CR0.MP (inform about task-switches)
 		mov cr0, eax
 		mov __temp_i__, eax
 		
-		// set CR4.OSFXSR (enable sse)
+		# set CR4.OSFXSR (enable sse)
 		mov eax, cr4
-		//mov __temp_i__, eax
+		#mov __temp_i__, eax
 		or eax, 0x00000200
 		mov cr4, eax
 	
-		// flush cpu prefetch
+		# flush cpu prefetch
 		jmp _flush_sse
 		_flush_sse:
 	}
 
 	prints("  ok\n")
 
-/*int sys_getpid()
-	asm{
-		xor, eax, eax
-		str ax
-		mov __temp_i__, eax
-	}
-	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES*/
+#int sys_getpid()
+#	asm{
+#		xor, eax, eax
+#		str ax
+#		mov __temp_i__, eax
+#	}
+#	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
 
 			
 

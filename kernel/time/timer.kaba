@@ -6,50 +6,50 @@ use "../irq/irq.kaba"
 
 
 class KernelTimer
-	//int[2] state
+	#int[2] state
 	TimeValue tv
 	int dt_nanosec
 	
-	/*void update_state()
-		asm{
-			db 0x0f
-			db 0x31
-			mov __temp_i__, eax
-			mov __temp_i2__, edx
-		}
-		state[0] = __temp_i2__
-		state[1] = __temp_i__*/
+	#void update_state()
+#		asm{
+#			db 0x0f
+#			db 0x31
+#			mov __temp_i__, eax
+#			mov __temp_i2__, edx
+#		}
+#		state[0] = __temp_i2__
+#		state[1] = __temp_i__
 	
 	void update()
-		//update_state()
-		// TODO   :P
-		//tv.sec = (state[0] << 8) + (state[1] >> 24)
-		//tv.nanosec = 0
-		//tv.nanosec = (state[1] << 6) & 0x3fffffff
+		#update_state()
+		# TODO   :P
+		#tv.sec = (state[0] << 8) + (state[1] >> 24)
+		#tv.nanosec = 0
+		#tv.nanosec = (state[1] << 6) & 0x3fffffff
 	void tick()
 		tv.inc_nanosec(dt_nanosec)
 
 KernelTimer kernel_timer
 
 void InitTimerInterrupt(Task *t, int dt_ms)
-	// read year from CMOS
-	//outportb(0x70, 0x40 | 0x09)
-	//inportb(0x71)
-	// year=0x09 month=0x08 day=0x07 hours=0x04 min=0x02 sec=0x00
+	# read year from CMOS
+	#outportb(0x70, 0x40 | 0x09)
+	#inportb(0x71)
+	# year=0x09 month=0x08 day=0x07 hours=0x04 min=0x02 sec=0x00
 
 	kernel_timer.tv.clear()
 	kernel_timer.dt_nanosec = dt_ms * 1000000
 	
-	irq.set_task(32, t) // IRQ 0
+	irq.set_task(32, t) # IRQ 0
 	
-	// ticks/s: 1193180
-	// 100Hz:   11932 = 0x2e9c
+	# ticks/s: 1193180
+	# 100Hz:   11932 = 0x2e9c
 	int ticks_per_sec = 1193180
 	int ticks_till_irq = (ticks_per_sec >> 10) * dt_ms
 	if ticks_till_irq > 0xffff
 		ticks_till_irq = 0xffff
 
-	outportb(0x43, 0x34) // channel 0, rate generator
+	outportb(0x43, 0x34) # channel 0, rate generator
 	outportb(0x40, ticks_till_irq)
 	outportb(0x40, ticks_till_irq >> 8)
 

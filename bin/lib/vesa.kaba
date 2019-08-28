@@ -71,13 +71,13 @@ void bga_set_video_mode(int width, int height, int depth)
 	
 	
 	
-	//vga_mem2 = _i2p(0xc0000000)
-	/*for d in pci_devices
-		if d.vendor == 0x1111 and d.device == 0x1234
-			print d.bar0
-			vga_mem2 = _i2p(d.bar0)
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
-	print _p2i(vga_mem2)*/
+	#vga_mem2 = _i2p(0xc0000000)
+	#for d in pci_devices
+#		if d.vendor == 0x1111 and d.device == 0x1234
+#			print d.bar0
+#			vga_mem2 = _i2p(d.bar0)
+#	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
+#	print _p2i(vga_mem2)
  
 void bga_set_bank(int bank)
 	bga_write_register(VBE_DISPI_INDEX_BANK, bank)
@@ -133,7 +133,7 @@ void vesa_init()
 	printh(dev.get_mem_addr(0))
 	print("\n")
 
-	// 3mb... enough for 1024*768*32
+	# 3mb... enough for 1024*768*32
 	int id = shmget(dev.get_mem_addr(0), 0x00300000, IPC_CREAT | SHM_ABSOLUTE)
 	if id >= 0
 		vga_mem2 = shmat(id, 0)

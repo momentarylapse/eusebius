@@ -11,18 +11,18 @@ void main(string[] arg)
 	File *f = Filesystem.create(arg[0])
 	f.seek(ClusterSize)
 
-	// root directory
+	# root directory
 	int cluster = 2
 	f << list.num
 	int offset = 4
 	for e in list
 		f << e.name
 		if e.is_dir
-			f << 1 // flags
+			f << 1 # flags
 		else
 			f << 0
 		f << e.size
-		f << 1 // number of file parts
+		f << 1 # number of file parts
 		f << cluster
 		int num_clusters = (e.size - 1) / ClusterSize + 1
 		f << num_clusters
@@ -31,7 +31,7 @@ void main(string[] arg)
 	f.seek(ClusterSize * cluster)
 	delete(f)
 		
-	// files
+	# files
 	cluster = 2
 	for e in list
 		string s="dd if='"+arg[1] + e.name
@@ -40,13 +40,13 @@ void main(string[] arg)
 		shell_execute(s)
 		int num_clusters = (e.size - 1) / ClusterSize + 1
 		cluster += num_clusters
-		/*string t = FileRead(arg[1] + e.name)
-		t += "        "
-		int ti[0]* = &t[0]
-		for int n, 0, e.size / 4 + 1
-			f.WriteInt(ti[n])
-		//f.WriteBuffer(t)
-		for int n, e.size/4 + 1, (((e.size - 1) / ClusterSize + 1) * ClusterSize) / 4
-			f.WriteInt(0)*/
+		#string t = FileRead(arg[1] + e.name)
+#		t += "        "
+#		int ti[0]* = &t[0]
+#		for int n, 0, e.size / 4 + 1
+#			f.WriteInt(ti[n])
+#		#f.WriteBuffer(t)
+#		for int n, e.size/4 + 1, (((e.size - 1) / ClusterSize + 1) * ClusterSize) / 4
+#			f.WriteInt(0)
 	
-	//FileClose(f)
+	#FileClose(f)

@@ -18,7 +18,7 @@ class OpenFileData
 	bool blocking
 	FileEntry *entry
 	int offset
-	//int block_size
+	#int block_size
 	char[0]* buffer
 	Pipe* pipe
 	KSocket *socket
@@ -65,12 +65,12 @@ class OpenFileData
 		
 		while size > 0
 	
-			// wieviel kann aus dem Puffer gelesen werden?
+			# wieviel kann aus dem Puffer gelesen werden?
 			int cur_size = size
 			if cur_size > block_size - pos_in_block
 				cur_size = block_size - pos_in_block
 
-			// direkt lesen (aus dem Lese-Puffer kopieren)
+			# direkt lesen (aus dem Lese-Puffer kopieren)
 			page_dir.memcpy2task(addr, &buffer[pos_in_block], cur_size)
 			pos_in_block += cur_size
 			offset += cur_size
@@ -79,7 +79,7 @@ class OpenFileData
 			addr += cur_size
 		
 			if pos_in_block >= block_size
-				// read next block
+				# read next block
 				pos_in_block = 0
 				block_no ++
 				int cl = entry.blocks[block_no]
@@ -114,12 +114,12 @@ class OpenFileData
 		
 		while size > 0
 	
-			// wieviel kann in den Puffer geschrieben werden?
+			# wieviel kann in den Puffer geschrieben werden?
 			int cur_size = size
 			if cur_size > block_size - pos_in_block
 				cur_size = block_size - pos_in_block
 
-			// direkt schreiben (in den Puffer kopieren)
+			# direkt schreiben (in den Puffer kopieren)
 			page_dir.memcpy2kernel(&buffer[pos_in_block], addr, cur_size)
 			pos_in_block += cur_size
 			offset += cur_size
@@ -130,17 +130,17 @@ class OpenFileData
 			buffer_dirty = true
 			inode_dirty = true
 			
-			// make sure, the current block exists
+			# make sure, the current block exists
 			if block_no >= entry.num_blocks
 				entry.add_block(entry.mount.alloc_block())
 			
-			// buffer full? -> write cur block
+			# buffer full? -> write cur block
 			if pos_in_block >= block_size
 				int cl = entry.blocks[block_no]
 				entry.mount.write_block(cl, buffer)
 				buffer_dirty = false
 				
-				// next block
+				# next block
 				pos_in_block = 0
 				block_no ++
 		
@@ -288,7 +288,7 @@ OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
 	bool creating = (flags & O_CREATE) > 0
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e and creating
-		//prints("kernel Warnung: neue Datei...\n")
+		#prints("kernel Warnung: neue Datei...\n")
 		e = cur_dir.create_child(filename, FILE_TYPE_FILE, cur_dir.mount)
 		e.add_block(cur_dir.mount.alloc_block())
 		e.mp_inode = cur_dir.mount.alloc_inode()

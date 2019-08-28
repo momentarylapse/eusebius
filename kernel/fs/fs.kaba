@@ -72,7 +72,7 @@ class FileEntry
 		else
 			strcpy(&path, &"/")
 	
-	// allocate list int blocks of int[16]
+	# allocate list int blocks of int[16]
 	void add_block(int b)
 		if (num_blocks & 0x0f) == 0
 			blocks = realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
@@ -175,7 +175,7 @@ class Ext2DirEntryHeader
 
 class MountPoint
 	cstring type
-	PartitionData *dev // nil => unused
+	PartitionData *dev # nil => unused
 	FileEntry *dest
 	int block_offset
 	int block_size
@@ -196,12 +196,12 @@ class MountPoint
 	int[0]* inode_bitmap
 	int[0]* block_bitmap
 	
-	void *p_write_inode // int f(self, FileEntry*)
-	void *p_alloc_block // int f(self)
-	void *p_free_block  // int f(self, int index)
-	void *p_free_inode  // int f(self, int index)
-	void *p_alloc_inode // int f(self)
-	void *p_sync        // int f(self)
+	void *p_write_inode # int f(self, FileEntry*)
+	void *p_alloc_block # int f(self)
+	void *p_free_block  # int f(self, int index)
+	void *p_free_inode  # int f(self, int index)
+	void *p_alloc_inode # int f(self)
+	void *p_sync        # int f(self)
 	
 	void __assign__(MountPoint o)
 		nil
@@ -264,8 +264,8 @@ class FileSystemData
 		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
 	
 	int del(FileEntry *e)
-		//prints("[del]")
-		//prints e.name
+		#prints("[del]")
+		#prints e.name
 		if e.first_sub
 			return -1
 		if !e.parent
@@ -274,10 +274,10 @@ class FileSystemData
 		
 		FileEntry *p = e.parent
 		if p.first_sub == e
-			// first in dir...
+			# first in dir...
 			p.first_sub = e.next
 		else
-			// find previous in dir
+			# find previous in dir
 			FileEntry *c = p.first_sub
 			while c
 				if c.next == e
@@ -393,10 +393,10 @@ class MountPointMichiFS extends MountPoint
 			cstring name
 			read_str(name)
 			FileEntry *e = dest.create_child(name, FILE_TYPE_FILE, self)
-			//e.type =
+			#e.type =
 			read_int()
 			e.size = read_int()
-			read_int() // NumParts = 1
+			read_int() # NumParts = 1
 			int first_block = read_int()
 			int num_blocks = read_int()
 			for i in 0:num_blocks
@@ -412,13 +412,13 @@ class MountPointExt2 extends MountPoint
 		p_alloc_block = &my_alloc_block
 		p_free_block  = &my_free_block
 		p_sync        = &my_sync
-		update_sizes(1024, 0) // temp
+		update_sizes(1024, 0) # temp
 		
 		read_block(1, buf)
 		memcpy(&sb, buf, sizeof(Ext2SuperBlock))
 		
 		block_size = 1 << (sb.log_block_size + 10)
-		inodes_per_block = block_size / sizeof(Ext2Inode) //128
+		inodes_per_block = block_size / sizeof(Ext2Inode) #128
 		block_offset = 1024
 		if block_size == 1024
 			block_offset = 0
@@ -426,8 +426,8 @@ class MountPointExt2 extends MountPoint
 		inode_bitmap = malloc(block_size)
 		block_bitmap = malloc(block_size)
 	
-		//f.seek(1024 + block_size, true)
-		//f.xread(&bg, sizeof(BlockGroupDescriptor))
+		#f.seek(1024 + block_size, true)
+		#f.xread(&bg, sizeof(BlockGroupDescriptor))
 		read_block(1 + block_size / 1024, buf)
 		memcpy(&bg, buf, sizeof(Ext2BlockGroupDescriptor))
 		
@@ -438,7 +438,7 @@ class MountPointExt2 extends MountPoint
 		
 		dirty = false
 		
-		//showMetaData()
+		#showMetaData()
 		test_compatibility()
 		if readable
 			read_inode_recursive(2, dest)
@@ -460,7 +460,7 @@ class MountPointExt2 extends MountPoint
 	
 	int write_inode_simple(FileEntry *e)
 		int index = e.mp_inode
-		int group_no = (index - 1) / sb.inodes_per_group // 0...
+		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
 		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
@@ -491,9 +491,9 @@ class MountPointExt2 extends MountPoint
 		return 0
 	
 	void read_inode(int index, Ext2Inode inode, FileEntry *e)
-		int group_no = (index - 1) / sb.inodes_per_group // 0...
+		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
-		// group_no!!!!!!!!!!!!!!
+		# group_no!!!!!!!!!!!!!!
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
 		
@@ -523,10 +523,10 @@ class MountPointExt2 extends MountPoint
 		
 		return buf
 		
-	/*void write_inode_contents(FileEntry *e, cstring *buf, int size)
-		cstring *buf = malloc(e.num_blocks * block_size)
-		for i in 0:e.num_blocks
-			write_block(e.blocks[i], &buf[i * block_size])*/
+	#void write_inode_contents(FileEntry *e, cstring *buf, int size)
+#		cstring *buf = malloc(e.num_blocks * block_size)
+#		for i in 0:e.num_blocks
+#			write_block(e.blocks[i], &buf[i * block_size])
 	
 	void read_inode_recursive(int index, FileEntry *dir)
 		Ext2Inode inode
@@ -571,7 +571,7 @@ class MountPointExt2 extends MountPoint
 		dir.size = 0
 		dir.shrink_block_list(0)
 		
-		// iterate over files and fill buffer
+		# iterate over files and fill buffer
 		FileEntry *e = dir.first_sub
 		int n = 0
 		while e
@@ -593,7 +593,7 @@ class MountPointExt2 extends MountPoint
 		if pos == 0
 			pos = block_size
 		
-		// create blocks for buffer
+		# create blocks for buffer
 		int num_blocks = ceil_quot(pos, block_size)
 		dir.size = num_blocks * block_size
 		for i in pos:dir.size
@@ -625,7 +625,7 @@ class MountPointExt2 extends MountPoint
 		return -1
 	
 	int my_alloc_block()
-		//prints(" AB ")
+		#prints(" AB ")
 		int n = sb.blocks_per_group / 32
 		for i in 0:n
 			int b = block_bitmap[i]
@@ -638,15 +638,15 @@ class MountPointExt2 extends MountPoint
 					sb.free_blocks_count --
 					bg.free_blocks_count += -1
 					dirty = true
-					//printi(i * 32 + j)
+					#printi(i * 32 + j)
 					return i * 32 + j
 		return -1
 	
 	int my_free_block(int index)
-		//prints(" FB ")
-		//printi(index)
-		int bmi = index >> 5 // index/32
-		int bit = index & 0x1f // index%32
+		#prints(" FB ")
+		#printi(index)
+		int bmi = index >> 5 # index/32
+		int bit = index & 0x1f # index%32
 		int mask = 1 << bit
 		if (block_bitmap[bmi] & mask) == 0
 			prints("  ---EFB--- ")
@@ -660,8 +660,8 @@ class MountPointExt2 extends MountPoint
 		return 0
 	
 	int my_free_inode(int index)
-		int bmi = index >> 5 // index/32
-		int bit = index & 0x1f // index%32
+		int bmi = index >> 5 # index/32
+		int bit = index & 0x1f # index%32
 		int mask = 1 << bit
 		if (inode_bitmap[bmi] & mask) == 0
 			prints("  ---EFI--- ")

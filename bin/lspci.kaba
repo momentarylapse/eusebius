@@ -30,8 +30,8 @@ void show_device(PCIDevice *d)
 	else
 		print(d._class)
 		print(":" + d.subclass)
-	//print("  ht=")
-	//print(d.header_type)
+	#print("  ht=")
+	#print(d.header_type)
 	if d.irq > 0
 		print("  irq=")
 		print(d.irq)

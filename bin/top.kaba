@@ -7,7 +7,7 @@ enum
 	TASK_STATUS_WAITING
 	TASK_STATUS_ZOMBIE
 	TASK_STATUS_INTERRUPT
-	//TASK_STATUS_DEAD
+	#TASK_STATUS_DEAD
 
 void fill(string s, int n)
 	while s.num < n

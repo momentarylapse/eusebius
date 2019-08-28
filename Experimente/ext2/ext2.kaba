@@ -119,7 +119,7 @@ class Ext2Reader
 		f.seek(1024, true)
 		f.xread(&sb, sizeof(SuperBlock))
 		block_size = 1 << (sb.log_block_size + 10)
-		inodes_per_block = block_size / sizeof(Inode) //128
+		inodes_per_block = block_size / sizeof(Inode) #128
 		block_offset = 1024
 		if block_size == 1024
 			block_offset = 0
@@ -127,7 +127,7 @@ class Ext2Reader
 		f.seek(1024 + block_size, true)
 		f.xread(&bg, sizeof(BlockGroupDescriptor))
 		
-		//showMetaData()
+		#showMetaData()
 		testCompatibility()
 		if readable
 			if filter.num == 0
@@ -141,9 +141,9 @@ class Ext2Reader
 		return f.read(block_size)
 	
 	void readInode(int index, Inode inode)
-		int group_no = (index - 1) / sb.inodes_per_group // 0...
+		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = (index - 1) % sb.inodes_per_group
-		// group_no!!!!!!!!!!!!!!
+		# group_no!!!!!!!!!!!!!!
 		int pos = block_offset
 		pos += group_no * sb.blocks_per_group * block_size
 		pos += bg.inode_table * block_size
@@ -161,7 +161,7 @@ class Ext2Reader
 		int num_direct = min(num_blocks, 12)
 		for i in 0:num_direct
 			r += readBlock(inode.iblock[i])
-		// indirect...
+		# indirect...
 		
 		r.resize(inode.size)
 		return r
@@ -173,7 +173,7 @@ class Ext2Reader
 		for i in 0:level*2+1
 			indent += "  "
 		string info = "s=" + inode.size
-		//print inode.mtime
+		#print inode.mtime
 		if inode.isDir()
 			info += "  dir"
 		else if inode.isFile()
@@ -193,7 +193,7 @@ class Ext2Reader
 					break
 				string name = cont.substr(p + 8, d.name_len)
 				info = "  " + name
-				//print "--"+name
+				#print "--"+name
 				info += "  i=" + d.inode
 				int ft = d.file_type
 				if ft == 2
@@ -211,10 +211,10 @@ class Ext2Reader
 				print(indent + info)
 				
 				if name != "." and name != ".."
-				//	if ft == 2 or ft == 1
+				#	if ft == 2 or ft == 1
 						showInodeRecursive(d.inode, level+1)
 			
-			//print(cont.substr(0, 32).hex(false))
+			#print(cont.substr(0, 32).hex(false))
 	
 	void showMetaData()
 		print(block_size)

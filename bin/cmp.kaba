@@ -50,6 +50,6 @@ void main()
 	cmp(h1, h2)
 	close(h1)
 	close(h2)
-	//print FileRead(arg[i])
+	#print FileRead(arg[i])
 	
 	exit(0)

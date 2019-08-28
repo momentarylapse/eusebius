@@ -7,7 +7,7 @@ const int MAX_SHARED_MEMORY_BLOCKS = 256
 
 class SharedMemory
 	int id
-	int key // -1 = unused
+	int key # -1 = unused
 	int pid
 	int size
 	int p
@@ -49,7 +49,7 @@ class SharedMemoryController
 			if b.key != -1
 				continue
 			if absolute and key == 0x00700000
-				// :P
+				# :P
 				b.p = key
 			else if absolute
 				if !paging.alloc_chunk(key, size, true)
@@ -72,7 +72,7 @@ class SharedMemoryController
 			return nil
 		for b,i in blocks
 			if b.key == key
-				// test access rights
+				# test access rights
 				return &b
 		return nil
 		

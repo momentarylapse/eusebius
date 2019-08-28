@@ -140,7 +140,7 @@ MtkSizeNegotiationData MtkSizeNegotiationData(int min_w, int min_h, bool exp_x, 
 class MtkWidget
 	MtkWindow* win
 	XPainter* p
-	XRect r // relative to window
+	XRect r # relative to window
 	int mx, my
 	MtkSizeNegotiationData snd
 	FontDescriptor* font
@@ -250,7 +250,7 @@ class MtkGrid extends MtkWidget
 			if c
 				c.draw()
 	void put(int x, int y, MtkWidget *c)
-		// update snd
+		# update snd
 		if c.snd.expand_x
 			child_exp_x[x] = true
 			snd.expand_x = true
@@ -274,9 +274,9 @@ class MtkGrid extends MtkWidget
 		c.set_win(win, r.x0 + dx, r.y0 + dy, ww, hh)
 		
 	override void on_resize()
-		// plan child sizes...
+		# plan child sizes...
 		
-		// min
+		# min
 		int sum_min_w = 0
 		for w in child_min_w
 			sum_min_w += w
@@ -284,7 +284,7 @@ class MtkGrid extends MtkWidget
 		for h in child_min_h
 			sum_min_h += h
 			
-		// expansion
+		# expansion
 		int n_exp_x = 0
 		int n_exp_y = 0
 		for b in child_exp_x
@@ -300,7 +300,7 @@ class MtkGrid extends MtkWidget
 		if n_exp_y > 0
 			exp_y = (r.h() - (ny-1)*GRID_MARGIN - sum_min_h) / n_exp_y
 	
-		// actual sizes
+		# actual sizes
 		int[] child_x, child_y
 		int x0 = r.x0, y0 = r.y0
 		for w,i in child_w
@@ -316,7 +316,7 @@ class MtkGrid extends MtkWidget
 				h += exp_y
 			y0 += h + GRID_MARGIN
 			
-		// apply
+		# apply
 		for c,ci in children
 			if c
 				int i = ci % nx
@@ -390,7 +390,7 @@ class MtkButton extends MtkWidget
 				set_state(BUTTON_STATE_HOVER)
 		if !inside
 			set_state(BUTTON_STATE_DEFAULT)
-		// not the best way :P
+		# not the best way :P
 		
 	virtual void on_click()
 
@@ -497,7 +497,7 @@ class MtkTextView extends MtkWidget
 	
 	void insert(string s)
 		text = text.head(cursor_pos) + s + text.tail(text.num - cursor_pos)
-		//text.insert(cursor_pos, key)
+		#text.insert(cursor_pos, key)
 		cursor_pos ++
 		notify_change()
 			
@@ -543,18 +543,18 @@ class MtkWindow extends XWindow
 		p = new XPainter(self)
 		p.font = font_db.get(FONT_NAME, FONT_SIZE_BAR)
 		
-	/*void __init__(string title, int x, int y, int w, int h)
-		super.__init__(xcon, x, y, w+20, h+30)
-		widget = nil
-		input_widget = nil
-		shown = false
-		dragging = false
-		frame = true
-		
-		self.title = title
-		
-		p = new XPainter(self)
-		p.font = LoadTTF("/home/x.font")*/
+	#void __init__(string title, int x, int y, int w, int h)
+#		super.__init__(xcon, x, y, w+20, h+30)
+#		widget = nil
+#		input_widget = nil
+#		shown = false
+#		dragging = false
+#		frame = true
+#		
+#		self.title = title
+#		
+#		p = new XPainter(self)
+#		p.font = LoadTTF("/home/x.font")
 	
 	override void __delete__()
 		if !killed
@@ -620,13 +620,13 @@ class MtkWindow extends XWindow
 			invalidate(w - 30, 0, w, FRAME_BAR)
 			
 	override void on_mouse_left_button_down()
-		//XWindow* ww = xcon.get_at_cursor()
+		#XWindow* ww = xcon.get_at_cursor()
 		if self == xcon.cursor_win
 			activate()
 			if frame and my < FRAME_BAR
 				if button_close_hover
 					if on_close_request()
-						//exit(0)
+						#exit(0)
 						close()
 				else
 					drag_start()
@@ -750,7 +750,7 @@ void mtk_run()
 				delete(w)
 				break
 			
-		// nothing more to do...
+		# nothing more to do...
 		if mtk_windows.num + idles.num == 0
 			break
 		

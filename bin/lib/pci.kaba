@@ -71,13 +71,13 @@ class PCIDevice
 class PCIController
 	int read_config(int bus, int slot, int func, int offset)
  
-		/* create configuration address as per Figure 1 */
+		# create configuration address as per Figure 1 
 		int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
  
-		/* write out the address */
+		# write out the address 
 		outportd(0xcf8, address)
-		/* read in the data */
-		/* (offset & 2) * 8) = 0 will choose the first word of the 32 bits register */
+		# read in the data 
+		# (offset & 2) * 8) = 0 will choose the first word of the 32 bits register 
 		return inportd(0xcfc)
 
 
@@ -93,7 +93,7 @@ class PCIController
 		int vendor = (a >> 16) & 0xffff
 		if vendor == 0xffff
 			return nil
-		//int b = read_config(bus, slot, function, 0x04)
+		#int b = read_config(bus, slot, function, 0x04)
 		int c = read_config(bus, slot, function, 0x08)
 		int d = read_config(bus, slot, function, 0x0c)
 		p = new PCIDevice

@@ -2,17 +2,17 @@ use "../base.kaba"
 use "../io/text.kaba"
 
 
-//--------------------------------------------------------------
-// Speicher-"Verwaltung"
+#--------------------------------------------------------------
+# Speicher-"Verwaltung"
 
 const int MEM_HEAP_OFFSET = 0x00280000
-const int MEM_HEAP_SIZE = 0x00580000 // 5.5mb
+const int MEM_HEAP_SIZE = 0x00580000 # 5.5mb
 
-int MemHeapAllocated // includes overhead of all headers
+int MemHeapAllocated # includes overhead of all headers
 
 
 class MallocHeader
-	int size // header + payload
+	int size # header + payload
 	MallocHeader *next
 	MallocHeader *prev
 	void *after()
@@ -24,39 +24,39 @@ class MallocHeader
 MallocHeader *malloc_first_free
 MallocHeader *malloc_end_marker
 
-// heap is split into a (hole-free) list of blocks
-// blocks are either free or allocated
-// free blocks form a doubly-linked list (no loop)
-// allocated blocks are not linked
+# heap is split into a (hole-free) list of blocks
+# blocks are either free or allocated
+# free blocks form a doubly-linked list (no loop)
+# allocated blocks are not linked
 
 
 void *malloc(int size)
 	size = ceil_quot(size, 8) << 3
-	//prints "<+"
-	//printi size
+	#prints "<+"
+	#printi size
 	
-	// account for the allocation header
+	# account for the allocation header
 	size += sizeof(MallocHeader)
 	
-	// find a free block big enough
+	# find a free block big enough
 	MallocHeader *cur = malloc_first_free
 	while cur.next
 		if size <= cur.size - sizeof(MallocHeader)
 		
-			// shrink free block
+			# shrink free block
 			cur.size -= size
 			
-			// create allocated block at (former) end of free block
+			# create allocated block at (former) end of free block
 			MallocHeader *hh = cur.after()
 			hh.size = size
 			hh.next = nil
 			hh.prev = nil
 			
 			MemHeapAllocated += size
-			//prints " "
-			//printi(_p2i(hh.payload()))
+			#prints " "
+			#printi(_p2i(hh.payload()))
 			memcheck()
-			//prints ">"
+			#prints ">"
 			return hh.payload()
 		cur = cur.next
 	panic("malloc: fail")
@@ -65,13 +65,13 @@ void *malloc(int size)
 void _cleanup(MallocHeader *h)
 	if h.after() == h.next
 		MemHeapAllocated -= sizeof(MallocHeader)
-		//prints(" merge after ")
+		#prints(" merge after ")
 		h.size += h.next.size
 		h.next = h.next.next
 		h.next.prev = h
 	if h.prev.after() == h
 		MemHeapAllocated -= sizeof(MallocHeader)
-		//prints(" merge before ")
+		#prints(" merge before ")
 		h.prev.size += h.size
 		h.next.prev = h.prev
 		h.prev.next = h.next
@@ -80,15 +80,15 @@ void free(void *p)
 	if !p
 		return
 	int ip = _p2i(p)
-	//prints "---free"
-	//prints("<-")
-	//printi(ip)
+	#prints "---free"
+	#prints("<-")
+	#printi(ip)
 	
 	MallocHeader *hh = _i2p(ip - sizeof(MallocHeader))
-	//prints(" ")
-	//printi(hh.size)
+	#prints(" ")
+	#printi(hh.size)
 	
-	// find last free window before p
+	# find last free window before p
 	MallocHeader *cur = malloc_first_free
 	while cur.next
 		if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
@@ -99,12 +99,12 @@ void free(void *p)
 			
 			panic("double free")
 		if ip < _p2i(cur.next)
-			// turn allocated block into a free one
+			# turn allocated block into a free one
 			
-			//printi(hh.size)
+			#printi(hh.size)
 			MemHeapAllocated -= hh.size - sizeof(MallocHeader)
 			
-			// ..by linking it to its neighbors
+			# ..by linking it to its neighbors
 			hh.next = cur.next
 			cur.next.prev = hh
 			hh.prev = cur
@@ -112,7 +112,7 @@ void free(void *p)
 			
 			_cleanup(hh)
 			memcheck()
-			//prints(">")
+			#prints(">")
 			return
 		cur = cur.next
 	panic("free: fail")
@@ -138,7 +138,7 @@ void* realloc(void* po, int old_size, int new_size)
 	return pn
 
 void InitHeap()
-	// intentionally leave a 8b gap to prevent merging
+	# intentionally leave a 8b gap to prevent merging
 	MemHeapAllocated = sizeof(MallocHeader)*2-8
 	malloc_first_free = _i2p(MEM_HEAP_OFFSET)
 	malloc_first_free.size = MEM_HEAP_SIZE - sizeof(MallocHeader) - 8

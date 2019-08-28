@@ -4,33 +4,33 @@ use "lib/draw.kaba"
 
 class LauncherButton extends MtkButton
 	string[] program
-	override void __init__(string title) // kaba bug...
+	override void __init__(string title) # kaba bug...
 	
 	void __init__(string title, string[] program)
 		super.__init__(title)
 		self.program = program
 	override void on_click()
 		if xcon.execute(program) < 0
-			//print("run " + program + " FAIL")
+			#print("run " + program + " FAIL")
 			mtk_error_box("run " + program + " FAIL")
 
 class LauncherBar extends MtkWindow
 	void __init__()
 		super.__init__("", 95, 200)
-		//super.__init__("Test", 1024, 32)
-		move(0, 0)//-30)
+		#super.__init__("Test", 1024, 32)
+		move(0, 0)#-30)
 		
 		MtkGrid* g = new MtkGrid(1, 5)
 		put(g)
 	
 		g.put(0, 0, new LauncherButton("Term", ["/bin/xterm"]))
 		g.put(0, 1, new LauncherButton("Test", ["/bin/xtest"]))
-		g.put(0, 2, new LauncherButton("Files", ["/bin/xfiles", "/home/"]))//"/home"]))
+		g.put(0, 2, new LauncherButton("Files", ["/bin/xfiles", "/home/"]))#"/home"]))
 		g.put(0, 3, new LauncherButton("Edit", ["/bin/xedit"]))
 		g.put(0, 4, new LauncherButton("Cake", ["/bin/cake"]))
 		
 
-//TestWindow* window
+#TestWindow* window
 
 void main()
 	mtk_init()

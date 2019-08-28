@@ -26,10 +26,10 @@ class Pipe
 		return size
 	int read(PageDirectory *page_dir, int addr, int size)
 		if buffer_used == 0
-			// no data... block if we have a writer
+			# no data... block if we have a writer
 			if write_ref_count > 0
 				return -EWOULDBLOCK
-			// else "empty"
+			# else "empty"
 			return 0
 		if size > buffer_used
 			size = buffer_used
@@ -38,14 +38,14 @@ class Pipe
 		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]
 		return size
-	/*void show()
-		prints("  ")
-		printi(_p2i(self))
-		prints("  ")
-		printi read_ref_count
-		prints(":")
-		printi write_ref_count
-		prints("  ")*/
+	#void show()
+#		prints("  ")
+#		printi(_p2i(self))
+#		prints("  ")
+#		printi read_ref_count
+#		prints(":")
+#		printi write_ref_count
+#		prints("  ")
 	void unref(bool writing)
 		if writing
 			write_ref_count --
@@ -58,12 +58,12 @@ class Pipe
 			panic("Pipe.write_ref_count < 0")
 			
 		if read_ref_count == 0 and write_ref_count == 0 and !e.parent
-			// only auto-delete if anonymous
+			# only auto-delete if anonymous
 			clean_up()
 	
 	void clean_up()
 		if !e.parent
-			// anonymous pipe
+			# anonymous pipe
 			FileSystem.del(e)
 
 		free(buffer)

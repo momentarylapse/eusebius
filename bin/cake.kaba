@@ -11,9 +11,9 @@ XConnection* xcon
 
 void draw_cancle(XPainter* p, float x, float y)
 	p.set_color(bg)
-	//p.rectangle(rect(x-12, x+12, y-60, y))
+	#p.rectangle(rect(x-12, x+12, y-60, y))
 	p.draw_circle(x, y-30, 20)
-	//p.fill()
+	#p.fill()
 	
 	p.set_color(White)
 	p.move_to(x-10, y)
@@ -73,8 +73,8 @@ void main()
 	draw_cancle(p, 170, 210)
 	draw_cancle(p, 220, 199)
 	
-	//p.draw_circle(60, 60, 10)
-	//p.draw_spline(complex(0,0), complex(100, 0), complex(100, 100))*/
+	#p.draw_circle(60, 60, 10)
+	#p.draw_spline(complex(0,0), complex(100, 0), complex(100, 100))*/
 	p.end()
 	
 	while true

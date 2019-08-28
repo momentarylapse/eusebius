@@ -29,12 +29,12 @@ int _p2i(void *p)
 	int* i = &p
 	return *i
 
-//class PointerWrapper
-//	void *p
+#class PointerWrapper
+#	void *p
 	
 void *_i2p(int i)
-//	PointerWrapper *p = &i
-//	return p.p
+#	PointerWrapper *p = &i
+#	return p.p
 	__temp_i__ = i
 	asm{
 		mov eax, __temp_i__
@@ -60,7 +60,7 @@ lib__string cs2s(cstring cs)
 	_cs2s(cs, s)
 	return s
 
-// ["aa", "bb"] -> "aa\0bb\0\0"
+# ["aa", "bb"] -> "aa\0bb\0\0"
 void sa2cs(string[] a, cstring cs)
 	int n = 0
 	for k in 0:a.num
@@ -72,8 +72,8 @@ void sa2cs(string[] a, cstring cs)
 	cs[n] = 0
 
 
-//--------------------------------------------------------------------------
-// system calls
+#--------------------------------------------------------------------------
+# system calls
 
 bool exit(int r)
 	__temp_i__ = r
@@ -209,7 +209,7 @@ bool rmdir(string filename)
 	}
 	return lib_error == 0
 
-bool getdents(int h, void *buf)//lib__DirEntry)
+bool getdents(int h, void *buf)#lib__DirEntry)
 	__temp_i__ = h
 	__temp_i2__ = 1
 	__temp_p__ = buf
@@ -376,7 +376,7 @@ int shmget(int key, int size, int flags)
 	__temp_i2__ = size
 	__temp_i3__ = flags
 	asm{
-		mov eax, 0x00000075 // ipc
+		mov eax, 0x00000075 # ipc
 		mov ebx, 0x0000000b
 		mov ecx, __temp_i__
 		mov edx, __temp_i2__
@@ -392,7 +392,7 @@ void* shmat(int id, int flags)
 	__temp_p__ = &p
 	__temp_i2__ = flags
 	asm{
-		mov eax, 0x00000075 // ipc
+		mov eax, 0x00000075 # ipc
 		mov ebx, 0x00000009
 		mov ecx, __temp_i__
 		mov edx, __temp_p__
@@ -407,7 +407,7 @@ void* shmat(int id, int flags)
 bool shmdt(void* addr)
 	__temp_p__ = addr
 	asm{
-		mov eax, 0x00000075 // ipc
+		mov eax, 0x00000075 # ipc
 		mov ebx, 0x0000000a
 		mov ecx, __temp_p__
 		int 0x80
@@ -417,8 +417,8 @@ bool shmdt(void* addr)
 	
 bool waitmsg()
 	asm{
-		mov eax, 0x00000075 // ipc
-		mov ebx, 0x000003e9 // 1001 = wait-msg
+		mov eax, 0x00000075 # ipc
+		mov ebx, 0x000003e9 # 1001 = wait-msg
 		int 0x80
 		mov lib_error, eax
 	}
@@ -427,8 +427,8 @@ bool waitmsg()
 bool yield(int pid)
 	__temp_i__ = pid
 	asm{
-		mov eax, 0x00000075 // ipc
-		mov ebx, 0x000003ea // 1002 = yield
+		mov eax, 0x00000075 # ipc
+		mov ebx, 0x000003ea # 1002 = yield
 		mov ecx, __temp_i__
 		int 0x80
 		mov lib_error, eax
@@ -591,8 +591,8 @@ void get_args(lib__string@list arg)
 			s.add(cs[i])
 
 
-//--------------------------------------------------------------------------
-// lib
+#--------------------------------------------------------------------------
+# lib
 
 int lib__clampi(int i, int min, int max)
 	if i > max
@@ -616,8 +616,8 @@ float lib__max(float a, float b)
 		return a
 	return b
 
-//--------------------------------------------------------------------------
-// memory management
+#--------------------------------------------------------------------------
+# memory management
 
 
 void memcpy(char[0]* dest, char[0]* source, int size)
@@ -633,10 +633,10 @@ void prints(cstring s)
 	}
 
 
-int MemHeapAllocated // includes overhead of all headers
+int MemHeapAllocated # includes overhead of all headers
 
 class MallocHeader
-	int size // header + payload
+	int size # header + payload
 	int magic
 	MallocHeader *next
 	MallocHeader *prev
@@ -650,10 +650,10 @@ MallocHeader *malloc_first_free
 MallocHeader *malloc_end_marker
 int cur_break_value
 
-// heap is split into a (hole-free) list of blocks
-// blocks are either free or allocated
-// free blocks form a doubly-linked list (no loop)
-// allocated blocks are not linked
+# heap is split into a (hole-free) list of blocks
+# blocks are either free or allocated
+# free blocks form a doubly-linked list (no loop)
+# allocated blocks are not linked
 
 int _align8_(int size)
 	if (size & 0x00000007) == 0
@@ -668,22 +668,22 @@ void* lib__@malloc(int size)
 			return ppp
 
 	size = _align8_(size)
-	/*kprint " [+"
-	kprinti(size)
-	kprint "] "*/
+	#kprint " [+"
+#	kprinti(size)
+#	kprint "] "
 	
-	// account for the allocation header
+	# account for the allocation header
 	size += sizeof(MallocHeader)
 	
-	// find a free block big enough
+	# find a free block big enough
 	MallocHeader *cur = malloc_first_free
 	while cur.next
 		if size <= cur.size - sizeof(MallocHeader)
 		
-			// shrink free block
+			# shrink free block
 			cur.size -= size
 			
-			// create allocated block at (former) end of free block
+			# create allocated block at (former) end of free block
 			MallocHeader *hh = cur.after()
 			hh.magic = 0x12345678
 			hh.size = size
@@ -691,50 +691,50 @@ void* lib__@malloc(int size)
 			hh.prev = nil
 			
 			MemHeapAllocated += size
-			//prints " "
-			//printi(_p2i(hh.payload()))
+			#prints " "
+			#printi(_p2i(hh.payload()))
 			memcheck()
-			//prints ">"
-//			kprinti(_p2i(hh.payload()))
+			#prints ">"
+#			kprinti(_p2i(hh.payload()))
 			return hh.payload()
 		cur = cur.next
 	
 	
-//	__lib_fatal__("malloc fail")
-//	return nil
+#	__lib_fatal__("malloc fail")
+#	return nil
 
 	
 	MallocHeader *last_before_end_new = _i2p(cur_break_value - sizeof(MallocHeader) - MALLOC_STOPPER)
  	
-	// request more memory from kernel
+	# request more memory from kernel
 	int new_break_value = cur_break_value + size + sizeof(MallocHeader) + 1024
-	/*kprint("  BREAK ")
-	kprinti(cur_break_value)
-	kprint(" - ")
-	kprinti(new_break_value)
-	kprint("  ")*/
+	#kprint("  BREAK ")
+#	kprinti(cur_break_value)
+#	kprint(" - ")
+#	kprinti(new_break_value)
+#	kprint("  ")
 	int r = brk(new_break_value)
 	if r < 0
 		__lib_fatal__("malloc/brk()")
 	cur_break_value = r
 	
-	// get the pointer now... we might overwrite the end marker...
+	# get the pointer now... we might overwrite the end marker...
 	MallocHeader *last_before_end_old = malloc_end_marker.prev
 	last_before_end_old.next = last_before_end_new
 	last_before_end_new.prev = last_before_end_old
 	last_before_end_new.magic = 0x1234567
 	
 	
-	// add allocated block
+	# add allocated block
 	MallocHeader *hh = _i2p(cur_break_value - size - sizeof(MallocHeader) - MALLOC_STOPPER)
 	hh.size = size
 	hh.next = nil
 	hh.prev = nil
 	
-	// resize last free block
+	# resize last free block
 	last_before_end_new.size = _p2i(hh) - _p2i(last_before_end_new)
 	
-	// create new end marker
+	# create new end marker
 	malloc_end_marker = _i2p(cur_break_value - sizeof(MallocHeader))
 	malloc_end_marker.size = sizeof(MallocHeader)
 	malloc_end_marker.next = nil
@@ -746,13 +746,13 @@ void* lib__@malloc(int size)
 void _cleanup(MallocHeader *h)
 	if h.after() == h.next
 		MemHeapAllocated -= sizeof(MallocHeader)
-		//kprint(" merge after ")
+		#kprint(" merge after ")
 		h.size += h.next.size
 		h.next = h.next.next
 		h.next.prev = h
 	if h.prev.after() == h
 		MemHeapAllocated -= sizeof(MallocHeader)
-		//kprint(" merge before ")
+		#kprint(" merge before ")
 		h.prev.size += h.size
 		h.next.prev = h.prev
 		h.prev.next = h.next
@@ -765,8 +765,8 @@ void lib__@free(void *p)
 		small_free(index)
 		return
 	int ip = _p2i(p)
-	/*kprint " free "
-	kprinti(ip)*/
+	#kprint " free "
+#	kprinti(ip)
 	
 	MallocHeader *hh = _i2p(ip - sizeof(MallocHeader))
 	if hh.magic != 0x12345678
@@ -774,29 +774,29 @@ void lib__@free(void *p)
 		kprinti(ip)
 		__lib_fatal__("evil free(1)")
 		
-	//kprint(" ")
-	//kprinti(hh.size)
+	#kprint(" ")
+	#kprinti(hh.size)
 	
-	// find last free window before p
+	# find last free window before p
 	MallocHeader *cur = malloc_first_free
 	while cur.next
 		if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
-			/*prints("\n")
-			printi(_p2i(cur))
-			prints("  ")
-			printi(cur.size)
-			
-			panic("double free")*/
-		//	__lib_free_error__()
+			#prints("\n")
+#			printi(_p2i(cur))
+#			prints("  ")
+#			printi(cur.size)
+#			
+#			panic("double free")
+		#	__lib_free_error__()
 			__lib_fatal__("double free()")
 		if ip < _p2i(cur.next)
-			// turn allocated block into a free one
+			# turn allocated block into a free one
 			hh.magic = 0
 			
-			//printi(hh.size)
+			#printi(hh.size)
 			MemHeapAllocated -= hh.size - sizeof(MallocHeader)
 			
-			// ..by linking it to its neighbors
+			# ..by linking it to its neighbors
 			hh.next = cur.next
 			cur.next.prev = hh
 			hh.prev = cur
@@ -804,7 +804,7 @@ void lib__@free(void *p)
 			
 			_cleanup(hh)
 			memcheck()
-			//prints(">")
+			#prints(">")
 			return
 		cur = cur.next
 	__lib_fatal__( "invalid call to free()")
@@ -820,15 +820,15 @@ void memcheck()
 			__lib_fatal__("memcheck: h!=h.next.prev")
 		h = h.next
 
-/*void* realloc(void* po, int old_size, int new_size)
-	void *pn = malloc(new_size)
-	int n = old_size
-	if new_size < n
-		n = new_size
-	memcpy(pn, po, n)
-	free(po)
-	return pn*/
-// double-linked list of free fields
+#void* realloc(void* po, int old_size, int new_size)
+#	void *pn = malloc(new_size)
+#	int n = old_size
+#	if new_size < n
+#		n = new_size
+#	memcpy(pn, po, n)
+#	free(po)
+#	return pn
+# double-linked list of free fields
 
 
 void __lib_fatal__(string s)
@@ -863,8 +863,8 @@ void *lib__@realloc(void *p, int size)
 class MallocSmallBlock
 	int[MALLOC_SMALL_NUM / 32] mask
 	char[MALLOC_SMALL_SIZE * MALLOC_SMALL_NUM] buf
-	int delta // address translation...
-	int full_below // #masks
+	int delta # address translation...
+	int full_below # #masks
 	
 	
 	void init()
@@ -874,7 +874,7 @@ class MallocSmallBlock
 		full_below = 0
 	
 	void* alloc()
-		//kprint " +sm "
+		#kprint " +sm "
 		for i in full_below:(MALLOC_SMALL_NUM/32)
 			if mask[i] == 0xffffffff
 				continue
@@ -884,24 +884,24 @@ class MallocSmallBlock
 					full_below = i
 					mask[i] = mask[i] | m
 					int n = i * 32 + j
-					//kprinti(n)
-					//kprint(" : ")
+					#kprinti(n)
+					#kprint(" : ")
 					void *p = &buf[n * MALLOC_SMALL_SIZE]
-					//kprinti _p2i(p)
+					#kprinti _p2i(p)
 					return p
-		//kprint " --[XXX]--"
+		#kprint " --[XXX]--"
 		return nil
 	
 	int to_index(void *p)
 		int ip = _p2i(p)
-		/*kprint(" - ")
-		kprinti(ip)
-		kprint(" : ")
-		kprinti((ip - delta) / MALLOC_SMALL_SIZE)*/
+		#kprint(" - ")
+#		kprinti(ip)
+#		kprint(" : ")
+#		kprinti((ip - delta) / MALLOC_SMALL_SIZE)
 		return (ip - delta) / MALLOC_SMALL_SIZE
 	
 	void free(int index)
-		//kprint " -sm "
+		#kprint " -sm "
 		int _mask = 1 << (index & 31)
 		int mn = index >> 5
 		if (mask[mn] & _mask) != 0
@@ -923,8 +923,8 @@ int small_malloc_no(void *p)
 		return -1
 	return index
 
-//--------------------------------------------------------------------------
-// arrays
+#--------------------------------------------------------------------------
+# arrays
 
 class lib__@DynamicArray
 	cstring *data
@@ -958,7 +958,7 @@ class lib__@DynamicArray
 	void __mem_resize__(int size)
 		if size > num
 			reserve(size)
-			//memset((char*)data + num * element_size, 0, (size - num) * element_size);
+			#memset((char*)data + num * element_size, 0, (size - num) * element_size);
 		num = size
 
 	void __mem_remove__(int index)
@@ -986,11 +986,11 @@ class lib__string extends lib__@DynamicArray
 	void add(char c)
 		__mem_resize__(num + 1)
 		data[num - 1] = c
-	/*void insert(int index, char c)
-		__mem_resize__(num + 1)
-		for i in 1:num-index-1
-			data[num - i] = data[num - i - 1]
-		data[index] = c*/
+	#void insert(int index, char c)
+#		__mem_resize__(num + 1)
+#		for i in 1:num-index-1
+#			data[num - i] = data[num - i - 1]
+#		data[index] = c
 	void remove(int index)
 		__mem_remove__(index)
 	void __assign__(lib__string o)
@@ -1011,7 +1011,7 @@ class lib__string extends lib__@DynamicArray
 		if start >= num
 			return r
 		if start < 0
-			// start from the end
+			# start from the end
 			start = num + start
 			if start < 0
 				return r
@@ -1059,57 +1059,57 @@ class lib__string extends lib__@DynamicArray
 	bool __ne__(lib__string s)
 		return compare(s) != 0
 
-/*int string::rfind(const string &s, int start) const
-{
-	char *b = (char*)data;
-	char *aa = (char*)s.data;
-	if (start < 0)
-		start = num - 1;
-	for (int i=start;i>=0;i--){
-		bool ok = true;
-		for (int j=0;j<s.num;j++)
-			if (b[i + j] != aa[j]){
-				ok = false;
-				break;
-			}
-		if (ok)
-			return i;
-	}
-	return -1;
-}
-
-int string::compare(const string &s) const
-{
-	char *a = (char*)data;
-	int n = num;
-	if (num > s.num)
-		n = s.num;
-	for (int i=0;i<n;i++){
-		if (s[i] != a[i])
-			return (int)(unsigned char)a[i] - (int)(unsigned char)s[i];
-	}
-	return num - s.num;
-}
-
-inline int ichar(char a)
-{
-	if ((a >= 'A') && (a <= 'Z'))
-		return (int)(unsigned char)a - (int)(unsigned char)'A' + (int)(unsigned char)'a';
-	return (int)(unsigned char)a;
-}
-
-int string::icompare(const string &s) const
-{
-	char *a = (char*)data;
-	int n = num;
-	if (num > s.num)
-		n = s.num;
-	for (int i=0;i<n;i++){
-		if (ichar(s[i]) != ichar(a[i]))
-			return ichar(a[i]) - ichar(s[i]);
-	}
-	return num - s.num;
-}*/
+#int string::rfind(const string &s, int start) const
+#{
+#	char *b = (char*)data;
+#	char *aa = (char*)s.data;
+#	if (start < 0)
+#		start = num - 1;
+#	for (int i=start;i>=0;i--){
+#		bool ok = true;
+#		for (int j=0;j<s.num;j++)
+#			if (b[i + j] != aa[j]){
+#				ok = false;
+#				break;
+#			}
+#		if (ok)
+#			return i;
+#	}
+#	return -1;
+#}
+#
+#int string::compare(const string &s) const
+#{
+#	char *a = (char*)data;
+#	int n = num;
+#	if (num > s.num)
+#		n = s.num;
+#	for (int i=0;i<n;i++){
+#		if (s[i] != a[i])
+#			return (int)(unsigned char)a[i] - (int)(unsigned char)s[i];
+#	}
+#	return num - s.num;
+#}
+#
+#inline int ichar(char a)
+#{
+#	if ((a >= 'A') && (a <= 'Z'))
+#		return (int)(unsigned char)a - (int)(unsigned char)'A' + (int)(unsigned char)'a';
+#	return (int)(unsigned char)a;
+#}
+#
+#int string::icompare(const string &s) const
+#{
+#	char *a = (char*)data;
+#	int n = num;
+#	if (num > s.num)
+#		n = s.num;
+#	for (int i=0;i<n;i++){
+#		if (ichar(s[i]) != ichar(a[i]))
+#			return ichar(a[i]) - ichar(s[i]);
+#	}
+#	return num - s.num;
+#}
 
 	lib__string reverse()
 		lib__string r
@@ -1124,7 +1124,7 @@ int string::icompare(const string &s) const
 		int d = str.num - length
 		if d > 0
 			resize(num + d)
-			//for (int i=num-1;i>=start+length;i--)
+			#for (int i=num-1;i>=start+length;i--)
 			int j = num-1
 			while j >= start+length
 				data[j] = data[j - d]
@@ -1337,10 +1337,10 @@ class lib__string@list extends lib__@DynamicArray
 	override void __delete__()
 		for i in 0:num
 			data[i].__delete__()
-		//clear()
+		#clear()
 	void resize(int size)
 		if size < num
-			// shrink -> destruct
+			# shrink -> destruct
 			for i in size:num
 				data[i].__delete__()
 		else if size > num
@@ -1361,8 +1361,8 @@ class lib__string@list extends lib__@DynamicArray
 		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
-		//data[index].__clear__()
-		//__mem_remove__(index)
+		#data[index].__clear__()
+		#__mem_remove__(index)
 
 	lib__string join(lib__string glue)
 		lib__string r
@@ -1623,8 +1623,8 @@ void lib__print(string s)
 
 
 
-//--------------------------------------------------------------------------
-// dir entry
+#--------------------------------------------------------------------------
+# dir entry
 
 
 class lib__DirEntry
@@ -1647,10 +1647,10 @@ class lib__DirEntry@list extends lib__@DynamicArray
 	override void __delete__()
 		for i in 0:num
 			data[i].__delete__()
-		//clear()
+		#clear()
 	void resize(int size)
 		if size < num
-			// shrink -> destruct
+			# shrink -> destruct
 			for i in size:num
 				data[i].__delete__()
 		else if size > num
@@ -1685,7 +1685,7 @@ class dirent_struct
 
 lib__DirEntry@list lib__DirSearch(string dirname, string filter, bool allow_dirs)
 	lib__DirEntry@list l
-	lib__print("") // ?!?!?!? FIXME
+	lib__print("") # ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
@@ -1749,7 +1749,7 @@ class lib__File
 	
 	int getPos()
 		return pos
-		//return xxx_seek(h, 0, SEEK_CUR)
+		#return xxx_seek(h, 0, SEEK_CUR)
 	
 	void seek(int _pos, bool absolute)
 		if absolute
@@ -1799,8 +1799,8 @@ lib__string lib__FileRead(string filename)
 	close(h)
 	return content
 
-//--------------------------------------------------------------------------
-// images
+#--------------------------------------------------------------------------
+# images
 
 class lib__color
 	float a, r, g, b
@@ -1850,20 +1850,20 @@ lib__Image* lib__LoadImage(string filename)
 	for y in 0:height
 		read(h, &im.data.data[y * width], 4*width)
 				
-	/*for y in 0:height
-		for x in 0:width
-			int c
-			if read(h, &c, 4) == 4
-				im.data.data[x + y * width] = c
-			else
-				im.data.data[x + y * width] = 0xffff0000*/
+	#for y in 0:height
+#		for x in 0:width
+#			int c
+#			if read(h, &c, 4) == 4
+#				im.data.data[x + y * width] = c
+#			else
+#				im.data.data[x + y * width] = 0xffff0000
 			
 	close(h)
 	return im
 		
 
-//--------------------------------------------------------------------------
-// start
+#--------------------------------------------------------------------------
+# start
 
 void signal_handler_segv()
 	lib__print("  -- Segmentation Fault --\n")
@@ -1875,9 +1875,9 @@ void init_lib()
 	
 	int malloc_begin = 0x00b00000
 	cur_break_value = brk(-1)
-	int malloc_size_all = cur_break_value - malloc_begin // 0x00200000
+	int malloc_size_all = cur_break_value - malloc_begin # 0x00200000
 	
-	// intentionally leave a 8b gap to prevent merging
+	# intentionally leave a 8b gap to prevent merging
 	malloc_first_free = _i2p(malloc_begin)
 	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
 	malloc_first_free.prev = nil

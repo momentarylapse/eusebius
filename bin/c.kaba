@@ -35,24 +35,24 @@ class CWindow extends XWindow
 		p.line_to(250,220)
 		p.line_to(40,210)
 		p.path_close()
-		//p.strike()
+		#p.strike()
 		p.fill()
 	
-		/*for x in 0:10
-			for y in 0:10
-				p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)*/
+		#for x in 0:10
+#			for y in 0:10
+#				p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)
 
 		p.set_color(White)
 		p.draw_str(20,  50, "Hallo Welt")
 		p.draw_str(20, 140, "ABCDEFG")
 	
-		/*for c in g.contours
-			for i in c.start:c.start+c.num
-				p.path_add(100+ttf.points[i].x*0.1, 100+ttf.points[i].y*0.1)
-			p.path_close()
-			p.set_color(White)
-			p.strike()*/
-		//p.spline(complex(0,0), complex(100, 0), complex(100, 100))
+		#for c in g.contours
+#			for i in c.start:c.start+c.num
+#				p.path_add(100+ttf.points[i].x*0.1, 100+ttf.points[i].y*0.1)
+#			p.path_close()
+#			p.set_color(White)
+#			p.strike()
+		#p.spline(complex(0,0), complex(100, 0), complex(100, 100))
 		p.end()
 
 
@@ -62,17 +62,17 @@ void main()
 	init_lib()
 	
 	
-	/*TTFFont *font = LoadTTF("/home/x.font")
-	
-	print font.points[0]
-	print "\n"
-	print font.glyphs[23].contours.num
-	print "\n"
-	print font.glyphs[23].contours[0].start
-	print "\n"
-	print font.points[font.glyphs[23].contours[0].start]
-	print "\n"
-	exit(0)*/
+	#TTFFont *font = LoadTTF("/home/x.font")
+#	
+#	print font.points[0]
+#	print "\n"
+#	print font.glyphs[23].contours.num
+#	print "\n"
+#	print font.glyphs[23].contours[0].start
+#	print "\n"
+#	print font.points[font.glyphs[23].contours[0].start]
+#	print "\n"
+#	exit(0)
 	
 	stdout = open("/dev/tty", O_WRONLY)
 	

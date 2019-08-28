@@ -9,8 +9,8 @@ use "../task/task.kaba"
 
 
 
-//--------------------------------------------------------------
-// Gerätedateien
+#--------------------------------------------------------------
+# Gerätedateien
 
 FileOperations dev_zero_ops
 int dev_zero_open(FileEntry *f)
@@ -87,7 +87,7 @@ int dev_mouse_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
 		return -EWOULDBLOCK
 	if size < 16
 		return 0
-	mouse_temp_no = 0 // CHEAP BUG FIX...
+	mouse_temp_no = 0 # CHEAP BUG FIX...
 	size = 16
 	if size > dev_mouse_num
 		size = dev_mouse_num
@@ -130,7 +130,7 @@ void InitDrivers()
 	dev_tty_key_num = 0
 	dev_key_reading = 0
 	
-	//FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
+	#FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
 	FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
 	
 	FileEntry *dev_zero = dev.create_child("zero", FILE_TYPE_CHAR, nil)
@@ -185,15 +185,15 @@ void InitDrivers()
 	Task *KeyTask = AddTaskKernel("irq-key", &int_key, 1024, KernelTask)
 	Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, 1024, KernelTask)
  	
-	irq.set_task(33, KeyTask) // IRQ 1
-	irq.set_task(44, MouseTask) // IRQ 12
+	irq.set_task(33, KeyTask) # IRQ 1
+	irq.set_task(44, MouseTask) # IRQ 12
 
 
-	// Enable the auxiliary mouse device
+	# Enable the auxiliary mouse device
 	mouse_wait_signal()
 	outportb(0x64, 0xa8)
   
-	// Enable the interrupts
+	# Enable the interrupts
 	mouse_wait_signal()
 	outportb(0x64, 0x20)
 	mouse_wait_data()
@@ -203,17 +203,17 @@ void InitDrivers()
 	mouse_wait_signal()
 	outportb(0x60, _status)
   
-	// Reset
+	# Reset
 	mouse_write(0xff)
-	mouse_read() // acknowledge
+	mouse_read() # acknowledge
   
-	// Set Defaults
+	# Set Defaults
 	mouse_write(0xf6)
-	mouse_read() // acknowledge
+	mouse_read() # acknowledge
   
-	// Enable Packet Streaming
+	# Enable Packet Streaming
 	mouse_write(0xf4)
-	mouse_read() // acknowledge
+	mouse_read() # acknowledge
 	
 	prints("ok\n")
 
@@ -242,86 +242,86 @@ int mouse_read()
 
 int getchar(int k)
 	if dev_key_control
-		if k == 0x2e // 'C'
+		if k == 0x2e # 'C'
 			return 0x03
-		if k == 0x20 // 'D'
+		if k == 0x20 # 'D'
 			return 0x04
-		if k == 0x15 // 'Z'
+		if k == 0x15 # 'Z'
 			return 0x1a
 		return -1
 	if k == 0x1c
-		return 0x0a // '\n'
+		return 0x0a # '\n'
 	if k == 0x39
-		return 0x20 // ' '
+		return 0x20 # ' '
 	if k == 0x0e
-		return 0x7f // BACKSPACE
+		return 0x7f # BACKSPACE
 	if k == 0xe048
-		return 0x1b5b41 // ^[A up
+		return 0x1b5b41 # ^[A up
 	if k == 0xe050
-		return 0x1b5b42 // ^[B down
+		return 0x1b5b42 # ^[B down
 	if k == 0xe04b
-		return 0x1b5b43 // ^[C left
+		return 0x1b5b43 # ^[C left
 	if k == 0xe04d
-		return 0x1b5b44 // ^[D right
+		return 0x1b5b44 # ^[D right
 	if dev_key_altgr
 		if k == 0x1b
-			return 0x7e // '~'
+			return 0x7e # '~'
 		if k == 0x56
-			return 0x7c // '|'
+			return 0x7c # '|'
 		if k == 0x08
-			return 0x7b // '{'
+			return 0x7b # '{'
 		if k == 0x09
-			return 0x5b // '['
+			return 0x5b # '['
 		if k == 0x0a
-			return 0x5d // ']'
+			return 0x5d # ']'
 		if k == 0x0b
-			return 0x7d // '}'
+			return 0x7d # '}'
 		if k == 0x10
-			return 0x40 // '@'
+			return 0x40 # '@'
 		if k == 0x0c
-			return 0x5c // '\'
+			return 0x5c # '\'
 	else if dev_key_shift
 		if k == 0x0b
-			return 0x3d // '='
+			return 0x3d # '='
 		if k == 0x02
-			return 0x21 // '!'
+			return 0x21 # '!'
 		if k == 0x03
-			return 0x22 // '"'
-		//if k == 0x04
-		//	return 0x00 // '§'
+			return 0x22 # '"'
+		#if k == 0x04
+		#	return 0x00 # '§'
 		if k == 0x05
-			return 0x24 // '$'
+			return 0x24 # '$'
 		if k == 0x06
-			return 0x25 // '%'
+			return 0x25 # '%'
 		if k == 0x07
-			return 0x26 // '&'
+			return 0x26 # '&'
 		if k == 0x08
-			return 0x2f // '/'
+			return 0x2f # '/'
 		if k == 0x09
-			return 0x28 // '('
+			return 0x28 # '('
 		if k == 0x0a
-			return 0x29 // ')'
+			return 0x29 # ')'
 		if k == 0x35
-			return 0x5f // '_'
+			return 0x5f # '_'
 		if k == 0x34
-			return 0x3a // ':'
+			return 0x3a # ':'
 		if k == 0x33
-			return 0x3b // ';'
+			return 0x3b # ';'
 		if k == 0x56
-			return 0x3e // '>'
+			return 0x3e # '>'
 		if k == 0x2b
-			return 0x27 // '''
+			return 0x27 # '''
 		if k == 0x1b
-			return 0x2a // '*'
-		//if k == 0x29
-		//	return 0x // '°'
+			return 0x2a # '*'
+		#if k == 0x29
+		#	return 0x # '°'
 		if k == 0x0c
-			return 0x3f // '?'
+			return 0x3f # '?'
 		if k == 0x0d
-			return 0x60 // '`'
+			return 0x60 # '`'
 			
 		if k == 0x1e
-			return 0x41 // 'A'
+			return 0x41 # 'A'
 		if k == 0x30
 			return 0x42
 		if k == 0x2e
@@ -333,7 +333,7 @@ int getchar(int k)
 		if k == 0x21
 			return 0x46
 		if k == 0x22
-			return 0x47 // 'G'
+			return 0x47 # 'G'
 		if k == 0x23
 			return 0x48
 		if k == 0x17
@@ -345,7 +345,7 @@ int getchar(int k)
 		if k == 0x26
 			return 0x4c
 		if k == 0x32
-			return 0x4d // 'M'
+			return 0x4d # 'M'
 		if k == 0x31
 			return 0x4e
 		if k == 0x18
@@ -355,7 +355,7 @@ int getchar(int k)
 		if k == 0x10
 			return 0x51
 		if k == 0x13
-			return 0x52 // 'R'
+			return 0x52 # 'R'
 		if k == 0x1f
 			return 0x53
 		if k == 0x14
@@ -367,14 +367,14 @@ int getchar(int k)
 		if k == 0x11
 			return 0x57
 		if k == 0x2d
-			return 0x58 // 'X'
+			return 0x58 # 'X'
 		if k == 0x2c
 			return 0x59
 		if k == 0x15
 			return 0x5a
 	else
 		if k == 0x0b
-			return 0x30 // '0'
+			return 0x30 # '0'
 		if k == 0x02
 			return 0x31
 		if k == 0x03
@@ -394,26 +394,26 @@ int getchar(int k)
 		if k == 0x0a
 			return 0x39
 		if k == 0x35
-			return 0x2d // '-'
+			return 0x2d # '-'
 		if k == 0x34
-			return 0x2e // '.'
+			return 0x2e # '.'
 		if k == 0x33
-			return 0x2c // ','
+			return 0x2c # ','
 		if k == 0x56
-			return 0x3c // '<'
+			return 0x3c # '<'
 		if k == 0x2b
-			return 0x23 // '#'
+			return 0x23 # '#'
 		if k == 0x1b
-			return 0x2b // '+'
+			return 0x2b # '+'
 		if k == 0x29
-			return 0x5e // '^'
-		//if k == 0x0c
-		//	return ... // 'ß'
-		//if k == 0x0d
-		//	return ... // '´'
+			return 0x5e # '^'
+		#if k == 0x0c
+		#	return ... # 'ß'
+		#if k == 0x0d
+		#	return ... # '´'
 			
 		if k == 0x1e
-			return 0x61 // 'a'
+			return 0x61 # 'a'
 		if k == 0x30
 			return 0x62
 		if k == 0x2e
@@ -425,7 +425,7 @@ int getchar(int k)
 		if k == 0x21
 			return 0x66
 		if k == 0x22
-			return 0x67 // 'g'
+			return 0x67 # 'g'
 		if k == 0x23
 			return 0x68
 		if k == 0x17
@@ -437,7 +437,7 @@ int getchar(int k)
 		if k == 0x26
 			return 0x6c
 		if k == 0x32
-			return 0x6d // 'm'
+			return 0x6d # 'm'
 		if k == 0x31
 			return 0x6e
 		if k == 0x18
@@ -447,7 +447,7 @@ int getchar(int k)
 		if k == 0x10
 			return 0x71
 		if k == 0x13
-			return 0x72 // 'r'
+			return 0x72 # 'r'
 		if k == 0x1f
 			return 0x73
 		if k == 0x14
@@ -459,17 +459,17 @@ int getchar(int k)
 		if k == 0x11
 			return 0x77
 		if k == 0x2d
-			return 0x78 // 'x'
+			return 0x78 # 'x'
 		if k == 0x2c
 			return 0x79
 		if k == 0x15
 			return 0x7a
-	//printh(&k, 3)
+	#printh(&k, 3)
 	return -1
 
 void ps2_read_key(int k)
 		
-	// add to low level device buffer
+	# add to low level device buffer
 	if dev_key_reading > 0
 		if dev_key_num < 64
 			dev_key_buf[dev_key_num] = k
@@ -561,17 +561,17 @@ void ps2_try_read()
 		ps2_read_mouse(d)
 	else
 		ps2_read_key(d)
-	//ps2_try_read()
+	#ps2_try_read()
 
 
 
 void int_key()
 	while true
-		//prints("<key>")
+		#prints("<key>")
 		
 		ps2_try_read()
 					
-		// allow more IRQs
+		# allow more IRQs
 		outportb(0x20, 0x20)
 			
 		asm{
@@ -580,11 +580,11 @@ void int_key()
 
 void int_mouse()
 	while true
-		//prints("<mouse>")
+		#prints("<mouse>")
 		
 		ps2_try_read()
 					
-		// allow more IRQs
+		# allow more IRQs
 		outportb(0xa0, 0x20)
 		outportb(0x20, 0x20)
 			

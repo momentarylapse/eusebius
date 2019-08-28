@@ -21,7 +21,7 @@ const int KALIB_LOCATION = 0x00050000
 
 void show_pvl()
 	asm{
-		db 0x9c // pushf
+		db 0x9c # pushf
 		pop eax
 		mov __temp_i__, eax
 	}
@@ -64,19 +64,19 @@ void main()
 	printi(MemorySize / 1024)
 	prints("k\n")
 	
-	/*asm{
-		mov eax, 0x8000000
-		db 0x0f
-		db 0xa2
-		mov __temp_i__, eax
-		mov __temp_i2__, ecx
-		mov __temp_i3__, edx
-	}
-	prints("   cpu:  ")
-	printh(&__temp_i__, 4)
-	printh(&__temp_i2__, 4)
-	printh(&__temp_i3__, 4)
-	prints("\n")*/
+	#asm{
+#		mov eax, 0x8000000
+#		db 0x0f
+#		db 0xa2
+#		mov __temp_i__, eax
+#		mov __temp_i2__, ecx
+#		mov __temp_i3__, edx
+#	}
+#	prints("   cpu:  ")
+#	printh(&__temp_i__, 4)
+#	printh(&__temp_i2__, 4)
+#	printh(&__temp_i3__, 4)
+#	prints("\n")
 	
 	paging.init()
 	

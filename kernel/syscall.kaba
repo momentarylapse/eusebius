@@ -28,7 +28,7 @@ class SysInfo
 		uptime = kernel_timer.tv.sec
 		for l in loads
 			l = 0
-		mem_unit = 1024 //PAGE_SIZE
+		mem_unit = 1024 #PAGE_SIZE
 		totalram = MemorySize / mem_unit
 		freeram = (MemorySize - paging.get_used()) / mem_unit
 		sharedram = SharedMem.get_used() / mem_unit
@@ -92,148 +92,148 @@ TaskInfo _task_info
 	
 void int_syscall()
 	while true
-		//show_pvl()
+		#show_pvl()
 		int r = 0
 		
-		//int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+		#int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		Task* caller = &Tasks[RunningPid]
-		//printi(pid)
+		#printi(pid)
 		int index = caller.tss.eax
 		int param1 = caller.tss.ebx
 		int param2 = caller.tss.ecx
 		int param3 = caller.tss.edx
 		int param4 = caller.tss.esi
-		/*printi(RunningPid)
-		prints(" ")
-		printi(index)
-		prints(" ")*/
+		#printi(RunningPid)
+#		prints(" ")
+#		printi(index)
+#		prints(" ")
 	
-		if index == 1 // exit
+		if index == 1 # exit
 			caller.sys_exit(param1)
-		else if index == 2 // fork
+		else if index == 2 # fork
 			r = caller.sys_fork()
-		else if index == 3 // read
+		else if index == 3 # read
 			r = caller.sys_read(param1, param2, param3)
-		else if index == 4 // write
+		else if index == 4 # write
 			r = caller.sys_write(param1, param2, param3)
-		else if index == 5 // open
+		else if index == 5 # open
 			r = caller.sys_open(param1, param2)
-		else if index == 6 // close
+		else if index == 6 # close
 			r = caller.sys_close(param1)
-		else if index == 7 // waitpid
+		else if index == 7 # waitpid
 			r = caller.sys_waitpid(param1, param2, param3)
-		else if index == 8 // create
+		else if index == 8 # create
 			r = caller.sys_open(param1, O_CREATE | O_WRONLY | O_TRUNC)
-		else if index == 10 // unlink
+		else if index == 10 # unlink
 			r = caller.sys_unlink(param1)
-		else if index == 11 // exec
+		else if index == 11 # exec
 			r = caller.sys_execute(param1, param2, param3)
-		else if index == 12 // chdir
+		else if index == 12 # chdir
 			r = caller.sys_set_cur_dir(param1)
-		else if index == 14 // mknod
+		else if index == 14 # mknod
 			r = caller.sys_mknod(param1, param2)
-		else if index == 19 // seek
+		else if index == 19 # seek
 			r = caller.sys_seek(param1, param2, param3)
-		else if index == 20 // getpid
+		else if index == 20 # getpid
 			r = RunningPid
-		else if index == 25 // stime
+		else if index == 25 # stime
 			kernel_timer.update()
 			r = 0
 			if !caller.page_dir.memcpy2task(param1, &kernel_timer.tv, sizeof(TimeValue))
 				r = -EFAULT
-		else if index == 37 // kill
+		else if index == 37 # kill
 			r = caller.sys_kill(param1, param2)
-		else if index == 39 // mkdir
+		else if index == 39 # mkdir
 			r = caller.sys_mkdir(param1)
-		else if index == 40 // rmdir
+		else if index == 40 # rmdir
 			r = caller.sys_rmdir(param1)
-		else if index == 41 // dup
+		else if index == 41 # dup
 			r = caller.sys_dup(param1)
-		else if index == 42 // pipe
+		else if index == 42 # pipe
 			r = caller.sys_pipe(param1)
-		else if index == 45 // brk
+		else if index == 45 # brk
 			r = caller.sys_brk(param1)
-		else if index == 51 // fcntl
+		else if index == 51 # fcntl
 			r = caller.sys_fcntl(param1, param2, param3)
-		else if index == 67 // sigaction
+		else if index == 67 # sigaction
 			r = caller.sys_sigaction(param1, param2)
-		else if index == 88 // reboot
+		else if index == 88 # reboot
 			nil
-		else if index == 102 // socket
+		else if index == 102 # socket
 			r = caller.sys_socket(param1, param2, param3)
-		else if index == 116 // sysinfo
+		else if index == 116 # sysinfo
 			_sys_info.get()
 			caller.page_dir.memcpy2task(param1, &_sys_info, sizeof(_sys_info))
-		else if index == 117 // ipc
+		else if index == 117 # ipc
 			r = caller.sys_ipc(param1, param2, param3, param4)
-		else if index == 122 // uname
+		else if index == 122 # uname
 			_uts_name.get()
 			caller.page_dir.memcpy2task(param1, &_uts_name, sizeof(_uts_name))
-		else if index == 141 // getdents
+		else if index == 141 # getdents
 			r = caller.sys_getdents(param1, param2, param3)
-		else if index == 158 // sched_yield
+		else if index == 158 # sched_yield
 			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, SysCallTask)
-		else if index == 162 // nanosleep
+		else if index == 162 # nanosleep
 			caller.sys_nanosleep(param1, param2)
-			// p1 = &duration
-			// p2 = &duration_more
-		else if index == 183 // getcwd
+			# p1 = &duration
+			# p2 = &duration_more
+		else if index == 183 # getcwd
 			cstring filename
 			caller.cur_dir.get_path(filename)
 			r = 0
 			if !caller.page_dir.memcpy2task(param1, &filename, sizeof(cstring))
 				r = -EFAULT
-		else if index == 0x2001 // getarg
+		else if index == 0x2001 # getarg
 			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
-		else if index == 0x2002 // kprints
+		else if index == 0x2002 # kprints
 			cstring filename
 			if param2 < sizeof(filename)
 				caller.page_dir.memcpy2kernel(&filename, param1, param2)
 				filename[param2] = 0
 				prints(filename)
-		else if index == 0x2003 // kprinti
+		else if index == 0x2003 # kprinti
 			printi(param1)
-		else if index == 0x2005 // taskinfo
+		else if index == 0x2005 # taskinfo
 			r = _task_info.get(param1)
 			if r == 0
 				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
-		else if index == 0x2006 // exit_signal
+		else if index == 0x2006 # exit_signal
 			r = caller.sys_exit_signal()
 			asm{
-				// don't overwrite eax with return value
+				# don't overwrite eax with return value
 				jmp __sys_call_return
 			}
-		else if index == 0x2007 // map IRQ
+		else if index == 0x2007 # map IRQ
 			r = irq.sys_map_irq(param1, caller, param2)
 		else
 			r = -ENOSYS
-		/*TextColor = 4
-		prints("<<")
-		prints(caller.name)
-		prints(":")
-		printi(index)
-		prints(">>")
-		TextColor = 7*/
-		//while true
-		//	nil
+		#TextColor = 4
+#		prints("<<")
+#		prints(caller.name)
+#		prints(":")
+#		printi(index)
+#		prints(">>")
+#		TextColor = 7
+		#while true
+		#	nil
 		
-		// task switch?
+		# task switch?
 		if caller.status != TASK_STATUS_RUNNING
-			//prints("S")
+			#prints("S")
 			int pid_next = GetNextTask(RunningPid)
 			ReconnectTasks(pid_next, SysCallTask)
-			//printi(pid_next)
+			#printi(pid_next)
 
-		// zurück
+		# zurück
 		caller.tss.eax = r
 		
-		//prints(">")
+		#prints(">")
 		asm{
 		__sys_call_return:
 			iret
 		}
-		//prints("<")
+		#prints("<")
 	
 Task *SysCallTask
 

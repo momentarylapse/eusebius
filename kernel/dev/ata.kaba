@@ -5,8 +5,8 @@ use "../io/io.kaba"
 
 
 
-//--------------------------------------------------------------
-// Ata Treiber
+#--------------------------------------------------------------
+# Ata Treiber
 
 const int ATA_MASK_BUSY = 0x80
 const int ATA_MASK_READY = 0x40
@@ -41,19 +41,19 @@ class AtaController
 		char AtaStatusChar = inportb(IOBase + 7)
 		int n = 1000000000
 		while ((AtaStatusChar & mask)!=value) and (n >= 0)
-			AtaStatusChar = inportb(IOCtrl)//+7)
+			AtaStatusChar = inportb(IOCtrl)#+7)
 			n--
 		return n >= 0
 
 	void set_disk_add(int disk_no)
 		ide_no = (disk_no/2)
 		ide_ms = (disk_no%2)
-		// Adressierungs-Daten
+		# Adressierungs-Daten
 		IOBase = 0x1f0
 		if ide_no == 1
 			IOBase = 0x170
 		IOCtrl = IOBase + 0x206
-		//IOCtrl = 0x3f6
+		#IOCtrl = 0x3f6
 		MSMask = 0x00
 		if ide_ms == 1
 			MSMask = 0x10
@@ -62,7 +62,7 @@ class AtaController
 		set_disk_add(disk_no)
 		disk_info[disk_no].isAvailable = false
 
-		// generell ansprechbar?
+		# generell ansprechbar?
 		prints("IDE ")
 		printi(ide_no)
 		prints(":")
@@ -82,23 +82,23 @@ class AtaController
 			prints("---\n")
 			return false
 
-		// now we think we know which devices, if any are there,
-		// so lets try a soft reset (ignoring any errors).
+		# now we think we know which devices, if any are there,
+		# so lets try a soft reset (ignoring any errors).
 
 		outportb(IOBase + 6, MSMask)
 		wait_400_ns()
-		outportb(IOCtrl, 0x0e) // soft reset
+		outportb(IOCtrl, 0x0e) # soft reset
 		wait_400_ns()
 		outportb(IOCtrl, 0x0a)
 		wait_400_ns()
 
-		//sub_atapi_delay( 0 )
+		#sub_atapi_delay( 0 )
 		wait_status(ATA_MASK_BUSY, 0)
 		outportb(IOBase + 6, MSMask)
 		wait_400_ns()
 
-		// lets check device 0 again, is device 0 really there?
-		// is it ATA or ATAPI?
+		# lets check device 0 again, is device 0 really there?
+		# is it ATA or ATAPI?
 		sc = inportb(IOBase + 2)
 		sn = inportb(IOBase + 3)
 		bool fail = true
@@ -120,30 +120,30 @@ class AtaController
 			prints("---\n")
 			return false
 
-		/*outportb( 0x1f6, 0xe0 ) // Master+LBA
-		wait_400_ns()
-		outportb( 0x3f6, 0x0e ) // ?+SoftReset+NoInt
-		wait_400_ns()
-		outportb( 0x3f6, 0x0a ) // ?+NoInt
-		wait_400_ns()
-		ata_wait_busy()*/
+		#outportb( 0x1f6, 0xe0 ) # Master+LBA
+#		wait_400_ns()
+#		outportb( 0x3f6, 0x0e ) # ?+SoftReset+NoInt
+#		wait_400_ns()
+#		outportb( 0x3f6, 0x0a ) # ?+NoInt
+#		wait_400_ns()
+#		ata_wait_busy()
 
 		disk_info[disk_no].isAvailable = true
 
-		outportb(IOCtrl, 0x0a) // ?+NoInt
+		outportb(IOCtrl, 0x0a) # ?+NoInt
 		wait_400_ns()
 		wait_status(ATA_MASK_BUSY, 0)
-		outportb(IOBase+1, 0) //?
-		outportb(IOBase+2, 0) // NumSectors
- 		outportb(IOBase+3, 0) // S0
- 		outportb(IOBase+4, 0) // C0
+		outportb(IOBase+1, 0) #?
+		outportb(IOBase+2, 0) # NumSectors
+ 		outportb(IOBase+3, 0) # S0
+ 		outportb(IOBase+4, 0) # C0
 		outportb(IOBase+5, 0)
-		char ata_lba3 = MSMask | 0x60 // ...+LBA
-		outportb(IOBase+6, ata_lba3) // H0
+		char ata_lba3 = MSMask | 0x60 # ...+LBA
+		outportb(IOBase+6, ata_lba3) # H0
 		if disk_info[disk_no].isAtapi
-			outportb(IOBase+7, 0xa1) // IdentifyDrive (ATAPI)
+			outportb(IOBase+7, 0xa1) # IdentifyDrive (ATAPI)
 		else
-			outportb(IOBase+7, 0xec) // IdentifyDrive
+			outportb(IOBase+7, 0xec) # IdentifyDrive
 		wait_400_ns()
 
 		wait_status(0x88, ATA_MASK_DATA)
@@ -152,24 +152,24 @@ class AtaController
 		BufferDW = &Buffer
 		for n in 0:128
 			BufferDW[n] = inportd(IOBase)
-		// die Bytes des Namens korregieren
-		//for n, 0, 40, 2
+		# die Bytes des Namens korregieren
+		#for n, 0, 40, 2
 		for n in 0:40:2
 			disk_info[disk_no].name[n  ] = Buffer[55+n]
 			disk_info[disk_no].name[n+1] = Buffer[54+n]
 		disk_info[disk_no].name[40] = 0
 		prints(disk_info[disk_no].name)
 		memcpy(&disk_info[disk_no].size, &Buffer[120], 4)
-		/*temp_i = Ata.DiskInfo[disk_no].size >> 11
-		asm{
-			mov eax, temp_i
-			shr eax, 0xb
-			mov temp_i, eax
-		}*/
+		#temp_i = Ata.DiskInfo[disk_no].size >> 11
+#		asm{
+#			mov eax, temp_i
+#			shr eax, 0xb
+#			mov temp_i, eax
+#		}
 		TextPos = 60
 		printi(disk_info[disk_no].size >> 11)
-	//	TextPos=60
-	//	printi(DiskInfo[disk_no].Size)
+	#	TextPos=60
+	#	printi(DiskInfo[disk_no].Size)
 		prints("mb\n")
 
 		return true
@@ -200,110 +200,110 @@ class AtaController
 		NumPartitions = 0
 		prints("ATA devices:\n")
 	
-		// set up Device Control register
+		# set up Device Control register
 		outportb(0x3f6, 0x0a)
 		outportb(0x376, 0x0a)
 
 		for n in 0:4
 			test_disk(n)
 			
-	// 1 Sektor = 512 b
+	# 1 Sektor = 512 b
 	bool read_sector(int disk_no, int sector_offset, int num_sectors, void* buf)
 		if !disk_info[disk_no].isAvailable
 			return false
 		if disk_info[disk_no].isAtapi
 			return false
-		//DrawString(0,24,"MAtaRead")
+		#DrawString(0,24,"MAtaRead")
 		set_disk_add(disk_no)
-		//printh(&IOBase,2)
-		// num_sectors=1...
+		#printh(&IOBase,2)
+		# num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
 	
 		char status
 
 
 		
-		outportb(IOCtrl, 0x0a) // ?+NoInt
+		outportb(IOCtrl, 0x0a) # ?+NoInt
 		wait_400_ns()
 		wait_status(ATA_MASK_BUSY, 0)
 
-		outportb(IOBase+1, 0) // Features
-		outportb(IOBase+2, num_sectors) // NumSectors
- 		outportb(IOBase+3, sector_offset) // S0
- 		outportb(IOBase+4, sector_offset >> 8) // C0
+		outportb(IOBase+1, 0) # Features
+		outportb(IOBase+2, num_sectors) # NumSectors
+ 		outportb(IOBase+3, sector_offset) # S0
+ 		outportb(IOBase+4, sector_offset >> 8) # C0
 		outportb(IOBase+5, sector_offset >> 16)
-		outportb(IOBase+6, sector_offset >> 24 | MSMask | 0x40 ) // H0 ...+LBA
-		outportb(IOBase+7, 0x20 ) // ReadSector
+		outportb(IOBase+6, sector_offset >> 24 | MSMask | 0x40 ) # H0 ...+LBA
+		outportb(IOBase+7, 0x20 ) # ReadSector
 		wait_400_ns()
 
 		wait_status(0x88, ATA_MASK_DATA)
-		//wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
+		#wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
 		wait_400_ns()
 
 		BufferDW = buf
 	
-		for n in 0:128 // 512b
+		for n in 0:128 # 512b
 			BufferDW[n] = inportd(IOBase)
 
 		status=inportb(IOBase+7)
-		//printh(&status,1)
+		#printh(&status,1)
 		status=inportb(IOBase+1)
-		//printh(&status,1)
+		#printh(&status,1)
 		status=inportb(IOCtrl)
-		//printh(&status,1)
+		#printh(&status,1)
 
 		return true
 		
-	// 1 Sektor = 512 b
+	# 1 Sektor = 512 b
 	bool write_sector(int disk_no, int sector_offset, int num_sectors, void *buf)
 		if !disk_info[disk_no].isAvailable
 			return false
 		if disk_info[disk_no].isAtapi
 			return false
-		//prints "write "
+		#prints "write "
 		set_disk_add(disk_no)
-		//printh(&IOBase,2)
-		// num_sectors=1...
+		#printh(&IOBase,2)
+		# num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
 	
 		char status
 
 
 		
-		outportb(IOCtrl, 0x0a) // ?+NoInt
+		outportb(IOCtrl, 0x0a) # ?+NoInt
 		wait_400_ns()
 		wait_status(ATA_MASK_BUSY, 0)
 
-		outportb(IOBase+1, 0) // Features
-		outportb(IOBase+2, num_sectors) // NumSectors
- 		outportb(IOBase+3, sector_offset) // S0
- 		outportb(IOBase+4, sector_offset >> 8) // C0
+		outportb(IOBase+1, 0) # Features
+		outportb(IOBase+2, num_sectors) # NumSectors
+ 		outportb(IOBase+3, sector_offset) # S0
+ 		outportb(IOBase+4, sector_offset >> 8) # C0
 		outportb(IOBase+5, sector_offset >> 16)
-		outportb(IOBase+6, sector_offset >> 24 | MSMask | 0x40 ) // H0 ...+LBA
-		outportb(IOBase+7, 0x30 ) // WriteSector
+		outportb(IOBase+6, sector_offset >> 24 | MSMask | 0x40 ) # H0 ...+LBA
+		outportb(IOBase+7, 0x30 ) # WriteSector
 		wait_400_ns()
 
 		wait_status(0x88, ATA_MASK_DATA)
-		//wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
+		#wait_status(AtaMaskData | AtaMaskBusy,AtaMaskData)
 		wait_400_ns()
 
 		BufferDW = buf
 	
-		for n in 0:128 // 512b
+		for n in 0:128 # 512b
 			outportd(IOBase, BufferDW[n])
 
 		status=inportb(IOBase+7)
-		//printh(&status,1)
+		#printh(&status,1)
 		status=inportb(IOBase+1)
-		//printh(&status,1)
+		#printh(&status,1)
 		status=inportb(IOCtrl)
-		//printh(&status,1)
+		#printh(&status,1)
 
 		return true
 
 AtaController ata
 
-// TODO split Partition/BlockDevice
+# TODO split Partition/BlockDevice
 
 class PartitionData
 	int major, minor
@@ -313,7 +313,7 @@ class PartitionData
 	char type
 	bool active
 	cstring name
-	void *p_read_block // (self, buf, minor, index)
+	void *p_read_block # (self, buf, minor, index)
 	
 	int read_block(int index, void *buf)
 		if !p_read_block
@@ -335,9 +335,9 @@ void ReadPartitions(int disk_no)
 	p.active = false
 	strcpy(&p.name, &"hda")
 	p.name[2] = 'a' + disk_no
-	// mbr lesen
+	# mbr lesen
 	ata.read_sector(disk_no, 0, 1, &ata.Buffer)
-	//MountPartition=false
+	#MountPartition=false
 	for n in 0:4
 		int *offset = &ata.Buffer[454+n*16]
 		int *size = &ata.Buffer[458+n*16]
@@ -355,8 +355,8 @@ void ReadPartitions(int disk_no)
 		strcpy(&p.name, &"hda_")
 		p.name[2] = 'a' + disk_no
 		p.name[3] = n + 49
-	/*for n, 0, 512
-		DrawHex(n*3,2,&AtaBuffer[n],1)*/
+	#for n, 0, 512
+#		DrawHex(n*3,2,&AtaBuffer[n],1)
 		
 void ShowPartitions()
 	prints("primary partitions:       offset   size\n")

@@ -56,7 +56,7 @@ const int IPC_CREAT = 1<<12
 const int IPC_EXCL = 1<<13
 
 
-int MemorySize // in bytes
+int MemorySize # in bytes
 
 const cstring KERNEL_NAME = "Eusebius"
 const cstring KERNEL_VERSION = "0.2.2.1"
@@ -65,13 +65,13 @@ const cstring MACHINE_TYPE = "x86"
 class BiosMemoryMapEntry
 	int offset, offset_hi
 	int size, size_hi
-	int type, dummy // type < 0 -> end
+	int type, dummy # type < 0 -> end
 
 BiosMemoryMapEntry[64] bios_mem_map
 
 
-//--------------------------------------------------------------
-// Low Level
+#--------------------------------------------------------------
+# Low Level
 
 
 void read_data_from_init()
@@ -84,11 +84,11 @@ void read_data_from_init()
 		mov __temp_i__, eax
 	}
 	int bmmn = __temp_i__ & 0x0000ffff
-	memcpy(&bios_mem_map, _i2p(0x00006000), 64*24)//sizeof(bio_mem_map))
+	memcpy(&bios_mem_map, _i2p(0x00006000), 64*24)#sizeof(bio_mem_map))
 	for m,i in bios_mem_map
 		if i == 0
 			continue
-		if m.offset == bios_mem_map[0].offset //and m.size == bios_mem_map[0].size
+		if m.offset == bios_mem_map[0].offset #and m.size == bios_mem_map[0].size
 			bmmn = i
 			m.type = -1
 			break
@@ -99,21 +99,21 @@ void memcpy(void* _dest, void* _source, int size)
 	cstring* source = _source
 	for n in 0:size
 		dest[n] = source[n]
-	/*if size > 0
-		temp_i=size
-		temp_p=source
-		temp_p2=dest
-		asm{
-			mov ecx, temp_i
-			mov eax, temp_p
-			mov ebx, temp_p2
-			_mem_cpy_loop:
-				mov.b dl, [eax]
-				mov.b [ebx], dl
-				inc eax
-				inc ebx
-				loop _mem_cpy_loop
-		}*/
+#	if size > 0
+#		temp_i=size
+#		temp_p=source
+#		temp_p2=dest
+#		asm{
+#			mov ecx, temp_i
+#			mov eax, temp_p
+#			mov ebx, temp_p2
+#			_mem_cpy_loop:
+#				mov.b dl, [eax]
+#				mov.b [ebx], dl
+#				inc eax
+#				inc ebx
+#				loop _mem_cpy_loop
+#		}
 
 int strlen(void* _s)
 	cstring* s = _s

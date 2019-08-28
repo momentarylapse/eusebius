@@ -1,26 +1,26 @@
-/*----------------------------------------------------------------------------*\
-| Eusebius - Init                                                              |
-| -> A20-Gate aktivieren                                                       |
-| -> GDT laden                                                                 |
-| -> Protected Mode starten (32 bit)                                           |
-| -> Kernel-Image laden und starten                                            |
-|                                                                              |
-| zuletzt geaendert: 2008.09.16 (c) by MichiSoft TM                            |
-\*----------------------------------------------------------------------------*/
+#----------------------------------------------------------------------------*\
+#| Eusebius - Init                                                              |
+#| -> A20-Gate aktivieren                                                       |
+#| -> GDT laden                                                                 |
+#| -> Protected Mode starten (32 bit)                                           |
+#| -> Kernel-Image laden und starten                                            |
+#|                                                                              |
+#| zuletzt geaendert: 2008.09.16 (c) by MichiSoft TM                            |
+#\*----------------------------------------------------------------------------
 
-void main()	//-------------------------------------------------------------	// RealMode!!!
+void main()	#-------------------------------------------------------------	# RealMode!!!
 	asm{
 		bits_16
 		
-		// Debug
+		# Debug
 		mov al, 'I'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 
 
-//--------------------------------------------------------------
-// gate 20A -> allow more than 1mb RAM :~~[
+#--------------------------------------------------------------
+# gate 20A -> allow more than 1mb RAM :~~[
 
 		mov ax, 0x2401
 		int 0x15
@@ -28,35 +28,35 @@ void main()	//-------------------------------------------------------------	// R
 		or al, 0x02
 		out 0x92, al
 
-		// Speicher-Menge (RAM) feststellen
+		# Speicher-Menge (RAM) feststellen
 		mov ax, 0xe801
 		int 0x15
-		mov [_var_mem_size], bx // #64kb
+		mov [_var_mem_size], bx # #64kb
 		shr ax, 0x06
-		add [_var_mem_size], ax // #1kb
+		add [_var_mem_size], ax # #1kb
 		
 		
-		// Debug
+		# Debug
 		mov al, 'a'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 		
-//--------------------------------------------------------------
-// read memory map
+#--------------------------------------------------------------
+# read memory map
 
-		mov si, 0x0000 // counter
+		mov si, 0x0000 # counter
 		
 		mov ax, 0x0000
 		mov es, ax
-		mov di, 0x6000 // 00:6000
+		mov di, 0x6000 # 00:6000
 		xor ebx, ebx
 		mov edx, 0x534d4150
 		mov eax, 0x0000e820
 		mov ecx, 0x00000018
 		int 0x15
 		
-		// failed?
+		# failed?
 		jb _read_mem_map_end
 		cmp eax, 0x534d4150
 		jnz _read_mem_map_end
@@ -71,48 +71,48 @@ void main()	//-------------------------------------------------------------	// R
 		mov ecx, 0x00000018
 		int 0x15
 		
-		// end of list?
+		# end of list?
 		jb _read_mem_map_end
 	
 		cmp si, 0x040
 		jl _read_mem_map_loop
 	_read_mem_map_end:
 		
-		// save count
+		# save count
 		mov [0x5104], si
 		xor ax, ax
 		mov [0x5106], ax
 
-		// Debug
+		# Debug
 		mov al, 'b'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 
 
-//--------------------------------------------------------------
-// load kernel image
+#--------------------------------------------------------------
+# load kernel image
 
-//		_reset_drive:
+#		_reset_drive:
 			mov dl, 0x00
 			mov ah, 0x00
 			int 0x13
 			or ah, ah
-		//jnz _reset_drive
+		#jnz _reset_drive
 		xor ax, ax
 		mov es, ax
 		
-		// target address
+		# target address
 		mov ax, 0x1000
 		mov es, ax
-		mov bx, 0x0000 // 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x001d // sector 0x1d, cylinder 0
-		mov dx, 0x0080 // head 0, disc 0
+		mov bx, 0x0000 # 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
+		mov ah, 0x02 # "ReadSector"
+		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+		mov cx, 0x001d # sector 0x1d, cylinder 0
+		mov dx, 0x0080 # head 0, disc 0
 		int 0x13
 		
-		// Debug
+		# Debug
 		mov al, '1'
 		mov ah, 0x0e
 		mov bx, 0x0000
@@ -120,17 +120,17 @@ void main()	//-------------------------------------------------------------	// R
 		
 		mov ax, 0x2000
 		mov es, ax
-		mov bx, 0x0000 // 0x20000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x001f // sector 0x1f, cylinder 0
-		mov dx, 0x0280 // head 2, disc 0
+		mov bx, 0x0000 # 0x20000
+		mov ah, 0x02 # "ReadSector"
+		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+		mov cx, 0x001f # sector 0x1f, cylinder 0
+		mov dx, 0x0280 # head 2, disc 0
 		int 0x13
 		or ah, ah
-		//jnz _reset_drive
+		#jnz _reset_drive
 		jnz _death
 		
-		// Debug
+		# Debug
 		mov al, '2'
 		mov ah, 0x0e
 		mov bx, 0x0000
@@ -138,44 +138,44 @@ void main()	//-------------------------------------------------------------	// R
 		
 		mov ax, 0x3000
 		mov es, ax
-		mov bx, 0x0000 // 0x30000
-		mov ah, 0x02 // "ReadSector"
-		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-		mov cx, 0x0021 // sector 0x21, cylinder 0
-		mov dx, 0x0480 // head 4, disc 0
+		mov bx, 0x0000 # 0x30000
+		mov ah, 0x02 # "ReadSector"
+		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+		mov cx, 0x0021 # sector 0x21, cylinder 0
+		mov dx, 0x0480 # head 4, disc 0
 		int 0x13
 		
 		or ah, ah
-		//jnz _reset_drive
+		#jnz _reset_drive
 		jnz _death
 		
-		// Debug
+		# Debug
 		mov al, '3'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 		
-//		mov ax, 0x4000
-//		mov es, ax
-//		mov bx, 0x0000 // 0x40000
-//		mov ah, 0x02 // "ReadSector"
-//		mov al, 0x80 // 128 sectors * 512 bytes = 64k
-//		mov cx, 0x0023 // sector 0x23, cylinder 0
-//		mov dx, 0x0680 // head 6, disc 0
-//		int 0x13
+#		mov ax, 0x4000
+#		mov es, ax
+#		mov bx, 0x0000 # 0x40000
+#		mov ah, 0x02 # "ReadSector"
+#		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+#		mov cx, 0x0023 # sector 0x23, cylinder 0
+#		mov dx, 0x0680 # head 6, disc 0
+#		int 0x13
 		
-//		or ah, ah
-//		//jnz _reset_drive
-//		jnz _death
+#		or ah, ah
+#		#jnz _reset_drive
+#		jnz _death
 		
-//		// Debug
-//		mov al, '4'
-//		mov ah, 0x0e
-//		mov bx, 0x0000
-//		int 0x10
+#		# Debug
+#		mov al, '4'
+#		mov ah, 0x0e
+#		mov bx, 0x0000
+#		int 0x10
 		
 		
-		// Debug
+		# Debug
 		mov al, 'c'
 		mov ah, 0x0e
 		mov bx, 0x0000
@@ -183,57 +183,57 @@ void main()	//-------------------------------------------------------------	// R
 
 
 
-//--------------------------------------------------------------
-// load memory segments
+#--------------------------------------------------------------
+# load memory segments
 
 		lgdt [_gdtr]
 
-		// Debug
+		# Debug
 		mov al, 'd'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 
-//--------------------------------------------------------------
-// activate 32bit protected mode
+#--------------------------------------------------------------
+# activate 32bit protected mode
 
 		cli
 		mov eax, cr0
 		or al, 0x01
 		mov cr0, eax
 		
-		// flush cpu prefetch
+		# flush cpu prefetch
 		jmp _flush
 		_flush:
 
-		// die Segment-Register vorbereiten
-		mov ax, 0x0010 // Descriptor[2]
+		# die Segment-Register vorbereiten
+		mov ax, 0x0010 # Descriptor[2]
 		mov ds, ax
 		mov es, ax
 		mov fs, ax
 		mov gs, ax
 		mov ss, ax
 
-		// Stack initialisieren
+		# Stack initialisieren
 		mov esp, 0x0027fff8
 
-		// in den 32bit ProtectedMode springen
-		db 0x66 // weil im 16:32 Format...
-		jmp_far [_pmode_ptr] // 0x0008:_pmode
+		# in den 32bit ProtectedMode springen
+		db 0x66 # weil im 16:32 Format...
+		jmp_far [_pmode_ptr] # 0x0008:_pmode
 
-	//-------------------------------------------------------------
-	// ProtectedMode!!!
+	#-------------------------------------------------------------
+	# ProtectedMode!!!
 		_pmode:
 		bits_32
 		
-		//jmp $
+		#jmp $
 		
 		mov eax, 0x000b8000
 		mov [eax], 'P'
 		add eax, 0x00000001
 		mov [eax], 0x20
 		
-		// für den Stack nach einem C-Aufruf!
+		# für den Stack nach einem C-Aufruf!
 		mov ebp, esp
 		
 		mov eax, 0x000b8002
@@ -241,13 +241,13 @@ void main()	//-------------------------------------------------------------	// R
 		add eax, 0x00000001
 		mov [eax], 0x20
 
-		// Variablen speichern
+		# Variablen speichern
 		mov eax, [_var_mem_size]
 		shl eax, 0x06
 		mov [0x00005100], eax
 		xor eax, eax
 
-		// -> Kernel starten
+		# -> Kernel starten
 		mov eax, 0x00010000
 		jmp eax
 
@@ -259,34 +259,34 @@ void main()	//-------------------------------------------------------------	// R
 		int 0x10
 		
 
-		// zur Sicherheit....
+		# zur Sicherheit....
 		jmp $
 
 
-//--------------------------------------------------------------
-// data
+#--------------------------------------------------------------
+# data
 	
-		// Variablen
+		# Variablen
 		_var_mem_size:
 		dd 0x00000000
 
 		_gdt:
-		// [0] 0x00 null descriptor
+		# [0] 0x00 null descriptor
 		dd 0x00000000
 		dd 0x00000000
-		// [1] 0x08 code descriptor
+		# [1] 0x08 code descriptor
 		dd 0x0000ffff
 		dd 0x00cf9a00
-		// [2] 0x10 data descriptor
+		# [2] 0x10 data descriptor
 		dd 0x0000ffff
 		dd 0x00cf9200
 
 		_gdtr:
-		dw 0x0017 // 3 descriptors
+		dw 0x0017 # 3 descriptors
 		dd _gdt
 		
 		_pmode_ptr:
 		dd _pmode
-		dw 0x0008 // Descriptor[1] : ...
+		dw 0x0008 # Descriptor[1] : ...
 	}
 

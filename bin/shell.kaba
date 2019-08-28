@@ -47,16 +47,16 @@ class Prompt
 			return
 		int c = k
 		if jobs.fg
-			if c == 0x1a // '^Z'
+			if c == 0x1a # '^Z'
 				kill(jobs.fg.pid, 19)
 				jobs.fg = nil
 				print("stopped\n")
 				show()
-			else if c == 0x03 // '^C'
+			else if c == 0x03 # '^C'
 				kill(jobs.fg.pid, 9)
 				jobs.test_all()
 				show()
-			else if c == 0x04 // '^D'
+			else if c == 0x04 # '^D'
 				close(jobs.fg.pipe_in[1])
 				jobs.test_all()
 				show()
@@ -64,7 +64,7 @@ class Prompt
 				write(jobs.fg.pipe_in[1], &c, 1)
 			return
 		
-		if c == 0x0a // '\n'
+		if c == 0x0a # '\n'
 			print("\n")
 			jobs.test_all()
 			exec(cur)
@@ -72,27 +72,27 @@ class Prompt
 			cur.clear()
 			if !jobs.fg
 				show()
-		else if c == 0x7f // BACKSPACE
+		else if c == 0x7f # BACKSPACE
 			if cur.num > 0
 				string s
 				s.add(c)
 				print(s)
 				cur.resize(cur.num - 1)
-		else if c == 0x1b5b41 // ^[A up
+		else if c == 0x1b5b41 # ^[A up
 			history_up()
-		else if c == 0x1b5b42 // ^[B down
+		else if c == 0x1b5b42 # ^[B down
 			history_down()
-		else if c == 0x1b5b43 // ^[C left
-			nil//print "----left---"
-		else if c == 0x1b5b44 // ^[D right
-			nil//print "----right---"
+		else if c == 0x1b5b43 # ^[C left
+			nil#print "----left---"
+		else if c == 0x1b5b44 # ^[D right
+			nil#print "----right---"
 		else if c >= 0x20 and c <= 0x7e
 			string s
 			s.add(c)
 			print(s)
 			cur.add(c)
-		//else
-		//	printh(&k, 2)
+		#else
+		#	printh(&k, 2)
 
 Prompt prompt
 
@@ -117,7 +117,7 @@ class Job
 	string cmd
 	int pid, id
 	bool done
-	int[2] pipe_in, pipe_out // from job's point of view
+	int[2] pipe_in, pipe_out # from job's point of view
 	bool as_bg
 	void __init__(string[] c, string _cmd)
 		cmd = _cmd
@@ -156,13 +156,13 @@ class Job
 		if as_bg
 			c.remove(c.num - 1)
 		id = -1
-		//pid = execute(c, stdin, stdout)
+		#pid = execute(c, stdin, stdout)
 		pid = execute(c, pipe_in[0], pipe_out[1])
 		close(pipe_in[0])
 		close(pipe_out[1])
 		if as_bg
 			print("[" + id + "]: ")
-			//print pid
+			#print pid
 			print("\n")
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
 	
@@ -185,9 +185,9 @@ class Job
 		vars.get("?").value = status
 		if self != jobs.fg
 			print("[" + id + "] done: " + cmd + "\n")
-	//	if status < -600//-652
-	//		print("  -- Programm hat was boeses gemacht! --\n")
-		//print(" status " + status)
+	#	if status < -600#-652
+	#		print("  -- Programm hat was boeses gemacht! --\n")
+		#print(" status " + status)
 		done = true
 
 class JobManager
@@ -248,7 +248,7 @@ string parse_single(string cmd, int *pos)
 	string t
 	bool in_string = false
 	for j in *pos:cmd.num
-		//if (cmd[j] == ' ' or cmd[j] == '<' or cmd[j] == '>' or cmd[j] == '|') and !in_string
+		#if (cmd[j] == ' ' or cmd[j] == '<' or cmd[j] == '>' or cmd[j] == '|') and !in_string
 		if cmd[j] == ' ' and !in_string
 			break
 		if cmd[j] == '"'
@@ -318,7 +318,7 @@ void exec(string cmd)
 	parse(cmd, c)
 	if c.num == 0
 		return
-	//print(c.join(" - ")+"|\n")
+	#print(c.join(" - ")+"|\n")
 	string cc = c[0]
 	if cc.find("=", 0) > 0
 		execute_assign(cc)

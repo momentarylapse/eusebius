@@ -1,6 +1,6 @@
 use "lib/std.kaba"
 
-// socket test program
+# socket test program
 
 void main()
 	init_lib()
@@ -9,10 +9,10 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	/*if fork() > 0
-		print("server")
-	else
-		print("client")*/
+	#if fork() > 0
+#		print("server")
+#	else
+#		print("client")
 	
 	if arg.num > 1
 		int s = socket(0)

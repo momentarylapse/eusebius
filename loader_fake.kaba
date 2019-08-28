@@ -1,18 +1,18 @@
-/*----------------------------------------------------------------------------*\
-| Eusebius - Boot Loader                                                       |
-| -> Boot-Loader fuer die Root-Partition                                       |
-|   -> laedt das Image des Init-Programmes von der aktuellen Partition         |
-|      in den Speicher und fuehrt es aus                                       |
-|                                                                              |
-| zuletzt geaendert: 2008.09.14 (c) by MichiSoft TM                            |
-\*----------------------------------------------------------------------------*/
+#----------------------------------------------------------------------------*\
+#| Eusebius - Boot Loader                                                       |
+#| -> Boot-Loader fuer die Root-Partition                                       |
+#|   -> laedt das Image des Init-Programmes von der aktuellen Partition         |
+#|      in den Speicher und fuehrt es aus                                       |
+#|                                                                              |
+#| zuletzt geaendert: 2008.09.14 (c) by MichiSoft TM                            |
+#\*----------------------------------------------------------------------------
 
 
 void main()
 	asm{
-		// wir befinden uns noch im 16bit RealMode
+		# wir befinden uns noch im 16bit RealMode
 		bits_16
-		// Debug
+		# Debug
 		mov al, 'L'
 		mov ah, 0x0e
 		mov bx, 0x0000
@@ -22,38 +22,38 @@ void main()
 		mov bx, 0x0000
 		int 0x10
 
-	// Image laden
+	# Image laden
 		_reset_drive:
 			mov dl, 0x00
 			mov ah, 0x00
 			int 0x13
 			or ah, ah
-		//jnz.b _reset_drive
+		#jnz.b _reset_drive
 		xor ax, ax
 		mov es, ax
-		// Ziel des Images
+		# Ziel des Images
 		mov ebx, 0x00007e00
-		mov ah, 0x02 // "ReadSector"
+		mov ah, 0x02 # "ReadSector"
 		mov al, 0x02
 		mov cx, 0x0019
 		mov dx, 0x0080
-		//mov al, 0x04 // 4 Sektoren = 2kb
-		//mov cx, 0x0006 // Cylinder 0, Sector 6
-		//mov dx, 0x0180 // Head 1 ,Disk0
+		#mov al, 0x04 # 4 Sektoren = 2kb
+		#mov cx, 0x0006 # Cylinder 0, Sector 6
+		#mov dx, 0x0180 # Head 1 ,Disk0
 		int 0x13
 		or ah, ah
-		//jnz _reset_drive
+		#jnz _reset_drive
 		jnz _death
 
 		
-		// Debug
+		# Debug
 		mov al, 'J'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
 
-		// das Image ausführen
-		jmp_far 0x00007e00 // 0x0000:0x7e00
+		# das Image ausführen
+		jmp_far 0x00007e00 # 0x0000:0x7e00
 
 	_death:
 		mov al, 'X'
@@ -63,19 +63,19 @@ void main()
 		jmp $
 
 
-//--------------------------------------------------------------
-// Daten
-		// Position des zu ladenden Images      (abhängig von der Festplatte/Partitionierung!!!)
-			//   (Partition-Beginn: h-s-c 01-01-00)
+#--------------------------------------------------------------
+# Daten
+		# Position des zu ladenden Images      (abhängig von der Festplatte/Partitionierung!!!)
+			#   (Partition-Beginn: h-s-c 01-01-00)
 		_read_cx:
-		dw 0x0006 // Cylinder 0, Sector 6
+		dw 0x0006 # Cylinder 0, Sector 6
 		_read_dx:
-		dw 0x0180 // Head 1 ,Disk 0
+		dw 0x0180 # Head 1 ,Disk 0
 		_read_size:
-		dw 0x0004 // 4 Sektoren = 2kb
+		dw 0x0004 # 4 Sektoren = 2kb
 		_read_size_kernel:
-		dw 0x0040 // 64 Sektoren = 32kb
-		// auf welcher Partition befinden wir uns?
+		dw 0x0040 # 64 Sektoren = 32kb
+		# auf welcher Partition befinden wir uns?
 		_partition_no:
-		dw 0x0000 // 1. primäre Partition!
+		dw 0x0000 # 1. primäre Partition!
 	}

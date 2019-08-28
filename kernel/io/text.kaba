@@ -3,8 +3,8 @@ use "io.kaba"
 
 
 
-//--------------------------------------------------------------
-// Text Modus
+#--------------------------------------------------------------
+# Text Modus
 
 void* VideoMemory
 char TextColor, TextColor2
@@ -44,7 +44,7 @@ void prints_low(cstring *str, int size)
 	cstring *d = VideoMemory
 	d = &d[2*(SCREEN_WIDTH * TextLine + TextPos)]
 	for i in 0:size
-		if str[i] == 0x7f or str[i] == 0x08 // BACKSPACE
+		if str[i] == 0x7f or str[i] == 0x08 # BACKSPACE
 			d[-2] = 0x20
 			TextPos --
 			if TextPos < 0
@@ -69,10 +69,10 @@ void prints_low(cstring *str, int size)
 			d = VideoMemory
 			d = &d[2*(SCREEN_WIDTH * TextLine)]
 	int position = (TextLine * SCREEN_WIDTH) + TextPos
-	// cursor LOW port to vga INDEX register
+	# cursor LOW port to vga INDEX register
 	outportb(0x3d4, 0x0f)
 	outportb(0x3d5, position)
-	// cursor HIGH port to vga INDEX register
+	# cursor HIGH port to vga INDEX register
 	outportb(0x3d4, 0x0e)
 	outportb(0x3d5, position >> 8)
 
@@ -124,10 +124,10 @@ int printh(void* _data,int size)
 			ttt[3] = 0
 		prints(ttt)
 
-/*void WasteTime()
-	int x
-	for x, 0, 100000
-		nil*/
+#void WasteTime()
+#	int x
+#	for x, 0, 100000
+#		nil
 		
 
 

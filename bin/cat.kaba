@@ -30,6 +30,6 @@ void main()
 			exit(-1)
 		cat(h)
 		close(h)
-		//print FileRead(arg[i])
+		#print FileRead(arg[i])
 	
 	exit(0)
