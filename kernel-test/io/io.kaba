@@ -1,0 +1,41 @@
+
+int _temp_port_no_
+int _temp_port_data_
+
+void outportb(int port, char data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		out dx, al
+	}
+
+void outportd(int port,int data)
+	_temp_port_no_ = port
+	_temp_port_data_ = data
+	asm{
+		mov eax, _temp_port_data_
+		mov edx, _temp_port_no_
+		out dx, eax
+	}
+
+char inportb(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		xor eax, eax
+		in al, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
+int inportd(int port)
+	_temp_port_no_ = port
+	asm{
+		mov edx, _temp_port_no_
+		in eax, dx
+		mov _temp_port_data_, eax
+	}
+	return _temp_port_data_
+
