@@ -100,6 +100,7 @@ class Variable
 	string name, value
 class VariableSet
 	Variable*[] var
+	void __init__()
 	Variable *get(string name)
 		for v in var
 			if v.name == name
@@ -161,7 +162,7 @@ class Job
 		close(pipe_in[0])
 		close(pipe_out[1])
 		if as_bg
-			print("[" + id + "]: ")
+			print("[{{id}}]: ")
 			#print pid
 			print("\n")
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
@@ -182,9 +183,9 @@ class Job
 		int status
 		if waitpid(pid, &status, false) == -2
 			return
-		vars.get("?").value = status
+		vars.get("?").value = str(status)
 		if &self != jobs.fg
-			print("[" + id + "] done: " + cmd + "\n")
+			print("[{{id}}] done: {{cmd}}\n")
 	#	if status < -600#-652
 	#		print("  -- Programm hat was boeses gemacht! --\n")
 		#print(" status " + status)
@@ -226,12 +227,12 @@ class JobManager
 				if job[i] == fg
 					fg = nil
 					prompt.show()
-				delete job[i]
+				del job[i]
 				job.remove(i)
 				i --
 	void show()
 		for j in job
-			print("" + j.id + " - " + j.cmd + "\n")
+			print("{{j.id}} - {{j.cmd}}\n")
 
 JobManager jobs
 
@@ -301,14 +302,14 @@ void do_bg(string[] c)
 	Job *j = jobs.get(id)
 	if j
 		kill(j.pid, 18)
-		print("in background: " + j.cmd + "\n")
+		print("in background: {{j.cmd}}\n")
 	else
 		print("no job\n")
 
 void do_cd(string[] c)
 	if c.num > 1
 		if !chdir(c[1])
-			print("no valid directory: " + c[1] + "\n")
+			print("no valid directory: {{c[1]}}\n")
 	else
 		print("directory?\n")
 
@@ -341,7 +342,7 @@ void exec(string cmd)
 		c[0] = vars.get("PATH").value + c[0]
 		if execute_job(c, cmd0)
 			return
-		print("unknown command: " + cc + "\n")
+		print("unknown command: {{cc}}\n")
 
 
 int getkey()

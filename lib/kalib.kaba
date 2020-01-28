@@ -1,3 +1,4 @@
+#define __FUNCTION_POINTER_AS_CODE__
 use image
 
 const int MALLOC_OFFSET = 0x00b00000
@@ -1397,7 +1398,7 @@ lib__string lib__@sa2s(lib__string@list a)
 	r.add(']')
 	return r
 
-lib__string lib__@i2s(int i)
+lib__string i2s(int i)
 	bool sign = i >= 0
 	if !sign
 		i = -i
@@ -1427,14 +1428,12 @@ int lib__randi(int m)
 	return lib__rand(m)
 
 class lib__int
-	int i
-	lib__string str()
-		return lib__@i2s(i)
+	static lib__string str(int i)
+		return i2s(i)
 
 class lib__float
-	float f
-	lib__string str()
-		return lib__@f2s(f, 6)
+	static lib__string str(float f)
+		return f2s(f, 6)
 
 float lib__sin(float f)
 	__temp_f__ = f
@@ -1523,13 +1522,13 @@ float lib__loop(float f, float min, float max)
 		return f - d * float(n)
 	return f
 
-lib__string lib__@f2s(float f, int n)
+lib__string f2s(float f, int n)
 	lib__string s
 	
 	if f < 0.0
 		s.add('-')
 		f = -f
-	s += lib__@i2s(f)
+	s += i2s(f)
 	if n > 0
 		s.add('.')
 		int e = 1
@@ -1550,7 +1549,7 @@ lib__string lib__p2s(void *p)
 	memcpy(r.data, pp, sizeof(p))
 	return r.hex(true)
 
-lib__string lib__@b2s(bool b)
+lib__string b2s(bool b)
 	lib__string r
 	if b
 		r.add('1')
@@ -1559,9 +1558,8 @@ lib__string lib__@b2s(bool b)
 	return r
 
 class lib__bool
-	bool b
-	lib__string str()
-		return lib__@b2s(b)
+	static lib__string str(bool b)
+		return b2s(b)
 
 lib__string lib__@ia2s(lib__int@list a)
 	lib__string r
@@ -1570,7 +1568,7 @@ lib__string lib__@ia2s(lib__int@list a)
 		if i > 0
 			r.add(',')
 			r.add(' ')
-		r += lib__@i2s(a.data[i])
+		r += i2s(a.data[i])
 	r.add(']')
 	return r
 
@@ -1581,7 +1579,7 @@ lib__string lib__@fa2s(lib__float@list a)
 		if i > 0
 			r.add(',')
 			r.add(' ')
-		r += lib__@f2s(a.data[i], 6)
+		r += f2s(a.data[i], 6)
 	r.add(']')
 	return r
 
@@ -1594,10 +1592,10 @@ class lib__complex
 lib__string _complex2s(lib__complex c)
 	lib__string r
 	r.add('(')
-	r += lib__@f2s(c.x, 6)
+	r += f2s(c.x, 6)
 	r.add(',')
 	r.add(' ')
-	r += lib__@f2s(c.y, 6)
+	r += f2s(c.y, 6)
 	r.add(')')
 	return r
 
@@ -1924,9 +1922,9 @@ void lib__raise(lib__Exception* e)
 # start
 
 void signal_handler_segv()
-	#kprint("----DIE---")
+	#kprint("--->SEGFAULT<--")
 	lib_print_endl = true
-	lib__print("  -- Segmentation Fault --")
+	lib__print("  -- Segmentation Fault --\n")
 	exit(0)
 	
 

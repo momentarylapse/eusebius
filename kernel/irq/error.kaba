@@ -102,10 +102,6 @@ void int_handler(int i)
 			handle_kernel_error(prev, i)
 		else
 			handle_task_error(prev, e, i)
-		prints("  interr  ")
-		printi(i)
-		prints(prev.name)
-		#panic("int")
 		
 		asm{
 			iret

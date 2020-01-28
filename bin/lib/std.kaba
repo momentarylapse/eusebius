@@ -1,3 +1,4 @@
+#define __FUNCTION_POINTER_AS_CODE__
 
 const int O_RDONLY = 1
 const int O_WRONLY = 2

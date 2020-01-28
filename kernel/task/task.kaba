@@ -318,8 +318,6 @@ class Task
 		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		
 	int handle_signal(int signal)
-		prints("---SIGNAL---")
-		printi(signal)
 		if signal < 0 or signal >= 32
 			return -EINVAL
 		
