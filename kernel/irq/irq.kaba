@@ -127,10 +127,15 @@ class InterruptController
 			mov [_idtr_base], eax
 			cli
 			lidt [_idtr]
-			sti
+			#sti
 		}
 	
 		prints("   ok\n")
+	
+	void enable()
+		asm{
+			sti
+		}
 	
 	int sys_map_irq(int hw_irq, Task *t, int signal)
 		if hw_irq < 0 or hw_irq >= 16

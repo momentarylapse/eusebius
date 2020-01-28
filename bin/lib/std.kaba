@@ -63,6 +63,8 @@ class TaskInfo
 	int mem
 	int cpu
 	TimeValue life
+	void __assign__(TaskInfo o)
+		pass
 
 extern void init_lib()
 extern void get_args(string[] arg)

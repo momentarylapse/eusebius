@@ -52,7 +52,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	pci = new PCIController
+	pci = new PCIController()
 	
 	pci.scan()
 	

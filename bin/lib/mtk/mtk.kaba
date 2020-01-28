@@ -161,11 +161,11 @@ class MtkWidget
 		return false
 	
 	bool has_input()
-		return win.active and (self == win.input_widget)
+		return win.active and (&self == win.input_widget)
 	
 	void set_win(MtkWindow* win, int x, int y, int w, int h)
 		self.win = win
-		win.widgets.add(self)
+		win.widgets.add(&self)
 		p = new XPainter(win)
 		p.font = font
 		resize(x, y, w, h)
@@ -536,11 +536,11 @@ class MtkWindow extends XWindow
 		frame = true
 		killed = false
 		button_close_hover = false
-		mtk_windows.add(self)
+		mtk_windows.add(&self)
 		
 		self.title = title
 		
-		p = new XPainter(self)
+		p = new XPainter(&self)
 		p.font = font_db.get(FONT_NAME, FONT_SIZE_BAR)
 		
 	#void __init__(string title, int x, int y, int w, int h)
@@ -590,7 +590,7 @@ class MtkWindow extends XWindow
 	
 	void put(MtkWidget* widget)
 		self.widget = widget
-		widget.set_win(self, FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
+		widget.set_win(&self, FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
 		
 		if shown
 			widget.draw()
@@ -621,7 +621,7 @@ class MtkWindow extends XWindow
 			
 	override void on_mouse_left_button_down()
 		#XWindow* ww = xcon.get_at_cursor()
-		if self == xcon.cursor_win
+		if &self == xcon.cursor_win
 			activate()
 			if frame and my < FRAME_BAR
 				if button_close_hover
@@ -677,7 +677,7 @@ class MtkErrorBox extends MtkWindow
 		l.snd.expand_y = true
 		g.put(0, 0, l)
 		
-		MtkButton* b = new MtkErrorBoxOkButton
+		MtkButton* b = new MtkErrorBoxOkButton()
 		g.put(0, 1, b)
 			
 
@@ -716,12 +716,12 @@ void mtk_init()
 	col_frame = color(1, 0.6, 0.6, 0.6)
 	col_frame_active = color(1, 0.4, 0.4, 0.80)
 	
-	xcon = new XConnection
+	xcon = new XConnection()
 	if xcon.error
 		print("client: can not connect to x\n")
 		exit(-1)
 	
-	font_db = new FontDB
+	font_db = new FontDB()
 	default_font = font_db.get(FONT_NAME, FONT_SIZE)
 
 void mtk_add_idle(MtkIdle *i)

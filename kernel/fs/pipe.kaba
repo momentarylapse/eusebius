@@ -40,7 +40,7 @@ class Pipe
 		return size
 	#void show()
 #		prints("  ")
-#		printi(_p2i(self))
+#		printi(_p2i(&self))
 #		prints("  ")
 #		printi read_ref_count
 #		prints(":")

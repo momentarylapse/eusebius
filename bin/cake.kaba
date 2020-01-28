@@ -34,7 +34,7 @@ void main()
 	
 	rand_seed(getpid())
 	
-	xcon = new XConnection
+	xcon = new XConnection()
 	if xcon.error
 		print("client: kann nicht mit x verbinden\n")
 		exit(-1)
@@ -45,7 +45,7 @@ void main()
 		exit(-2)
 		
 	XPainter* p = new XPainter(win)
-	FontDB* font_db = new FontDB
+	FontDB* font_db = new FontDB()
 	p.font = font_db.get("Cantarell", 30)
 
 	bg = color(1, 0.1765, 0.1608, 0.4706)

@@ -12,7 +12,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	pci = new PCIController
+	pci = new PCIController()
 	pci.scan()
 	PCIDevice *dev = pci.get(0x8029, 0x10ec)
 	if !dev

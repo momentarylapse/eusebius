@@ -49,7 +49,7 @@ class OpenFileData
 			return -3
 		
 		if entry.type == FILE_TYPE_CHAR
-			return call_ppii(entry.op._read, entry, page_dir, addr, size)
+			return entry.op.read(entry, page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.read(page_dir, addr, size)
 		else if entry.type == FILE_TYPE_SOCKET
@@ -102,7 +102,7 @@ class OpenFileData
 			return -2
 		
 		if entry.type == FILE_TYPE_CHAR
-			return call_ppii(entry.op._write, entry, page_dir, addr, size)
+			return entry.op.write(entry, page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.write(page_dir, addr, size)
 		else if entry.type == FILE_TYPE_SOCKET
@@ -219,7 +219,7 @@ class OpenFileData
 		if buffer
 			free(buffer)
 		if entry.type == FILE_TYPE_CHAR
-			call_p(entry.op._close, entry)
+			entry.op.close(entry)
 		if entry.type == FILE_TYPE_PIPE
 			pipe.unref(writing)
 		else if entry.type == FILE_TYPE_SOCKET
@@ -281,7 +281,7 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 			return nil
 		of.socket.ref_count ++
 	else if of.entry.type == FILE_TYPE_CHAR
-		call_p(of.entry.op._open, of.entry)
+		of.entry.op.open(of.entry)
 	return of
 
 OpenFileData *kernel_open(cstring filename, int flags, FileEntry *cur_dir)
@@ -344,6 +344,8 @@ class dirent_struct
 	int size
 	int type
 	cstring name
+	void __assign__(dirent_struct o)
+		pass
 
 void InitFileAccessData()
 	for o in OpenFiles

@@ -227,7 +227,7 @@ class PageDirectory extends PageTable
 			npages --
 	
 	void show()
-		printh(self, 64)
+		printh(&self, 64)
 		prints("...\n")
 		for i in 0:4
 			PageTable *pt = _i2p(e[i] & 0xfffff000)

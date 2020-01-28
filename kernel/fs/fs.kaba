@@ -16,10 +16,14 @@ const int MAX_MOUNT_POINTS = 32
 
 
 class FileOperations
-	code* _open
-	code* _close
-	code* _read
-	code* _write
+	virtual int open(FileEntry* e)
+		return 0
+	virtual int close(FileEntry* e)
+		return 0
+	virtual int read(FileEntry* e, void* page_dir, int addr, int size) # PageDirectory
+		return 0
+	virtual int write(FileEntry* e, void* page_dir, int addr, int size) # PageDirectory
+		return 0
 
 class FileEntry
 	cstring name
@@ -35,6 +39,9 @@ class FileEntry
 	FileEntry *first_sub
 	FileOperations *op
 	
+	void __assign__(FileEntry o)
+		pass
+	
 	
 	FileEntry *create_child(cstring _name, int _type, MountPoint *_mount)
 		FileEntry *e = create_file_entry(_name, _type, _mount)
@@ -42,7 +49,7 @@ class FileEntry
 		return e
 	
 	void add_child(FileEntry *e)
-		e.parent = self
+		e.parent = &self
 		if first_sub
 			FileEntry *i = first_sub
 			while i.next
@@ -55,7 +62,7 @@ class FileEntry
 		if strcmp(&sname, &"..") == 0
 			return parent
 		if strcmp(&sname, &".") == 0
-			return self
+			return &self
 		FileEntry *e = first_sub
 		while e
 			if strcmp(&sname, &e.name) == 0
@@ -197,15 +204,13 @@ class MountPoint
 	int[0]* inode_bitmap
 	int[0]* block_bitmap
 	
-	code *p_write_inode # int f(self, FileEntry*)
-	code *p_alloc_block # int f(self)
-	code *p_free_block  # int f(self, int index)
-	code *p_free_inode  # int f(self, int index)
-	code *p_alloc_inode # int f(self)
-	code *p_sync        # int f(self)
-	
+	void __init__()
+		pass
 	void __assign__(MountPoint o)
-		nil
+		pass
+		
+	virtual int mount()
+		return -1
 	
 	void update_sizes(int _bs, int _bo)
 		block_size = _bs
@@ -223,35 +228,23 @@ class MountPoint
 		for i in 0:dev_blocks_per_block
 			ata.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 	
-	int alloc_block()
-		if !p_alloc_block
-			return -1
-		return call_p(p_alloc_block, self)
+	virtual int alloc_block()
+		return -1
 	
-	int free_block(int index)
-		if !p_free_block
-			return -1
-		return call_pi(p_free_block, self, index)
+	virtual int free_block(int index)
+		return -1
 	
-	int free_inode(int index)
-		if !p_free_inode
-			return -1
-		return call_pi(p_free_inode, self, index)
+	virtual int free_inode(int index)
+		return -1
 	
-	int alloc_inode()
-		if !p_alloc_inode
-			return -1
-		return call_p(p_alloc_inode, self)
+	virtual int alloc_inode()
+		return -1
 	
-	int write_inode(FileEntry *e)
-		if !p_write_inode
-			return -1
-		return call_pp(p_write_inode, self, e)
+	virtual int write_inode(FileEntry *e)
+		return -1
 	
-	int sync()
-		if !p_sync
-			return -1
-		return call_p(p_sync, self)
+	virtual int sync()
+		return -1
 
 
 
@@ -344,22 +337,18 @@ class FileSystemData
 				mp = &m
 		if !mp
 			return -1
-		mp.dest = dir
-		mp.dev = dev
-		mp.p_write_inode = nil
-		mp.p_alloc_inode = nil
-		mp.p_free_inode = nil
-		mp.p_alloc_block = nil
-		mp.p_free_block = nil
-		mp.p_sync = nil
-		mp.dirty = false
-		strcpy(&mp.type, &fs_name)
 		if strcmp(&fs_name, &"michifs") == 0
 			MountPointMichiFS *mp_michi = mp
-			mp_michi.mount()
+			mp_michi.__init__()
 		else if strcmp(&fs_name, &"ext2") == 0
 			MountPointExt2 *mp_ext2 = mp
-			mp_ext2.mount()
+			mp_ext2.__init__()
+			
+		mp.dest = dir
+		mp.dev = dev
+		mp.dirty = false
+		strcpy(&mp.type, &fs_name)
+		mp.mount()
 		dir.mount = mp
 		prints(" ok\n")
 		return 0
@@ -384,7 +373,7 @@ class MountPointMichiFS extends MountPoint
 			s[i] = buf[buf_used + i]
 		buf_used += l
 		s[l] = 0
-	int mount()
+	override int mount()
 		buf = malloc(2048)
 		update_sizes(2048, 0)
 		read_block(1, buf)
@@ -393,7 +382,7 @@ class MountPointMichiFS extends MountPoint
 		for n in 0:NumFiles
 			cstring name
 			read_str(name)
-			FileEntry *e = dest.create_child(name, FILE_TYPE_FILE, self)
+			FileEntry *e = dest.create_child(name, FILE_TYPE_FILE, &self)
 			#e.type =
 			read_int()
 			e.size = read_int()
@@ -406,15 +395,8 @@ class MountPointMichiFS extends MountPoint
 
 class MountPointExt2 extends MountPoint
 	
-	int mount()
+	override int mount()
 		buf = malloc(4096)
-		p_write_inode = my_write_inode.code  ARGH!!! Function* not ex...
-		p_alloc_inode = my_alloc_inode.code
-		p_alloc_block = my_alloc_block.code
-		p_free_block  = my_free_block.code
-		p_sync        = my_sync.code
-		printh(&p_write_inode, 4)
-		panic("a")
 		update_sizes(1024, 0) # temp
 		
 		read_block(1, buf)
@@ -486,7 +468,7 @@ class MountPointExt2 extends MountPoint
 		
 		if e.num_blocks > 12
 			if inode.iblock[12] == 0
-				inode.iblock[12] = my_alloc_block()
+				inode.iblock[12] = alloc_block()
 			write_block(inode.iblock[12], buf)
 		
 		write_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
@@ -555,12 +537,12 @@ class MountPointExt2 extends MountPoint
 				int type = FILE_TYPE_FILE
 				if d.file_type == 2
 					type = FILE_TYPE_DIR
-				FileEntry *e = dir.create_child(name, type, self)
+				FileEntry *e = dir.create_child(name, type, &self)
 				e.mp_inode = d.inode
 				read_inode_recursive(d.inode, e)
 		free(cont)
 		
-	int my_write_inode(FileEntry *e)
+	override int write_inode(FileEntry *e)
 		if e.type == FILE_TYPE_DIR
 			return write_inode_dir(e)
 		return write_inode_simple(e)
@@ -602,7 +584,7 @@ class MountPointExt2 extends MountPoint
 		for i in pos:dir.size
 			b[i] = 0
 		for i in 0:num_blocks
-			dir.add_block(my_alloc_block())
+			dir.add_block(alloc_block())
 		
 		for i in 0:num_blocks
 			write_block(dir.blocks[i], &b[i * block_size])
@@ -611,7 +593,7 @@ class MountPointExt2 extends MountPoint
 		free(b)
 		return 0
 	
-	int my_alloc_inode()
+	override int alloc_inode()
 		int n = sb.inodes_per_group / 32
 		for i in 0:n
 			int b = inode_bitmap[i]
@@ -627,7 +609,7 @@ class MountPointExt2 extends MountPoint
 					return i * 32 + j
 		return -1
 	
-	int my_alloc_block()
+	override int alloc_block()
 		#prints(" AB ")
 		int n = sb.blocks_per_group / 32
 		for i in 0:n
@@ -645,7 +627,7 @@ class MountPointExt2 extends MountPoint
 					return i * 32 + j
 		return -1
 	
-	int my_free_block(int index)
+	override int free_block(int index)
 		#prints(" FB ")
 		#printi(index)
 		int bmi = index >> 5 # index/32
@@ -662,7 +644,7 @@ class MountPointExt2 extends MountPoint
 		dirty = true
 		return 0
 	
-	int my_free_inode(int index)
+	override int free_inode(int index)
 		int bmi = index >> 5 # index/32
 		int bit = index & 0x1f # index%32
 		int mask = 1 << bit
@@ -677,7 +659,7 @@ class MountPointExt2 extends MountPoint
 		dirty = true
 		return 0
 	
-	int my_sync()
+	override int sync()
 		if !dirty
 			return 0
 		write_meta_data()

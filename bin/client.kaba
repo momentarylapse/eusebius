@@ -12,7 +12,7 @@ void main()
 	
 	rand_seed(getpid())
 	
-	xcon = new XConnection
+	xcon = new XConnection()
 	if xcon.error
 		print("client: kann nicht mit x verbinden")
 		exit(-1)

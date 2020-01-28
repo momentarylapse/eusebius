@@ -59,7 +59,7 @@ void main()
 	prints(KERNEL_NAME)
 	prints(" ")
 	prints(KERNEL_VERSION)
-	prints("   (c) by MichiSoft TM 2019\n")
+	prints("   (c) by MichiSoft TM 2020\n")
 	prints("memory: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
@@ -101,6 +101,8 @@ void main()
 	irq.init()
 	error.init()
 	InitSysCall()
+	# -------- ok until here ------------
+	irq.enable()
 	
 	InitDrivers()
 	
@@ -116,7 +118,7 @@ void main()
 	panic("test")
 	prints("aa2")
 	while true
-		nil
+		pass
 	
 	panic("no tasks")
 

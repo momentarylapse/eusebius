@@ -104,7 +104,7 @@ class VariableSet
 		for v in var
 			if v.name == name
 				return v
-		Variable *v = new Variable
+		Variable *v = new Variable()
 		v.name = name
 		var.add(v)
 		return v
@@ -183,7 +183,7 @@ class Job
 		if waitpid(pid, &status, false) == -2
 			return
 		vars.get("?").value = status
-		if self != jobs.fg
+		if &self != jobs.fg
 			print("[" + id + "] done: " + cmd + "\n")
 	#	if status < -600#-652
 	#		print("  -- Programm hat was boeses gemacht! --\n")

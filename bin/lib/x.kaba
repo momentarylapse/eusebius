@@ -58,12 +58,12 @@ class XWindow
 		mx = 0
 		my = 0
 		active = false
-		c._create_win(self, x, y, w, h)
+		c._create_win(&self, x, y, w, h)
 	virtual void __delete__()
 		if buf
 			shmdt(buf)
 		for w,i in con.windows
-			if w == self
+			if w == &self
 				con.windows.remove(i)
 				break
 	void create_buf(int _id, int key)

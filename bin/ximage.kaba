@@ -28,7 +28,7 @@ void main()
 	get_args(arg)
 	
 	if arg.num > 1
-		window = new ImageWindow(arg[1], LoadImage(arg[1]))
+		window = new ImageWindow(arg[1], Image.load(arg[1]))
 		
 	window.show()
 	

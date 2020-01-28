@@ -98,7 +98,7 @@ class ShellView extends MtkWidget
 		int offset = max_lines - hist.lines.num
 		if offset > 0
 			offset = 0
-		p.font = font_db.get("FreeMono", i2f(LINE_HEIGHT) * 0.9)
+		p.font = font_db.get("FreeMono", float(LINE_HEIGHT) * 0.9)
 		for l,i in hist.lines
 			if i >= -offset
 				p.draw_str(5, (i + offset)*LINE_HEIGHT+5, l)
@@ -110,7 +110,7 @@ class ShellWindow extends MtkWindow
 	ShellView* view
 	void __init__()
 		super.__init__("XTerm", 600, 400)
-		history = new History
+		history = new History()
 		view = new ShellView(history)
 		put(view)
 		
@@ -149,7 +149,7 @@ void main()
 	stdout = open("/dev/tty", O_WRONLY)
 	
 	
-	window = new ShellWindow
+	window = new ShellWindow()
 	if !window.buf
 		print("client: can not create a window\n")
 		exit(-2)

@@ -13,7 +13,7 @@ string i2h(int i)
 
 float time_dif(TimeValue t1, TimeValue t2)
 	float d = t2.sec - t1.sec
-	d += i2f(t2.nanosec - t1.nanosec) * 0.000000001
+	d += float(t2.nanosec - t1.nanosec) * 0.000000001
 	return d
 
 
@@ -112,7 +112,7 @@ class TTFFont
 		float scale = font_size
 		float w = 0
 		for c,i in text
-			int code = c2i(c) & 0x000000ff
+			int code = int(c) & 0x000000ff
 			if code == 9
 				w += 4 * 0.5
 				continue
@@ -125,7 +125,7 @@ class TTFFont
 		return w * scale
 
 TTFFont *LoadTTF(string filename)
-	TTFFont *f = new TTFFont
+	TTFFont *f = new TTFFont()
 	if f.load(filename)
 		return f
 	delete f
@@ -135,6 +135,7 @@ class FontDescriptor
 	TTFFont *font
 	float size
 	
+	void __init__()
 	float get_str_width(string text)
 		return font.get_str_width(text, size)
 
@@ -146,7 +147,7 @@ class FontDB
 		for d in descriptors
 			if d.font.name == name and d.size == size
 				return d
-		FontDescriptor* d = new FontDescriptor
+		FontDescriptor* d = new FontDescriptor()
 		d.size = size
 		for f in fonts
 			if f.name == name

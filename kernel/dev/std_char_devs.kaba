@@ -12,114 +12,96 @@ use "../task/task.kaba"
 #--------------------------------------------------------------
 # Gerätedateien
 
-FileOperations dev_zero_ops
-int dev_zero_open(FileEntry *f)
-	return 0
-int dev_zero_close(FileEntry *f)
-	return 0
-int dev_zero_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	int zero = 0
-	for i in 0:size
-		page_dir.memcpy2task(addr + i, &zero, 1)
-	return size
-int dev_zero_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return 0
+FileOperationsZero dev_zero_ops
+class FileOperationsZero extends FileOperations
+	override int open(FileEntry *f)
+		return 0
+	override int close(FileEntry *f)
+		return 0
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		int zero = 0
+		for i in 0:size
+			page_dir.memcpy2task(addr + i, &zero, 1)
+		return size
 
-FileOperations dev_null_ops
-int dev_null_open(FileEntry *f)
-	return 0
-int dev_null_close(FileEntry *f)
-	return 0
-int dev_null_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return 0
-int dev_null_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return size
+FileOperationsNull dev_null_ops
+class FileOperationsNull extends FileOperations
+	override int write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		return size
 
-FileOperations dev_rand_ops
+FileOperationsRand dev_rand_ops
 int dev_rand_state
-int dev_rand_open(FileEntry *f)
-	return 0
-int dev_rand_close(FileEntry *f)
-	return 0
-int dev_rand_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	for i in 0:size
-		dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
-		page_dir.memcpy2task(addr + i, &dev_rand_state, 1)
-	return size
-int dev_rand_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return 0
+class FileOperationsRand extends FileOperations
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		for i in 0:size
+			dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
+			page_dir.memcpy2task(addr + i, &dev_rand_state, 1)
+		return size
 
 
-FileOperations dev_key_ops
+FileOperationsKey dev_key_ops
 cstring dev_key_buf
 int dev_key_num
 bool dev_key_escaped
 bool dev_key_shift, dev_key_control, dev_key_altgr
 int dev_key_reading
-int dev_key_open(FileEntry *f)
-	dev_key_num = 0
-	dev_key_reading ++
-	return 0
-int dev_key_close(FileEntry *f)
-	dev_key_reading --
-	return 0
-int dev_key_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	if dev_key_num == 0
-		return -EWOULDBLOCK
-	if size > dev_key_num
-		size = dev_key_num
-	page_dir.memcpy2task(addr, &dev_key_buf, size)
-	dev_key_num -= size
-	memcpy(&dev_key_buf, &dev_key_buf[size], dev_key_num)
-	return size
-int dev_key_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return 0
+class FileOperationsKey extends FileOperations
+	override int open(FileEntry *f)
+		dev_key_num = 0
+		dev_key_reading ++
+		return 0
+	override int close(FileEntry *f)
+		dev_key_reading --
+		return 0
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		if dev_key_num == 0
+			return -EWOULDBLOCK
+		if size > dev_key_num
+			size = dev_key_num
+		page_dir.memcpy2task(addr, &dev_key_buf, size)
+		dev_key_num -= size
+		memcpy(&dev_key_buf, &dev_key_buf[size], dev_key_num)
+		return size
+	override int write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		return 0
 	
-FileOperations dev_mouse_ops
+FileOperationsMouse dev_mouse_ops
 cstring dev_mouse_buf
 int dev_mouse_num
-int dev_mouse_open(FileEntry *f)
-	return 0
-int dev_mouse_close(FileEntry *f)
-	return 0
-int dev_mouse_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	if dev_mouse_num == 0
-		return -EWOULDBLOCK
-	if size < 16
-		return 0
-	mouse_temp_no = 0 # CHEAP BUG FIX...
-	size = 16
-	if size > dev_mouse_num
-		size = dev_mouse_num
-	page_dir.memcpy2task(addr, &dev_mouse_buf, size)
-	dev_mouse_num -= size
-	memcpy(&dev_mouse_buf, &dev_mouse_buf[size], dev_mouse_num)
-	return size
-int dev_mouse_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	return 0
+class FileOperationsMouse extends FileOperations
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		if dev_mouse_num == 0
+			return -EWOULDBLOCK
+		if size < 16
+			return 0
+		mouse_temp_no = 0 # CHEAP BUG FIX...
+		size = 16
+		if size > dev_mouse_num
+			size = dev_mouse_num
+		page_dir.memcpy2task(addr, &dev_mouse_buf, size)
+		dev_mouse_num -= size
+		memcpy(&dev_mouse_buf, &dev_mouse_buf[size], dev_mouse_num)
+		return size
 
-FileOperations dev_tty_ops
+FileOperationsTTY dev_tty_ops
 cstring dev_tty_key_buf
 int dev_tty_key_num
-int dev_tty_open(FileEntry *f)
-	return 0
-int dev_tty_close(FileEntry *f)
-	return 0
-int dev_tty_read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	if dev_tty_key_num == 0
-		return -EWOULDBLOCK
-	if size > dev_tty_key_num
-		size = dev_tty_key_num
-	page_dir.memcpy2task(addr, &dev_tty_key_buf, size)
-	dev_tty_key_num -= size
-	memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
-	return size
-int dev_tty_write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
-	for i in 0:size
-		int offset
-		cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
-		prints_low(buf, 1)
-	return size
+class FileOperationsTTY extends FileOperations
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		if dev_tty_key_num == 0
+			return -EWOULDBLOCK
+		if size > dev_tty_key_num
+			size = dev_tty_key_num
+		page_dir.memcpy2task(addr, &dev_tty_key_buf, size)
+		dev_tty_key_num -= size
+		memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
+		return size
+	override int write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+		for i in 0:size
+			int offset
+			cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
+			prints_low(buf, 1)
+		return size
 
 void InitDrivers()
 	prints("init drivers... ")
@@ -134,52 +116,34 @@ void InitDrivers()
 	FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
 	
 	FileEntry *dev_zero = dev.create_child("zero", FILE_TYPE_CHAR, nil)
-	dev_zero_ops._open = dev_zero_open.code
-	dev_zero_ops._close = dev_zero_close.code
-	dev_zero_ops._read = dev_zero_read.code
-	dev_zero_ops._write = dev_zero_write.code
+	dev_zero_ops.__init__()
 	dev_zero.op = &dev_zero_ops
 	
 	FileEntry *dev_null = dev.create_child("null", FILE_TYPE_CHAR, nil)
-	dev_null_ops._open = dev_null_open.code
-	dev_null_ops._close = dev_null_close.code
-	dev_null_ops._read = dev_null_read.code
-	dev_null_ops._write = dev_null_write.code
+	dev_null_ops.__init__()
 	dev_null.op = &dev_null_ops
 	
 	dev_rand_state = 13
 	
 	FileEntry *dev_rand = dev.create_child("random", FILE_TYPE_CHAR, nil)
-	dev_rand_ops._open = dev_rand_open.code
-	dev_rand_ops._close = dev_rand_close.code
-	dev_rand_ops._read = dev_rand_read.code
-	dev_rand_ops._write = dev_rand_write.code
+	dev_rand_ops.__init__()
 	dev_rand.op = &dev_rand_ops
 	
 	dev_key_num = 0
 	
 	FileEntry *dev_key = dev.create_child("keyboard", FILE_TYPE_CHAR, nil)
-	dev_key_ops._open = dev_key_open.code
-	dev_key_ops._close = dev_key_close.code
-	dev_key_ops._read = dev_key_read.code
-	dev_key_ops._write = dev_key_write.code
+	dev_key_ops.__init__()
 	dev_key.op = &dev_key_ops
 	
 	FileEntry *dev_tty = dev.create_child("tty", FILE_TYPE_CHAR, nil)
-	dev_tty_ops._open = dev_tty_open.code
-	dev_tty_ops._close = dev_tty_close.code
-	dev_tty_ops._read = dev_tty_read.code
-	dev_tty_ops._write = dev_tty_write.code
+	dev_tty_ops.__init__()
 	dev_tty.op = &dev_tty_ops
 	
 	mouse_temp_no = 0
 	dev_mouse_num = 0
 	
 	FileEntry *dev_mouse = dev.create_child("mouse", FILE_TYPE_CHAR, nil)
-	dev_mouse_ops._open = dev_mouse_open.code
-	dev_mouse_ops._close = dev_mouse_close.code
-	dev_mouse_ops._read = dev_mouse_read.code
-	dev_mouse_ops._write = dev_mouse_write.code
+	dev_mouse_ops.__init__()
 	dev_mouse.op = &dev_mouse_ops
 	
 	Task *KeyTask = AddTaskKernel("irq-key", &int_key, 1024, KernelTask)

@@ -17,6 +17,7 @@ class AtaDiskInfo
 	bool isAtapi
 	int size
 	cstring name
+	void __assign__(AtaDiskInfo i)
 
 class AtaController
 
@@ -315,10 +316,12 @@ class PartitionData
 	cstring name
 	void *p_read_block # (self, buf, minor, index)
 	
-	int read_block(int index, void *buf)
-		if !p_read_block
-			return -1
-		return call_ppii(p_read_block, self, buf, minor, index)
+	void __assign__(PartitionData o)
+	
+#	int read_block(int index, void *buf)
+#		if !p_read_block
+#			return -1
+#		return call_ppii(p_read_block, &self, buf, minor, index)
 	
 PartitionData[8] Partition
 int NumPartitions

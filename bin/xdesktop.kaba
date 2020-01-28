@@ -35,7 +35,7 @@ class LauncherBar extends MtkWindow
 void main()
 	mtk_init()
 
-	LauncherBar* bar = new LauncherBar
+	LauncherBar* bar = new LauncherBar()
 	bar.show()
 
 	mtk_run()

@@ -642,10 +642,10 @@ class MallocHeader
 	MallocHeader *next
 	MallocHeader *prev
 	void *after()
-		char[0]* pp = self
+		char[0]* pp = &self
 		return &pp[size]
 	void *payload()
-		char[0]* pp = self
+		char[0]* pp = &self
 		return &pp[sizeof(MallocHeader)]
 MallocHeader *malloc_first_free
 MallocHeader *malloc_end_marker
@@ -984,7 +984,7 @@ class lib__string extends lib__@DynamicArray
 	override char[0]* data
 	void __init__()
 		__mem_init__(1)
-	override void __delete__()
+	void __delete__()
 		__mem_clear__()
 	void resize(int size)
 		__mem_resize__(size)
@@ -1009,7 +1009,7 @@ class lib__string extends lib__@DynamicArray
 		memcpy(&data[n0], o.data, o.num)
 	lib__string __add__(lib__string o)
 		lib__string r
-		r = *self
+		r = self
 		r += o
 		return r
 			
@@ -1147,7 +1147,7 @@ class lib__string extends lib__@DynamicArray
 			resize(num + d)
 
 	lib__string replace(lib__string sub, lib__string by)
-		lib__string r = *self
+		lib__string r = self
 		int i = r.find(sub, 0)
 		while i >= 0
 			r.replace0(i, sub.num, by)
@@ -1155,14 +1155,14 @@ class lib__string extends lib__@DynamicArray
 		return r
 
 	lib__string lower()
-		lib__string r = *self
+		lib__string r = self
 		for i in 0:num
 			if (data[i] >= 'A') and (data[i] <= 'Z')
 				r.data[i] += 'a' - 'A'
 		return r
 
 	lib__string upper()
-		lib__string r = *self
+		lib__string r = self
 		for i in 0:num
 			if (data[i] >= 'a') and (data[i] <= 'z')
 				r.data[i] += 'A' - 'a'
@@ -1253,7 +1253,7 @@ class lib__int@list extends lib__@DynamicArray
 	override int[0]* data
 	void __init__()
 		__mem_init__(sizeof(int))
-	override void __delete__()
+	void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1286,7 +1286,7 @@ class lib__float@list extends lib__@DynamicArray
 	override float[0]* data
 	void __init__()
 		__mem_init__(sizeof(float))
-	override void __delete__()
+	void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1319,7 +1319,7 @@ class lib__bool@list extends lib__@DynamicArray
 	override bool[0]* data
 	void __init__()
 		__mem_init__(sizeof(bool))
-	override void __delete__()
+	void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1345,7 +1345,7 @@ class lib__string@list extends lib__@DynamicArray
 	override lib__string[0]* data
 	void __init__()
 		__mem_init__(sizeof(lib__string))
-	override void __delete__()
+	void __delete__()
 		for i in 0:num
 			data[i].__delete__()
 		#clear()
@@ -1383,7 +1383,7 @@ class lib__string@list extends lib__@DynamicArray
 			r += data[i]
 		return r
 	lib__string str()
-		return lib__@sa2s(*self)
+		return lib__@sa2s(self)
 
 lib__string lib__@sa2s(lib__string@list a)
 	lib__string r
@@ -1421,7 +1421,7 @@ void lib__rand_seed(int s)
 	rand_state = s
 
 float lib__rand(float m)
-	return rand_next() * m / i2f(0x01000000)
+	return rand_next() * m / float(0x01000000)
 
 int lib__randi(int m)
 	return lib__rand(m)
@@ -1516,11 +1516,11 @@ float lib__clamp(float f, float min, float max)
 float lib__loop(float f, float min, float max)
 	float d = max - min
 	if f < min
-		int n = i2f( (min-f) / d ) + 1
-		return f + d * i2f(n)
+		int n = int( (min-f) / d ) + 1
+		return f + d * float(n)
 	if f >= max
-		int n= i2f( (f-max) / d ) + 1
-		return f - d * i2f(n)
+		int n= int( (f-max) / d ) + 1
+		return f - d * float(n)
 	return f
 
 lib__string lib__@f2s(float f, int n)
@@ -1537,7 +1537,7 @@ lib__string lib__@f2s(float f, int n)
 		for i in 0:n
 			e = e *10
 			fe *= 10.0
-		int after = f2i(f*fe) % e
+		int after = int(f*fe) % e
 		for i in 0:n
 			e /= 10
 			s.add(((after / e) % 10) + 0x30)
@@ -1589,7 +1589,7 @@ class lib__complex
 	float x, y
 	
 	lib__string str()
-		return _complex2s(*self)
+		return _complex2s(self)
 
 lib__string _complex2s(lib__complex c)
 	lib__string r
@@ -1606,7 +1606,7 @@ class lib__complex@list extends lib__@DynamicArray
 	override complex[0]* data
 	void __init__()
 		__mem_init__(sizeof(complex))
-	override void __delete__()
+	void __delete__()
 		clear()
 	void clear()
 		__mem_clear__()
@@ -1662,7 +1662,7 @@ class lib__DirEntry@list extends lib__@DynamicArray
 	override lib__DirEntry[0]* data
 	void __init__()
 		__mem_init__(sizeof(lib__DirEntry))
-	override void __delete__()
+	void __delete__()
 		for i in 0:num
 			data[i].__delete__()
 		#clear()
@@ -1696,6 +1696,8 @@ class dirent_struct
 	int size
 	int type
 	cstring name
+	void __assign__(dirent_struct o)
+		pass
 	void fill(lib__DirEntry e)
 		_cs2s(name, e.name)
 		e.size = size
@@ -1859,50 +1861,50 @@ class lib__Image
 	bool error
 	void __init__(int w, int h, color c)
 		data.resize(w * h)
-		int ic = 0xff000000 + f2i(255.0 * c.b) + (f2i(255.0 * c.g) << 8) + (f2i(255.0 * c.r) << 16)
+		int ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
 		for i in 0:data.num
 			data.data[i] = ic
 		width = w
 		height = h
 		error = false
 
-lib__Image* lib__LoadImage(string filename)
-	lib__string temp
-	int h = open(filename, O_RDONLY)
-	if h < 0
-		return nil
-	temp.resize(32)
-	int r = read(h, &temp.data[0], 18)
-	if r < 0
-		close(h)
-		return nil
-	lib__Image* im = lib__@malloc(sizeof(Image))
-	int offset = temp.data[0]
-	int ww = temp.data[13]
-	int width = temp.data[12]
-	width += (ww*256)
-	int hh = temp.data[15]
-	int height = temp.data[14]
-	height += (hh*256)
+	static lib__Image* load(string filename)
+		lib__string temp
+		int h = open(filename, O_RDONLY)
+		if h < 0
+			return nil
+		temp.resize(32)
+		int r = read(h, &temp.data[0], 18)
+		if r < 0
+			close(h)
+			return nil
+		lib__Image* im = lib__@malloc(sizeof(Image))
+		int offset = temp.data[0]
+		int ww = temp.data[13]
+		int width = temp.data[12]
+		width += (ww*256)
+		int hh = temp.data[15]
+		int height = temp.data[14]
+		height += (hh*256)
 	
-	im.__init__(width, height, Red)
+		im.__init__(width, height, Red)
 	
-	for i in 0:offset
-		read(h, &temp.data[0], 1)
+		for i in 0:offset
+			read(h, &temp.data[0], 1)
 	
-	for y in 0:height
-		read(h, &im.data.data[y * width], 4*width)
+		for y in 0:height
+			read(h, &im.data.data[y * width], 4*width)
 				
-	#for y in 0:height
-#		for x in 0:width
-#			int c
-#			if read(h, &c, 4) == 4
-#				im.data.data[x + y * width] = c
-#			else
-#				im.data.data[x + y * width] = 0xffff0000
+		#for y in 0:height
+#			for x in 0:width
+#				int c
+#				if read(h, &c, 4) == 4
+#					im.data.data[x + y * width] = c
+#				else
+#					im.data.data[x + y * width] = 0xffff0000
 			
-	close(h)
-	return im
+		close(h)
+		return im
 
 
 class lib__Exception

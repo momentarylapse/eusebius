@@ -181,7 +181,7 @@ class Word
 		
 
 
-int call_ppii(void *f, void *a, void *b, int c, int d)
+int _call_ppii(void *f, void *a, void *b, int c, int d)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -200,7 +200,7 @@ int call_ppii(void *f, void *a, void *b, int c, int d)
 	return __temp_i__
 
 
-int call_ppi(void *f, void *a, void *b, int c)
+int _call_ppi(void *f, void *a, void *b, int c)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -217,7 +217,7 @@ int call_ppi(void *f, void *a, void *b, int c)
 	return __temp_i__
 
 
-int call_pi(void *f, void *a, int b)
+int _call_pi(void *f, void *a, int b)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_i__ = b
@@ -232,7 +232,7 @@ int call_pi(void *f, void *a, int b)
 	return __temp_i__
 
 
-int call_pp(void *f, void *a, void *b)
+int _call_pp(void *f, void *a, void *b)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -246,7 +246,7 @@ int call_pp(void *f, void *a, void *b)
 	}
 	return __temp_i__
 
-int call_p(void *f, void *a)
+int _call_p(void *f, void *a)
 	__temp_p__ = f
 	__temp_p2__ = a
 	asm{

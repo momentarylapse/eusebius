@@ -53,6 +53,8 @@ class UTSName
 	cstring version
 	cstring machine
 	cstring domainname
+	void __assign__(UTSName o)
+		pass
 	void get()
 		strcpy(&sysname, &KERNEL_NAME)
 		strcpy(&nodename, &"???")
@@ -69,6 +71,8 @@ class TaskInfo
 	int mem
 	int cpu
 	TimeValue life
+	void __assign__(TaskInfo o)
+		pass
 	int get(int _pid)
 		Task* t = get_task(_pid)
 		if !t

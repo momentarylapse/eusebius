@@ -96,7 +96,7 @@ class PCIController
 		#int b = read_config(bus, slot, function, 0x04)
 		int c = read_config(bus, slot, function, 0x08)
 		int d = read_config(bus, slot, function, 0x0c)
-		p = new PCIDevice
+		p = new PCIDevice()
 		p.header_type = (d >> 16) & 0x7f
 		p.bus = bus
 		p.slot = slot

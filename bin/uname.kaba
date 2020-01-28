@@ -7,6 +7,8 @@ class UTSName
 	cstring version
 	cstring machine
 	cstring domainname
+	void __assign__(UTSName o)
+		pass
 
 void main()
 	init_lib()

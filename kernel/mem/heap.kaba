@@ -16,10 +16,10 @@ class MallocHeader
 	MallocHeader *next
 	MallocHeader *prev
 	void *after()
-		char[0]* pp = self
+		char[0]* pp = &self
 		return &pp[size]
 	void *payload()
-		char[0]* pp = self
+		char[0]* pp = &self
 		return &pp[sizeof(MallocHeader)]
 MallocHeader *malloc_first_free
 MallocHeader *malloc_end_marker

@@ -7,8 +7,8 @@ class CWindow extends XWindow
 	XPainter *p
 	void __init__(int x, int y, int w, int h)
 		super.__init__(xcon, x, y, w, h)
-		p = new XPainter(self)
-		FontDB* font_db = new FontDB
+		p = new XPainter(&self)
+		FontDB* font_db = new FontDB()
 		p.font = font_db.get("Cantarell", 60)
 	
 	override void on_key(int key)
@@ -78,7 +78,7 @@ void main()
 	
 	rand_seed(getpid())
 	
-	xcon = new XConnection
+	xcon = new XConnection()
 	if xcon.error
 		print("client: kann nicht mit x verbinden")
 		exit(-1)

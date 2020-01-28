@@ -472,7 +472,7 @@ class Task
 		cstring filename
 		of.entry.get_path(filename)
 		int addr = TASK_IMAGE_POS # task space...
-		Task* t = AddTaskUser(filename, _i2p(addr), self)
+		Task* t = AddTaskUser(filename, _i2p(addr), &self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
@@ -546,7 +546,7 @@ class Task
 		return -EINVAL
 	
 	int sys_fork()
-		Task* t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), self)
+		Task* t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), &self)
 		if !t
 			return -ENOMEM
 		
@@ -569,7 +569,7 @@ class Task
 		memcpy(&t.arg, &arg, sizeof(cstring))
 		strcpy(&t.name, &name)
 		strcpy(&t.cur_dir, &cur_dir)
-		t.parent = self
+		t.parent = &self
 		t.tss = tss
 		t.tss.cr3 = t.page_dir
 		t.tss.eax = 0 # fork() return for child

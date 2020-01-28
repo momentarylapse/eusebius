@@ -15,7 +15,7 @@ void i2col(color c, int i)
 	int ig = (i >> 8) & 255
 	int ib = i & 255
 	int ia = i >> 24
-	c = color(i2f(ia) / 255.0, i2f(ir) / 255.0, i2f(ig) / 255.0, i2f(ib) / 255.0)
+	c = color(float(ia) / 255.0, float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0)
 
 int add_blend(int i1, int i2, float t)
 	float s = 1 - t
@@ -163,7 +163,7 @@ class XPainter
 		complex z1 = a
 		complex z2
 		for i in 1:n
-			float t = i2f(i) / n
+			float t = float(i) / n
 			float s = 1 - t
 			z2 = a * (s*s) + b * (s*t*2.0) + c * (t*t)
 			draw_line(z1, z2)
@@ -266,7 +266,7 @@ class XPainter
 	void draw_str(float x, float y, string text)
 		float scale = font.size
 		for c,i in text
-			int code = c2i(c) & 0x000000ff
+			int code = int(c) & 0x000000ff
 			
 			if code == 9
 				x += scale * 0.5 * 4

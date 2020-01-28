@@ -122,7 +122,7 @@ void vesa_init()
 	vga_mem2 = nil
 	
 	
-	pci = new PCIController
+	pci = new PCIController()
 	pci.scan()
 	PCIDevice *dev = pci.get(0x1111, 0x1234)
 	if !dev
