@@ -1,0 +1,32 @@
+#define __STRING_CONST_AS_CSTRING__
+
+use "base.kaba"
+use "io/text.kaba"
+
+class Base
+	void __init__()
+	#virtual void __delete__()
+	void __assign__(Base b)
+	virtual void f()
+		prints("Base.f()")
+
+class Derived extends Base
+	override void __init__()
+	#virtual void __delete__()
+	void __assign__(Derived d)
+	override void f()
+		prints("Derived.f()")
+
+void main()
+
+	InitTextMode()
+	clrscr()
+	
+	Derived d
+	Base* b = &d
+	
+	b.f()
+	
+	while true
+		nil
+

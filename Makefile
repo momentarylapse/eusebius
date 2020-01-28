@@ -5,7 +5,7 @@ MACHINE = --x86
 FLAGS =  $(MACHINE) --no-std-lib
 LOADERFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7c00
 INITFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7e00
-KERNELFLAGS = $(MACHINE)  --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
+KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point --import-symbols kalib_symbols
 LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs
@@ -151,7 +151,7 @@ img.mfs: init kernel/kernel $(BINS)
 	cp kernel/kernel mfs/kernel
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
-img-test.mfs: init kernel-test/kernel $(BINS)
+img-test.mfs: init kernel-test/kernel
 	mkdir -p mfs
 	cp init mfs/000-init
 	cp kernel-test/kernel mfs/kernel

@@ -1,0 +1,21 @@
+#define __STRING_CONST_AS_CSTRING__
+
+#use "base.kaba"
+#use "io/text.kaba"
+
+void f(void* p)
+#	prints("hallo")
+
+void main()
+
+	#InitTextMode()
+	#clrscr()
+	
+	
+	let p = f
+#	call_p(p, nil)
+
+
+	while true
+		nil
+

@@ -2,6 +2,7 @@ use "../base.kaba"
 use "../mem/heap.kaba"
 use "../dev/ata.kaba"
 use "../io/text.kaba"
+use kaba
 
 const int FILE_TYPE_FILE = 0
 const int FILE_TYPE_DIR = 1
@@ -15,10 +16,10 @@ const int MAX_MOUNT_POINTS = 32
 
 
 class FileOperations
-	void *_open
-	void *_close
-	void *_read
-	void *_write
+	code* _open
+	code* _close
+	code* _read
+	code* _write
 
 class FileEntry
 	cstring name
@@ -196,12 +197,12 @@ class MountPoint
 	int[0]* inode_bitmap
 	int[0]* block_bitmap
 	
-	void *p_write_inode # int f(self, FileEntry*)
-	void *p_alloc_block # int f(self)
-	void *p_free_block  # int f(self, int index)
-	void *p_free_inode  # int f(self, int index)
-	void *p_alloc_inode # int f(self)
-	void *p_sync        # int f(self)
+	code *p_write_inode # int f(self, FileEntry*)
+	code *p_alloc_block # int f(self)
+	code *p_free_block  # int f(self, int index)
+	code *p_free_inode  # int f(self, int index)
+	code *p_alloc_inode # int f(self)
+	code *p_sync        # int f(self)
 	
 	void __assign__(MountPoint o)
 		nil
@@ -407,11 +408,13 @@ class MountPointExt2 extends MountPoint
 	
 	int mount()
 		buf = malloc(4096)
-		p_write_inode = &my_write_inode
-		p_alloc_inode = &my_alloc_inode
-		p_alloc_block = &my_alloc_block
-		p_free_block  = &my_free_block
-		p_sync        = &my_sync
+		p_write_inode = my_write_inode.code  ARGH!!! Function* not ex...
+		p_alloc_inode = my_alloc_inode.code
+		p_alloc_block = my_alloc_block.code
+		p_free_block  = my_free_block.code
+		p_sync        = my_sync.code
+		printh(&p_write_inode, 4)
+		panic("a")
 		update_sizes(1024, 0) # temp
 		
 		read_block(1, buf)

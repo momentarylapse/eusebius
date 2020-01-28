@@ -1,17 +1,1 @@
-#define __STRING_CONST_AS_CSTRING__
-
-use "base.kaba"
-use "io/text.kaba"
-
-
-void main()
-
-	InitTextMode()
-	clrscr()
-	
-	prints("hallo")
-
-
-	while true
-		nil
-
+use "test-virtual.kaba"
