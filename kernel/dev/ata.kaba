@@ -336,7 +336,7 @@ void ReadPartitions(int disk_no)
 	p.type = 0
 	p.p_read_block = nil
 	p.active = false
-	strcpy(&p.name, &"hda")
+	strcpy(p.name, "hda")
 	p.name[2] = 'a' + disk_no
 	# mbr lesen
 	ata.read_sector(disk_no, 0, 1, &ata.Buffer)
@@ -355,7 +355,7 @@ void ReadPartitions(int disk_no)
 		p.size = *size
 		p.type = ata.Buffer[450+n*16]
 		p.active = (ata.Buffer[446+n*16] == 0x80)
-		strcpy(&p.name, &"hda_")
+		strcpy(p.name, "hda_")
 		p.name[2] = 'a' + disk_no
 		p.name[3] = n + 49
 	#for n, 0, 512
@@ -364,7 +364,7 @@ void ReadPartitions(int disk_no)
 void ShowPartitions()
 	prints("primary partitions:       offset   size\n")
 	for n in 0:NumPartitions
-		PartitionData *p = &Partition[n]
+		let p = &Partition[n]
 		prints("/dev/")
 		prints(p.name)
 		TextPos = 60

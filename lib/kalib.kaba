@@ -1924,6 +1924,7 @@ void lib__raise(lib__Exception* e)
 # start
 
 void signal_handler_segv()
+	#kprint("----DIE---")
 	lib_print_endl = true
 	lib__print("  -- Segmentation Fault --")
 	exit(0)
@@ -1953,7 +1954,7 @@ void init_lib()
 	
 	rand_state = 0
 	
-	sigaction(11, &signal_handler_segv)
+	sigaction(11, signal_handler_segv)
 	
 	stdin = 0
 	stdout = 1

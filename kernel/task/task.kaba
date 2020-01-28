@@ -175,7 +175,7 @@ class Task
 		puid = NextPuidToAssign
 		NextPuidToAssign ++
 
-		strcpy(&name, &_name)
+		strcpy(name, _name)
 		desc = NUM_PRE_GDT_ENTRIES + pid
 		status = TASK_STATUS_SLEEPING
 		parent = _parent
@@ -318,6 +318,8 @@ class Task
 		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		
 	int handle_signal(int signal)
+		prints("---SIGNAL---")
+		printi(signal)
 		if signal < 0 or signal >= 32
 			return -EINVAL
 		
@@ -332,7 +334,7 @@ class Task
 			__handler_p__ = tss.eax
 			tss.esp = _i2p(_p2i(tss.esp) + 1024)
 			tss.ebp = tss.esp
-			tss.eip = &TaskSignalHandler
+			tss.eip = TaskSignalHandler
 		else
 			# default actions
 			if signal == SIGSTOP
@@ -567,8 +569,8 @@ class Task
 		
 		# data
 		memcpy(&t.arg, &arg, sizeof(cstring))
-		strcpy(&t.name, &name)
-		strcpy(&t.cur_dir, &cur_dir)
+		strcpy(t.name, name)
+		t.cur_dir = cur_dir
 		t.parent = &self
 		t.tss = tss
 		t.tss.cr3 = t.page_dir
@@ -859,7 +861,7 @@ void InitTasks()
 	RunningPid = 0
 
 	KernelTask = AddTaskKernel("kernel", nil, KERNEL_STACK_SIZE, nil)
-	IdleTask = AddTaskKernel("idle", &idle_func, IDLE_STACK_SIZE, KernelTask)
+	IdleTask = AddTaskKernel("idle", idle_func, IDLE_STACK_SIZE, KernelTask)
 	
 	# GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1

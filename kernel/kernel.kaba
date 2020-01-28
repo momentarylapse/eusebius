@@ -1,3 +1,5 @@
+#define __STRING_CONST_AS_CSTRING__
+#define __FUNCTION_POINTER_AS_CODE__
 use "base.kaba"
 use "io/text.kaba"
 use "dev/ata.kaba"
@@ -101,8 +103,6 @@ void main()
 	irq.init()
 	error.init()
 	InitSysCall()
-	# -------- ok until here ------------
-	irq.enable()
 	
 	InitDrivers()
 	

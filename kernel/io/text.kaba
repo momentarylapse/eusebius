@@ -76,8 +76,8 @@ void prints_low(cstring *str, int size)
 	outportb(0x3d4, 0x0e)
 	outportb(0x3d5, position >> 8)
 
-void prints(cstring str)
-	prints_low(&str, strlen(&str))
+void prints(cstring s)
+	prints_low(&s, strlen(s))
 
 void _i2s(int i, cstring *s)
 	bool sign = (i >= 0)
@@ -95,7 +95,7 @@ void _i2s(int i, cstring *s)
 	if !sign
 		ttt[offset] = '-'
 		offset --
-	strcpy(s, &ttt[offset + 1])
+	memcpy(s, &ttt[offset + 1], 16-offset)
 
 void printi(int i)
 	cstring s

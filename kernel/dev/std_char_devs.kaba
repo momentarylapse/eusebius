@@ -146,8 +146,8 @@ void InitDrivers()
 	dev_mouse_ops.__init__()
 	dev_mouse.op = &dev_mouse_ops
 	
-	Task *KeyTask = AddTaskKernel("irq-key", &int_key, 1024, KernelTask)
-	Task *MouseTask = AddTaskKernel("irq-mouse", &int_mouse, 1024, KernelTask)
+	Task *KeyTask = AddTaskKernel("irq-key", int_key, 1024, KernelTask)
+	Task *MouseTask = AddTaskKernel("irq-mouse", int_mouse, 1024, KernelTask)
  	
 	irq.set_task(33, KeyTask) # IRQ 1
 	irq.set_task(44, MouseTask) # IRQ 12

@@ -164,10 +164,10 @@ class OpenFileData
 		if !e
 			return 0
 		dirent_struct r
-		r.struct_size = strlen(&e.name) + 13
+		r.struct_size = strlen(e.name) + 13
 		r.size = e.size
 		r.type = e.type
-		strcpy(&r.name, &e.name)
+		strcpy(r.name, e.name)
 		page_dir.memcpy2task(addr, &r, r.struct_size)
 		offset ++
 		return 1

@@ -2,6 +2,7 @@ use "../base.kaba"
 use "../io/text.kaba"
 use "../io/io.kaba"
 use "../task/task.kaba"
+use kaba
 
 
 const int HARDWARE_IRQ_SHIFT = 32
@@ -38,7 +39,7 @@ void int_task_irq()
 class InterruptDescriptor
 	int a, b
 
-	void set(void* func)
+	void set(Function* func)
 		a = 0
 		b = 0
 		if func
@@ -77,7 +78,7 @@ class InterruptController
 		task_maps[id].pid = 666666
 		
 	
-	void set(int id, void* func)
+	void set(int id, Function* func)
 		idt[id].set(func)
 		if func
 			deny_user_map(id)
@@ -99,7 +100,7 @@ class InterruptController
 			m.utask = nil
 		
 	
-		IgnoreTask = AddTaskKernel("irq-ignore", &int_ignore, 128, KernelTask)
+		IgnoreTask = AddTaskKernel("irq-ignore", int_ignore, 128, KernelTask)
 		irq.set_task(32, IgnoreTask) # IRQ 0
 
 		# move IRQs to higher interrupts
@@ -127,15 +128,15 @@ class InterruptController
 			mov [_idtr_base], eax
 			cli
 			lidt [_idtr]
-			#sti
+			sti
 		}
 	
 		prints("   ok\n")
 	
-	void enable()
-		asm{
-			sti
-		}
+	#void enable()
+	#	asm{
+	#		sti
+	#	}
 	
 	int sys_map_irq(int hw_irq, Task *t, int signal)
 		if hw_irq < 0 or hw_irq >= 16
@@ -146,7 +147,7 @@ class InterruptController
 		if m.pid >= 0
 			return -EEXIST
 		if !m.ktask
-			m.ktask = AddTaskKernel("irq-task", &int_task_irq, 4096, KernelTask)
+			m.ktask = AddTaskKernel("irq-task", int_task_irq, 4096, KernelTask)
 			set_task(hw_irq + HARDWARE_IRQ_SHIFT, m.ktask)
 			m.ktask.tss.esi = hw_irq
 		m.pid = t.pid

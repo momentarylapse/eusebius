@@ -1,4 +1,5 @@
 #define __STRING_CONST_AS_CSTRING__
+use kaba
 
 const int O_RDONLY = 1
 const int O_WRONLY = 2
@@ -115,30 +116,26 @@ void memcpy(void* _dest, void* _source, int size)
 #				loop _mem_cpy_loop
 #		}
 
-int strlen(void* _s)
-	cstring* s = _s
+int strlen(cstring s)
 	for i in 0:256
 		if s[i] == 0
 			return i
 	return 256
 
-void strcpy(void* _a, void* _b)
-	cstring* a = _a
-	cstring* b = _b
+void strcpy(cstring a, cstring b)
 	for i in 0:256
 		a[i] = b[i]
 		if b[i] == 0
 			break
 
-void strcat(void* _a, void* _b)
-	cstring* a = _a
-	cstring* b = _b
+void strcat(cstring a, cstring b)
 	int n = strlen(a)
-	strcpy(&a[n], b)
+	for i in 0:256
+		a[i+n] = b[i]
+		if b[i] == 0
+			break
 
-int strcmp(void* _a, void* _b)
-	cstring* a = _a
-	cstring* b = _b
+int strcmp(cstring a, cstring b)
 	for i in 0:256
 		if a[i] > b[i]
 			return 1
@@ -181,7 +178,7 @@ class Word
 		
 
 
-int _call_ppii(void *f, void *a, void *b, int c, int d)
+int _call_ppii(Function *f, void *a, void *b, int c, int d)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -200,7 +197,7 @@ int _call_ppii(void *f, void *a, void *b, int c, int d)
 	return __temp_i__
 
 
-int _call_ppi(void *f, void *a, void *b, int c)
+int _call_ppi(Function *f, void *a, void *b, int c)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -217,7 +214,7 @@ int _call_ppi(void *f, void *a, void *b, int c)
 	return __temp_i__
 
 
-int _call_pi(void *f, void *a, int b)
+int _call_pi(Function *f, void *a, int b)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_i__ = b
@@ -232,7 +229,7 @@ int _call_pi(void *f, void *a, int b)
 	return __temp_i__
 
 
-int _call_pp(void *f, void *a, void *b)
+int _call_pp(Function *f, void *a, void *b)
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -246,7 +243,7 @@ int _call_pp(void *f, void *a, void *b)
 	}
 	return __temp_i__
 
-int _call_p(void *f, void *a)
+int call_p(Function *f, void *a)
 	__temp_p__ = f
 	__temp_p2__ = a
 	asm{

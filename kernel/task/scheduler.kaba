@@ -44,7 +44,7 @@ void StartScheduler()
 	RunningPid = 0
 	prints("starting scheduler\n")
 	
-	SchedulerTask = AddTaskKernel("scheduler", &int_timer, SCHEDULER_STACK_SIZE, KernelTask)
+	SchedulerTask = AddTaskKernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, KernelTask)
 	
 	InitTimerInterrupt(SchedulerTask, TASK_SWITCH_DT)
 	next_perf_calc = kernel_timer.tv

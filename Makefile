@@ -1,5 +1,5 @@
-#KABA  = kaba
-KABA  = ~/Projekte/Kaba/kaba
+KABA  = kaba
+#KABA  = ~/Projekte/Kaba/kaba
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --x86
 FLAGS =  $(MACHINE) --no-std-lib

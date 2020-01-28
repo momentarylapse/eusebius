@@ -3,9 +3,9 @@ use "lib/std.kaba"
 
 
 string i2s2(int i, int n)
-	string s = i
+	string s = str(i)
 	string r
-	for j in s.num:n
+	for j in len(s):n
 		r.add(' ')
 	return r + s
 
@@ -13,7 +13,7 @@ string i2s2(int i, int n)
 void ls(string dirname, bool extended)
 	let l = Filesystem.search(dirname, "", true)
 	if lib_error != 0
-		print("ls: can not read directory: " + dirname + "\n")
+		print("ls: can not read directory: {{dirname}}\n")
 
 	if extended
 		for e in l
@@ -22,7 +22,7 @@ void ls(string dirname, bool extended)
 			else
 				print("file      ")
 			print(i2s2(e.size, 8))
-			print(" " + e.name + "\n")
+			print(" {{e.name}}\n")
 	else
 		for e,i in l
 			if i > 0

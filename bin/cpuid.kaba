@@ -94,7 +94,7 @@ void main()
 	
 	show_cpu()
 	
-	if !sigaction(23, &handler)
+	if !sigaction(23, handler)
 		print("---E1\n")
 	if !mapirq(1, 23) # key
 		print("---E2\n")

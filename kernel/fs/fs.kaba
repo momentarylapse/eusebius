@@ -59,13 +59,13 @@ class FileEntry
 			first_sub = e
 	
 	FileEntry *get_sub(cstring sname)
-		if strcmp(&sname, &"..") == 0
+		if strcmp(sname, "..") == 0
 			return parent
-		if strcmp(&sname, &".") == 0
+		if strcmp(sname, ".") == 0
 			return &self
 		FileEntry *e = first_sub
 		while e
-			if strcmp(&sname, &e.name) == 0
+			if strcmp(sname, e.name) == 0
 				return e
 			e = e.next
 		return nil
@@ -75,10 +75,10 @@ class FileEntry
 		if parent
 			parent.get_path(path)
 			if parent.parent
-				strcat(&path, &"/")
-			strcat(&path, &name)
+				strcat(path, "/")
+			strcat(path, name)
 		else
-			strcpy(&path, &"/")
+			strcpy(path, "/")
 	
 	# allocate list int blocks of int[16]
 	void add_block(int b)
@@ -100,7 +100,7 @@ FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
 	e.mp_inode = 0
 	e.num_blocks = 0
 	e.blocks = nil
-	strcpy(&e.name, &name)
+	strcpy(e.name, name)
 	e.parent = nil
 	e.type = type
 	e.mount = mount
@@ -304,7 +304,8 @@ class FileSystemData
 		cstring sub
 		bool has_more = true
 		while has_more
-			strcpy(&sub, &path[ppos])
+			cstring* pp = &path[ppos]
+			strcpy(sub, pp)
 			cstring name
 			for i in 0:256
 				if (sub[i] == '/') or (sub[i] == 0)
@@ -337,17 +338,17 @@ class FileSystemData
 				mp = &m
 		if !mp
 			return -1
-		if strcmp(&fs_name, &"michifs") == 0
+		if strcmp(fs_name, "michifs") == 0
 			MountPointMichiFS *mp_michi = mp
 			mp_michi.__init__()
-		else if strcmp(&fs_name, &"ext2") == 0
+		else if strcmp(fs_name, "ext2") == 0
 			MountPointExt2 *mp_ext2 = mp
 			mp_ext2.__init__()
 			
 		mp.dest = dir
 		mp.dev = dev
 		mp.dirty = false
-		strcpy(&mp.type, &fs_name)
+		strcpy(mp.type, fs_name)
 		mp.mount()
 		dir.mount = mp
 		prints(" ok\n")
@@ -533,7 +534,7 @@ class MountPointExt2 extends MountPoint
 				continue
 				
 		
-			if strcmp(&name, &".") != 0 and strcmp(&name, &"..") != 0
+			if strcmp(name, ".") != 0 and strcmp(name, "..") != 0
 				int type = FILE_TYPE_FILE
 				if d.file_type == 2
 					type = FILE_TYPE_DIR
@@ -567,7 +568,7 @@ class MountPointExt2 extends MountPoint
 			d.file_type = 0
 			if e.type == FILE_TYPE_DIR
 				d.file_type = 2
-			int len = strlen(&e.name)
+			int len = strlen(e.name)
 			d.name_len = len
 			d.rec_len.set(8 + len)
 			memcpy(&b[pos + 8], &e.name, len)

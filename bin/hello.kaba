@@ -8,7 +8,7 @@ void main()
 	lib_print_endl = false
 	print("Hallo Welt\n")
 	
-	sigaction(23, &handler)
+	sigaction(23, handler)
 	
 	while true
 		usleep(100000)

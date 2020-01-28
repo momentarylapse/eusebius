@@ -3,6 +3,7 @@ use "../io/text.kaba"
 use "../task/task.kaba"
 use "../task/scheduler.kaba"
 use "irq.kaba"
+use kaba
 
 const int ERROR_STACK_SIZE = 4096
 
@@ -54,40 +55,40 @@ void handle_kernel_error(Task* t, int i)
 
 void get_error_text(int i, cstring s)
 	cstring nn
-	strcpy(&s, &"Int ")
+	strcpy(s, "Int ")
 	_i2s(i, &nn)
-	strcat(&s, &nn)
+	strcat(s, nn)
 	if i==0
-		strcat(&s, &": division by zero")
+		strcat(s, ": division by zero")
 	if i==1
-		strcat(&s, &": debug")
+		strcat(s, ": debug")
 	if i==3
-		strcat(&s, &": breakpoint")
+		strcat(s, ": breakpoint")
 	if i==4
-		strcat(&s, &": overflow")
+		strcat(s, ": overflow")
 	if i==5
-		strcat(&s, &": bounds check")
+		strcat(s, ": bounds check")
 	if i==6
-		strcat(&s, &": invalid opcode")
+		strcat(s, ": invalid opcode")
 	if i==7
-		strcat(&s, &": no coprocessor")
+		strcat(s, ": no coprocessor")
 	if i==8
-		strcat(&s, &": system error")
+		strcat(s, ": system error")
 	if i==9
-		strcat(&s, &": coprocessor segment overrun")
+		strcat(s, ": coprocessor segment overrun")
 	if i==10
-		strcat(&s, &": invalid TSS")
+		strcat(s, ": invalid TSS")
 	if i==11
-		strcat(&s, &": segment missing")
+		strcat(s, ": segment missing")
 	if i==12
-		strcat(&s, &": stack error")
+		strcat(s, ": stack error")
 	if i==13
-		strcat(&s, &": general protection fault")
+		strcat(s, ": general protection fault")
 	if i==14
-		strcat(&s, &": page fault")
+		strcat(s, ": page fault")
 	if i==16
-		strcat(&s, &": coprocessor error")
-	strcat(&s, &"  8-P")
+		strcat(s, ": coprocessor error")
+	strcat(s, "  8-P")
 
 void int_handler(int i)
 	while true
@@ -101,6 +102,10 @@ void int_handler(int i)
 			handle_kernel_error(prev, i)
 		else
 			handle_task_error(prev, e, i)
+		prints("  interr  ")
+		printi(i)
+		prints(prev.name)
+		#panic("int")
 		
 		asm{
 			iret
@@ -163,29 +168,28 @@ void int_ignore_dummy()
 
 
 class ErrorController
-	void*[16] handler
+	Function*[16] handler
 	Task*[16] tasks
 
 	void init()
 		prints("setting error handler")
 
-		handler[ 0] = &int_00
-		handler[ 1] = &int_01
-		handler[ 2] = &int_02
-		handler[ 3] = &int_03
-		handler[ 4] = &int_04
-		handler[ 5] = &int_05
-		handler[ 6] = &int_06
-		handler[ 7] = &int_07
-		handler[ 8] = &int_08
-		handler[ 9] = &int_09
-		handler[10] = &int_10
-		handler[11] = &int_11
-		handler[12] = &int_12
-		handler[13] = &int_13
-		handler[14] = &int_14
-		handler[15] = &int_15
-		
+		handler[ 0] = int_00
+		handler[ 1] = int_01
+		handler[ 2] = int_02
+		handler[ 3] = int_03
+		handler[ 4] = int_04
+		handler[ 5] = int_05
+		handler[ 6] = int_06
+		handler[ 7] = int_07
+		handler[ 8] = int_08
+		handler[ 9] = int_09
+		handler[10] = int_10
+		handler[11] = int_11
+		handler[12] = int_12
+		handler[13] = int_13
+		handler[14] = int_14
+		handler[15] = int_15
 		
 		for h,i in handler
 			tasks[i] = AddTaskKernel("irq-error", h, ERROR_STACK_SIZE, KernelTask)

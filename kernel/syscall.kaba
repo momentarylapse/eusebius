@@ -56,12 +56,12 @@ class UTSName
 	void __assign__(UTSName o)
 		pass
 	void get()
-		strcpy(&sysname, &KERNEL_NAME)
-		strcpy(&nodename, &"???")
-		strcpy(&release, &KERNEL_VERSION)
-		strcpy(&version, &KERNEL_VERSION)
-		strcpy(&machine, &MACHINE_TYPE)
-		strcpy(&domainname, &"-no domain-")
+		strcpy(sysname, KERNEL_NAME)
+		strcpy(nodename, "???")
+		strcpy(release, KERNEL_VERSION)
+		strcpy(version, KERNEL_VERSION)
+		strcpy(machine, MACHINE_TYPE)
+		strcpy(domainname, "-no domain-")
 
 UTSName _uts_name
 
@@ -77,7 +77,7 @@ class TaskInfo
 		Task* t = get_task(_pid)
 		if !t
 			return -1
-		strcpy(&name, &t.name)
+		strcpy(name, t.name)
 		pid = t.pid
 		ppid = -1
 		if t.parent
@@ -242,5 +242,5 @@ void int_syscall()
 Task *SysCallTask
 
 void InitSysCall()
-	SysCallTask = AddTaskKernel("irq-syscall", &int_syscall, SYSCALL_STACK_SIZE, KernelTask)
+	SysCallTask = AddTaskKernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, KernelTask)
 	irq.set_task(0x80, SysCallTask)
