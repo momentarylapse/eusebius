@@ -85,7 +85,7 @@ class ShellView extends MtkWidget
 	void __init__(History *_hist)
 		hist = _hist
 		max_lines = 0
-		hist.view = self
+		hist.view = &self
 		
 	override void draw()
 		max_lines = (p.height - 10) / LINE_HEIGHT
@@ -155,8 +155,7 @@ void main()
 		exit(-2)
 	window.show()
 		
-		
-	
+
 	
 	mtk_run()
 	

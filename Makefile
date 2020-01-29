@@ -41,6 +41,9 @@ bin/cat: bin/cat.kaba $(PDEP)
 bin/cmp: bin/cmp.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/cmp bin/cmp.kaba
 
+bin/cpuid: bin/cpuid.kaba $(PDEP)
+	$(KABA) $(PFLAGS) -o bin/cpuid bin/cpuid.kaba
+
 bin/hd: bin/hd.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/hd bin/hd.kaba
 

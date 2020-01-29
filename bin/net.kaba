@@ -2,7 +2,6 @@ use "lib/std.kaba"
 use "lib/pci.kaba"
 use "lib/io.kaba"
 
-PCIController *pci
 
 int io_base
 int[0]* net_mem
@@ -12,12 +11,12 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	pci = new PCIController()
+	let pci = new PCIController()
 	pci.scan()
 	PCIDevice *dev = pci.get(0x8029, 0x10ec)
 	if !dev
 		print("ERROR: pci dev not found")
-		return
+		exit(1)
 	
 	io_base = dev.get_io_addr(0)
 	print("pci dev found, io: {{binary(&io_base, 4).hex(true)}}")
@@ -29,9 +28,8 @@ void main()
 	int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
 	if shm_id < 0
 		print("ERROR can't create shared memory for window")
-		return
-	else
-		net_mem = shmat(shm_id, 0)
+		exit(1)
+	net_mem = shmat(shm_id, 0)
 	print("mem: {{p2s(net_mem)}}")
 
 

@@ -82,14 +82,15 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	pci = new PCIController
+	pci = new PCIController()
 	
 	pci.scan()
 	
 	dev = pci.get(0x8029, 0x10ec)
 	if dev
 		dev.show()
-		printh(dev.getIOAddr0())
+		int addr = dev.get_io_addr(0)
+		print(binary(&addr, 4).hex(false))
 		print("\n")
 	
 	show_cpu()
