@@ -62,17 +62,3 @@ int inportw(int port)
 		mov _temp_port_data_, eax
 	}
 	return _temp_port_data_
-
-char geth0(int i)
-	if (i >= 0) and (i <= 9)
-		return i + '0'
-	if (i >= 10) and (i <= 15)
-		return i - 10 + 'a'
-
-void printh(int i)
-	string s
-	for n in 0:8
-		s.add(geth0((i >> ((7-n)*4)) & 0xf))
-	print(s)
-
-

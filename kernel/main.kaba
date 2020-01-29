@@ -1,6 +1,8 @@
 #define __STRING_CONST_AS_CSTRING__
 #define __FUNCTION_POINTER_AS_CODE__
 
+
+use "kernel.kaba"
 #use "test-base.kaba"
 #use "test-virtual.kaba"
-use "test-func-pointer.kaba"
+#use "test-func-pointer.kaba"

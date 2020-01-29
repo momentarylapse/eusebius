@@ -10,7 +10,7 @@ PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offse
 LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
-BINS = bin/hello bin/shell bin/cat bin/cmp bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/date bin/sleep bin/uname bin/client bin/lspci bin/sock bin/net bin/sound bin/error bin/k bin/rm bin/rmdir bin/cake bin/c #bin/xterm bin/xtest bin/xedit bin/ximage bin/xfiles bin/xdesktop
+BINS = bin/hello bin/shell bin/cat bin/cmp bin/echo bin/kill bin/top bin/ls bin/hd bin/touch bin/mkdir bin/tr bin/mkfifo bin/less bin/x bin/shmem bin/date bin/sleep bin/uname bin/client bin/lspci bin/sock bin/net bin/sound bin/error bin/k bin/rm bin/rmdir bin/cake bin/c bin/xterm bin/xtest bin/xedit bin/ximage bin/xfiles bin/xdesktop
 PDEP = lib/kalib.kaba kalib_symbols bin/lib/*.kaba bin/lib/*/*.kaba
 LIBS = lib/kalib
 
@@ -20,11 +20,8 @@ init : init.kaba
 	$(KABA) $(INITFLAGS) -o init init.kaba
 	echo "HALLO" >> init
 
-kernel/kernel : kernel/*.kaba kernel/dev/*.kaba kernel/fs/*.kaba kernel/io/*.kaba kernel/irq/*.kaba kernel/mem/*.kaba kernel/task/*.kaba kernel/time/*.kaba kernel/net/*.kaba
-	$(KABA) $(KERNELFLAGS) -o kernel/kernel kernel/kernel.kaba
-
-kernel-test/kernel : kernel-test/*.kaba kernel-test/*/*.kaba
-	$(KABA) $(KERNELFLAGS) -o kernel-test/kernel kernel-test/kernel.kaba
+kernel/kernel : kernel/*.kaba kernel/*/*.kaba
+	$(KABA) $(KERNELFLAGS) -o kernel/kernel kernel/main.kaba
 
 loader_fake : loader_fake.kaba
 	$(KABA) $(LOADERFLAGS) -o loader_fake loader_fake.kaba
@@ -151,12 +148,6 @@ img.mfs: init kernel/kernel $(BINS)
 	cp kernel/kernel mfs/kernel
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
-img-test.mfs: init kernel-test/kernel
-	mkdir -p mfs
-	cp init mfs/000-init
-	cp kernel-test/kernel mfs/kernel
-	$(MAKEMFS) `pwd`/img-test.mfs `pwd`/mfs/
-
 img.ext2: $(BINS) img.mfs
 	mkdir -p img-src
 	mkdir -p img-src/dev
@@ -183,15 +174,6 @@ bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=img.mfs of=bochs/c.img bs=1024 seek=8 conv=notrunc
 	dd if=img.ext2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc
 
-test: img-test.mfs loader_fake
-	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160
-	dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc
-	dd if=loader_fake of=bochs/c.img conv=notrunc
-	dd if=img-test.mfs of=bochs/c.img bs=1024 seek=8 conv=notrunc
-
-run: all
-	cd bochs; yes c | bochs -qf f.txt
-
 clean:
-	rm -rf init loader_fake kernel/kernel kernel-test/kernel $(BINS) $(LIBS) bochs/c.img img.mfs img-test.mfs img.ext2 img-src mfs
+	rm -rf init loader_fake kernel/kernel $(BINS) $(LIBS) bochs/c.img img.mfs img.ext2 img-src mfs
 

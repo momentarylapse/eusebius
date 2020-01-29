@@ -5,16 +5,7 @@ use "lib/io.kaba"
 PCIController *pci
 
 void show_device(PCIDevice *d)
-	print(d.bus)
-	print(":")
-	print(d.slot)
-	print(":")
-	print(d.function)
-	print("\n  vendor=")
-	printh(d.vendor)
-	print("  device=")
-	printh(d.device)
-	print("  class=")
+	print("[{{d.bus}}:{{d.slot}}:{{d.function}}]   {{binary(&d.vendor, 2).hex(true))}} : {{binary(&d.device, 2).hex(true))}}   ")
 	if d._class == CLASS_NET and d.subclass == SUBCLASS_NET_ETHERNET
 		print("ethernet")
 	else if d._class == CLASS_DISPLAY and d.subclass == SUBCLASS_DISPLAY_VGA
@@ -28,22 +19,22 @@ void show_device(PCIDevice *d)
 	else if d._class == CLASS_STORAGE and d.subclass == SUBCLASS_STORAGE_IDE
 		print("ide")
 	else
-		print(d._class)
-		print(":" + d.subclass)
+		print("class={{d._class}}:{{d.subclass}}")
 	#print("  ht=")
 	#print(d.header_type)
 	if d.irq > 0
-		print("  irq=")
-		print(d.irq)
+		print("  irq={{d.irq}}")
 	print("\n")
 	for i in 0:6
 		if d.bar[i] != 0
-			print("  bar" + i + "=")
+			print("     bar[{{i}}]=")
 			if (d.bar[i] & 1) == 1
-				printh(d.bar[i] & 0xfffffffc)
+				int addr = d.bar[i] & 0xfffffffc
+				print(binary(&addr, 4).hex(true))
 				print(" (io)\n")
 			else
-				printh(d.bar[i] & 0xfffffff0)
+				int addr = d.bar[i] & 0xfffffff0
+				print(binary(&addr, 4).hex(true))
 				print(" (mem)\n")
 
 void main()

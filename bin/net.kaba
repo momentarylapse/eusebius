@@ -20,20 +20,19 @@ void main()
 		return
 	
 	io_base = dev.get_io_addr(0)
-	print("pci dev found, io:")
-	printh(io_base)
+	print("pci dev found, io: {{binary(&io_base, 4).hex(true)}}")
 	
 	
 	# 64k... enough
 	int shm_key = 0x0e640000 # randi()
-	print(binary(&shm_key, 4).hex(false))
+	print("key:  {{binary(&shm_key, 4).hex(true)}}")
 	int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
 	if shm_id < 0
 		print("ERROR can't create shared memory for window")
 		return
 	else
 		net_mem = shmat(shm_id, 0)
-	print(p2s(net_mem))
+	print("mem: {{p2s(net_mem)}}")
 
 
 	
@@ -64,8 +63,7 @@ void main()
 
 	for i in 0:32
 		prom[i] = inportb(io_base + 0x10)
-	print("MAC")
-	print(binary(&prom, 6).hex(false))
+	print("MAC: {{binary(&prom, 6).hex(false)}}")
 	
 
 	# program the PAR0..PAR5 registers to listen for packets to our MAC address!		

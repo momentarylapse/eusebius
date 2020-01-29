@@ -51,21 +51,15 @@ class PCIDevice
 		return 0
 	
 	void show()
-		print(bus)
+		print("{{bus}}:{{slot}}:{{function}} ")
+		print(binary(&vendor, 2).hex(true))
 		print(":")
-		print(slot)
-		print(":")
-		print(function)
-		print(" ")
-		printh(vendor)
-		print(":")
-		printh(device)
-		print(" class=" + _class + ":" + subclass)
+		print(binary(&device, 2).hex(true))
+		print(" class={{_class}}:{{subclass}}")
 		print("  ht=")
 		print(header_type)
 		if irq >= 0
-			print("  irq=")
-			print(irq)
+			print("  irq={{irq}}")
 		print("\n")
 
 class PCIController

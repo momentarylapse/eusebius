@@ -130,7 +130,8 @@ void vesa_init()
 		return
 		
 	print("pci dev found, mem=")
-	printh(dev.get_mem_addr(0))
+	int addr = dev.get_mem_addr(0)
+	print(binary(&addr, 4).hex(false))
 	print("\n")
 
 	# 3mb... enough for 1024*768*32

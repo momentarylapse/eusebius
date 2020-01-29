@@ -12,7 +12,7 @@ class LauncherButton extends MtkButton
 	override void on_click()
 		if xcon.execute(program) < 0
 			#print("run " + program + " FAIL")
-			mtk_error_box("run " + program + " FAIL")
+			mtk_error_box("run {{program}} FAIL")
 
 class LauncherBar extends MtkWindow
 	void __init__()

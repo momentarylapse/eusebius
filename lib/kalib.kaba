@@ -1188,8 +1188,14 @@ class lib__string extends lib__@DynamicArray
 		
 	lib__string hex(bool inverted)
 		lib__string ttt
+		if inverted
+			ttt.add('0')
+			ttt.add('x')
 		for i in 0:num
-			int d = data[i]
+			int j = i
+			if inverted
+				j = num - i - 1
+			int d = data[j]
 			int d1 = (d>>4)
 			int d2 = (d&15)
 			if d1 < 10
@@ -1200,10 +1206,11 @@ class lib__string extends lib__@DynamicArray
 				ttt.add(d2+48)
 			else
 				ttt.add(d2+87)
-			if i == num-1
-				ttt.add(' ')
-			else
-				ttt.add('.')
+			if !inverted
+				if i == num-1
+					ttt.add(' ')
+				else
+					ttt.add('.')
 		return ttt
 	
 	int int()
