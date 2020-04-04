@@ -1,4 +1,4 @@
-use file
+use os
 use "lib/std.kaba"
 use "lib/mtk/mtk.kaba"
 use "lib/draw.kaba"
@@ -32,7 +32,7 @@ class EditWindow extends MtkWindow
 		File* f = Filesystem.create(filename)
 		if f
 			f.write(v.text)
-			delete f
+			del f
 	override void on_key(int key)
 		if key == KEY_CONTROL + KEY_S
 			mtk_error_box("save")

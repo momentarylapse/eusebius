@@ -212,7 +212,7 @@ class JobManager
 	Job *create(string[] c, string cmd)
 		Job *j = new Job(c, cmd)
 		if j.pid < 0
-			delete j
+			del j
 			return nil
 		j.id = get_next_id()
 		job.add(j)
@@ -346,7 +346,8 @@ void exec(string cmd)
 
 
 int getkey()
-	int buf = 0, key = 0
+	int buf = 0
+	int key = 0
 	int r = read(stdin, &key, 1)
 	if r <= 0
 		return -1

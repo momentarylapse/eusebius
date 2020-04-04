@@ -1,4 +1,4 @@
-use file
+use os
 
 const int ClusterSize = 2048
 
@@ -6,7 +6,7 @@ void main(string[] arg)
 	if arg.num < 2
 		print("usage: kaba makemfs.kaba <out-file> <in-dir>")
 		return
-	DirEntry[] list = Filesystem.search(arg[1], "*", false)
+	let list = Filesystem.search(arg[1], "*", false)
 	print(list.str())
 	File *f = Filesystem.create(arg[0])
 	f.seek(ClusterSize)
@@ -29,7 +29,7 @@ void main(string[] arg)
 		cluster += num_clusters
 		offset += e.name.num + 22
 	f.seek(ClusterSize * cluster)
-	delete(f)
+	del f
 		
 	# files
 	cluster = 2

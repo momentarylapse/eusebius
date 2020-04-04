@@ -82,6 +82,6 @@ void main()
 		
 		win.move(randi(300), randi(200))
 	
-	delete xcon
+	del xcon
 	
 	exit(0)

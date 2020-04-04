@@ -95,6 +95,6 @@ void main()
 	
 	xcon.run()
 	
-	delete xcon
+	del xcon
 	
 	exit(0)

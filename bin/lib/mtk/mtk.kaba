@@ -155,7 +155,7 @@ class MtkWidget
 	
 	virtual void __delete__()
 		if p
-			delete p
+			del p
 	
 	virtual bool can_grab_input()
 		return false
@@ -302,7 +302,8 @@ class MtkGrid extends MtkWidget
 	
 		# actual sizes
 		int[] child_x, child_y
-		int x0 = r.x0, y0 = r.y0
+		int x0 = r.x0
+		int y0 = r.y0
 		for w,i in child_w
 			child_x.add(x0)
 			w = child_min_w[i]
@@ -560,8 +561,8 @@ class MtkWindow extends XWindow
 		if !killed
 			close()
 		if widget
-			delete widget
-		delete p
+			del widget
+		del p
 	
 	void show()
 		shown = true
@@ -747,12 +748,12 @@ void mtk_run()
 		for w,i in mtk_windows
 			if w.killed
 				mtk_windows.remove(i)
-				delete(w)
+				del(w)
 				break
 			
 		# nothing more to do...
 		if mtk_windows.num + idles.num == 0
 			break
 		
-	delete xcon
+	del xcon
 	exit(0)

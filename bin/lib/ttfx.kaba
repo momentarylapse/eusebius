@@ -1,4 +1,4 @@
-use file
+use os
 use "std.kaba"
 
 string hex(void* _p, int size)
@@ -96,7 +96,7 @@ class TTFFont
 #		time(tv3)
 #		kprint("[" + time_dif(tv2, tv3) + "]")
 		
-		delete f
+		del f
 		return true
 		
 	
@@ -125,10 +125,10 @@ class TTFFont
 		return w * scale
 
 TTFFont *LoadTTF(string filename)
-	TTFFont *f = new TTFFont()
+	let f = new TTFFont()
 	if f.load(filename)
 		return f
-	delete f
+	del f
 	return nil
 
 class FontDescriptor
@@ -147,7 +147,7 @@ class FontDB
 		for d in descriptors
 			if d.font.name == name and d.size == size
 				return d
-		FontDescriptor* d = new FontDescriptor()
+		let d = new FontDescriptor()
 		d.size = size
 		for f in fonts
 			if f.name == name
@@ -162,5 +162,5 @@ class FontDB
 			d.font = fonts[0]
 			descriptors.add(d)
 			return d
-		delete d
+		del d
 		return nil

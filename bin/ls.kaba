@@ -1,4 +1,4 @@
-use file
+use os
 use "lib/std.kaba"
 
 
