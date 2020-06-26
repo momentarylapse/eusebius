@@ -130,7 +130,8 @@ class KeyboardController
 		shift = false
 		altgr = false
 		escaped = false
-	void digest(int k)
+	void digest(int _k)
+		int k = _k
 		if k == 0xe0
 			escaped = true
 			return
@@ -307,9 +308,11 @@ class XWindow
 	bool transparent
 	int level
 	
-	void __init__(Client* client, int x, int y, int w, int h, int flags)
+	void __init__(Client* client, int _x, int _y, int w, int h, int flags)
 		kprint("x: new win\n")
 		self.client = client
+		int x = _x
+		int y = _y
 		if x < 0
 			x = randi(screen_width - w)
 		if y < 0

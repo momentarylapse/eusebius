@@ -48,12 +48,12 @@ void *_i2p(int i)
 	return __temp_p__
 
 
-void _s2cs(string s, cstring cs)
+void _s2cs(string s, out cstring cs)
 	for i in 0:s.num
 		cs[i] = s[i]
 	cs[s.num] = 0
 
-void _cs2s(cstring cs, lib__string s)
+void _cs2s(cstring cs, out lib__string s)
 	s.clear()
 	for i in 0:255
 		if cs[i] == 0
@@ -66,7 +66,7 @@ lib__string cs2s(cstring cs)
 	return s
 
 # ["aa", "bb"] -> "aa\0bb\0\0"
-void sa2cs(string[] a, cstring cs)
+void sa2cs(string[] a, out cstring cs)
 	int n = 0
 	for k in 0:a.num
 		for i in 0:a[k].num
@@ -574,7 +574,7 @@ bool listen(int fd)
 int accept(int fd)
 	return sys_socket(5, fd, 0)
 
-void get_args(lib__string@list arg)
+void get_args(out lib__string@list arg)
 	cstring cs
 	__temp_p__ = &cs
 	asm{
@@ -663,13 +663,13 @@ int _align8_(int size)
 	return (size & 0xfffffff8) + 8
 
 
-void* lib__@malloc(int size)
-	if size <= MALLOC_SMALL_SIZE
+void* lib__@malloc(int _size)
+	if _size <= MALLOC_SMALL_SIZE
 		void *ppp = small_malloc()
 		if ppp
 			return ppp
 
-	size = _align8_(size)
+	int size = _align8_(_size)
 	if lib_mem_debug
 		kprint(" [+")
 		kprinti(size)
@@ -745,7 +745,7 @@ void* lib__@malloc(int size)
 	
 	return hh.payload()
 
-void _cleanup(MallocHeader *h)
+void _cleanup(out MallocHeader *h)
 	if h.after() == h.next
 		MemHeapAllocated -= sizeof(MallocHeader)
 		if lib_mem_debug
@@ -1014,8 +1014,10 @@ class lib__string extends lib__@DynamicArray
 		r += o
 		return r
 			
-	lib__string substr(int start, int length)
+	lib__string substr(int _start, int _length)
 		lib__string r
+		int start = _start
+		int length = _length
 		if start >= num
 			return r
 		if start < 0
@@ -1405,7 +1407,8 @@ lib__string lib__@sa2s(lib__string@list a)
 	r.add(']')
 	return r
 
-lib__string i2s(int i)
+lib__string i2s(int _i)
+	int i = _i
 	bool sign = i >= 0
 	if !sign
 		i = -i
@@ -1529,7 +1532,8 @@ float lib__loop(float f, float min, float max)
 		return f - d * float(n)
 	return f
 
-lib__string f2s(float f, int n)
+lib__string f2s(float _f, int n)
+	float f = _f
 	lib__string s
 	
 	if f < 0.0
@@ -1703,7 +1707,7 @@ class dirent_struct
 	cstring name
 	void __assign__(dirent_struct o)
 		pass
-	void fill(lib__DirEntry e)
+	void fill(out lib__DirEntry e)
 		_cs2s(name, e.name)
 		e.size = size
 		e.is_dir = (type == 1)

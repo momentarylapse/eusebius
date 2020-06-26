@@ -101,7 +101,7 @@ class Variable
 class VariableSet
 	Variable*[] var
 	void __init__()
-	Variable *get(string name)
+	selfref Variable *get(string name)
 		for v in var
 			if v.name == name
 				return v
@@ -120,7 +120,7 @@ class Job
 	bool done
 	int[2] pipe_in, pipe_out # from job's point of view
 	bool as_bg
-	void __init__(string[] c, string _cmd)
+	void __init__(out string[] c, string _cmd)
 		cmd = _cmd
 		done = false
 		pipe_in[0] = -1
@@ -209,7 +209,7 @@ class JobManager
 			if j.id == id
 				return j
 		return nil
-	Job *create(string[] c, string cmd)
+	Job *create(out string[] c, string cmd)
 		Job *j = new Job(c, cmd)
 		if j.pid < 0
 			del j
@@ -245,7 +245,7 @@ string parse_var_name(string cmd, int pos)
 		name.add(cmd[i])
 	return name
 
-string parse_single(string cmd, int *pos)
+string parse_single(string cmd, out int *pos)
 	string t
 	bool in_string = false
 	for j in *pos:cmd.num
@@ -263,7 +263,7 @@ string parse_single(string cmd, int *pos)
 		*pos = j
 	return t
 
-void parse(string cmd0, string[] c)
+void parse(string cmd0, out string[] c)
 	string cmd = cmd0
 	for i in 0:cmd.num
 		if cmd[i] == ' '
@@ -279,7 +279,7 @@ void execute_assign(string cmd)
 	if a.num == 2
 		vars.get(a[0]).value = a[1]
 
-bool execute_job(string[] c, string cmd)
+bool execute_job(out string[] c, string cmd)
 	Job *j = jobs.create(c, cmd)
 	return j
 

@@ -24,7 +24,8 @@ class Pipe
 		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
 		buffer_used += size
 		return size
-	int read(PageDirectory *page_dir, int addr, int size)
+	int read(PageDirectory *page_dir, int addr, int _size)
+		int size = _size
 		if buffer_used == 0
 			# no data... block if we have a writer
 			if write_ref_count > 0

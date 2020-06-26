@@ -15,10 +15,10 @@ class MallocHeader
 	int size # header + payload
 	MallocHeader *next
 	MallocHeader *prev
-	void *after()
+	const void *after()
 		char[0]* pp = &self
 		return &pp[size]
-	void *payload()
+	const void *payload()
 		char[0]* pp = &self
 		return &pp[sizeof(MallocHeader)]
 MallocHeader *malloc_first_free
@@ -30,8 +30,8 @@ MallocHeader *malloc_end_marker
 # allocated blocks are not linked
 
 
-void *malloc(int size)
-	size = ceil_quot(size, 8) << 3
+void *malloc(int _size)
+	int size = ceil_quot(_size, 8) << 3
 	#prints "<+"
 	#printi size
 	
@@ -62,7 +62,7 @@ void *malloc(int size)
 	panic("malloc: fail")
 	return nil
 
-void _cleanup(MallocHeader *h)
+void _cleanup(out MallocHeader *h)
 	if h.after() == h.next
 		MemHeapAllocated -= sizeof(MallocHeader)
 		#prints(" merge after ")

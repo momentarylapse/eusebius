@@ -53,7 +53,8 @@ class FileOperationsKey extends FileOperations
 	override int close(FileEntry *f)
 		dev_key_reading --
 		return 0
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int _size)
+		int size = _size
 		if dev_key_num == 0
 			return -EWOULDBLOCK
 		if size > dev_key_num
@@ -69,7 +70,8 @@ FileOperationsMouse dev_mouse_ops
 cstring dev_mouse_buf
 int dev_mouse_num
 class FileOperationsMouse extends FileOperations
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int _size)
+		int size = _size
 		if dev_mouse_num == 0
 			return -EWOULDBLOCK
 		if size < 16
@@ -87,7 +89,8 @@ FileOperationsTTY dev_tty_ops
 cstring dev_tty_key_buf
 int dev_tty_key_num
 class FileOperationsTTY extends FileOperations
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int _size)
+		int size = _size
 		if dev_tty_key_num == 0
 			return -EWOULDBLOCK
 		if size > dev_tty_key_num
@@ -431,7 +434,8 @@ int getchar(int k)
 	#printh(&k, 3)
 	return -1
 
-void ps2_read_key(int k)
+void ps2_read_key(int _k)
+	int k = _k
 		
 	# add to low level device buffer
 	if dev_key_reading > 0
@@ -479,7 +483,8 @@ void ps2_read_key(int k)
 int[4] mouse_temp
 int mouse_temp_no
 
-void ps2_read_mouse(int d)
+void ps2_read_mouse(int _d)
+	int d = _d
 	mouse_temp[mouse_temp_no] = d & 0x000000ff
 	mouse_temp_no ++
 	

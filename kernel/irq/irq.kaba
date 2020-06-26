@@ -50,7 +50,7 @@ class InterruptDescriptor
 
 
 	# interrupt tasks don't need the cli/sti... we use the IF bit
-	void set_task(Task* t)
+	void set_task(out Task* t)
 		a = 0
 		b = 0
 		if t
@@ -83,7 +83,7 @@ class InterruptController
 		if func
 			deny_user_map(id)
 	
-	void set_task(int id, Task* t)
+	void set_task(int id, out Task* t)
 		idt[id].set_task(t)
 		if t
 			deny_user_map(id)

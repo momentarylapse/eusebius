@@ -234,7 +234,7 @@ class Task
 			#call_far [eax]
 			#jmp_far 0x004000000000 #0x0040:0x00000000
 		}
-	int addr2kernel(int addr, int* offset)
+	int addr2kernel(int addr, out int* offset)
 		return page_dir.addr2kernel(addr, offset)
 	
 	int set_cur_dir(cstring dir)
@@ -524,8 +524,8 @@ class Task
 		set_wait(WAITING_MODE_TIME, tv.sec, tv.nanosec, 0)
 		return 0
 
-	int sys_brk(int new_top)
-		new_top = ceil_quot(new_top, PAGE_SIZE) * PAGE_SIZE
+	int sys_brk(int _new_top)
+		int new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
 		int cur_top = mem_bottom + mem_size
 		if new_top <= cur_top
 			return cur_top

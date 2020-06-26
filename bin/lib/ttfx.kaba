@@ -17,7 +17,7 @@ float time_dif(TimeValue t1, TimeValue t2)
 	return d
 
 
-void _read(File *f, void* _p, int size)
+void _read(out File *f, void* _p, int size)
 	char[0]* p = _p
 	string s = f.read(size)
 	for i in 0:size

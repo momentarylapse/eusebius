@@ -95,7 +95,7 @@ void read_data_from_init()
 			break
 
 
-void memcpy(void* _dest, void* _source, int size)
+void memcpy(out void* _dest, void* _source, int size)
 	cstring* dest = _dest
 	cstring* source = _source
 	for n in 0:size
@@ -122,13 +122,13 @@ int strlen(cstring s)
 			return i
 	return 256
 
-void strcpy(cstring a, cstring b)
+void strcpy(out cstring a, cstring b)
 	for i in 0:256
 		a[i] = b[i]
 		if b[i] == 0
 			break
 
-void strcat(cstring a, cstring b)
+void strcat(out cstring a, cstring b)
 	int n = strlen(a)
 	for i in 0:256
 		a[i+n] = b[i]

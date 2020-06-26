@@ -45,7 +45,7 @@ class XWindow
 	bool lbut, mbut, rbut
 	int mx, my
 	
-	void __init__(XConnection *c, int x, int y, int w, int h)
+	void __init__(out XConnection *c, int x, int y, int w, int h)
 		con = c
 		buf = nil
 		self.x = x
@@ -80,7 +80,7 @@ class XWindow
 		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
 	void move(int x, int y)
 		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
-	void get_size(int *w, int *h)
+	void get_size(out int *w, out int *h)
 		con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
 		con.wait_recv(XCMD_WINDOW_GET_SIZE)
 		*w = con.buf[2]
@@ -167,7 +167,7 @@ class XConnection
 	void send_exit()
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
-	bool _create_win(XWindow *win, int x, int y, int w, int h)
+	bool _create_win(out XWindow *win, int x, int y, int w, int h)
 		kprint("client: send new win\n")
 		just_send(XCMD_NEW_WINDOW, x, y, w, h, 0)
 		

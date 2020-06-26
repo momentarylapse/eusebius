@@ -45,7 +45,8 @@ class KSocket
 		s.buffer_used += size
 		return size
 	
-	int read(PageDirectory *page_dir, int addr, int size)
+	int read(PageDirectory *page_dir, int addr, int _size)
+		int size = _size
 		if buffer_used == 0
 			if peer_port < 0
 				return -ENOTCONN
@@ -68,7 +69,7 @@ class KSocket
 		port = _port
 		return 0
 		
-	void link(KSocket *s)
+	void link(out KSocket *s)
 		s.peer_port = port
 		peer_port = s.port
 		

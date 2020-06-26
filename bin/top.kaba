@@ -9,7 +9,7 @@ enum
 	TASK_STATUS_INTERRUPT
 	#TASK_STATUS_DEAD
 
-void fill(string s, int n)
+void fill(out string s, int n)
 	while s.num < n
 		s.add(' ')
 
@@ -19,10 +19,10 @@ string i2s2(int i, int n)
 	fill(s1, n - s2.num)
 	return s1 + s2
 
-string sec2s(int sec)
-	int hour = sec / 3600
-	int min = (sec / 60) % 60
-	sec = sec % 60
+string sec2s(int _sec)
+	int hour = _sec / 3600
+	int min = (_sec / 60) % 60
+	int sec = _sec % 60
 	string s = "  :  "
 	s[0] = '0' + (min / 10)
 	s[1] = '0' + (min % 10)

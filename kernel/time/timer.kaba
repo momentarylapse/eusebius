@@ -31,7 +31,7 @@ class KernelTimer
 
 KernelTimer kernel_timer
 
-void InitTimerInterrupt(Task *t, int dt_ms)
+void InitTimerInterrupt(out Task *t, int dt_ms)
 	# read year from CMOS
 	#outportb(0x70, 0x40 | 0x09)
 	#inportb(0x71)

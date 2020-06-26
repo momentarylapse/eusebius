@@ -32,7 +32,8 @@ string dir_append(string dir, string e)
 		r += "/"
 	return r + e
 
-string key_to_str(int key)
+string key_to_str(int _key)
+	int key = _key
 	if key == KEY_RETURN
 		return "\n"
 	if key == KEY_SPACE
@@ -163,7 +164,7 @@ class MtkWidget
 	bool has_input()
 		return win.active and (&self == win.input_widget)
 	
-	void set_win(MtkWindow* win, int x, int y, int w, int h)
+	void set_win(out MtkWindow* win, int x, int y, int w, int h)
 		self.win = win
 		win.widgets.add(&self)
 		p = new XPainter(win)
@@ -249,7 +250,7 @@ class MtkGrid extends MtkWidget
 		for c in children
 			if c
 				c.draw()
-	void put(int x, int y, MtkWidget *c)
+	void put(int x, int y, out MtkWidget *c)
 		# update snd
 		if c.snd.expand_x
 			child_exp_x[x] = true
@@ -415,7 +416,7 @@ class MtkTextView extends MtkWidget
 			draw()
 			p.end()
 	
-	void to_screen(int pos, int* x, int* y)
+	void to_screen(int pos, out int* x, out int* y)
 		string[] lines = text.head(pos).explode("\n")
 		*y = 5
 		*x = 5
@@ -589,7 +590,7 @@ class MtkWindow extends XWindow
 		if shown
 			show()
 	
-	void put(MtkWidget* widget)
+	void put(out MtkWidget* widget)
 		self.widget = widget
 		widget.set_win(&self, FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
 		

@@ -79,8 +79,9 @@ void prints_low(cstring *str, int size)
 void prints(cstring s)
 	prints_low(&s, strlen(s))
 
-void _i2s(int i, cstring *s)
-	bool sign = (i >= 0)
+void _i2s(int _i, out cstring *s)
+	bool sign = (_i >= 0)
+	int i = _i
 	if !sign
 		i = -i
 	char[16] ttt

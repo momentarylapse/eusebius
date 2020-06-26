@@ -9,7 +9,7 @@ color bg
 XConnection* xcon
 
 
-void draw_cancle(XPainter* p, float x, float y)
+void draw_cancle(out XPainter p, float x, float y)
 	p.set_color(bg)
 	#p.rectangle(rect(x-12, x+12, y-60, y))
 	p.draw_circle(x, y-30, 20)

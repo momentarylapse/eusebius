@@ -1,7 +1,9 @@
 use "lib/std.kaba"
 
 
-void hd(int h, int skip, int length)
+void hd(int h, int _skip, int _length)
+	int skip = _skip
+	int length = _length
 	string s
 	while skip > 0
 		s.resize(128)

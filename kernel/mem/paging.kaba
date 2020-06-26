@@ -19,14 +19,14 @@ class Page
 
 class PageTable extends Page
 	
-	int count_entries()
+	const int count_entries()
 		int num_entries = 0
 		for ee in e
 			if ee != 0
 				num_entries ++
 		return num_entries
 
-void page_params(int addr, int* dir_no, int* page_no, int* offset)
+void page_params(int addr, out int* dir_no, out int* page_no, out int* offset)
 	*dir_no = addr >> 22
 	*page_no = (addr >> 12) & 0x000003ff
 	*offset = addr & 0x00000fff
@@ -36,9 +36,9 @@ class PageDirectory extends PageTable
 	# source = task-space
 	# dest = kernel-space
 	# (does not allocate pages)
-	void map_lin(int source, int dest, int size, bool writable)
-		source = source & 0xfffff000
-		dest = dest & 0xfffff000
+	void map_lin(int _source, int _dest, int size, bool writable)
+		int source = _source & 0xfffff000
+		int dest = _dest & 0xfffff000
 		int dir_no, page_no, offset
 		page_params(source, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
@@ -68,8 +68,8 @@ class PageDirectory extends PageTable
 			page_no = 0
 
 	# start = task-space
-	bool map_by_alloc(int start, int size, bool writable)
-		start = start & 0xfffff000
+	bool map_by_alloc(int _start, int size, bool writable)
+		int start = _start & 0xfffff000
 		int dir_no, page_no, offset
 		page_params(start, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
@@ -100,8 +100,8 @@ class PageDirectory extends PageTable
 			page_no = 0
 		return true
 	
-	void unmap(int start, int size, bool dealloc)
-		start = start & 0xfffff000
+	void unmap(int _start, int size, bool dealloc)
+		int start = _start & 0xfffff000
 		int dir_no, page_no, offset
 		page_params(start, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
@@ -123,8 +123,8 @@ class PageDirectory extends PageTable
 			dir_no ++
 			page_no = 0
 	
-	int find_free_space(int start, int size)
-		start = (start & 0xfffff000)
+	const int find_free_space(int _start, int size)
+		int start = (_start & 0xfffff000)
 		int dir_no, page_no, offset
 		page_params(start, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
@@ -155,7 +155,7 @@ class PageDirectory extends PageTable
 			page_no = 0
 		return -1
 
-	int addr2kernel(int addr, int* offset)
+	const int addr2kernel(int addr, out int* offset)
 		int dir_no, page_no
 		page_params(addr, &dir_no, &page_no, offset)
 		if e[dir_no] == 0
@@ -166,8 +166,10 @@ class PageDirectory extends PageTable
 		int n = pt.e[page_no] & 0xfffff000
 		return n + *offset
 
-	bool memcpy2kernel(void *_o, int addr, int size)
+	const bool memcpy2kernel(void *_o, int _addr, int _size)
 		cstring *o = _o
+		int addr = _addr
+		int size = _size
 		while size > 0
 			int offset
 			int kaddr = addr2kernel(addr, &offset)
@@ -184,7 +186,9 @@ class PageDirectory extends PageTable
 			o = &o[num]
 		return true
 
-	bool memcpy2task(int addr, void *_p, int size)
+	const bool memcpy2task(int _addr, void *_p, int _size)
+		int addr = _addr
+		int size = _size
 		cstring *p = _p
 		while size > 0
 			int offset
@@ -202,7 +206,7 @@ class PageDirectory extends PageTable
 			p = &p[num]
 		return true
 	
-	void copy_pages_to(PageDirectory* dest, int start1, int start2, int size)
+	void copy_pages_to(out PageDirectory* dest, int start1, int start2, int size)
 		int dir_no1, page_no1, offset1
 		page_params(start1, &dir_no1, &page_no1, &offset1)
 		int dir_no2, page_no2, offset2
@@ -213,7 +217,8 @@ class PageDirectory extends PageTable
 		PageTable *pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
 		#int n = pt.e[page_no] & 0xfffff000
 		while npages > 0
-			memcpy(_i2p(pt2.e[page_no2] & 0xfffff000), _i2p(pt1.e[page_no1] & 0xfffff000), PAGE_SIZE)
+			let pout = _i2p(pt2.e[page_no2] & 0xfffff000)
+			memcpy(pout, _i2p(pt1.e[page_no1] & 0xfffff000), PAGE_SIZE)
 			page_no1 ++
 			if page_no1 >= PAGE_SIZE
 				page_no1 = 0

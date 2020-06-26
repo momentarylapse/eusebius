@@ -10,7 +10,7 @@ int col2i(color c)
 	int ia = c.a * 255.0
 	return ib + (ig << 8) + (ir << 16) + (ia << 24)
 
-void i2col(color c, int i)
+void i2col(out color c, int i)
 	int ir = (i >> 16) & 255
 	int ig = (i >> 8) & 255
 	int ib = i & 255
@@ -109,8 +109,8 @@ class XPainter
 				buf[index] = cur_color
 				index ++
 	
-	void draw_circle(float mx, float my, float r)
-		r += 0.5
+	void draw_circle(float mx, float my, float _r)
+		float r = _r + 0.5
 		int x0 = max(mx - r, 0)
 		int y0 = max(my - r, 0)
 		int x1 = min(mx + r, width)
@@ -249,12 +249,12 @@ class XPainter
 			draw_line(l.a, l.b)
 		clear_data()
 	
-	void draw_glyph(float x, float y, TTFGlyph *g, float scale)
+	void draw_glyph(float x, float _y, TTFGlyph *g, float scale)
 		if !font
 			return
 	
 		TTFFont* f = font.font
-		y -= scale * 0.2
+		float y = _y - scale * 0.2
 		for c in g.contours
 			move_to(x + f.points[c.start].x * scale, y + (1.0 - f.points[c.start].y) * scale)
 			for i in c.start+1:c.start+c.num
@@ -263,8 +263,9 @@ class XPainter
 		strike()
 		#fill()
 	
-	void draw_str(float x, float y, string text)
+	void draw_str(float _x, float y, string text)
 		float scale = font.size
+		float x = _x
 		for c,i in text
 			int code = int(c) & 0x000000ff
 			
