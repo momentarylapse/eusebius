@@ -7,7 +7,7 @@ use image
 
 class FilesView extends MtkWidget
 	string dir
-	DirEntry[] list
+	string[] list
 	void __init__(string dir)
 		set_dir(dir)
 		snd = MtkSizeNegotiationData(30, 30, true, true)
@@ -36,23 +36,23 @@ class FilesView extends MtkWidget
 		p.fill()
 		
 		for e,i in list
-			if e.is_dir
+			if Filesystem.is_directory(dir + "/" + e)
 				p.draw_image(10, 10 + i * 20, icon_dir)
 			else
 				p.draw_image(10, 10 + i * 20, icon_file)
 			p.set_color(col_text)
-			p.draw_str(30, 10 + i * 20, e.name)
+			p.draw_str(30, 10 + i * 20, e)
 		#p.draw_str(200, 10, dir)
 	
 	override void on_mouse_move()
 	override void on_mouse_left_button_down()
 		for e,i in list
 			if mx >= 10 and mx < 200 and my >= 10+i*20 and my < 30+i*20
-				if e.is_dir
-					set_dir(dir_append(dir, e.name))
+				if Filesystem.is_directory(dir + "/" + e)
+					set_dir(dir_append(dir, e))
 					break
 				else
-					mtk_open(dir_append(dir, e.name))
+					mtk_open(dir_append(dir, e))
 	override void on_mouse_left_button_up()
 	override void on_key(int key)
 		if key == KEY_BACKSPACE

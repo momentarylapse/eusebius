@@ -128,3 +128,6 @@ extern int accept(int fd)
 
 extern void memcpy(void* dest, void* source, int size)
 
+# because std lib is 64bit...
+extern int Filesystem_size32(string filename)
+

@@ -17,17 +17,17 @@ void ls(string dirname, bool extended)
 
 	if extended
 		for e in l
-			if e.is_dir
+			if Filesystem.is_directory(dirname + e)
 				print("directory ")
 			else
 				print("file      ")
-			print(i2s2(e.size, 8))
-			print(" {{e.name}}\n")
+			print(i2s2(Filesystem_size32(dirname + e), 8))
+			print(" {{e}}\n")
 	else
 		for e,i in l
 			if i > 0
 				print("  ")
-			print(e.name)
+			print(e)
 		print("\n")
 
 

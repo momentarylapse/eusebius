@@ -1394,6 +1394,17 @@ class lib__string@list extends lib__@DynamicArray
 		return r
 	lib__string str()
 		return lib__@sa2s(self)
+	void swap(int i, int j)
+		let t = data[i]
+		data[i] = data[j]
+		data[j] = t
+	lib__string@list __add__(lib__string@list o)
+		lib__string@list r = self
+		r += o
+		return r
+	void __iadd__(lib__string@list o)
+		for i in 0:len(o)
+			add(o.data[i])
 
 lib__string lib__@sa2s(lib__string@list a)
 	lib__string r
@@ -1654,50 +1665,6 @@ void lib__print(string s)
 # dir entry
 
 
-class lib__DirEntry
-	lib__string name
-	int dddd, eee
-	int size
-	bool is_dir
-	void __init__()
-		name.__init__()
-	void __assign__(lib__DirEntry o)
-		name = o.name
-		size = o.size
-		is_dir = o.is_dir
-
-
-class lib__DirEntry@list extends lib__@DynamicArray
-	override lib__DirEntry[0]* data
-	void __init__()
-		__mem_init__(sizeof(lib__DirEntry))
-	void __delete__()
-		for i in 0:num
-			data[i].__delete__()
-		#clear()
-	void resize(int size)
-		if size < num
-			# shrink -> destruct
-			for i in size:num
-				data[i].__delete__()
-		else if size > num
-			reserve(size)
-			for i in num:size
-				data[i].__init__()
-		num = size
-	void add(lib__DirEntry s)
-		resize(num + 1)
-		data[num - 1] = s
-	void __assign__(lib__DirEntry@list o)
-		resize(o.num)
-		for i in 0:num
-			data[i] = o.data[i]
-	void swap(int i, int j)
-		lib__DirEntry e = data[i]
-		data[i] = data[j]
-		data[j] = e
-		
-
 
 
 class dirent_struct
@@ -1707,39 +1674,38 @@ class dirent_struct
 	cstring name
 	void __assign__(dirent_struct o)
 		pass
-	void fill(out lib__DirEntry e)
-		_cs2s(name, e.name)
-		e.size = size
-		e.is_dir = (type == 1)
+	#void fill(out lib__DirEntry e)
+	#	_cs2s(name, e.name)
+	#	e.size = size
+	#	e.is_dir = (type == 1)
 
-lib__DirEntry@list lib__Filesystem@@search(string dirname, string filter, bool allow_dirs)
-	lib__DirEntry@list l
+lib__string@list lib__Filesystem@@search(string dirname, string filter, bool allow_dirs)
+	lib__string@list list_dirs, list_files
 	lib__print("") # ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
-		return l
+		return list_files
 	dirent_struct d
-	lib__DirEntry e
 	while getdents(h, &d)
 		lib__string s
 		_cs2s(d.name, s)
-		d.fill(e)
-		l.add(e)
+		if d.type == 1
+			list_dirs.add(s)
+		else
+			list_files.add(s)
 	close(h)
 	lib_error = 0
 	
-	for i in 0:l.num-1
-		for j in i+1:l.num
-			if !l.data[i].is_dir and l.data[j].is_dir
-				l.swap(i, j)
-	for i in 0:l.num-1
-		for j in i+1:l.num
-			if l.data[i].is_dir != l.data[j].is_dir
-				nil
-			else if (l.data[i].name.compare(l.data[j].name) > 0)
-				l.swap(i, j)
-	return l
+	for i in 0:list_dirs.num-1
+		for j in i+1:list_dirs.num
+			if list_dirs.data[i].compare(list_dirs.data[j]) > 0
+				list_dirs.swap(i, j)
+	for i in 0:list_files.num-1
+		for j in i+1:list_files.num
+			if list_files.data[i].compare(list_files.data[j]) > 0
+				list_files.swap(i, j)
+	return list_dirs + list_files
 
 class lib__File
 	int h
@@ -1852,6 +1818,16 @@ lib__string lib__Filesystem@@read(string filename)
 	content.resize(size)
 	close(h)
 	return content
+
+bool lib__Filesystem@@is_directory(string filename)
+	return false
+
+int64 lib__Filesystem@@size(string filename)
+	pass
+#	return 0
+
+int Filesystem_size32(string filename)
+	return 0
 
 #--------------------------------------------------------------------------
 # images
