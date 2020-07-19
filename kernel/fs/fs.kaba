@@ -84,7 +84,7 @@ class FileEntry
 	# allocate list int blocks of int[16]
 	void add_block(int b)
 		if (num_blocks & 0x0f) == 0
-			blocks = realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
+			blocks = Heap.realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
 		blocks[num_blocks] = b
 		num_blocks ++
 	
@@ -96,7 +96,7 @@ class FileEntry
 
 	
 FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
-	FileEntry *e = malloc(sizeof(FileEntry))
+	FileEntry *e = Heap.malloc(sizeof(FileEntry))
 	e.inode = 0
 	e.mp_inode = 0
 	e.num_blocks = 0
@@ -184,7 +184,7 @@ class Ext2DirEntryHeader
 
 class MountPoint
 	cstring type
-	PartitionData *dev # nil => unused
+	BlockDevice *dev # nil => unused
 	FileEntry *dest
 	int block_offset
 	int block_size
@@ -287,7 +287,7 @@ class FileSystem
 		e.shrink_block_list(0)
 		if e.mount
 			e.mount.free_inode(e.mp_inode)
-		free(e)
+		Heap.free(e)
 		if p
 			p.mount.write_inode(p)
 			p.mount.sync()
@@ -320,7 +320,7 @@ class FileSystem
 				return nil
 		return e
 		
-	static int mount(PartitionData dev, out FileEntry dir, cstring fs_name)
+	static int mount(BlockDevice dev, out FileEntry dir, cstring fs_name)
 		if !&dev
 			return -1
 		if !&dir
@@ -375,7 +375,7 @@ class MountPointMichiFS extends MountPoint
 		buf_used += l
 		s[l] = 0
 	override int mount()
-		buf = malloc(2048)
+		buf = Heap.malloc(2048)
 		update_sizes(2048, 0)
 		read_block(1, buf)
 		buf_used = 0
@@ -397,7 +397,7 @@ class MountPointMichiFS extends MountPoint
 class MountPointExt2 extends MountPoint
 	
 	override int mount()
-		buf = malloc(4096)
+		buf = Heap.malloc(4096)
 		update_sizes(1024, 0) # temp
 		
 		read_block(1, buf)
@@ -409,8 +409,8 @@ class MountPointExt2 extends MountPoint
 		if block_size == 1024
 			block_offset = 0
 		
-		inode_bitmap = malloc(block_size)
-		block_bitmap = malloc(block_size)
+		inode_bitmap = Heap.malloc(block_size)
+		block_bitmap = Heap.malloc(block_size)
 	
 		#f.seek(1024 + block_size, true)
 		#f.xread(&bg, sizeof(BlockGroupDescriptor))
@@ -503,7 +503,7 @@ class MountPointExt2 extends MountPoint
 	
 	
 	cstring *read_inode_contents(FileEntry e)
-		cstring *buf = malloc(e.num_blocks * block_size)
+		cstring *buf = Heap.malloc(e.num_blocks * block_size)
 		for i in 0:e.num_blocks
 			read_block(e.blocks[i], &buf[i * block_size])
 		
@@ -541,7 +541,7 @@ class MountPointExt2 extends MountPoint
 				FileEntry *e = dir.create_child(name, type, &self)
 				e.mp_inode = d.inode
 				read_inode_recursive(d.inode, e)
-		free(cont)
+		Heap.free(cont)
 		
 	override int write_inode(out FileEntry e)
 		if e.type == FILE_TYPE_DIR
@@ -551,7 +551,7 @@ class MountPointExt2 extends MountPoint
 	int write_inode_dir(out FileEntry dir)
 		cstring fn
 		dir.get_path(fn)
-		cstring *b = malloc(4096*8)
+		cstring *b = Heap.malloc(4096*8)
 		int pos = 0
 	
 		dir.size = 0
@@ -591,7 +591,7 @@ class MountPointExt2 extends MountPoint
 			write_block(dir.blocks[i], &b[i * block_size])
 			
 		write_inode_simple(dir)
-		free(b)
+		Heap.free(b)
 		return 0
 	
 	override int alloc_inode()

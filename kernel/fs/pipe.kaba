@@ -67,7 +67,7 @@ class Pipe
 			# anonymous pipe
 			FileSystem.delete(e)
 
-		free(buffer)
+		Heap.free(buffer)
 		used = false
 
 
@@ -84,7 +84,7 @@ class PipeManager
 				p.read_ref_count = 0
 				p.write_ref_count = 0
 				p.buffer_used = 0
-				p.buffer = malloc(PIPE_BUFFER_SIZE)
+				p.buffer = Heap.malloc(PIPE_BUFFER_SIZE)
 				return &p
 		return nil
 

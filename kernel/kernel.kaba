@@ -56,7 +56,6 @@ void load_kalib()
 void main()
 	read_data_from_init()
 	TextMode.init()
-	InitHeap()
 	
 	prints("Welcome to ")
 	prints(KERNEL_NAME)
@@ -81,6 +80,7 @@ void main()
 #	printh(&__temp_i3__, 4)
 #	prints("\n")
 	
+	Heap.init()
 	Paging.init()
 	SharedMemory.init()
 	
@@ -93,9 +93,9 @@ void main()
 	FileSystem.init()
 	
 	# assume a default disk layout...
-	FileSystem.mount(BlockDevManager.partition[2], FileSystem.root, "ext2")
+	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
 	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
-	FileSystem.mount(BlockDevManager.partition[1], boot, "michifs")
+	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 	TaskManager.init()
 	

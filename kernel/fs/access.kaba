@@ -221,7 +221,7 @@ class OpenFileData
 		FileSystem.sync()
 			
 		if buffer
-			free(buffer)
+			Heap.free(buffer)
 		if entry.type == FILE_TYPE_CHAR
 			entry.op.close(entry)
 		if entry.type == FILE_TYPE_PIPE
@@ -257,7 +257,7 @@ OpenFileData *kernel_open_entry(FileEntry e, int flags)
 	of.entry = &e
 	of.offset = 0
 	if of.entry.type == FILE_TYPE_FILE
-		of.buffer = malloc(of.entry.mount.block_size)
+		of.buffer = Heap.malloc(of.entry.mount.block_size)
 		if of.entry.num_blocks > 0
 			of.entry.mount.read_block(of.entry.blocks[0], of.buffer)
 		if of.writing

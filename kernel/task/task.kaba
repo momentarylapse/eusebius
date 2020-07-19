@@ -800,7 +800,7 @@ class TaskManager
 		t.kernel_mode = true
 	
 		t.stack_size = stack_size
-		t.stack = malloc(stack_size)
+		t.stack = Heap.malloc(stack_size)
 		t.page_dir = Paging.kernel_page_dir
 		t.mem_bottom = 0
 		t.mem_size = 0

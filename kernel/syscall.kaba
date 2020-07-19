@@ -42,7 +42,7 @@ class SysInfo
 		totalhigh = 0
 		freehigh = 0
 		totalheap = MEM_HEAP_SIZE / mem_unit
-		freeheap = (MEM_HEAP_SIZE - MemHeapAllocated) / mem_unit
+		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
 
 SysInfo _sys_info
 

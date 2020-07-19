@@ -136,7 +136,7 @@ class KSocket
 			if s
 				s.peer_port = -1
 		FileSystem.delete(e)
-		free(buffer)
+		Heap.free(buffer)
 		used = false
 
 
@@ -157,7 +157,7 @@ class SocketManager
 				s.peer_port = -1
 				s.ref_count = 0
 				s.buffer_used = 0
-				s.buffer = malloc(SOCKET_BUFFER_SIZE)
+				s.buffer = Heap.malloc(SOCKET_BUFFER_SIZE)
 				return &s
 		return nil
 
