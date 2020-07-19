@@ -89,8 +89,8 @@ void main()
 	ShowPartitions()
 	
 	InitFileAccessData()
-	InitPipes()
-	InitSockets()
+	PipeManager.init()
+	SocketManager.init()
 	
 	FileSystem.init()
 	

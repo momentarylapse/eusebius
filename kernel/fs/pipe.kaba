@@ -70,29 +70,31 @@ class Pipe
 		free(buffer)
 		used = false
 
-Pipe[MAX_PIPES] Pipes
+
+class PipeManager
+	static Pipe[MAX_PIPES] pipes
 
 
 
-Pipe* create_pipe(FileEntry e)
-	for p in Pipes
-		if !p.used
-			p.used = true
-			p.e = &e
-			p.read_ref_count = 0
-			p.write_ref_count = 0
-			p.buffer_used = 0
-			p.buffer = malloc(PIPE_BUFFER_SIZE)
-			return &p
-	return nil
+	static Pipe* create(FileEntry e)
+		for p in pipes
+			if !p.used
+				p.used = true
+				p.e = &e
+				p.read_ref_count = 0
+				p.write_ref_count = 0
+				p.buffer_used = 0
+				p.buffer = malloc(PIPE_BUFFER_SIZE)
+				return &p
+		return nil
 
-Pipe* get_pipe(FileEntry e)
-	for p in Pipes
-		if p.used and p.e == &e
-			return &p
-	return nil
+	static Pipe* get(FileEntry e)
+		for p in pipes
+			if p.used and p.e == &e
+				return &p
+		return nil
 
 
-void InitPipes()
-	for p in Pipes
-		p.used = false
+	static void init()
+		for p in pipes
+			p.used = false

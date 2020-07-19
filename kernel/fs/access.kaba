@@ -270,7 +270,7 @@ OpenFileData *kernel_open_entry(FileEntry e, int flags)
 		if of.reading == of.writing
 			of.used = false
 			return nil
-		of.pipe = get_pipe(of.entry)
+		of.pipe = PipeManager.get(of.entry)
 		if !of.pipe
 			of.used = false
 			return nil
@@ -279,7 +279,7 @@ OpenFileData *kernel_open_entry(FileEntry e, int flags)
 		else
 			of.pipe.write_ref_count ++
 	else if of.entry.type == FILE_TYPE_SOCKET
-		of.socket = get_socket(of.entry)
+		of.socket = SocketManager.get(of.entry)
 		if !of.socket
 			of.used = false
 			return nil
@@ -319,7 +319,7 @@ int kernel_mknod(cstring filename, int flags, out FileEntry cur_dir)
 	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
 	if !e
 		return -2
-	if !create_pipe(e)
+	if !PipeManager.create(e)
 		return -3
 	return 0
 
@@ -354,5 +354,5 @@ class dirent_struct
 void InitFileAccessData()
 	for o in OpenFiles
 		o.used = false
-	for p in Pipes
+	for p in PipeManager.pipes
 		p.used = false

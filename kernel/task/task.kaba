@@ -421,7 +421,7 @@ class Task
 		FileEntry *e = create_file_entry(":pipe:", FILE_TYPE_PIPE, nil)
 		if !e
 			return -ENFILE
-		if !create_pipe(e)
+		if !PipeManager.create(e)
 			return -3
 		OpenFileData *of_in = kernel_open_entry(e, O_RDONLY)
 		OpenFileData *of_out = kernel_open_entry(e, O_WRONLY)
@@ -619,7 +619,7 @@ class Task
 			let e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
 			if !e
 				return -ENFILE
-			if !create_socket(e, p1)
+			if !SocketManager.create(e, p1)
 				return -3
 			OpenFileData *of = kernel_open_entry(e, O_RDWR)
 			return add_handle(of)
@@ -664,7 +664,7 @@ class Task
 			if e < 0
 				return e
 			# port
-			KSocket *s = get_socket_by_port(e)
+			KSocket *s = SocketManager.get_by_port(e)
 			if !s
 				return -1
 			of = kernel_open_entry(s.e, O_RDWR)
@@ -703,7 +703,7 @@ class Task
 #				tss.eax = 0 # return 0
 #				activate()
 		else if waiting_mode == WAITING_MODE_SOCKET_ACCEPT
-			KSocket *s = get_socket_by_port(waiting_param_i1)
+			KSocket *s = SocketManager.get_by_port(waiting_param_i1)
 			if !s
 				tss.eax = -EINVAL # return ...
 				activate()
@@ -714,7 +714,7 @@ class Task
 				if e < 0
 					tss.eax = e # return e
 				else
-					s = get_socket_by_port(e)
+					s = SocketManager.get_by_port(e)
 					if !s
 						tss.eax = -2  # return -2
 					else
@@ -722,7 +722,7 @@ class Task
 						tss.eax = add_handle(of) # return 0
 				activate()
 		else if waiting_mode == WAITING_MODE_SOCKET_CONNECT
-			let s = get_socket_by_port(waiting_param_i1)
+			let s = SocketManager.get_by_port(waiting_param_i1)
 			if !s
 				tss.eax = -EINVAL # return ...
 				activate()

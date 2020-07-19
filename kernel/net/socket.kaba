@@ -36,7 +36,7 @@ class KSocket
 	int write(PageDirectory page_dir, int addr, int size)
 		if peer_port < 0
 			return -ENOTCONN
-		KSocket *s = get_socket_by_port(peer_port)
+		KSocket *s = SocketManager.get_by_port(peer_port)
 		if !s
 			return -ENOTCONN
 		if s.buffer_used + size > SOCKET_BUFFER_SIZE
@@ -64,7 +64,7 @@ class KSocket
 		state = _state
 		
 	int bind(int _port)
-		if get_socket_by_port(_port)
+		if SocketManager.get_by_port(_port)
 			return -EADDRINUSE
 		port = _port
 		return 0
@@ -82,7 +82,7 @@ class KSocket
 	int accept()
 		if state == SOCK_STATE_WAIT_ACCEPT
 			# "remote socket"
-			KSocket *rs = get_socket_by_port(_accept_wait_port)
+			KSocket *rs = SocketManager.get_by_port(_accept_wait_port)
 			if !rs
 				return -1
 			# "return socket"
@@ -90,7 +90,7 @@ class KSocket
 			if !e
 				self.set_state(SOCK_STATE_LISTENING)
 				return -ENFILE
-			KSocket* s = create_socket(e, type)
+			KSocket* s = SocketManager.create(e, type)
 			s.assign_available_port()
 			s.link(rs)
 			self.set_state(SOCK_STATE_LISTENING)
@@ -101,7 +101,7 @@ class KSocket
 		return -EWOULDBLOCK
 		
 	int connect(int _port)
-		KSocket *rs = get_socket_by_port(_port)
+		KSocket *rs = SocketManager.get_by_port(_port)
 		if !rs
 			return -ECONNREFUSED
 		if rs.state != SOCK_STATE_LISTENING
@@ -116,7 +116,7 @@ class KSocket
 		
 	void assign_available_port()
 		for p in 10000:20000
-			if !get_socket_by_port(p)
+			if !SocketManager.get_by_port(p)
 				bind(p)
 				return
 		
@@ -132,48 +132,50 @@ class KSocket
 	void clean_up()
 		if peer_port >= 0
 			# "unconnect"
-			KSocket *s = get_socket_by_port(peer_port)
+			KSocket *s = SocketManager.get_by_port(peer_port)
 			if s
 				s.peer_port = -1
 		FileSystem.del(e)
 		free(buffer)
 		used = false
 
-KSocket[MAX_SOCKETS] Sockets
+
+class SocketManager
+	static KSocket[MAX_SOCKETS] sockets
 
 
 
-KSocket* create_socket(FileEntry e, int type)
-	for s in Sockets
-		if !s.used
-			s.used = true
-			s.e = &e
-			s.type = type
-			s.state = SOCK_STATE_NONE
-			s.blocking = true
-			s.port = -1
-			s.peer_port = -1
-			s.ref_count = 0
-			s.buffer_used = 0
-			s.buffer = malloc(SOCKET_BUFFER_SIZE)
-			return &s
-	return nil
+	static KSocket* create(FileEntry e, int type)
+		for s in sockets
+			if !s.used
+				s.used = true
+				s.e = &e
+				s.type = type
+				s.state = SOCK_STATE_NONE
+				s.blocking = true
+				s.port = -1
+				s.peer_port = -1
+				s.ref_count = 0
+				s.buffer_used = 0
+				s.buffer = malloc(SOCKET_BUFFER_SIZE)
+				return &s
+		return nil
 
 
-KSocket* get_socket_by_port(int port)
-	for s in Sockets
-		if s.used and s.port == port
-			return &s
-	return nil
+	static KSocket* get_by_port(int port)
+		for s in sockets
+			if s.used and s.port == port
+				return &s
+		return nil
 	
-KSocket* get_socket(FileEntry *e)
-	for s in Sockets
-		if s.used and s.e == e
-			return &s
-	return nil
+	static KSocket* get(FileEntry e)
+		for s in sockets
+			if s.used and s.e == &e
+				return &s
+		return nil
 
 
-void InitSockets()
-	for s,i in Sockets
-		s._index = i
-		s.used = false
+	static void init()
+		for s,i in sockets
+			s._index = i
+			s.used = false
