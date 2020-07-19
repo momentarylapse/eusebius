@@ -67,6 +67,23 @@ class TaskInfo
 	void __assign__(TaskInfo o)
 		pass
 
+class MountInfo
+	int major, minor
+	cstring dir
+	void __assign__(MountInfo o)
+		pass
+class BlockDevice
+	int major, minor
+	int disk_no
+	int offset, size
+	int block_size
+	char type
+	bool active
+	cstring name
+	void *p
+	void __assign__(BlockDevice o)
+		pass
+
 extern void init_lib()
 extern void get_args(string[] arg)
 
@@ -107,7 +124,9 @@ extern bool shmdt(void* p)
 extern bool waitmsg()
 extern bool yield(int pid)
 extern bool sysinfo(SysInfo s)
-extern bool taskinfo(int pid, TaskInfo t)
+extern bool taskinfo(int pid, out TaskInfo t)
+extern bool mountinfo(int index, out MountInfo i)
+extern bool blockinfo(int major, int minor, out BlockDevice d)
 extern bool sched_yield(int pid)
 extern bool uname(void *buf)
 extern bool time(TimeValue t)

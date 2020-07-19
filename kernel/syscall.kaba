@@ -2,6 +2,7 @@ use "base.kaba"
 use "io/text.kaba"
 use "fs/fs.kaba"
 use "fs/access.kaba"
+use "dev/block.kaba"
 use "mem/heap.kaba"
 use "mem/paging.kaba"
 use "mem/shared.kaba"
@@ -92,6 +93,22 @@ class TaskInfo
 		return 0
 
 TaskInfo _task_info
+
+class MountInfo
+	int major, minor
+	cstring dir
+	void __assign__(MountInfo o)
+		pass
+	int get(int _index)
+		let m = &FileSystem.mounts[_index]
+		if !m.dev
+			return -1
+		major = m.dev.major
+		minor = m.dev.minor
+		m.dest.get_path(dir)
+		return 0
+
+MountInfo _mount_info
 
 	
 void int_syscall()
@@ -210,6 +227,16 @@ void int_syscall()
 			}
 		else if index == 0x2007 # map IRQ
 			r = irq.sys_map_irq(param1, caller, param2)
+		else if index == 0x2008 # mountinfo
+			r = _mount_info.get(param1)
+			if r == 0
+				caller.page_dir.memcpy2task(param2, &_mount_info, sizeof(_mount_info))
+		else if index == 0x2009 # blockinfo
+			r = -1
+			let d = BlockDevManager.get(param1, param2)
+			if d
+				caller.page_dir.memcpy2task(param3, d, sizeof(BlockDevice))
+				r = 0
 		else
 			r = -ENOSYS
 		#TextColor = 4

@@ -31,13 +31,22 @@ class BlockDevManager
 		read_partitions_from_disk(0)
 		show()
 	
-	static BlockDevice* add_dev()
+	static BlockDevice* add_dev(int major, int minor)
 		let p = &devs[num_devs]
+		p.major = major
+		p.minor = minor
 		num_devs ++
 		return p
+	
+	static BlockDevice* get(int major, int minor)
+		for d in devs
+			if d.major == major and d.minor == minor
+				return &d
+		return nil
+		
 
 	static void read_partitions_from_disk(int disk_no)
-		let p = add_dev()
+		let p = add_dev(0, 0)
 		p.block_size = 512
 		p.disk_no = disk_no
 		p.offset = 0
@@ -56,7 +65,7 @@ class BlockDevManager
 			int type = AtaController.buffer[450+n*16]
 			if (type == 0) or (*size == 0)
 				continue
-			p = add_dev()
+			p = add_dev(0, n+1)
 			p.block_size = 512
 			p.disk_no = disk_no
 			p.offset = *offset

@@ -333,10 +333,7 @@ class FileSystem
 		cstring dirname
 		dir.get_path(dirname)
 		prints(dirname)
-		MountPoint *mp = nil
-		for m in mounts
-			if !m.dev
-				mp = &m
+		let mp = add_mount_point()
 		if !mp
 			return -1
 		if strcmp(fs_name, "michifs") == 0
@@ -354,6 +351,11 @@ class FileSystem
 		dir.mount = mp
 		prints(" ok\n")
 		return 0
+	static MountPoint* add_mount_point()
+		for m in mounts
+			if !m.dev
+				return &m
+		return nil
 	
 	static void sync()
 		for m in mounts

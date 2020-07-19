@@ -1,0 +1,45 @@
+use "lib/std.kaba"
+
+
+void fill(out string s, int n)
+	while len(s) < n
+		s.add(' ')
+
+void show_mount(MountInfo m)
+	print("{{m.major}}:{{m.minor}}    {{cs2s(m.dir)}}\n")
+
+
+string fs_type(BlockDevice p)
+	if p.type == 0x83
+		return "ext2"
+	if p.type == 0x20
+		return "michifs"
+	if p.type == 0x0c
+		return "fat32"
+	if p.type == 0x0e
+		return "fat16"
+	if p.type == 0x07
+		return "ntfs"
+	if p.type == 0x0f
+		return "extended..."
+	return "???"
+
+void show_dev(BlockDevice d)
+	print("{{cs2s(d.name)}}    {{d.major}}:{{d.minor}}    {{d.size * d.block_size / 1024}} k    {{fs_type(d)}}\n")
+
+void main()
+	init_lib()
+	lib_print_endl = false
+	string[] arg
+	get_args(arg)
+	
+	for i in 0:16
+		MountInfo m
+		if mountinfo(i, m)
+			show_mount(m)
+	for i in 0:16
+		BlockDevice d
+		if blockinfo(0, i, d)
+			show_dev(d)
+	
+	exit(0)

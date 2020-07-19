@@ -1,51 +1,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use image
-
-const int MALLOC_OFFSET = 0x00b00000
-const int MALLOC_STOPPER = 8
-const int MALLOC_SMALL_SIZE = 8
-const int MALLOC_SMALL_NUM = 4096*16
-
-const int O_RDONLY = 1
-const int O_WRONLY = 2
-const int O_RDWR = 3
-const int O_APPEND = 16
-const int O_CREATE = 32
-const int O_NONBLOCK = 64
-const int O_TRUNC = 128
-const int EWOULDBLOCK = 128
-
-const int SEEK_SET = 1
-const int SEEK_CUR = 2
-const int SEEK_END = 3
-
-int stdin, stdout
-
-int lib_error
-bool __free_error__
-bool lib_mem_debug
-bool lib_print_endl
-
-int __temp_i__, __temp_i2__, __temp_i3__
-float __temp_f__
-void* __temp_p__, __temp_p2__
-
-int _p2i(void *p)
-	int* i = &p
-	return *i
-
-#class PointerWrapper
-#	void *p
-	
-void *_i2p(int i)
-#	PointerWrapper *p = &i
-#	return p.p
-	__temp_i__ = i
-	asm{
-		mov eax, __temp_i__
-		mov __temp_p__, eax
-	}
-	return __temp_p__
+use "base.kaba"
+use "syscalls.kaba"
 
 
 void _s2cs(string s, out cstring cs)
@@ -77,39 +33,6 @@ void sa2cs(string[] a, out cstring cs)
 	cs[n] = 0
 
 
-#--------------------------------------------------------------------------
-# system calls
-
-bool exit(int r)
-	__temp_i__ = r
-	asm{
-		mov eax, 0x00000001
-		mov ebx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-int brk(int size)
-	__temp_i__ = size
-	asm{
-		mov eax, 0x0000002d
-		mov ebx, __temp_i__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-	
-int fork()
-	asm{
-		mov eax, 0x00000002
-		int 0x80
-		mov __temp_i__, eax
-	}
-	if __temp_i__ == 0
-		stdout = open("/dev/tty", O_RDONLY)
-	return __temp_i__
-
 int open(string filename, int flags)
 	cstring tt
 	_s2cs(filename, tt)
@@ -136,59 +59,16 @@ int create(string filename)
 		mov __temp_i__, eax
 	}
 	return __temp_i__
-	
-bool close(int h)
-	__temp_i__ = h
-	asm{
-		mov eax, 0x00000006
-		mov ebx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
 
-int read(int h, void *buf, int size)
-	__temp_i__ = h
-	__temp_i2__ = size
-	__temp_p__ = buf
+int fork()
 	asm{
-		mov eax, 0x00000003
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
+		mov eax, 0x00000002
 		int 0x80
-		mov __temp_i3__, eax
+		mov __temp_i__, eax
 	}
-	return __temp_i3__
-	
-int write(int h, void *buf, int size)
-	__temp_i__ = h
-	__temp_i2__ = size
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x00000004
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-
-int seek(int h, int pos, int mode)
-	__temp_i__ = h
-	__temp_i2__ = pos
-	__temp_i3__ = mode
-	asm{
-		mov eax, 0x00000013
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_i3__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-
+	if __temp_i__ == 0
+		stdout = open("/dev/tty", O_RDONLY)
+	return __temp_i__
 
 bool mkdir(string filename)
 	cstring tt
@@ -214,53 +94,6 @@ bool rmdir(string filename)
 	}
 	return lib_error == 0
 
-bool getdents(int h, void *buf)#lib__DirEntry)
-	__temp_i__ = h
-	__temp_i2__ = 1
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x0000008d
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error > 0
-
-int dup(int h)
-	__temp_i__ = h
-	asm{
-		mov eax, 0x00000029
-		mov ebx, __temp_i__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-
-bool pipe(int[2] h)
-	__temp_p__ = &h
-	asm{
-		mov eax, 0x0000002a
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-int fcntl(int h, int op, int param)
-	__temp_i__ = h
-	__temp_i2__ = op
-	__temp_i3__ = param
-	asm{
-		mov eax, 0x00000033
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_i3__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
 
 bool mkfifo(string filename)
 	cstring tt
@@ -281,54 +114,6 @@ bool unlink(string filename)
 	asm{
 		mov eax, 0x0000000a
 		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-int getpid()
-	asm{
-		mov eax, 0x00000014
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-
-bool sigaction(int sig, void *f)
-	__temp_i__ = sig
-	__temp_p__ = f
-	asm{
-		mov eax, 0x00000043
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-int waitpid(int pid, void *status, bool block)
-	__temp_i__ = pid
-	__temp_p__ = status
-	__temp_i2__ = 0
-	if !block
-		__temp_i2__ = 1
-	asm{
-		mov eax, 0x00000007
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-	
-bool kill(int pid, int signal)
-	__temp_i__ = pid
-	__temp_i2__ = signal
-	asm{
-		mov eax, 0x00000025
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
 		int 0x80
 		mov lib_error, eax
 	}
@@ -376,188 +161,6 @@ int execute(string[] arg, int fd_in, int fd_out)
 	}
 	return lib_error
 
-int shmget(int key, int size, int flags)
-	__temp_i__ = key
-	__temp_i2__ = size
-	__temp_i3__ = flags
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x0000000b
-		mov ecx, __temp_i__
-		mov edx, __temp_i2__
-		mov esi, __temp_i3__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-
-void* shmat(int id, int flags)
-	void *p
-	__temp_i__ = id
-	__temp_p__ = &p
-	__temp_i2__ = flags
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x00000009
-		mov ecx, __temp_i__
-		mov edx, __temp_p__
-		mov esi, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	if lib_error < 0 and lib_error > - 1024
-		return nil
-	return p
-	
-bool shmdt(void* addr)
-	__temp_p__ = addr
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x0000000a
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-bool waitmsg()
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x000003e9 # 1001 = wait-msg
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-bool yield(int pid)
-	__temp_i__ = pid
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x000003ea # 1002 = yield
-		mov ecx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-bool sysinfo(void *buf)
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x00000074
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-bool taskinfo(int pid, void *buf)
-	__temp_i__ = pid
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x00002005
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-bool uname(void *buf)
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x0000007a
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-bool time(void *buf)
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x00000019
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-bool nanosleep(void *buf, void *buf2)
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x000000a2
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-bool sleep(int sec)
-	int[2] tv
-	tv[0] = sec
-	tv[1] = 0
-	return nanosleep(&tv, nil)
-
-bool usleep(int usec)
-	int[2] tv
-	tv[0] = usec / 1000000
-	tv[1] = (usec % 1000000) * 1000
-	return nanosleep(&tv, nil)
-
-bool sched_yield(int pid)
-	__temp_i__ = pid
-	asm{
-		mov eax, 0x0000009e
-		mov ebx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-void kprint(string s)
-	__temp_p__ = &s[0]
-	__temp_i__ = s.num
-	asm{
-		mov eax, 0x00002002
-		mov ebx, __temp_p__
-		mov ecx, __temp_i__
-		int 0x80
-	}
-	
-void kprinti(int i)
-	__temp_i__ = i
-	asm{
-		mov eax, 0x00002003
-		mov ebx, __temp_i__
-		int 0x80
-	}
-	
-bool mapirq(int irq, int signal)
-	__temp_i__ = irq
-	__temp_i2__ = signal
-	asm{
-		mov eax, 0x00002007
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-
-int sys_socket(int cmd, int p1, int p2)
-	__temp_i__ = cmd
-	__temp_i2__ = p1
-	__temp_i3__ = p2
-	asm{
-		mov eax, 0x00000066
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_i3__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error
 
 int socket(int type)
 	return sys_socket(1, type, 0)

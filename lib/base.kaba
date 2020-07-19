@@ -1,0 +1,46 @@
+
+const int MALLOC_OFFSET = 0x00b00000
+const int MALLOC_STOPPER = 8
+const int MALLOC_SMALL_SIZE = 8
+const int MALLOC_SMALL_NUM = 4096*16
+
+const int O_RDONLY = 1
+const int O_WRONLY = 2
+const int O_RDWR = 3
+const int O_APPEND = 16
+const int O_CREATE = 32
+const int O_NONBLOCK = 64
+const int O_TRUNC = 128
+const int EWOULDBLOCK = 128
+
+const int SEEK_SET = 1
+const int SEEK_CUR = 2
+const int SEEK_END = 3
+
+int stdin, stdout
+
+int lib_error
+bool __free_error__
+bool lib_mem_debug
+bool lib_print_endl
+
+int __temp_i__, __temp_i2__, __temp_i3__
+float __temp_f__
+void* __temp_p__, __temp_p2__
+
+int _p2i(void *p)
+	int* i = &p
+	return *i
+
+#class PointerWrapper
+#	void *p
+	
+void *_i2p(int i)
+#	PointerWrapper *p = &i
+#	return p.p
+	__temp_i__ = i
+	asm{
+		mov eax, __temp_i__
+		mov __temp_p__, eax
+	}
+	return __temp_p__
