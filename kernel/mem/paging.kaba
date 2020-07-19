@@ -48,7 +48,7 @@ class PageDirectory extends PageTable
 		while npages > 0
 			PageTable *pt
 			if e[dir_no] == 0
-				int pos = paging.alloc_page()
+				int pos = Paging.alloc_page()
 				pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
@@ -79,7 +79,7 @@ class PageDirectory extends PageTable
 		while npages > 0
 			PageTable *pt
 			if e[dir_no] == 0
-				int pos = paging.alloc_page()
+				int pos = Paging.alloc_page()
 				pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
@@ -90,7 +90,7 @@ class PageDirectory extends PageTable
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
-				int dest = paging.alloc_page()
+				int dest = Paging.alloc_page()
 				if dest == -1
 					unmap(start, size, true)
 					return false
@@ -115,10 +115,10 @@ class PageDirectory extends PageTable
 			for i in i0:i1
 				if pt.e[i] != 0
 					if dealloc
-						paging.free_page(pt.e[i] & 0xfffff000)
+						Paging.free_page(pt.e[i] & 0xfffff000)
 					pt.e[i] = 0
 			if pt.count_entries() == 0
-				paging.free_page(pt_pos)
+				Paging.free_page(pt_pos)
 			npages -= i1-i0
 			dir_no ++
 			page_no = 0
@@ -239,12 +239,12 @@ class PageDirectory extends PageTable
 			printh(pt, 64)
 			prints("...\n")
 
-class PageController
-	int[MAX_PAGE_MASKS] mask
-	int num_masks
-	int pages_allocated
-	int pages_usable
-	void init()
+class Paging
+	static int[MAX_PAGE_MASKS] mask
+	static int num_masks
+	static int pages_allocated
+	static int pages_usable
+	static void init()
 		prints("enable paging...")
 		num_masks = MemorySize / PAGE_SIZE / 32
 		MemorySize = num_masks * PAGE_SIZE * 32 # easier memory management...
@@ -279,7 +279,7 @@ class PageController
 		prints("  ok\n")
 		
 	
-	void mark_by_bios()
+	static void mark_by_bios()
 		for m,i in bios_mem_map
 			if m.type < 0
 				break
@@ -291,7 +291,7 @@ class PageController
 			alloc_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
 	# does not clear
-	int alloc_page()
+	static int alloc_page()
 		bool ok = true
 		for i in 0:num_masks
 			if mask[i] == 0xffffffff
@@ -305,7 +305,7 @@ class PageController
 					return pos
 		return -1
 	
-	void free_page(int pos)
+	static void free_page(int pos)
 		int page_no = pos / PAGE_SIZE
 		int mask_no = page_no / 32
 		if mask_no > num_masks or mask_no < 0
@@ -328,7 +328,7 @@ class PageController
 			printi(offset)
 			panic("invalid free page")
 			
-	int find_and_alloc_chunk(int size)
+	static int find_and_alloc_chunk(int size)
 		int num_pages_req = ceil_quot(size, PAGE_SIZE)
 		int num_masks_req = ceil_quot(num_pages_req, 32)
 		for i in 0:num_masks-num_masks_req
@@ -343,7 +343,7 @@ class PageController
 				return i * PAGE_SIZE * 32
 		return 0
 	
-	bool alloc_chunk(int pos, int size, bool test_free)
+	static bool alloc_chunk(int pos, int size, bool test_free)
 		if (pos & 0x00000fff) != 0
 			return false
 		if size == 0
@@ -392,7 +392,7 @@ class PageController
 			pages_allocated += npages
 		return true
 
-	bool free_chunk(int pos, int size)
+	static bool free_chunk(int pos, int size)
 		if (pos & 0x00000fff) != 0
 			return false
 		if size == 0
@@ -425,7 +425,7 @@ class PageController
 		pages_allocated -= npages
 		return true
 
-	int get_used()
+	static int get_used()
 		int n = 0
 		for i in 0:num_masks
 			if mask[i] == 0
@@ -439,7 +439,7 @@ class PageController
 						n ++
 		return n * PAGE_SIZE
 	
-	PageDirectory *create_page_directory()
+	static PageDirectory *create_page_directory()
 		int pos = alloc_page()
 		if pos == -1
 			panic("can not create page directory")
@@ -447,9 +447,6 @@ class PageController
 		PageDirectory *pd = _i2p(pos)
 		pd.clear()
 		return pd
-			
-
-PageController paging
 
 
 

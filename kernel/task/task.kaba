@@ -111,7 +111,7 @@ enum
 	WAITING_MODE_SOCKET_CONNECT
 
 class TaskSharedMemoryRef
-	SharedMemory *s
+	SharedMemory.Block *s
 	int dest # task space
 
 int __handler_p__
@@ -273,7 +273,7 @@ class Task
 			if page_dir
 				page_dir.unmap(0, KERNEL_MEM, false)
 				page_dir.unmap(mem_bottom, mem_size, true)
-				paging.free_page(_p2i(page_dir))
+				Paging.free_page(_p2i(page_dir))
 				page_dir = nil
 
 	void clean_up_deep()
@@ -579,11 +579,11 @@ class Task
 	
 	int sys_ipc(int cmd, int p1, int p2, int p3)
 		if cmd == SHMGET
-			return SharedMem.shm_get(p1, p2, p3, pid)
+			return SharedMemory.shm_get(p1, p2, p3, pid)
 		else if cmd == SHMAT
 			for r in shmem
 				if !r.s
-					r.s = SharedMem.get(p1)
+					r.s = SharedMemory.get(p1)
 					if !r.s
 						return -ENOENT
 					r.dest = page_dir.find_free_space(0xe0000000, r.s.size) #0xa0000000
@@ -799,7 +799,7 @@ class TaskManager
 		t.stack = _i2p(TASK_STACK_POS)
 		t.mem_bottom = KERNEL_MEM
 		t.mem_size = INITIAL_TASK_MEM
-		t.page_dir = paging.create_page_directory()
+		t.page_dir = Paging.create_page_directory()
 		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
 		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
 			panic("incomplete page dir") # ...

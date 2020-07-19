@@ -80,9 +80,9 @@ void main()
 #	printh(&__temp_i3__, 4)
 #	prints("\n")
 	
-	paging.init()
+	Paging.init()
 	
-	SharedMem.init()
+	SharedMemory.init()
 	
 	ata.init()
 	ReadPartitions(0)

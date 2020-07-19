@@ -30,8 +30,8 @@ class SysInfo
 			l = 0
 		mem_unit = 1024 #PAGE_SIZE
 		totalram = MemorySize / mem_unit
-		freeram = (MemorySize - paging.get_used()) / mem_unit
-		sharedram = SharedMem.get_used() / mem_unit
+		freeram = (MemorySize - Paging.get_used()) / mem_unit
+		sharedram = SharedMemory.get_used() / mem_unit
 		bufferram = 0
 		totalswap = 0
 		freeswap = 0
