@@ -33,7 +33,7 @@ class KSocket
 	
 	int _accept_wait_port
 	
-	int write(PageDirectory *page_dir, int addr, int size)
+	int write(PageDirectory page_dir, int addr, int size)
 		if peer_port < 0
 			return -ENOTCONN
 		KSocket *s = get_socket_by_port(peer_port)
@@ -45,7 +45,7 @@ class KSocket
 		s.buffer_used += size
 		return size
 	
-	int read(PageDirectory *page_dir, int addr, int _size)
+	int read(PageDirectory page_dir, int addr, int _size)
 		int size = _size
 		if buffer_used == 0
 			if peer_port < 0
@@ -143,11 +143,11 @@ KSocket[MAX_SOCKETS] Sockets
 
 
 
-KSocket* create_socket(FileEntry *e, int type)
+KSocket* create_socket(FileEntry e, int type)
 	for s in Sockets
 		if !s.used
 			s.used = true
-			s.e = e
+			s.e = &e
 			s.type = type
 			s.state = SOCK_STATE_NONE
 			s.blocking = true

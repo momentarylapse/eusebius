@@ -95,7 +95,7 @@ void int_handler(int i)
 		# task?
 		Task* e = error.tasks[i]
 		int prev_pid = e.get_prev_pid()
-		Task *prev = &tasks[prev_pid]
+		Task *prev = &TaskManager.tasks[prev_pid]
 		
 		# handle error
 		if prev.kernel_mode
@@ -188,7 +188,7 @@ class ErrorController
 		handler[15] = int_15
 		
 		for h,i in handler
-			tasks[i] = AddTaskKernel("irq-error", h, ERROR_STACK_SIZE, kernel_task)
+			tasks[i] = TaskManager.add_task_kernel("irq-error", h, ERROR_STACK_SIZE, kernel_task)
 			irq.set_task(i, tasks[i])
 		
 		

@@ -172,8 +172,8 @@ class Task
 		sleep_and_wait = false
 			
 		pid = _pid
-		puid = NextPuidToAssign
-		NextPuidToAssign ++
+		puid = TaskManager.next_puid_to_assign
+		TaskManager.next_puid_to_assign ++
 
 		strcpy(name, _name)
 		desc = NUM_PRE_GDT_ENTRIES + pid
@@ -283,7 +283,7 @@ class Task
 		
 	
 	void send_death_message()
-		for t in tasks
+		for t in TaskManager.tasks
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
 					t.tss.eax = 0# # return waitpid()
@@ -472,7 +472,7 @@ class Task
 		cstring filename
 		of.entry.get_path(filename)
 		int addr = TASK_IMAGE_POS # task space...
-		Task* t = AddTaskUser(filename, _i2p(addr), &self)
+		Task* t = TaskManager.add_task_user(filename, _i2p(addr), &self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
@@ -498,7 +498,7 @@ class Task
 		die(r)
 
 	int sys_waitpid(int _pid, int status_addr, int options)
-		Task* t = get_task(_pid)
+		let t = TaskManager.get_task(_pid)
 		if !t
 			return -ECHILD
 		if t.status == TASK_STATUS_ZOMBIE
@@ -512,7 +512,7 @@ class Task
 		return 0
 
 	int sys_kill(int _pid, int signal)
-		Task* t = get_task(_pid)
+		let t = TaskManager.get_task(_pid)
 		if !t
 			return -ESRCH
 		return t.handle_signal(signal)
@@ -546,7 +546,7 @@ class Task
 		return -EINVAL
 	
 	int sys_fork()
-		let t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), &self)
+		let t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
 		if !t
 			return -ENOMEM
 		
@@ -607,7 +607,7 @@ class Task
 			set_wait(WAITING_MODE_MESSAGE, 0, 0, 0)
 			return 0
 		else if cmd == 1002 # yield / wake-up
-			let t = get_task(p1)
+			let t = TaskManager.get_task(p1)
 			if t
 				t.activate()
 			set_wait(WAITING_MODE_TIME, 0, 0, 0)
@@ -730,20 +730,6 @@ class Task
 				tss.eax = 0 # return 0
 				activate()
 
-Task *get_task(int pid)
-	if pid < 0 or pid >= MAX_TASKS
-		return nil
-	let t = &tasks[pid]
-	if t.status == TASK_STATUS_UNUSED
-		return nil
-	return t
-
-Task[MAX_TASKS] tasks
-Task* kernel_task
-Task* idle_task
-int NextPidToAssign
-int NextPuidToAssign
-int RunningPid
 
 class GlobalDescriptorData
 	int a, b
@@ -768,145 +754,163 @@ class GlobalDescriptorData
 		else
 			b = b & 0xfffffdff
 
-GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] GlobalDescriptorTable
 
-int get_next_pid()
-	for i in NextPidToAssign:MAX_TASKS
-		if tasks[i].status == TASK_STATUS_UNUSED
-			NextPidToAssign = i + 1
-			return i
-	for i in 0:NextPidToAssign
-		if tasks[i].status == TASK_STATUS_UNUSED
-			NextPidToAssign = i + 1
-			return i
-	return -1
+Task* kernel_task
 
-Task* AddTaskUser(cstring name, void *func, Task *parent)
-	int pid = get_next_pid()
-	if pid < 0
-		return nil
-	let t = &tasks[pid]
+
+class TaskManager
+	static Task *get_task(int pid)
+		if pid < 0 or pid >= MAX_TASKS
+			return nil
+		let t = &tasks[pid]
+		if t.status == TASK_STATUS_UNUSED
+			return nil
+		return t
+
+	static Task[MAX_TASKS] tasks
+	static Task* idle_task
+	static int next_pid_to_assign
+	static int next_puid_to_assign
+
+
+	static GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] gdt
+
+	static int get_next_pid()
+		for i in next_pid_to_assign:MAX_TASKS
+			if tasks[i].status == TASK_STATUS_UNUSED
+				next_pid_to_assign = i + 1
+				return i
+		for i in 0:next_pid_to_assign
+			if tasks[i].status == TASK_STATUS_UNUSED
+				next_pid_to_assign = i + 1
+				return i
+		return -1
+
+	static Task* add_task_user(cstring name, void *func, Task *parent)
+		int pid = get_next_pid()
+		if pid < 0
+			return nil
+		let t = &tasks[pid]
 	
-	t.init(pid, name, parent)
-	t.kernel_mode = false
+		t.init(pid, name, parent)
+		t.kernel_mode = false
 	
-	t.stack_size = TASK_STACK_SIZE
-	t.stack = _i2p(TASK_STACK_POS)
-	t.mem_bottom = KERNEL_MEM
-	t.mem_size = INITIAL_TASK_MEM
-	t.page_dir = paging.create_page_directory()
-	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
-	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-		panic("incomplete page dir") # ...
-	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
-	GlobalDescriptorTable[t.desc].set_task(t)
+		t.stack_size = TASK_STACK_SIZE
+		t.stack = _i2p(TASK_STACK_POS)
+		t.mem_bottom = KERNEL_MEM
+		t.mem_size = INITIAL_TASK_MEM
+		t.page_dir = paging.create_page_directory()
+		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
+		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+			panic("incomplete page dir") # ...
+		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+		gdt[t.desc].set_task(t)
 
-	return t
+		return t
 
-Task* AddTaskKernel(cstring name, void *func, int stack_size, Task* parent)
-	int pid = get_next_pid()
-	if pid < 0
-		return nil
-	let t = &tasks[pid]
+	static Task* add_task_kernel(cstring name, void *func, int stack_size, Task* parent)
+		int pid = get_next_pid()
+		if pid < 0
+			return nil
+		let t = &tasks[pid]
 
-	t.init(pid, name, parent)
-	t.kernel_mode = true
+		t.init(pid, name, parent)
+		t.kernel_mode = true
 	
-	t.stack_size = stack_size
-	t.stack = malloc(stack_size)
-	t.page_dir = KernelPageDir
-	t.mem_bottom = 0
-	t.mem_size = 0
-	t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
+		t.stack_size = stack_size
+		t.stack = malloc(stack_size)
+		t.page_dir = KernelPageDir
+		t.mem_bottom = 0
+		t.mem_size = 0
+		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
 	
-	GlobalDescriptorTable[t.desc].set_task(t)
+		gdt[t.desc].set_task(t)
 
-	return t
+		return t
 
-void idle_func()
-	while true
-		#prints("<idle>")
+	static void idle_func()
+		while true
+			#prints("<idle>")
+			asm {
+				hlt
+			}
+
+	static void init()
+		prints("init tasks...")
+	
+		# null descriptor
+		for g in gdt
+			g.a = 0x00000000
+			g.b = 0x00000000
+		# kernel code
+		gdt[1].set_data(0, 0xffffffff, true, 0)
+		# kernel data
+		gdt[2].set_data(0, 0xffffffff, false, 0)
+		# user code
+		gdt[3].set_data(0, 0xffffffff, true, 0)#3)
+		# user data
+		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
+
+		for t in tasks
+			t.status = TASK_STATUS_UNUSED
+			for h in t.handles
+				h = nil
+			for sm in t.shmem
+				sm.s = nil
+
+		next_pid_to_assign = 0
+		next_puid_to_assign = 0
+		#UserMemMask = 0
+
+		kernel_task = add_task_kernel("kernel", nil, KERNEL_STACK_SIZE, nil)
+		idle_task = add_task_kernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
+	
+		# load GDT
+		__temp_i__ = sizeof(gdt) - 1
+		__temp_p__ = &gdt
 		asm{
-			hlt
+			jmp _after_gdt_data
+			_gdtr:
+			dw 0x0000
+			_gdtr_base:
+			dd 0x00000000
+			_after_gdt_data:
+			mov eax, __temp_i__
+			mov [_gdtr], eax
+			mov eax, __temp_p__
+			mov [_gdtr_base], eax
+			lgdt [_gdtr]
 		}
 
-void InitTasks()
-	prints("init tasks...")
+		#prints("\n  setze Kernel-Task-Register")
+		__temp_i__ = kernel_task.desc * 8
+		asm{
+			mov eax, __temp_i__ # Descriptor[n]
+			ltr ax
+		}
+		# markiert das aktuelle TSS als "busy"!
 	
-	# null descriptor
-	for g in GlobalDescriptorTable
-		g.a = 0x00000000
-		g.b = 0x00000000
-	# kernel code
-	GlobalDescriptorTable[1].set_data(0, 0xffffffff, true, 0)
-	# kernel data
-	GlobalDescriptorTable[2].set_data(0, 0xffffffff, false, 0)
-	# user code
-	GlobalDescriptorTable[3].set_data(0, 0xffffffff, true, 0)#3)
-	# user data
-	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)#3)
-
-	for t in tasks
-		t.status = TASK_STATUS_UNUSED
-		for h in t.handles
-			h = nil
-		for sm in t.shmem
-			sm.s = nil
-
-	NextPidToAssign = 0
-	NextPuidToAssign = 0
-	#UserMemMask = 0
-	RunningPid = 0
-
-	kernel_task = AddTaskKernel("kernel", nil, KERNEL_STACK_SIZE, nil)
-	idle_task = AddTaskKernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
+		# enable sse
+		asm{
 	
-	# GDT laden
-	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
-	__temp_p__ = &GlobalDescriptorTable
-	asm{
-		jmp _after_gdt_data
-		_gdtr:
-		dw 0x0000
-		_gdtr_base:
-		dd 0x00000000
-		_after_gdt_data:
-		mov eax, __temp_i__
-		mov [_gdtr], eax
-		mov eax, __temp_p__
-		mov [_gdtr_base], eax
-		lgdt [_gdtr]
-	}
-
-	#prints("\n  setze Kernel-Task-Register")
-	__temp_i__ = kernel_task.desc * 8
-	asm{
-		mov eax, __temp_i__ # Descriptor[n]
-		ltr ax
-	}
-	# markiert das aktuelle TSS als "busy"!
-	
-	# enable sse
-	asm{
-	
-		mov eax, cr0
-		and eax, 0xfffffffb # clear CR0.EM (don't emulate via IRQ)
-		or eax, 0x00000002 # set CR0.MP (inform about task-switches)
-		mov cr0, eax
-		mov __temp_i__, eax
+			mov eax, cr0
+			and eax, 0xfffffffb # clear CR0.EM (don't emulate via IRQ)
+			or eax, 0x00000002 # set CR0.MP (inform about task-switches)
+			mov cr0, eax
+			mov __temp_i__, eax
 		
-		# set CR4.OSFXSR (enable sse)
-		mov eax, cr4
-		#mov __temp_i__, eax
-		or eax, 0x00000200
-		mov cr4, eax
+			# set CR4.OSFXSR (enable sse)
+			mov eax, cr4
+			#mov __temp_i__, eax
+			or eax, 0x00000200
+			mov cr4, eax
 	
-		# flush cpu prefetch
-		jmp _flush_sse
-		_flush_sse:
-	}
+			# flush cpu prefetch
+			jmp _flush_sse
+			_flush_sse:
+		}
 
-	prints("  ok\n")
+		prints("  ok\n")
 
 #int sys_getpid()
 #	asm{

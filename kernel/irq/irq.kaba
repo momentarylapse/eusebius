@@ -100,7 +100,7 @@ class InterruptController
 			m.utask = nil
 		
 	
-		ignore_task = AddTaskKernel("irq-ignore", int_ignore, 128, kernel_task)
+		ignore_task = TaskManager.add_task_kernel("irq-ignore", int_ignore, 128, kernel_task)
 		irq.set_task(32, ignore_task) # IRQ 0
 
 		# move IRQs to higher interrupts
@@ -138,7 +138,7 @@ class InterruptController
 	#		sti
 	#	}
 	
-	int sys_map_irq(int hw_irq, Task *t, int signal)
+	int sys_map_irq(int hw_irq, Task t, int signal)
 		if hw_irq < 0 or hw_irq >= 16
 			return -EINVAL
 		if signal < 0 or signal >= 32
@@ -147,13 +147,13 @@ class InterruptController
 		if m.pid >= 0
 			return -EEXIST
 		if !m.ktask
-			m.ktask = AddTaskKernel("irq-task", int_task_irq, 4096, kernel_task)
+			m.ktask = TaskManager.add_task_kernel("irq-task", int_task_irq, 4096, kernel_task)
 			set_task(hw_irq + HARDWARE_IRQ_SHIFT, m.ktask)
 			m.ktask.tss.esi = hw_irq
 		m.pid = t.pid
 		m.puid = t.puid
 		m.signal = signal
-		m.utask = t
+		m.utask = &t
 		return 0
 		
 

@@ -16,6 +16,7 @@ class Scheduler
 	static Task* scheduler_task
 
 	static TimeValue next_perf_calc
+	static int running_pid
 
 	static void int_timer()
 		while true
@@ -29,7 +30,7 @@ class Scheduler
 			#prints(" ")
 		
 			# pick next task
-			int pid_next = get_next_task(RunningPid)
+			int pid_next = get_next_task(running_pid)
 			reconnect_tasks(pid_next, scheduler_task)
 
 			#prints(")")
@@ -43,10 +44,10 @@ class Scheduler
 			}
 
 	static void start()
-		RunningPid = 0
+		running_pid = 0
 		prints("starting scheduler\n")
 	
-		scheduler_task = AddTaskKernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, kernel_task)
+		scheduler_task = TaskManager.add_task_kernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, kernel_task)
 	
 		InitTimerInterrupt(scheduler_task, TASK_SWITCH_DT)
 		next_perf_calc = kernel_timer.tv
@@ -58,15 +59,15 @@ class Scheduler
 	# Scheduler
 	static int get_next_task(int pid)
 		for i in pid + 1:MAX_TASKS
-			if tasks[i].status == TASK_STATUS_RUNNING
+			if TaskManager.tasks[i].status == TASK_STATUS_RUNNING
 				return i
 		for i in 0:pid+1
-			if tasks[i].status == TASK_STATUS_RUNNING
+			if TaskManager.tasks[i].status == TASK_STATUS_RUNNING
 				return i
-		return idle_task.pid
+		return TaskManager.idle_task.pid
 
 	static void process_waiting_tasks()
-		for t in tasks
+		for t in TaskManager.tasks
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TIME
 					TimeValue *rem = &t.waiting_param_i1
@@ -80,20 +81,20 @@ class Scheduler
 
 	static void reconnect_tasks(int pid_next, out Task irq_task)
 		#int pid_cur = irq_task.get_prev_task()
-		GlobalDescriptorTable[tasks[RunningPid].desc].set_busy(false)
-		GlobalDescriptorTable[tasks[pid_next].desc].set_busy(true)
+		TaskManager.gdt[TaskManager.tasks[running_pid].desc].set_busy(false)
+		TaskManager.gdt[TaskManager.tasks[pid_next].desc].set_busy(true)
 		irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
-		RunningPid = pid_next
+		running_pid = pid_next
 		#prints("<rec ")
 	#	printi pid_next
 	#	prints(">")
 
 	static void update_times()
-		tasks[RunningPid].time_all.inc_nanosec(kernel_timer.dt_nanosec)
-		tasks[RunningPid].time_temp.inc_nanosec(kernel_timer.dt_nanosec)
+		TaskManager.tasks[running_pid].time_all.inc_nanosec(kernel_timer.dt_nanosec)
+		TaskManager.tasks[running_pid].time_temp.inc_nanosec(kernel_timer.dt_nanosec)
 	
 		if !kernel_timer.tv.is_before(next_perf_calc)
 			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
-			for t in tasks
+			for t in TaskManager.tasks
 				t.load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
 				t.time_temp.clear()

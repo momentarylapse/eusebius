@@ -291,16 +291,16 @@ class FileSystemData
 			p.mount.write_inode(p)
 			p.mount.sync()
 	
-	FileEntry *get(cstring path, out FileEntry *cur_dir)
+	FileEntry *get(cstring path, out FileEntry cur_dir)
 		int ppos = 0
 		if path[0] == '/'
 			ppos = 1
 			cur_dir = root
 			if path[1] == 0
 				return root
-		else if !cur_dir
+		else if !&cur_dir
 			return nil
-		FileEntry *e = cur_dir
+		FileEntry *e = &cur_dir
 		cstring sub
 		bool has_more = true
 		while has_more

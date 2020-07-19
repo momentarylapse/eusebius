@@ -33,7 +33,7 @@ void show_pvl()
 	printi(pvl)
 	prints("]")
 
-void LoadKalib()
+void load_kalib()
 	prints("loading kalib... ")
 	int h = kernel_task.sys_open(_p2i(&"/lib/kalib"), O_RDONLY)
 	if h < 0
@@ -98,7 +98,7 @@ void main()
 	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
 	FileSystem.mount(Partition[1], boot, "michifs")
 	
-	InitTasks()
+	TaskManager.init()
 	
 	irq.init()
 	error.init()
@@ -106,7 +106,7 @@ void main()
 	
 	InitDrivers()
 	
-	LoadKalib()
+	load_kalib()
 	
 	int stdin = kernel_task.sys_open(_p2i(&"/dev/tty"), O_RDONLY)
 	int stdout = kernel_task.sys_open(_p2i(&"/dev/tty"), O_WRONLY)

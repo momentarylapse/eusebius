@@ -36,7 +36,7 @@ class SysInfo
 		totalswap = 0
 		freeswap = 0
 		procs = 0
-		for t in tasks
+		for t in TaskManager.tasks
 			if t.status != TASK_STATUS_UNUSED
 				procs ++
 		totalhigh = 0
@@ -74,7 +74,7 @@ class TaskInfo
 	void __assign__(TaskInfo o)
 		pass
 	int get(int _pid)
-		Task* t = get_task(_pid)
+		let t = TaskManager.get_task(_pid)
 		if !t
 			return -1
 		strcpy(name, t.name)
@@ -100,7 +100,7 @@ void int_syscall()
 		int r = 0
 		
 		#int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		Task* caller = &tasks[RunningPid]
+		let caller = &TaskManager.tasks[Scheduler.running_pid]
 		#printi(pid)
 		int index = caller.tss.eax
 		int param1 = caller.tss.ebx
@@ -139,7 +139,7 @@ void int_syscall()
 		else if index == 19 # seek
 			r = caller.sys_seek(param1, param2, param3)
 		else if index == 20 # getpid
-			r = RunningPid
+			r = Scheduler.running_pid
 		else if index == 25 # stime
 			kernel_timer.update()
 			r = 0
@@ -176,7 +176,7 @@ void int_syscall()
 		else if index == 141 # getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 158 # sched_yield
-			int pid_next = Scheduler.get_next_task(RunningPid)
+			int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
 			Scheduler.reconnect_tasks(pid_next, sys_call_task)
 		else if index == 162 # nanosleep
 			caller.sys_nanosleep(param1, param2)
@@ -225,7 +225,7 @@ void int_syscall()
 		# task switch?
 		if caller.status != TASK_STATUS_RUNNING
 			#prints("S")
-			int pid_next = Scheduler.get_next_task(RunningPid)
+			int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
 			Scheduler.reconnect_tasks(pid_next, sys_call_task)
 			#printi(pid_next)
 
@@ -242,5 +242,5 @@ void int_syscall()
 Task* sys_call_task
 
 void InitSysCall()
-	sys_call_task = AddTaskKernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, kernel_task)
+	sys_call_task = TaskManager.add_task_kernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, kernel_task)
 	irq.set_task(0x80, sys_call_task)

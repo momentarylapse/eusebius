@@ -42,7 +42,7 @@ class OpenFileData
 		if socket
 			socket.blocking = blocking
 
-	int read(PageDirectory *page_dir, int _addr, int _size)
+	int read(PageDirectory page_dir, int _addr, int _size)
 		int r = 0
 		int size = _size
 		int addr = _addr
@@ -51,7 +51,7 @@ class OpenFileData
 			return -3
 		
 		if entry.type == FILE_TYPE_CHAR
-			return entry.op.read(entry, page_dir, addr, size)
+			return entry.op.read(entry, &page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.read(page_dir, addr, size)
 		else if entry.type == FILE_TYPE_SOCKET
@@ -94,7 +94,7 @@ class OpenFileData
 		entry.shrink_block_list(ceil_quot(entry.size, entry.mount.block_size))
 		inode_dirty = true
 
-	int write(PageDirectory *page_dir, int _addr, int _size)
+	int write(PageDirectory page_dir, int _addr, int _size)
 		int r=0
 		int addr = _addr
 		int size = _size
@@ -106,7 +106,7 @@ class OpenFileData
 			return -2
 		
 		if entry.type == FILE_TYPE_CHAR
-			return entry.op.write(entry, page_dir, addr, size)
+			return entry.op.write(entry, &page_dir, addr, size)
 		else if entry.type == FILE_TYPE_PIPE
 			return pipe.write(page_dir, addr, size)
 		else if entry.type == FILE_TYPE_SOCKET
@@ -150,7 +150,7 @@ class OpenFileData
 		
 		return r
 
-	int getdents(PageDirectory *page_dir, int addr, int num)
+	int getdents(PageDirectory page_dir, int addr, int num)
 		if !used
 			return -EBADF
 
@@ -249,12 +249,12 @@ OpenFileData *create_handle(int flags)
 
 
 
-OpenFileData *kernel_open_entry(FileEntry *e, int flags)
+OpenFileData *kernel_open_entry(FileEntry e, int flags)
 	bool truncating = (flags & O_TRUNC) > 0
 	OpenFileData *of = create_handle(flags)
 	if !of
 		return nil
-	of.entry = e
+	of.entry = &e
 	of.offset = 0
 	if of.entry.type == FILE_TYPE_FILE
 		of.buffer = malloc(of.entry.mount.block_size)
@@ -288,7 +288,7 @@ OpenFileData *kernel_open_entry(FileEntry *e, int flags)
 		of.entry.op.open(of.entry)
 	return of
 
-OpenFileData *kernel_open(cstring filename, int flags, out FileEntry *cur_dir)
+OpenFileData *kernel_open(cstring filename, int flags, out FileEntry cur_dir)
 	bool creating = (flags & O_CREATE) > 0
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e and creating
@@ -301,7 +301,7 @@ OpenFileData *kernel_open(cstring filename, int flags, out FileEntry *cur_dir)
 		return nil
 	return kernel_open_entry(e, flags)
 
-int kernel_mkdir(cstring filename, out FileEntry *cur_dir)
+int kernel_mkdir(cstring filename, out FileEntry cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
 	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
@@ -313,7 +313,7 @@ int kernel_mkdir(cstring filename, out FileEntry *cur_dir)
 	cur_dir.mount.sync()
 	return 0
 
-int kernel_mknod(cstring filename, int flags, out FileEntry *cur_dir)
+int kernel_mknod(cstring filename, int flags, out FileEntry cur_dir)
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
 	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
@@ -323,7 +323,7 @@ int kernel_mknod(cstring filename, int flags, out FileEntry *cur_dir)
 		return -3
 	return 0
 
-int kernel_unlink(cstring filename, out FileEntry *cur_dir)
+int kernel_unlink(cstring filename, out FileEntry cur_dir)
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
@@ -332,7 +332,7 @@ int kernel_unlink(cstring filename, out FileEntry *cur_dir)
 	return FileSystem.del(e)
 	
 
-int kernel_rmdir(cstring filename, out FileEntry *cur_dir)
+int kernel_rmdir(cstring filename, out FileEntry cur_dir)
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
