@@ -114,29 +114,8 @@ class TaskSharedMemoryRef
 	SharedMemory.Block *s
 	int dest # task space
 
-int __handler_p__
 
-void TaskSignalHandler()#void *p)
-	asm{
-		#mov __handler_p__, eax
-	}
-	#__temp_p__ = p
-	#prints("-----signal-handler-----\n")
-	#printh(&__handler_p__, 4)
-	#__temp_p__ = p
-	asm{
-		mov eax, __handler_p__
-		call eax
-	}
-	#prints("[fertig...return]\n")
-	asm{	
-		# return from handler
-		mov eax, 0x00002006
-		int 0x80
-	}
-	while true
-		nil
-	
+int __handler_p__	
 
 class Task
 	TaskStateSegment tss
@@ -332,7 +311,7 @@ class Task
 			__handler_p__ = tss.eax
 			tss.esp = _i2p(_p2i(tss.esp) + 1024)
 			tss.ebp = tss.esp
-			tss.eip = TaskSignalHandler
+			tss.eip = TaskManager.task_signal_handler
 		else
 			# default actions
 			if signal == SIGSTOP
@@ -837,6 +816,28 @@ class TaskManager
 			asm {
 				hlt
 			}
+
+
+	static void task_signal_handler()#void *p)
+		asm {
+			#mov __handler_p__, eax
+		}
+		#__temp_p__ = p
+		#prints("-----signal-handler-----\n")
+		#printh(&__handler_p__, 4)
+		#__temp_p__ = p
+		asm {
+			mov eax, __handler_p__
+			call eax
+		}
+		#prints("[fertig...return]\n")
+		asm {
+			# return from handler
+			mov eax, 0x00002006
+			int 0x80
+		}
+		while true
+			nil
 
 	static void init()
 		prints("init tasks...")

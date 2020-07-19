@@ -10,7 +10,7 @@ use "../task/task.kaba"
 
 
 #--------------------------------------------------------------
-# Gerätedateien
+# device files
 
 FileOperationsZero dev_zero_ops
 class FileOperationsZero extends FileOperations
@@ -30,12 +30,12 @@ class FileOperationsNull extends FileOperations
 		return size
 
 FileOperationsRand dev_rand_ops
-int dev_rand_state
 class FileOperationsRand extends FileOperations
+	int state
 	override int read(FileEntry f, PageDirectory *page_dir, int addr, int size)
 		for i in 0:size
-			dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
-			page_dir.memcpy2task(addr + i, &dev_rand_state, 1)
+			state = (state * 23434 + 82374) % 8623
+			page_dir.memcpy2task(addr + i, &state, 1)
 		return size
 
 
@@ -76,7 +76,7 @@ class FileOperationsMouse extends FileOperations
 			return -EWOULDBLOCK
 		if size < 16
 			return 0
-		mouse_temp_no = 0 # CHEAP BUG FIX...
+		StdCharDevs.mouse_temp_no = 0 # CHEAP BUG FIX...
 		size = 16
 		if size > dev_mouse_num
 			size = dev_mouse_num
@@ -103,462 +103,465 @@ class FileOperationsTTY extends FileOperations
 		for i in 0:size
 			int offset
 			cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
-			prints_low(buf, 1)
+			TextMode.prints_low(buf, 1)
 		return size
 
-void InitDrivers()
-	prints("init drivers... ")
-	dev_key_escaped = false
-	dev_key_shift = false
-	dev_key_control = false
-	dev_key_altgr = false
-	dev_tty_key_num = 0
-	dev_key_reading = 0
-	
-	#FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
-	FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
-	
-	FileEntry *dev_zero = dev.create_child("zero", FILE_TYPE_CHAR, nil)
-	dev_zero_ops.__init__()
-	dev_zero.op = &dev_zero_ops
-	
-	FileEntry *dev_null = dev.create_child("null", FILE_TYPE_CHAR, nil)
-	dev_null_ops.__init__()
-	dev_null.op = &dev_null_ops
-	
-	dev_rand_state = 13
-	
-	FileEntry *dev_rand = dev.create_child("random", FILE_TYPE_CHAR, nil)
-	dev_rand_ops.__init__()
-	dev_rand.op = &dev_rand_ops
-	
-	dev_key_num = 0
-	
-	FileEntry *dev_key = dev.create_child("keyboard", FILE_TYPE_CHAR, nil)
-	dev_key_ops.__init__()
-	dev_key.op = &dev_key_ops
-	
-	FileEntry *dev_tty = dev.create_child("tty", FILE_TYPE_CHAR, nil)
-	dev_tty_ops.__init__()
-	dev_tty.op = &dev_tty_ops
-	
-	mouse_temp_no = 0
-	dev_mouse_num = 0
-	
-	FileEntry *dev_mouse = dev.create_child("mouse", FILE_TYPE_CHAR, nil)
-	dev_mouse_ops.__init__()
-	dev_mouse.op = &dev_mouse_ops
-	
-	let key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
-	let mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
- 	
-	irq.set_task(33, key_task) # IRQ 1
-	irq.set_task(44, mouse_task) # IRQ 12
 
+class StdCharDevs
 
-	# Enable the auxiliary mouse device
-	mouse_wait_signal()
-	outportb(0x64, 0xa8)
-  
-	# Enable the interrupts
-	mouse_wait_signal()
-	outportb(0x64, 0x20)
-	mouse_wait_data()
-	int _status = (inportb(0x60) | 2)
-	mouse_wait_signal()
-	outportb(0x64, 0x60)
-	mouse_wait_signal()
-	outportb(0x60, _status)
-  
-	# Reset
-	mouse_write(0xff)
-	mouse_read() # acknowledge
-  
-	# Set Defaults
-	mouse_write(0xf6)
-	mouse_read() # acknowledge
-  
-	# Enable Packet Streaming
-	mouse_write(0xf4)
-	mouse_read() # acknowledge
-	
-	prints("ok\n")
-
-
-void mouse_wait_data()
-	for i in 0:100000
-		if ((inportb(0x64) & 1) == 1)
-			return
-
-void mouse_wait_signal()
-	for i in 0:100000
-		if ((inportb(0x64) & 2) == 0)
-			return
-
-
-void mouse_write(int data)
-	mouse_wait_signal()
-	outportb(0x64, 0xd4)
-	mouse_wait_signal()
-	outportb(0x60, data)
-
-int mouse_read()
-	mouse_wait_data()
-	return inportb(0x60)
-
-
-int getchar(int k)
-	if dev_key_control
-		if k == 0x2e # 'C'
-			return 0x03
-		if k == 0x20 # 'D'
-			return 0x04
-		if k == 0x15 # 'Z'
-			return 0x1a
-		return -1
-	if k == 0x1c
-		return 0x0a # '\n'
-	if k == 0x39
-		return 0x20 # ' '
-	if k == 0x0e
-		return 0x7f # BACKSPACE
-	if k == 0xe048
-		return 0x1b5b41 # ^[A up
-	if k == 0xe050
-		return 0x1b5b42 # ^[B down
-	if k == 0xe04b
-		return 0x1b5b43 # ^[C left
-	if k == 0xe04d
-		return 0x1b5b44 # ^[D right
-	if dev_key_altgr
-		if k == 0x1b
-			return 0x7e # '~'
-		if k == 0x56
-			return 0x7c # '|'
-		if k == 0x08
-			return 0x7b # '{'
-		if k == 0x09
-			return 0x5b # '['
-		if k == 0x0a
-			return 0x5d # ']'
-		if k == 0x0b
-			return 0x7d # '}'
-		if k == 0x10
-			return 0x40 # '@'
-		if k == 0x0c
-			return 0x5c # '\'
-	else if dev_key_shift
-		if k == 0x0b
-			return 0x3d # '='
-		if k == 0x02
-			return 0x21 # '!'
-		if k == 0x03
-			return 0x22 # '"'
-		#if k == 0x04
-		#	return 0x00 # '§'
-		if k == 0x05
-			return 0x24 # '$'
-		if k == 0x06
-			return 0x25 # '%'
-		if k == 0x07
-			return 0x26 # '&'
-		if k == 0x08
-			return 0x2f # '/'
-		if k == 0x09
-			return 0x28 # '('
-		if k == 0x0a
-			return 0x29 # ')'
-		if k == 0x35
-			return 0x5f # '_'
-		if k == 0x34
-			return 0x3a # ':'
-		if k == 0x33
-			return 0x3b # ';'
-		if k == 0x56
-			return 0x3e # '>'
-		if k == 0x2b
-			return 0x27 # '''
-		if k == 0x1b
-			return 0x2a # '*'
-		#if k == 0x29
-		#	return 0x # '°'
-		if k == 0x0c
-			return 0x3f # '?'
-		if k == 0x0d
-			return 0x60 # '`'
-			
-		if k == 0x1e
-			return 0x41 # 'A'
-		if k == 0x30
-			return 0x42
-		if k == 0x2e
-			return 0x43
-		if k == 0x20
-			return 0x44
-		if k == 0x12
-			return 0x45
-		if k == 0x21
-			return 0x46
-		if k == 0x22
-			return 0x47 # 'G'
-		if k == 0x23
-			return 0x48
-		if k == 0x17
-			return 0x49
-		if k == 0x24
-			return 0x4a
-		if k == 0x25
-			return 0x4b
-		if k == 0x26
-			return 0x4c
-		if k == 0x32
-			return 0x4d # 'M'
-		if k == 0x31
-			return 0x4e
-		if k == 0x18
-			return 0x4f
-		if k == 0x19
-			return 0x50
-		if k == 0x10
-			return 0x51
-		if k == 0x13
-			return 0x52 # 'R'
-		if k == 0x1f
-			return 0x53
-		if k == 0x14
-			return 0x54
-		if k == 0x16
-			return 0x55
-		if k == 0x2f
-			return 0x56
-		if k == 0x11
-			return 0x57
-		if k == 0x2d
-			return 0x58 # 'X'
-		if k == 0x2c
-			return 0x59
-		if k == 0x15
-			return 0x5a
-	else
-		if k == 0x0b
-			return 0x30 # '0'
-		if k == 0x02
-			return 0x31
-		if k == 0x03
-			return 0x32
-		if k == 0x04
-			return 0x33
-		if k == 0x05
-			return 0x34
-		if k == 0x06
-			return 0x35
-		if k == 0x07
-			return 0x36
-		if k == 0x08
-			return 0x37
-		if k == 0x09
-			return 0x38
-		if k == 0x0a
-			return 0x39
-		if k == 0x35
-			return 0x2d # '-'
-		if k == 0x34
-			return 0x2e # '.'
-		if k == 0x33
-			return 0x2c # ','
-		if k == 0x56
-			return 0x3c # '<'
-		if k == 0x2b
-			return 0x23 # '#'
-		if k == 0x1b
-			return 0x2b # '+'
-		if k == 0x29
-			return 0x5e # '^'
-		#if k == 0x0c
-		#	return ... # 'ß'
-		#if k == 0x0d
-		#	return ... # '´'
-			
-		if k == 0x1e
-			return 0x61 # 'a'
-		if k == 0x30
-			return 0x62
-		if k == 0x2e
-			return 0x63
-		if k == 0x20
-			return 0x64
-		if k == 0x12
-			return 0x65
-		if k == 0x21
-			return 0x66
-		if k == 0x22
-			return 0x67 # 'g'
-		if k == 0x23
-			return 0x68
-		if k == 0x17
-			return 0x69
-		if k == 0x24
-			return 0x6a
-		if k == 0x25
-			return 0x6b
-		if k == 0x26
-			return 0x6c
-		if k == 0x32
-			return 0x6d # 'm'
-		if k == 0x31
-			return 0x6e
-		if k == 0x18
-			return 0x6f
-		if k == 0x19
-			return 0x70
-		if k == 0x10
-			return 0x71
-		if k == 0x13
-			return 0x72 # 'r'
-		if k == 0x1f
-			return 0x73
-		if k == 0x14
-			return 0x74
-		if k == 0x16
-			return 0x75
-		if k == 0x2f
-			return 0x76
-		if k == 0x11
-			return 0x77
-		if k == 0x2d
-			return 0x78 # 'x'
-		if k == 0x2c
-			return 0x79
-		if k == 0x15
-			return 0x7a
-	#printh(&k, 3)
-	return -1
-
-void ps2_read_key(int _k)
-	int k = _k
-		
-	# add to low level device buffer
-	if dev_key_reading > 0
-		if dev_key_num < 64
-			dev_key_buf[dev_key_num] = k
-			dev_key_num ++
-		return
-		
-	if k == 0xe0
-		dev_key_escaped = true
-	else
-		if dev_key_escaped
-			k += 0xe000
+	static void init()
+		prints("init drivers... ")
 		dev_key_escaped = false
-	
-		if (k & 0x80) > 0
-			if k == 0xaa or k == 0xb6
-				dev_key_shift = false
-			if k == 0x9d or k == 0xe09d
-				dev_key_control = false
-			if k == 0xe0b8
-				dev_key_altgr = false
-		if k == 0x2a or k == 0x36
-			dev_key_shift = true
-		if k == 0x1d or k == 0xe01d
-			dev_key_control = true
-		if k == 0xe038
-			dev_key_altgr = true
-	
-		k = getchar(k)
-		if k >= 0 and dev_tty_key_num < 64
-			if (k & 0xffffff00) == 0
-				dev_tty_key_buf[dev_tty_key_num] = k
-				dev_tty_key_num ++
-			else if (k & 0xffff0000) == 0
-				dev_tty_key_buf[dev_tty_key_num] = k >> 8
-				dev_tty_key_buf[dev_tty_key_num + 1] = k
-				dev_tty_key_num += 2
-			else
-				dev_tty_key_buf[dev_tty_key_num] = k >> 16
-				dev_tty_key_buf[dev_tty_key_num + 1] = k >> 8
-				dev_tty_key_buf[dev_tty_key_num + 2] = k
-				dev_tty_key_num += 3
-
-int[4] mouse_temp
-int mouse_temp_no
-
-void ps2_read_mouse(int _d)
-	int d = _d
-	mouse_temp[mouse_temp_no] = d & 0x000000ff
-	mouse_temp_no ++
-	
-	if mouse_temp_no >= 3
+		dev_key_shift = false
+		dev_key_control = false
+		dev_key_altgr = false
+		dev_tty_key_num = 0
+		dev_key_reading = 0
+		
+		#FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
+		FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
+		
+		FileEntry *dev_zero = dev.create_child("zero", FILE_TYPE_CHAR, nil)
+		dev_zero_ops.__init__()
+		dev_zero.op = &dev_zero_ops
+		
+		FileEntry *dev_null = dev.create_child("null", FILE_TYPE_CHAR, nil)
+		dev_null_ops.__init__()
+		dev_null.op = &dev_null_ops
+		
+		dev_rand_ops.state = 13
+		
+		FileEntry *dev_rand = dev.create_child("random", FILE_TYPE_CHAR, nil)
+		dev_rand_ops.__init__()
+		dev_rand.op = &dev_rand_ops
+		
+		dev_key_num = 0
+		
+		FileEntry *dev_key = dev.create_child("keyboard", FILE_TYPE_CHAR, nil)
+		dev_key_ops.__init__()
+		dev_key.op = &dev_key_ops
+		
+		FileEntry *dev_tty = dev.create_child("tty", FILE_TYPE_CHAR, nil)
+		dev_tty_ops.__init__()
+		dev_tty.op = &dev_tty_ops
+		
 		mouse_temp_no = 0
-	else
-		return
-	d = mouse_temp[0]
-	bool MYOverflow = ((d & 0x80) > 0)
-	bool MXOverflow = ((d & 0x40) > 0)
-	bool MYNegative = ((d & 0x20) > 0)
-	bool MXNegative = ((d & 0x10) > 0)
-	bool mbut = ((d & 0x04) > 0)
-	bool rbut = ((d & 0x02) > 0)
-	bool lbut = ((d & 0x01) > 0)
-	mouse_temp[0] = 0
-	if lbut
-		mouse_temp[0] += 0x1
-	if mbut
-		mouse_temp[0] += 0x2
-	if rbut
-		mouse_temp[0] += 0x4
-	if MXNegative
-		mouse_temp[1] -= 256
-	if MYNegative
-		mouse_temp[2] -= 256
-	if MXOverflow
-		mouse_temp[1] = 0
-	if MYOverflow
-		mouse_temp[2] = 0
-	mouse_temp[3] = 0
-	
-	if dev_mouse_num < 200
-		memcpy(&dev_mouse_buf[dev_mouse_num], &mouse_temp, 4*4)
-		dev_mouse_num += 4*4
-
-void ps2_try_read()
-	int k = inportb(0x64)
-	if (k & 0x01) == 0
-		return
-	int d = inportb(0x60)
-	if (k & 0x20) > 0
-		ps2_read_mouse(d)
-	else
-		ps2_read_key(d)
-	#ps2_try_read()
-
-
-
-void int_key()
-	while true
-		#prints("<key>")
+		dev_mouse_num = 0
 		
-		ps2_try_read()
-					
-		# allow more IRQs
-		outportb(0x20, 0x20)
-			
-		asm{
-			iret
-		}		
-
-void int_mouse()
-	while true
-		#prints("<mouse>")
+		FileEntry *dev_mouse = dev.create_child("mouse", FILE_TYPE_CHAR, nil)
+		dev_mouse_ops.__init__()
+		dev_mouse.op = &dev_mouse_ops
 		
-		ps2_try_read()
-					
-		# allow more IRQs
-		outportb(0xa0, 0x20)
-		outportb(0x20, 0x20)
+		let key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
+		let mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
+	 	
+		irq.set_task(33, key_task) # IRQ 1
+		irq.set_task(44, mouse_task) # IRQ 12
+
+
+		# Enable the auxiliary mouse device
+		mouse_wait_signal()
+		outportb(0x64, 0xa8)
+	  
+		# Enable the interrupts
+		mouse_wait_signal()
+		outportb(0x64, 0x20)
+		mouse_wait_data()
+		int _status = (inportb(0x60) | 2)
+		mouse_wait_signal()
+		outportb(0x64, 0x60)
+		mouse_wait_signal()
+		outportb(0x60, _status)
+	  
+		# Reset
+		mouse_write(0xff)
+		mouse_read() # acknowledge
+	  
+		# Set Defaults
+		mouse_write(0xf6)
+		mouse_read() # acknowledge
+	  
+		# Enable Packet Streaming
+		mouse_write(0xf4)
+		mouse_read() # acknowledge
+		
+		prints("ok\n")
+
+
+	static void mouse_wait_data()
+		for i in 0:100000
+			if ((inportb(0x64) & 1) == 1)
+				return
+
+	static void mouse_wait_signal()
+		for i in 0:100000
+			if ((inportb(0x64) & 2) == 0)
+				return
+
+
+	static void mouse_write(int data)
+		mouse_wait_signal()
+		outportb(0x64, 0xd4)
+		mouse_wait_signal()
+		outportb(0x60, data)
+
+	static int mouse_read()
+		mouse_wait_data()
+		return inportb(0x60)
+
+
+	static int getchar(int k)
+		if dev_key_control
+			if k == 0x2e # 'C'
+				return 0x03
+			if k == 0x20 # 'D'
+				return 0x04
+			if k == 0x15 # 'Z'
+				return 0x1a
+			return -1
+		if k == 0x1c
+			return 0x0a # '\n'
+		if k == 0x39
+			return 0x20 # ' '
+		if k == 0x0e
+			return 0x7f # BACKSPACE
+		if k == 0xe048
+			return 0x1b5b41 # ^[A up
+		if k == 0xe050
+			return 0x1b5b42 # ^[B down
+		if k == 0xe04b
+			return 0x1b5b43 # ^[C left
+		if k == 0xe04d
+			return 0x1b5b44 # ^[D right
+		if dev_key_altgr
+			if k == 0x1b
+				return 0x7e # '~'
+			if k == 0x56
+				return 0x7c # '|'
+			if k == 0x08
+				return 0x7b # '{'
+			if k == 0x09
+				return 0x5b # '['
+			if k == 0x0a
+				return 0x5d # ']'
+			if k == 0x0b
+				return 0x7d # '}'
+			if k == 0x10
+				return 0x40 # '@'
+			if k == 0x0c
+				return 0x5c # '\'
+		else if dev_key_shift
+			if k == 0x0b
+				return 0x3d # '='
+			if k == 0x02
+				return 0x21 # '!'
+			if k == 0x03
+				return 0x22 # '"'
+			#if k == 0x04
+			#	return 0x00 # '§'
+			if k == 0x05
+				return 0x24 # '$'
+			if k == 0x06
+				return 0x25 # '%'
+			if k == 0x07
+				return 0x26 # '&'
+			if k == 0x08
+				return 0x2f # '/'
+			if k == 0x09
+				return 0x28 # '('
+			if k == 0x0a
+				return 0x29 # ')'
+			if k == 0x35
+				return 0x5f # '_'
+			if k == 0x34
+				return 0x3a # ':'
+			if k == 0x33
+				return 0x3b # ';'
+			if k == 0x56
+				return 0x3e # '>'
+			if k == 0x2b
+				return 0x27 # '''
+			if k == 0x1b
+				return 0x2a # '*'
+			#if k == 0x29
+			#	return 0x # '°'
+			if k == 0x0c
+				return 0x3f # '?'
+			if k == 0x0d
+				return 0x60 # '`'
+				
+			if k == 0x1e
+				return 0x41 # 'A'
+			if k == 0x30
+				return 0x42
+			if k == 0x2e
+				return 0x43
+			if k == 0x20
+				return 0x44
+			if k == 0x12
+				return 0x45
+			if k == 0x21
+				return 0x46
+			if k == 0x22
+				return 0x47 # 'G'
+			if k == 0x23
+				return 0x48
+			if k == 0x17
+				return 0x49
+			if k == 0x24
+				return 0x4a
+			if k == 0x25
+				return 0x4b
+			if k == 0x26
+				return 0x4c
+			if k == 0x32
+				return 0x4d # 'M'
+			if k == 0x31
+				return 0x4e
+			if k == 0x18
+				return 0x4f
+			if k == 0x19
+				return 0x50
+			if k == 0x10
+				return 0x51
+			if k == 0x13
+				return 0x52 # 'R'
+			if k == 0x1f
+				return 0x53
+			if k == 0x14
+				return 0x54
+			if k == 0x16
+				return 0x55
+			if k == 0x2f
+				return 0x56
+			if k == 0x11
+				return 0x57
+			if k == 0x2d
+				return 0x58 # 'X'
+			if k == 0x2c
+				return 0x59
+			if k == 0x15
+				return 0x5a
+		else
+			if k == 0x0b
+				return 0x30 # '0'
+			if k == 0x02
+				return 0x31
+			if k == 0x03
+				return 0x32
+			if k == 0x04
+				return 0x33
+			if k == 0x05
+				return 0x34
+			if k == 0x06
+				return 0x35
+			if k == 0x07
+				return 0x36
+			if k == 0x08
+				return 0x37
+			if k == 0x09
+				return 0x38
+			if k == 0x0a
+				return 0x39
+			if k == 0x35
+				return 0x2d # '-'
+			if k == 0x34
+				return 0x2e # '.'
+			if k == 0x33
+				return 0x2c # ','
+			if k == 0x56
+				return 0x3c # '<'
+			if k == 0x2b
+				return 0x23 # '#'
+			if k == 0x1b
+				return 0x2b # '+'
+			if k == 0x29
+				return 0x5e # '^'
+			#if k == 0x0c
+			#	return ... # 'ß'
+			#if k == 0x0d
+			#	return ... # '´'
+				
+			if k == 0x1e
+				return 0x61 # 'a'
+			if k == 0x30
+				return 0x62
+			if k == 0x2e
+				return 0x63
+			if k == 0x20
+				return 0x64
+			if k == 0x12
+				return 0x65
+			if k == 0x21
+				return 0x66
+			if k == 0x22
+				return 0x67 # 'g'
+			if k == 0x23
+				return 0x68
+			if k == 0x17
+				return 0x69
+			if k == 0x24
+				return 0x6a
+			if k == 0x25
+				return 0x6b
+			if k == 0x26
+				return 0x6c
+			if k == 0x32
+				return 0x6d # 'm'
+			if k == 0x31
+				return 0x6e
+			if k == 0x18
+				return 0x6f
+			if k == 0x19
+				return 0x70
+			if k == 0x10
+				return 0x71
+			if k == 0x13
+				return 0x72 # 'r'
+			if k == 0x1f
+				return 0x73
+			if k == 0x14
+				return 0x74
+			if k == 0x16
+				return 0x75
+			if k == 0x2f
+				return 0x76
+			if k == 0x11
+				return 0x77
+			if k == 0x2d
+				return 0x78 # 'x'
+			if k == 0x2c
+				return 0x79
+			if k == 0x15
+				return 0x7a
+		#printh(&k, 3)
+		return -1
+
+	static void ps2_read_key(int _k)
+		int k = _k
 			
-		asm{
-			iret
-		}
+		# add to low level device buffer
+		if dev_key_reading > 0
+			if dev_key_num < 64
+				dev_key_buf[dev_key_num] = k
+				dev_key_num ++
+			return
+			
+		if k == 0xe0
+			dev_key_escaped = true
+		else
+			if dev_key_escaped
+				k += 0xe000
+			dev_key_escaped = false
+		
+			if (k & 0x80) > 0
+				if k == 0xaa or k == 0xb6
+					dev_key_shift = false
+				if k == 0x9d or k == 0xe09d
+					dev_key_control = false
+				if k == 0xe0b8
+					dev_key_altgr = false
+			if k == 0x2a or k == 0x36
+				dev_key_shift = true
+			if k == 0x1d or k == 0xe01d
+				dev_key_control = true
+			if k == 0xe038
+				dev_key_altgr = true
+		
+			k = getchar(k)
+			if k >= 0 and dev_tty_key_num < 64
+				if (k & 0xffffff00) == 0
+					dev_tty_key_buf[dev_tty_key_num] = k
+					dev_tty_key_num ++
+				else if (k & 0xffff0000) == 0
+					dev_tty_key_buf[dev_tty_key_num] = k >> 8
+					dev_tty_key_buf[dev_tty_key_num + 1] = k
+					dev_tty_key_num += 2
+				else
+					dev_tty_key_buf[dev_tty_key_num] = k >> 16
+					dev_tty_key_buf[dev_tty_key_num + 1] = k >> 8
+					dev_tty_key_buf[dev_tty_key_num + 2] = k
+					dev_tty_key_num += 3
+
+	static int[4] mouse_temp
+	static int mouse_temp_no
+
+	static void ps2_read_mouse(int _d)
+		int d = _d
+		mouse_temp[mouse_temp_no] = d & 0x000000ff
+		mouse_temp_no ++
+		
+		if mouse_temp_no >= 3
+			mouse_temp_no = 0
+		else
+			return
+		d = mouse_temp[0]
+		bool MYOverflow = ((d & 0x80) > 0)
+		bool MXOverflow = ((d & 0x40) > 0)
+		bool MYNegative = ((d & 0x20) > 0)
+		bool MXNegative = ((d & 0x10) > 0)
+		bool mbut = ((d & 0x04) > 0)
+		bool rbut = ((d & 0x02) > 0)
+		bool lbut = ((d & 0x01) > 0)
+		mouse_temp[0] = 0
+		if lbut
+			mouse_temp[0] += 0x1
+		if mbut
+			mouse_temp[0] += 0x2
+		if rbut
+			mouse_temp[0] += 0x4
+		if MXNegative
+			mouse_temp[1] -= 256
+		if MYNegative
+			mouse_temp[2] -= 256
+		if MXOverflow
+			mouse_temp[1] = 0
+		if MYOverflow
+			mouse_temp[2] = 0
+		mouse_temp[3] = 0
+		
+		if dev_mouse_num < 200
+			memcpy(&dev_mouse_buf[dev_mouse_num], &mouse_temp, 4*4)
+			dev_mouse_num += 4*4
+
+	static void ps2_try_read()
+		int k = inportb(0x64)
+		if (k & 0x01) == 0
+			return
+		int d = inportb(0x60)
+		if (k & 0x20) > 0
+			ps2_read_mouse(d)
+		else
+			ps2_read_key(d)
+		#ps2_try_read()
+
+
+
+	static void int_key()
+		while true
+			#prints("<key>")
+			
+			ps2_try_read()
+						
+			# allow more IRQs
+			outportb(0x20, 0x20)
+				
+			asm{
+				iret
+			}		
+
+	static void int_mouse()
+		while true
+			#prints("<mouse>")
+			
+			ps2_try_read()
+						
+			# allow more IRQs
+			outportb(0xa0, 0x20)
+			outportb(0x20, 0x20)
+				
+			asm{
+				iret
+			}
 
 

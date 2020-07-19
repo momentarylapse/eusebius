@@ -3,6 +3,7 @@
 use "base.kaba"
 use "io/text.kaba"
 use "dev/ata.kaba"
+use "dev/block.kaba"
 use "dev/std_char_devs.kaba"
 use "fs/fs.kaba"
 use "fs/access.kaba"
@@ -54,7 +55,7 @@ void load_kalib()
 
 void main()
 	read_data_from_init()
-	InitTextMode()
+	TextMode.init()
 	InitHeap()
 	
 	prints("Welcome to ")
@@ -81,12 +82,9 @@ void main()
 #	prints("\n")
 	
 	Paging.init()
-	
 	SharedMemory.init()
 	
-	ata.init()
-	ReadPartitions(0)
-	ShowPartitions()
+	BlockDevManager.init()
 	
 	InitFileAccessData()
 	PipeManager.init()
@@ -94,17 +92,18 @@ void main()
 	
 	FileSystem.init()
 	
-	FileSystem.mount(Partition[2], FileSystem.root, "ext2")
+	# assume a default disk layout...
+	FileSystem.mount(BlockDevManager.partition[2], FileSystem.root, "ext2")
 	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
-	FileSystem.mount(Partition[1], boot, "michifs")
+	FileSystem.mount(BlockDevManager.partition[1], boot, "michifs")
 	
 	TaskManager.init()
 	
 	irq.init()
-	error.init()
+	Error.init()
 	InitSysCall()
 	
-	InitDrivers()
+	StdCharDevs.init()
 	
 	load_kalib()
 	

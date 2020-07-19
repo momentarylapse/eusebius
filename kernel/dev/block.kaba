@@ -1,0 +1,100 @@
+use "../base.kaba"
+use "../io/text.kaba"
+use "ata.kaba"
+
+
+# TODO split Partition/BlockDevice
+
+class PartitionData
+	int major, minor
+	int disk_no
+	int offset, size
+	int block_size
+	char type
+	bool active
+	cstring name
+	void *p_read_block # (self, buf, minor, index)
+	
+	void __assign__(PartitionData o)
+	
+#	int read_block(int index, void *buf)
+#		if !p_read_block
+#			return -1
+#		return call_ppii(p_read_block, &self, buf, minor, index)
+
+class BlockDevManager	
+
+	static PartitionData[8] partition
+	static int num_partitions
+	
+	static void init()
+		num_partitions = 0
+		AtaController.init()
+		read_partitions_from_disk(0)
+		show()
+
+	static void read_partitions_from_disk(int disk_no)
+		let p = &partition[num_partitions]
+		num_partitions ++
+		p.block_size = 512
+		p.disk_no = disk_no
+		p.offset = 0
+		p.size = AtaController.disk_info[disk_no].size
+		p.type = 0
+		p.p_read_block = nil
+		p.active = false
+		strcpy(p.name, "hda")
+		p.name[2] = 'a' + disk_no
+		# read MBR
+		AtaController.read_sector(disk_no, 0, 1, &AtaController.buffer)
+		#MountPartition=false
+		for n in 0:4
+			int *offset = &AtaController.buffer[454+n*16]
+			int *size = &AtaController.buffer[458+n*16]
+			int type = AtaController.buffer[450+n*16]
+			if (type == 0) or (*size == 0)
+				continue
+			p = &partition[num_partitions]
+			num_partitions ++
+			p.block_size = 512
+			p.disk_no = disk_no
+			p.offset = *offset
+			p.size = *size
+			p.type = AtaController.buffer[450+n*16]
+			p.active = (AtaController.buffer[446+n*16] == 0x80)
+			strcpy(p.name, "hda_")
+			p.name[2] = 'a' + disk_no
+			p.name[3] = n + 49
+		#for n, 0, 512
+	#		DrawHex(n*3,2,&AtaBuffer[n],1)
+			
+	static void show()
+		prints("primary partitions:       offset   size\n")
+		for n in 0:num_partitions
+			let p = &partition[n]
+			prints("/dev/")
+			prints(p.name)
+			TextMode.pos = 60
+			if p.active
+				prints("(aktiv)")
+			TextMode.pos = 27
+			printi(p.offset/2)
+			TextMode.pos = 36
+			printi(p.size/2)
+			TextMode.pos = 50
+			if p.type == 0x83
+				prints("Linux")
+			else if p.type == 0x20
+				prints("MichiFS")
+			else if p.type == 0x0c
+				prints("Fat 32")
+			else if p.type == 0x0e
+				prints("Fat 16")
+			else if p.type == 0x07
+				prints("NTFS")
+			else if p.type == 0x0f
+				prints("Extended...")
+			else
+				printh(&p.type, 1)
+			prints("\n")
+

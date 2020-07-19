@@ -7,167 +7,169 @@ use kaba
 
 const int ERROR_STACK_SIZE = 4096
 
-void handle_task_error(out Task t, out Task e, int i)
-	int pid = t.pid
-	#prints("\n    -- Interrupt #")
-#	printi(i)
-#	prints(" pid=")
-#	printi(pid)
-#	prints "  eip="
-#	printh(t.tss.eip, 4)
-#	prints(" --\n")
-#	cstring s
-#	get_error_text(i, s)
-#	prints(s)
-	
-	# TODO send signal
-	
-	if i == 13 or i == 14
-		t.handle_signal(SIGSEGV)
-	else
-		t.die(i-666)
-	
-	int pid_next = Scheduler.get_next_task(pid)
-	Scheduler.reconnect_tasks(pid_next, e)
-	
 
-void handle_kernel_error(Task t, int i)
-	cstring s
-	get_error_text(i, s)
-	
-	prints("\neip=")
-	printh(t.tss.eip, 4)
-	prints("  esp=")
-	printh(t.tss.esp, 4)
-	prints("\n")
-	
-	#if i == 0
-#		prints("   eflags=")
-#		printh(&KernelTask.tss.eflags, 4)
-#		prints(s)
-#		prints("-y-")
-#		return
-#		asm{
-#			iret
-#		}
-#		prints("xxxx")
-	panic(s)
+class Error
 
-void get_error_text(int i, out cstring s)
-	cstring nn
-	strcpy(s, "Int ")
-	_i2s(i, nn)
-	strcat(s, nn)
-	if i==0
-		strcat(s, ": division by zero")
-	if i==1
-		strcat(s, ": debug")
-	if i==3
-		strcat(s, ": breakpoint")
-	if i==4
-		strcat(s, ": overflow")
-	if i==5
-		strcat(s, ": bounds check")
-	if i==6
-		strcat(s, ": invalid opcode")
-	if i==7
-		strcat(s, ": no coprocessor")
-	if i==8
-		strcat(s, ": system error")
-	if i==9
-		strcat(s, ": coprocessor segment overrun")
-	if i==10
-		strcat(s, ": invalid TSS")
-	if i==11
-		strcat(s, ": segment missing")
-	if i==12
-		strcat(s, ": stack error")
-	if i==13
-		strcat(s, ": general protection fault")
-	if i==14
-		strcat(s, ": page fault")
-	if i==16
-		strcat(s, ": coprocessor error")
-	strcat(s, "  8-P")
-
-void int_handler(int i)
-	while true
-		# task?
-		Task* e = error.tasks[i]
-		int prev_pid = e.get_prev_pid()
-		Task *prev = &TaskManager.tasks[prev_pid]
+	static void handle_task_error(out Task t, out Task e, int i)
+		int pid = t.pid
+		#prints("\n    -- Interrupt #")
+	#	printi(i)
+	#	prints(" pid=")
+	#	printi(pid)
+	#	prints "  eip="
+	#	printh(t.tss.eip, 4)
+	#	prints(" --\n")
+	#	cstring s
+	#	get_error_text(i, s)
+	#	prints(s)
 		
-		# handle error
-		if prev.kernel_mode
-			handle_kernel_error(prev, i)
+		# TODO send signal
+		
+		if i == 13 or i == 14
+			t.handle_signal(SIGSEGV)
 		else
-			handle_task_error(prev, e, i)
+			t.die(i-666)
 		
-		asm{
+		int pid_next = Scheduler.get_next_task(pid)
+		Scheduler.reconnect_tasks(pid_next, e)
+		
+
+	static void handle_kernel_error(Task t, int i)
+		cstring s
+		get_error_text(i, s)
+		
+		prints("\neip=")
+		printh(t.tss.eip, 4)
+		prints("  esp=")
+		printh(t.tss.esp, 4)
+		prints("\n")
+		
+		#if i == 0
+	#		prints("   eflags=")
+	#		printh(&KernelTask.tss.eflags, 4)
+	#		prints(s)
+	#		prints("-y-")
+	#		return
+	#		asm{
+	#			iret
+	#		}
+	#		prints("xxxx")
+		panic(s)
+
+	static void get_error_text(int i, out cstring s)
+		cstring nn
+		strcpy(s, "Int ")
+		_i2s(i, nn)
+		strcat(s, nn)
+		if i==0
+			strcat(s, ": division by zero")
+		if i==1
+			strcat(s, ": debug")
+		if i==3
+			strcat(s, ": breakpoint")
+		if i==4
+			strcat(s, ": overflow")
+		if i==5
+			strcat(s, ": bounds check")
+		if i==6
+			strcat(s, ": invalid opcode")
+		if i==7
+			strcat(s, ": no coprocessor")
+		if i==8
+			strcat(s, ": system error")
+		if i==9
+			strcat(s, ": coprocessor segment overrun")
+		if i==10
+			strcat(s, ": invalid TSS")
+		if i==11
+			strcat(s, ": segment missing")
+		if i==12
+			strcat(s, ": stack error")
+		if i==13
+			strcat(s, ": general protection fault")
+		if i==14
+			strcat(s, ": page fault")
+		if i==16
+			strcat(s, ": coprocessor error")
+		strcat(s, "  8-P")
+
+	static void int_handler(int i)
+		while true
+			# task?
+			Task* e = Error.tasks[i]
+			int prev_pid = e.get_prev_pid()
+			Task *prev = &TaskManager.tasks[prev_pid]
+			
+			# handle error
+			if prev.kernel_mode
+				handle_kernel_error(prev, i)
+			else
+				handle_task_error(prev, e, i)
+			
+			asm{
+				iret
+			}
+
+	static void int_00()
+		int_handler(0)
+	static void int_01()
+		int_handler(1)
+	static void int_02()
+		int_handler(2)
+	static void int_03()
+		int_handler(3)
+	static void int_04()
+		int_handler(4)
+	static void int_05()
+		int_handler(5)
+	static void int_06()
+		int_handler(6)
+	static void int_07()
+		int_handler(7)
+		prints("[CP]")
+		asm {
+			db 0x0f
+			db 0x06
+			iret
+		}
+	static void int_08()
+		int_handler(8)
+	static void int_09()
+		int_handler(9)
+	static void int_10()
+		int_handler(10)
+	static void int_11()
+		int_handler(11)
+	static void int_12()
+		int_handler(12)
+	static void int_13()
+		int_handler(13)
+	static void int_14()
+		int_handler(14)
+	static void int_15()
+		int_handler(15)
+	static void int_16()
+		int_handler(16)
+	static void int_XX()
+		int_handler(2004)
+		
+		
+	static void int_ignore_dummy()
+		asm {
+			_ignore_interrupt_handler:
+		}
+		#prints("  [ignore]")
+		asm {
+			db 0x0f
+			db 0x06
 			iret
 		}
 
-void int_00()
-	int_handler(0)
-void int_01()
-	int_handler(1)
-void int_02()
-	int_handler(2)
-void int_03()
-	int_handler(3)
-void int_04()
-	int_handler(4)
-void int_05()
-	int_handler(5)
-void int_06()
-	int_handler(6)
-void int_07()
-	int_handler(7)
-	prints("[CP]")
-	asm{
-		db 0x0f
-		db 0x06
-		iret
-	}
-void int_08()
-	int_handler(8)
-void int_09()
-	int_handler(9)
-void int_10()
-	int_handler(10)
-void int_11()
-	int_handler(11)
-void int_12()
-	int_handler(12)
-void int_13()
-	int_handler(13)
-void int_14()
-	int_handler(14)
-void int_15()
-	int_handler(15)
-void int_16()
-	int_handler(16)
-void int_XX()
-	int_handler(2004)
-	
-	
-void int_ignore_dummy()
-	asm{
-		_ignore_interrupt_handler:
-	}
-	#prints("  [ignore]")
-	asm{
-		db 0x0f
-		db 0x06
-		iret
-	}
 
+	static Function*[16] handler
+	static Task*[16] tasks
 
-class ErrorController
-	Function*[16] handler
-	Task*[16] tasks
-
-	void init()
+	static void init()
 		prints("setting error handler")
 
 		handler[ 0] = int_00
@@ -193,7 +195,7 @@ class ErrorController
 		
 		
 		# tell the cpu to ignore sse/task-switch-exceptions
-		asm{
+		asm {
 			mov eax, _ignore_interrupt_handler
 			mov __temp_p__, eax
 		}
@@ -202,6 +204,4 @@ class ErrorController
 		prints("   ok\n")
 
 
-ErrorController error
-	
 	

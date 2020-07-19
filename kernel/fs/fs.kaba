@@ -1,6 +1,7 @@
 use "../base.kaba"
 use "../mem/heap.kaba"
 use "../dev/ata.kaba"
+use "../dev/block.kaba"
 use "../io/text.kaba"
 use kaba
 
@@ -221,12 +222,12 @@ class MountPoint
 	void read_block(int block_no, void *_buf)
 		cstring *buf = _buf
 		for i in 0:dev_blocks_per_block
-			ata.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
+			AtaController.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 
 	void write_block(int block_no, void *_buf)
 		cstring *buf = _buf
 		for i in 0:dev_blocks_per_block
-			ata.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
+			AtaController.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 	
 	virtual int alloc_block()
 		return -1
@@ -429,7 +430,7 @@ class MountPointExt2 extends MountPoint
 			read_inode_recursive(2, dest)
 	
 	void write_meta_data()
-		ata.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)
+		AtaController.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)
 		write_block(1 + block_size / 1024, &bg)
 			
 	
