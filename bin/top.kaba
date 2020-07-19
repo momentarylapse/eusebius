@@ -10,13 +10,13 @@ enum
 	#TASK_STATUS_DEAD
 
 void fill(out string s, int n)
-	while s.num < n
+	while len(s) < n
 		s.add(' ')
 
 string i2s2(int i, int n)
-	string s2 = i.str()
+	string s2 = str(i)
 	string s1
-	fill(s1, n - s2.num)
+	fill(s1, n - len(s2))
 	return s1 + s2
 
 string sec2s(int _sec)

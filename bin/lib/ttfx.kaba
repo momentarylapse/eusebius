@@ -6,7 +6,7 @@ string hex(void* _p, int size)
 	string s
 	for i in 0:size
 		s.add(p[i])
-	return s.hex(false)
+	return s.hex()
 string i2h(int i)
 	return hex(&i, 4)
 
@@ -63,7 +63,7 @@ class TTFFont
 
 		f = Filesystem.open(filename)
 		if !f
-			print("kann Datei nicht lesen\n")
+			print("can not read file\n")
 			return false
 		#f.setBinaryMode(true)
 		#TimeValue tv1
@@ -79,7 +79,7 @@ class TTFFont
 #			n = readI()
 			_read(f, &g.code, 4*4)
 			g.contours.resize(g._num_contours_)
-			_read(f, &g.contours[0], g.contours.num * 8)
+			_read(f, &g.contours[0], len(g.contours) * 8)
 			#for c in g.contours
 #				c.start = readI()
 #				c.num = readI()
@@ -153,12 +153,12 @@ class FontDB
 			if f.name == name
 				d.font = f
 				return d
-		d.font = LoadTTF("/home/" + name + ".font")
+		d.font = LoadTTF("/home/{{name}}.font")
 		if d.font
 			d.font.name = name
 			descriptors.add(d)
 			return d
-		if fonts.num > 0
+		if len(fonts) > 0
 			d.font = fonts[0]
 			descriptors.add(d)
 			return d

@@ -23,7 +23,7 @@ void hd(int h, int _skip, int _length)
 		if r <= 0
 			break
 		s.resize(r)
-		print(s.hex(false))
+		print(s.hex())
 		length -= r
 	print("\n")
 
@@ -39,15 +39,15 @@ void main()
 	int length = 2000000000
 	int skip = 0
 	
-	for i in 1:arg.num
+	for i in 1:len(arg)
 		if arg[i] == "-n"
 			i ++
-			if i < arg.num
-				length = arg[i].int()
+			if i < len(arg)
+				length = int(arg[i])
 		else if arg[i] == "-s"
 			i ++
-			if i < arg.num
-				skip = arg[i].int()
+			if i < len(arg)
+				skip = int(arg[i])
 		else
 			files.add(arg[i])
 	
@@ -57,7 +57,7 @@ void main()
 	for f in files
 		int h = open(f, O_RDONLY)
 		if h < 0
-			print("hd: can not open file: " + f + "\n")
+			print("hd: can not open file: {{f}}\n")
 			exit(-1)
 		hd(h, skip, length)
 		close(h)

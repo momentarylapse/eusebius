@@ -52,9 +52,9 @@ class PCIDevice
 	
 	void show()
 		print("{{bus}}:{{slot}}:{{function}} ")
-		print(binary(&vendor, 2).hex(true))
+		print(binary(&vendor, 2).hex())
 		print(":")
-		print(binary(&device, 2).hex(true))
+		print(binary(&device, 2).hex())
 		print(" class={{_class}}:{{subclass}}")
 		print("  ht=")
 		print(header_type)

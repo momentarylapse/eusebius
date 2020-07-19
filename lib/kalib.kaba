@@ -1188,15 +1188,10 @@ class lib__string extends lib__@DynamicArray
 			r.add(substr(pos, num - pos))
 		return r
 		
-	lib__string hex(bool inverted)
+	lib__string hex()
 		lib__string ttt
-		if inverted
-			ttt.add('0')
-			ttt.add('x')
 		for i in 0:num
 			int j = i
-			if inverted
-				j = num - i - 1
 			int d = data[j]
 			int d1 = (d>>4)
 			int d2 = (d&15)
@@ -1208,14 +1203,13 @@ class lib__string extends lib__@DynamicArray
 				ttt.add(d2+48)
 			else
 				ttt.add(d2+87)
-			if !inverted
-				if i == num-1
-					ttt.add(' ')
-				else
-					ttt.add('.')
+			if i == num-1
+				ttt.add(' ')
+			else
+				ttt.add('.')
 		return ttt
 	
-	int int()
+	int __int__()
 		if num == 0
 			return 0
 		bool sign = (data[0] != '-')
@@ -1230,7 +1224,7 @@ class lib__string extends lib__@DynamicArray
 			return -r
 		return r
 	
-	float float()
+	float __float__()
 		if num == 0
 			return 0.0
 		bool sign = (data[0] != '-')
@@ -1392,7 +1386,7 @@ class lib__string@list extends lib__@DynamicArray
 				r += glue
 			r += data[i]
 		return r
-	lib__string str()
+	lib__string __str__()
 		return lib__@sa2s(self)
 	void swap(int i, int j)
 		let t = data[i]
@@ -1449,11 +1443,11 @@ int lib__randi(int m)
 	return lib__rand(m)
 
 class lib__int
-	static lib__string str(int i)
+	static lib__string __str__(int i)
 		return i2s(i)
 
 class lib__float
-	static lib__string str(float f)
+	static lib__string __str__(float f)
 		return f2s(f, 6)
 
 float lib__sin(float f)
@@ -1569,7 +1563,7 @@ lib__string lib__p2s(void *p)
 	r.resize(sizeof(p))
 	void *pp = &p
 	memcpy(r.data, pp, sizeof(p))
-	return r.hex(true)
+	return r.hex()
 
 lib__string b2s(bool b)
 	lib__string r
@@ -1580,7 +1574,7 @@ lib__string b2s(bool b)
 	return r
 
 class lib__bool
-	static lib__string str(bool b)
+	static lib__string __str__(bool b)
 		return b2s(b)
 
 lib__string lib__@ia2s(lib__int@list a)
@@ -1608,7 +1602,7 @@ lib__string lib__@fa2s(lib__float@list a)
 class lib__complex
 	float x, y
 	
-	lib__string str()
+	lib__string __str__()
 		return _complex2s(self)
 
 lib__string _complex2s(lib__complex c)
@@ -1834,7 +1828,7 @@ int Filesystem_size32(string filename)
 
 class lib__color
 	float a, r, g, b
-	lib__string str()
+	lib__string __str__()
 		lib__string s
 		return s
 
@@ -1896,7 +1890,7 @@ class lib__Exception
 	lib__string msg
 	void __init__(lib__string _msg)
 		msg = _msg
-	virtual lib__string message()
+	virtual lib__string __str__()
 		return msg
 
 void lib__raise(lib__Exception* e)

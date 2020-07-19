@@ -344,7 +344,7 @@ class XWindow
 			shmdt(buf)
 		for ww,n in windows
 			if ww == &self
-				windows_r.remove(windows.num - n - 1)
+				windows_r.remove(len(windows) - n - 1)
 				windows.remove(n)
 	
 	void move(int x, int y)
@@ -382,15 +382,15 @@ XWindow* desktop
 XWindow* active_window
 
 void sort_windows()
-	for i in 0:windows.num
-		for j in i+1:windows.num
+	for i in 0:len(windows)
+		for j in i+1:len(windows)
 			if windows[i].level > windows[j].level
 				XWindow *t = windows[i]
 				windows[i] = windows[j]
 				windows[j] = t
-	windows_r.resize(windows.num)
+	windows_r.resize(len(windows))
 	for w, i in windows
-		windows_r[windows.num - i - 1] = w
+		windows_r[len(windows) - i - 1] = w
 
 XRect[] invalidated
 
@@ -629,7 +629,7 @@ class CommandController
 			
 		for c in clients
 			c.poll()
-		for i in 0:clients.num
+		for i in 0:len(clients)
 			if clients[i].kill_me
 				del clients[i]
 				clients.remove(i)
@@ -650,7 +650,7 @@ class ProcessManager
 			if waitpid(p, &status, false) == -2
 				continue
 			p = -1
-		for i in 0:pids.num
+		for i in 0:len(pids)
 			if pids[i] < 0
 				pids.remove(i)
 				i --
@@ -677,7 +677,7 @@ void main()
 	keyboard = new KeyboardController()
 	pm = new ProcessManager()
 	
-	if arg.num == 1
+	if len(arg) == 1
 		#bga_set_video_mode(800, 600, 32)
 		bga_set_video_mode(1024, 768, 32)
 		mouse.set(screen_width / 2, screen_height / 2)

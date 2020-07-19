@@ -4,7 +4,7 @@ use "lib/io.kaba"
 
 
 void show_device(PCIDevice d)
-	print("[{{d.bus}}:{{d.slot}}:{{d.function}}]   {{binary(&d.vendor, 2).hex(true))}} : {{binary(&d.device, 2).hex(true))}}   ")
+	print("[{{d.bus}}:{{d.slot}}:{{d.function}}]   {{binary(&d.vendor, 2).hex())}} : {{binary(&d.device, 2).hex())}}   ")
 	if d._class == CLASS_NET and d.subclass == SUBCLASS_NET_ETHERNET
 		print("ethernet")
 	else if d._class == CLASS_DISPLAY and d.subclass == SUBCLASS_DISPLAY_VGA
@@ -29,11 +29,11 @@ void show_device(PCIDevice d)
 			print("     bar[{{i}}]=")
 			if (d.bar[i] & 1) == 1
 				int addr = d.bar[i] & 0xfffffffc
-				print(binary(&addr, 4).hex(true))
+				print(binary(&addr, 4).hex())
 				print(" (io)\n")
 			else
 				int addr = d.bar[i] & 0xfffffff0
-				print(binary(&addr, 4).hex(true))
+				print(binary(&addr, 4).hex())
 				print(" (mem)\n")
 
 void main()

@@ -65,7 +65,7 @@ void main()
 	
 	# 64k... enough
 	mem_key = 0x00700000#0x0e680000 # randi()
-	print(binary(&mem_key, 4).hex(false))
+	print(binary(&mem_key, 4).hex())
 	int shm_id = shmget(mem_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
 	if shm_id < 0
 		print("ERROR can't create shared memory")

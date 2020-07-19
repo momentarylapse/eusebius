@@ -56,7 +56,7 @@ void handle_kernel_error(Task* t, int i)
 void get_error_text(int i, out cstring s)
 	cstring nn
 	strcpy(s, "Int ")
-	_i2s(i, &nn)
+	_i2s(i, nn)
 	strcat(s, nn)
 	if i==0
 		strcat(s, ": division by zero")

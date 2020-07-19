@@ -22,10 +22,7 @@ void clrscr()
 	TextPos = 0
 
 void InitTextMode()
-	asm{
-		mov eax, 0x000b8000
-		mov VideoMemory, eax
-	}
+	VideoMemory = _i2p(0x000b8000)
 	
 	clrscr()
 	TextColor = 7
@@ -55,12 +52,12 @@ void prints_low(cstring *str, int size)
 					TextPos = 0
 					TextLine = 0
 			continue
-		if str[i] != 0x0a
+		if str[i] != '\n'
 			d[0] = str[i]
 			d[1] = TextColor
 			d = &d[2]
 			TextPos ++
-		if (TextPos >= SCREEN_WIDTH) or (str[i] == 0x0a)
+		if (TextPos >= SCREEN_WIDTH) or (str[i] == '\n')
 			TextPos = 0
 			TextLine ++
 			if TextLine >= SCREEN_HEIGHT
@@ -79,7 +76,7 @@ void prints_low(cstring *str, int size)
 void prints(cstring s)
 	prints_low(&s, strlen(s))
 
-void _i2s(int _i, out cstring *s)
+void _i2s(int _i, out cstring s)
 	bool sign = (_i >= 0)
 	int i = _i
 	if !sign
@@ -96,11 +93,11 @@ void _i2s(int _i, out cstring *s)
 	if !sign
 		ttt[offset] = '-'
 		offset --
-	memcpy(s, &ttt[offset + 1], 16-offset)
+	memcpy(&s, &ttt[offset + 1], 16-offset)
 
 void printi(int i)
 	cstring s
-	_i2s(i, &s)
+	_i2s(i, s)
 	prints(s)
 
 int printh(void* _data,int size)
@@ -133,10 +130,10 @@ int printh(void* _data,int size)
 
 
 void panic(cstring s)
-	asm{
+	asm {
 		cli
 	}
-	TextColor=0x04
+	TextColor = 0x04
 	prints("\n\n                   --  Panik  --\n\n")
 	prints(s)
 	while true

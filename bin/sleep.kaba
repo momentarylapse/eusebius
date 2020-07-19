@@ -7,7 +7,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	if arg.num == 2
-		sleep(arg[1].int())
+	if len(arg) == 2
+		sleep(int(arg[1]))
 	
 	exit(0)
