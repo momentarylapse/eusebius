@@ -135,7 +135,7 @@ class KSocket
 			KSocket *s = SocketManager.get_by_port(peer_port)
 			if s
 				s.peer_port = -1
-		FileSystem.del(e)
+		FileSystem.delete(e)
 		free(buffer)
 		used = false
 

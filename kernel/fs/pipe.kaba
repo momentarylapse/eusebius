@@ -65,7 +65,7 @@ class Pipe
 	void clean_up()
 		if !e.parent
 			# anonymous pipe
-			FileSystem.del(e)
+			FileSystem.delete(e)
 
 		free(buffer)
 		used = false

@@ -248,16 +248,16 @@ class MountPoint
 
 
 
-class FileSystemData
-	MountPoint[MAX_MOUNT_POINTS] mounts
-	FileEntry *root
+class FileSystem
+	static MountPoint[MAX_MOUNT_POINTS] mounts
+	static FileEntry *root
 	
-	void init()
+	static void init()
 		for m in mounts
 			m.dev = nil
 		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
 	
-	int del(out FileEntry *e)
+	static int delete(out FileEntry *e)
 		#prints("[del]")
 		#prints e.name
 		if e.first_sub
@@ -281,7 +281,7 @@ class FileSystemData
 		clean_up(e)
 		return 0
 	
-	void clean_up(out FileEntry *e)
+	static void clean_up(out FileEntry *e)
 		FileEntry *p = e.parent
 		e.shrink_block_list(0)
 		if e.mount
@@ -291,16 +291,16 @@ class FileSystemData
 			p.mount.write_inode(p)
 			p.mount.sync()
 	
-	FileEntry *get(cstring path, out FileEntry cur_dir)
+	static FileEntry *get(cstring path, FileEntry cur_dir)
 		int ppos = 0
+		FileEntry *e = &cur_dir
 		if path[0] == '/'
 			ppos = 1
-			cur_dir = root
+			e = root
 			if path[1] == 0
 				return root
-		else if !&cur_dir
+		else if !e
 			return nil
-		FileEntry *e = &cur_dir
 		cstring sub
 		bool has_more = true
 		while has_more
@@ -319,7 +319,7 @@ class FileSystemData
 				return nil
 		return e
 		
-	int mount(PartitionData dev, out FileEntry dir, cstring fs_name)
+	static int mount(PartitionData dev, out FileEntry dir, cstring fs_name)
 		if !&dev
 			return -1
 		if !&dir
@@ -354,12 +354,11 @@ class FileSystemData
 		prints(" ok\n")
 		return 0
 	
-	void sync()
+	static void sync()
 		for m in mounts
 			if m.dev
 				m.sync()
 
-FileSystemData FileSystem
 
 class MountPointMichiFS extends MountPoint
 	
