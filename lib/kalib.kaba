@@ -611,13 +611,13 @@ class lib__string extends lib__@DynamicArray
 		int n0 = num
 		__mem_resize__(num + o.num)
 		memcpy(&data[n0], o.data, o.num)
-	lib__string __add__(lib__string o)
+	const lib__string __add__(lib__string o)
 		lib__string r
 		r = self
 		r += o
 		return r
 			
-	lib__string substr(int _start, int _length)
+	const lib__string substr(int _start, int _length)
 		lib__string r
 		int start = _start
 		int length = _length
@@ -637,13 +637,13 @@ class lib__string extends lib__@DynamicArray
 			memcpy(r.data, &data[start], length)
 		return r
 
-	lib__string head(int size)
+	const lib__string head(int size)
 		return substr(0, size)
 
-	lib__string tail(int size)
+	const lib__string tail(int size)
 		return substr(num - size, size)
 
-	int find(lib__string s, int start)
+	const int find(lib__string s, int start)
 		for i in start : num - s.num
 			bool ok = true
 			for j in 0:s.num
@@ -654,7 +654,7 @@ class lib__string extends lib__@DynamicArray
 				return i
 		return -1
 		
-	int compare(lib__string s)
+	const int compare(lib__string s)
 		int n = num
 		if s.num < num
 			n = s.num
@@ -665,15 +665,15 @@ class lib__string extends lib__@DynamicArray
 				return a - b
 		return num - s.num
 		
-	bool __eq__(lib__string s)
+	const bool __eq__(lib__string s)
 		return compare(s) == 0
-	bool __neq__(lib__string s)
+	const bool __neq__(lib__string s)
 		return compare(s) != 0
-	bool __ne__(lib__string s)
+	const bool __ne__(lib__string s)
 		return compare(s) != 0
-	bool __lt__(lib__string s)
+	const bool __lt__(lib__string s)
 		return compare(s) < 0
-	bool __gt__(lib__string s)
+	const bool __gt__(lib__string s)
 		return compare(s) > 0
 
 #int string::rfind(const string &s, int start) const
@@ -728,7 +728,7 @@ class lib__string extends lib__@DynamicArray
 #	return num - s.num;
 #}
 
-	lib__string reverse()
+	const lib__string reverse()
 		lib__string r
 		r.resize(num)
 		for i in 0:num
@@ -752,7 +752,7 @@ class lib__string extends lib__@DynamicArray
 				data[i] = data[i - d]
 			resize(num + d)
 
-	lib__string replace(lib__string sub, lib__string by)
+	const lib__string replace(lib__string sub, lib__string by)
 		lib__string r = self
 		int i = r.find(sub, 0)
 		while i >= 0
@@ -760,14 +760,14 @@ class lib__string extends lib__@DynamicArray
 			i = r.find(sub, i + by.num)
 		return r
 
-	lib__string lower()
+	const lib__string lower()
 		lib__string r = self
 		for i in 0:num
 			if (data[i] >= 'A') and (data[i] <= 'Z')
 				r.data[i] += 'a' - 'A'
 		return r
 
-	lib__string upper()
+	const lib__string upper()
 		lib__string r = self
 		for i in 0:num
 			if (data[i] >= 'a') and (data[i] <= 'z')
@@ -775,7 +775,7 @@ class lib__string extends lib__@DynamicArray
 		return r
 		
 
-	lib__string@list explode(lib__string s)
+	const lib__string@list explode(lib__string s)
 		lib__string@list r
 
 		int pos = 0
@@ -791,7 +791,7 @@ class lib__string extends lib__@DynamicArray
 			r.add(substr(pos, num - pos))
 		return r
 		
-	lib__string hex()
+	const lib__string hex()
 		lib__string ttt
 		for i in 0:num
 			int j = i
@@ -812,7 +812,7 @@ class lib__string extends lib__@DynamicArray
 				ttt.add('.')
 		return ttt
 	
-	int __int__()
+	const int __int__()
 		if num == 0
 			return 0
 		bool sign = (data[0] != '-')
@@ -827,7 +827,7 @@ class lib__string extends lib__@DynamicArray
 			return -r
 		return r
 	
-	float __float__()
+	const float __float__()
 		if num == 0
 			return 0.0
 		bool sign = (data[0] != '-')
@@ -849,6 +849,13 @@ class lib__string extends lib__@DynamicArray
 		if !sign
 			return -r
 		return r
+	const lib__string format(lib__string f)
+		lib__string ttt
+		int n = int(f)
+		ttt = self
+		for i in len(self):n
+			ttt.add(' ')
+		return ttt
 
 lib__string binary(void *p, int num)
 	lib__string s
@@ -1048,6 +1055,18 @@ int lib__randi(int m)
 class lib__int
 	static lib__string __str__(int i)
 		return i2s(i)
+	static lib__string format(int i, lib__string f)
+		lib__string ttt, filler
+		int n = int(f)
+		ttt = i2s(i)
+		if n > 0
+			while len(ttt) < n
+				ttt.add(' ')
+		else
+			while len(ttt) + len(filler) < -n
+				filler.add(' ')
+			return filler + ttt
+		return ttt
 
 class lib__float
 	static lib__string __str__(float f)

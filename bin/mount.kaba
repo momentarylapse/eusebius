@@ -1,10 +1,6 @@
 use "lib/std.kaba"
 
 
-void fill(out string s, int n)
-	while len(s) < n
-		s.add(' ')
-
 void show_mount(MountInfo m)
 	print("{{m.major}}:{{m.minor}}    {{cs2s(m.dir)}}\n")
 
@@ -25,7 +21,7 @@ string fs_type(BlockDevice p)
 	return "???"
 
 void show_dev(BlockDevice d)
-	print("{{cs2s(d.name)}}    {{d.major}}:{{d.minor}}    {{d.size * d.block_size / 1024}} k    {{fs_type(d)}}\n")
+	print("{{cs2s(d.name)|10}} {{d.major|-2}}:{{d.minor|2}}   {{d.size * d.block_size / 1024|-10}} k   {{fs_type(d)|10}}\n")
 
 void main()
 	init_lib()
