@@ -35,19 +35,19 @@ void show_pvl()
 
 void LoadKalib()
 	prints("loading kalib... ")
-	int h = KernelTask.sys_open(_p2i(&"/lib/kalib"), O_RDONLY)
+	int h = kernel_task.sys_open(_p2i(&"/lib/kalib"), O_RDONLY)
 	if h < 0
 		panic("can not read file /lib/kalib!")
 		return
 	int addr = KALIB_LOCATION
 	int size = 0
 	while true
-		int r = KernelTask.sys_read(h, addr, 1024)
+		int r = kernel_task.sys_read(h, addr, 1024)
 		if r <= 0
 			break
 		size += r
 		addr += r
-	KernelTask.sys_close(h)
+	kernel_task.sys_close(h)
 	printi(size)
 	prints("b  ok\n")
 
@@ -94,9 +94,9 @@ void main()
 	
 	FileSystem.init()
 	
-	FileSystem.mount(&Partition[2], FileSystem.root, "ext2")
+	FileSystem.mount(Partition[2], FileSystem.root, "ext2")
 	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
-	FileSystem.mount(&Partition[1], boot, "michifs")
+	FileSystem.mount(Partition[1], boot, "michifs")
 	
 	InitTasks()
 	
@@ -108,13 +108,13 @@ void main()
 	
 	LoadKalib()
 	
-	int stdin = KernelTask.sys_open(_p2i(&"/dev/tty"), O_RDONLY)
-	int stdout = KernelTask.sys_open(_p2i(&"/dev/tty"), O_WRONLY)
+	int stdin = kernel_task.sys_open(_p2i(&"/dev/tty"), O_RDONLY)
+	int stdout = kernel_task.sys_open(_p2i(&"/dev/tty"), O_WRONLY)
 	
-	if KernelTask.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
+	if kernel_task.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
 		panic("can not read file /bin/shell!")
 	
-	StartScheduler()
+	Scheduler.start()
 	panic("test")
 	prints("aa2")
 	while true

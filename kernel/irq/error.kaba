@@ -7,7 +7,7 @@ use kaba
 
 const int ERROR_STACK_SIZE = 4096
 
-void handle_task_error(out Task* t, out Task* e, int i)
+void handle_task_error(out Task t, out Task e, int i)
 	int pid = t.pid
 	#prints("\n    -- Interrupt #")
 #	printi(i)
@@ -27,11 +27,11 @@ void handle_task_error(out Task* t, out Task* e, int i)
 	else
 		t.die(i-666)
 	
-	int pid_next = GetNextTask(pid)
-	ReconnectTasks(pid_next, e)
+	int pid_next = Scheduler.get_next_task(pid)
+	Scheduler.reconnect_tasks(pid_next, e)
 	
 
-void handle_kernel_error(Task* t, int i)
+void handle_kernel_error(Task t, int i)
 	cstring s
 	get_error_text(i, s)
 	
@@ -95,7 +95,7 @@ void int_handler(int i)
 		# task?
 		Task* e = error.tasks[i]
 		int prev_pid = e.get_prev_pid()
-		Task *prev = &Tasks[prev_pid]
+		Task *prev = &tasks[prev_pid]
 		
 		# handle error
 		if prev.kernel_mode
@@ -188,7 +188,7 @@ class ErrorController
 		handler[15] = int_15
 		
 		for h,i in handler
-			tasks[i] = AddTaskKernel("irq-error", h, ERROR_STACK_SIZE, KernelTask)
+			tasks[i] = AddTaskKernel("irq-error", h, ERROR_STACK_SIZE, kernel_task)
 			irq.set_task(i, tasks[i])
 		
 		

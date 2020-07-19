@@ -11,87 +11,89 @@ const int SCHEDULER_STACK_SIZE = 8192
 const int TASK_SWITCH_DT = 5 # ms
 const int PERF_UPDATE_DT = 1000000000 # 1000 ns
 
-Task* SchedulerTask
 
-TimeValue next_perf_calc
+class Scheduler
+	static Task* scheduler_task
 
-void int_timer()
-	while true
-		#prints("(")
-		kernel_timer.tick()
+	static TimeValue next_perf_calc
+
+	static void int_timer()
+		while true
+			#prints("(")
+			kernel_timer.tick()
 		
-		# IO-waits
-		ProcessWaitingTasks()
+			# IO-waits
+			process_waiting_tasks()
 			
-		UpdateTimes()
-		#prints(" ")
+			update_times()
+			#prints(" ")
 		
-		# pick next task
-		int pid_next = GetNextTask(RunningPid)
-		ReconnectTasks(pid_next, SchedulerTask)
+			# pick next task
+			int pid_next = get_next_task(RunningPid)
+			reconnect_tasks(pid_next, scheduler_task)
 
-		#prints(")")
+			#prints(")")
 
-		# allow more timer IRQs
-		outportb(0x20,0x20)
+			# allow more timer IRQs
+			outportb(0x20,0x20)
 
-		# return to (other) task
-		asm{
-			iret
-		}
+			# return to (other) task
+			asm {
+				iret
+			}
 
-void StartScheduler()
-	RunningPid = 0
-	prints("starting scheduler\n")
+	static void start()
+		RunningPid = 0
+		prints("starting scheduler\n")
 	
-	SchedulerTask = AddTaskKernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, KernelTask)
+		scheduler_task = AddTaskKernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, kernel_task)
 	
-	InitTimerInterrupt(SchedulerTask, TASK_SWITCH_DT)
-	next_perf_calc = kernel_timer.tv
-	next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
-	SchedulerTask.run_forced()
-
-
-
-# Scheduler
-int GetNextTask(int pid)
-	for i in pid + 1:MAX_TASKS
-		if Tasks[i].status == TASK_STATUS_RUNNING
-			return i
-	for i in 0:pid+1
-		if Tasks[i].status == TASK_STATUS_RUNNING
-			return i
-	return IdleTask.pid
-
-void ProcessWaitingTasks()
-	for t in Tasks
-		if t.status == TASK_STATUS_WAITING
-			if t.waiting_mode == WAITING_MODE_TIME
-				TimeValue *rem = &t.waiting_param_i1
-				rem.dec_nanosec(kernel_timer.dt_nanosec)
-				if rem.sec < 0
-					t.tss.eax = 0 # return 0
-					t.activate()
-			else
-				t.do_wait_update()
-
-
-void ReconnectTasks(int pid_next, out Task* irq_task)
-	#int pid_cur = irq_task.get_prev_task()
-	GlobalDescriptorTable[Tasks[RunningPid].desc].set_busy(false)
-	GlobalDescriptorTable[Tasks[pid_next].desc].set_busy(true)
-	irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
-	RunningPid = pid_next
-	#prints("<rec ")
-#	printi pid_next
-#	prints(">")
-
-void UpdateTimes()
-	Tasks[RunningPid].time_all.inc_nanosec(kernel_timer.dt_nanosec)
-	Tasks[RunningPid].time_temp.inc_nanosec(kernel_timer.dt_nanosec)
-	
-	if !kernel_timer.tv.is_before(next_perf_calc)
+		InitTimerInterrupt(scheduler_task, TASK_SWITCH_DT)
+		next_perf_calc = kernel_timer.tv
 		next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
-		for t in Tasks
-			t.load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
-			t.time_temp.clear()
+		scheduler_task.run_forced()
+
+
+
+	# Scheduler
+	static int get_next_task(int pid)
+		for i in pid + 1:MAX_TASKS
+			if tasks[i].status == TASK_STATUS_RUNNING
+				return i
+		for i in 0:pid+1
+			if tasks[i].status == TASK_STATUS_RUNNING
+				return i
+		return idle_task.pid
+
+	static void process_waiting_tasks()
+		for t in tasks
+			if t.status == TASK_STATUS_WAITING
+				if t.waiting_mode == WAITING_MODE_TIME
+					TimeValue *rem = &t.waiting_param_i1
+					rem.dec_nanosec(kernel_timer.dt_nanosec)
+					if rem.sec < 0
+						t.tss.eax = 0 # return 0
+						t.activate()
+				else
+					t.do_wait_update()
+
+
+	static void reconnect_tasks(int pid_next, out Task irq_task)
+		#int pid_cur = irq_task.get_prev_task()
+		GlobalDescriptorTable[tasks[RunningPid].desc].set_busy(false)
+		GlobalDescriptorTable[tasks[pid_next].desc].set_busy(true)
+		irq_task.tss.prev = (pid_next + NUM_PRE_GDT_ENTRIES) << 3
+		RunningPid = pid_next
+		#prints("<rec ")
+	#	printi pid_next
+	#	prints(">")
+
+	static void update_times()
+		tasks[RunningPid].time_all.inc_nanosec(kernel_timer.dt_nanosec)
+		tasks[RunningPid].time_temp.inc_nanosec(kernel_timer.dt_nanosec)
+	
+		if !kernel_timer.tv.is_before(next_perf_calc)
+			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
+			for t in tasks
+				t.load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
+				t.time_temp.clear()

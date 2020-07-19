@@ -12,7 +12,7 @@ void int_ignore()
 	asm{
 		iret
 	}
-Task *IgnoreTask
+Task* ignore_task
 
 void int_task_irq()
 	asm{
@@ -20,7 +20,7 @@ void int_task_irq()
 	}
 	int irq_no = __temp_i__
 	InterruptToSignalMap *m = &irq.task_maps[irq_no]
-	Task *t = m.utask
+	let t = m.utask
 	while true
 		
 		if t.puid == m.puid
@@ -100,8 +100,8 @@ class InterruptController
 			m.utask = nil
 		
 	
-		IgnoreTask = AddTaskKernel("irq-ignore", int_ignore, 128, KernelTask)
-		irq.set_task(32, IgnoreTask) # IRQ 0
+		ignore_task = AddTaskKernel("irq-ignore", int_ignore, 128, kernel_task)
+		irq.set_task(32, ignore_task) # IRQ 0
 
 		# move IRQs to higher interrupts
 		outportb(0x20,0x11) # init
@@ -147,7 +147,7 @@ class InterruptController
 		if m.pid >= 0
 			return -EEXIST
 		if !m.ktask
-			m.ktask = AddTaskKernel("irq-task", int_task_irq, 4096, KernelTask)
+			m.ktask = AddTaskKernel("irq-task", int_task_irq, 4096, kernel_task)
 			set_task(hw_irq + HARDWARE_IRQ_SHIFT, m.ktask)
 			m.ktask.tss.esi = hw_irq
 		m.pid = t.pid

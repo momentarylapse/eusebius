@@ -249,10 +249,10 @@ class Task
 	FileEntry *get_file(cstring path)
 		return FileSystem.get(path, cur_dir)
 		
-	int add_handle(OpenFileData *oh)
+	int add_handle(OpenFileData oh)
 		for h,i in handles
 			if !h
-				h = oh
+				h = &oh
 				oh.ref_count ++
 				return i
 		return -1
@@ -283,7 +283,7 @@ class Task
 		
 	
 	void send_death_message()
-		for t in Tasks
+		for t in tasks
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TASK_EXIT and t.waiting_param_i1 == pid
 					t.tss.eax = 0# # return waitpid()
@@ -535,7 +535,7 @@ class Task
 		return new_top
 	
 	int sys_fcntl(int fd, int op, int param)
-		OpenFileData *of = get_handle(fd)
+		let of = get_handle(fd)
 		if !of
 			return -EBADF
 		if op == F_GETFL
@@ -546,7 +546,7 @@ class Task
 		return -EINVAL
 	
 	int sys_fork()
-		Task* t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), &self)
+		let t = AddTaskUser("-fork-", _i2p(TASK_IMAGE_POS), &self)
 		if !t
 			return -ENOMEM
 		
@@ -607,7 +607,7 @@ class Task
 			set_wait(WAITING_MODE_MESSAGE, 0, 0, 0)
 			return 0
 		else if cmd == 1002 # yield / wake-up
-			Task*t = get_task(p1)
+			let t = get_task(p1)
 			if t
 				t.activate()
 			set_wait(WAITING_MODE_TIME, 0, 0, 0)
@@ -616,7 +616,7 @@ class Task
 	
 	int sys_socket(int cmd, int p1, int p2)
 		if cmd == SYS_SOCKET
-			FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+			let e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
 			if !e
 				return -ENFILE
 			if !create_socket(e, p1)
@@ -631,7 +631,7 @@ class Task
 				return -ENOTSOCK
 			return of.socket.bind(p2)
 		else if cmd == SYS_CONNECT
-			OpenFileData *of = get_handle(p1)
+			let of = get_handle(p1)
 			if !of
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
@@ -642,14 +642,14 @@ class Task
 			set_wait(WAITING_MODE_SOCKET_CONNECT, of.socket.port, 0, 0)
 			return 0
 		else if cmd == SYS_LISTEN
-			OpenFileData *of = get_handle(p1)
+			let of = get_handle(p1)
 			if !of
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
 				return -ENOTSOCK
 			return of.socket.listen()
 		else if cmd == SYS_ACCEPT
-			OpenFileData *of = get_handle(p1)
+			let of = get_handle(p1)
 			if !of
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
@@ -722,7 +722,7 @@ class Task
 						tss.eax = add_handle(of) # return 0
 				activate()
 		else if waiting_mode == WAITING_MODE_SOCKET_CONNECT
-			KSocket *s = get_socket_by_port(waiting_param_i1)
+			let s = get_socket_by_port(waiting_param_i1)
 			if !s
 				tss.eax = -EINVAL # return ...
 				activate()
@@ -733,14 +733,14 @@ class Task
 Task *get_task(int pid)
 	if pid < 0 or pid >= MAX_TASKS
 		return nil
-	Task* t = &Tasks[pid]
+	let t = &tasks[pid]
 	if t.status == TASK_STATUS_UNUSED
 		return nil
 	return t
 
-Task[MAX_TASKS] Tasks
-Task* KernelTask
-Task* IdleTask
+Task[MAX_TASKS] tasks
+Task* kernel_task
+Task* idle_task
 int NextPidToAssign
 int NextPuidToAssign
 int RunningPid
@@ -759,7 +759,7 @@ class GlobalDescriptorData
 		if executable
 			b += 0x00000800
 		b += 0x00002000 * pvl
-	void set_task(Task *t)
+	void set_task(Task t)
 		set_base(_p2i(&t.tss), 103, false)
 		b += 0x00000900 # not busy
 	void set_busy(bool busy)
@@ -772,11 +772,11 @@ GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] GlobalDescriptorTable
 
 int get_next_pid()
 	for i in NextPidToAssign:MAX_TASKS
-		if Tasks[i].status == TASK_STATUS_UNUSED
+		if tasks[i].status == TASK_STATUS_UNUSED
 			NextPidToAssign = i + 1
 			return i
 	for i in 0:NextPidToAssign
-		if Tasks[i].status == TASK_STATUS_UNUSED
+		if tasks[i].status == TASK_STATUS_UNUSED
 			NextPidToAssign = i + 1
 			return i
 	return -1
@@ -785,7 +785,7 @@ Task* AddTaskUser(cstring name, void *func, Task *parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
-	Task* t = &Tasks[pid]
+	let t = &tasks[pid]
 	
 	t.init(pid, name, parent)
 	t.kernel_mode = false
@@ -807,7 +807,7 @@ Task* AddTaskKernel(cstring name, void *func, int stack_size, Task* parent)
 	int pid = get_next_pid()
 	if pid < 0
 		return nil
-	Task* t = &Tasks[pid]
+	let t = &tasks[pid]
 
 	t.init(pid, name, parent)
 	t.kernel_mode = true
@@ -846,7 +846,7 @@ void InitTasks()
 	# user data
 	GlobalDescriptorTable[4].set_data(0, 0xffffffff, false, 0)#3)
 
-	for t in Tasks
+	for t in tasks
 		t.status = TASK_STATUS_UNUSED
 		for h in t.handles
 			h = nil
@@ -858,8 +858,8 @@ void InitTasks()
 	#UserMemMask = 0
 	RunningPid = 0
 
-	KernelTask = AddTaskKernel("kernel", nil, KERNEL_STACK_SIZE, nil)
-	IdleTask = AddTaskKernel("idle", idle_func, IDLE_STACK_SIZE, KernelTask)
+	kernel_task = AddTaskKernel("kernel", nil, KERNEL_STACK_SIZE, nil)
+	idle_task = AddTaskKernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
 	
 	# GDT laden
 	__temp_i__ = sizeof(GlobalDescriptorTable) - 1
@@ -879,7 +879,7 @@ void InitTasks()
 	}
 
 	#prints("\n  setze Kernel-Task-Register")
-	__temp_i__ = KernelTask.desc * 8
+	__temp_i__ = kernel_task.desc * 8
 	asm{
 		mov eax, __temp_i__ # Descriptor[n]
 		ltr ax

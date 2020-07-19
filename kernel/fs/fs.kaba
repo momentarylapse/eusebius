@@ -16,13 +16,13 @@ const int MAX_MOUNT_POINTS = 32
 
 
 class FileOperations
-	virtual int open(FileEntry* e)
+	virtual int open(FileEntry e)
 		return 0
-	virtual int close(FileEntry* e)
+	virtual int close(FileEntry e)
 		return 0
-	virtual int read(FileEntry* e, void* page_dir, int addr, int size) # PageDirectory
+	virtual int read(FileEntry e, void* page_dir, int addr, int size) # PageDirectory
 		return 0
-	virtual int write(FileEntry* e, void* page_dir, int addr, int size) # PageDirectory
+	virtual int write(FileEntry e, void* page_dir, int addr, int size) # PageDirectory
 		return 0
 
 class FileEntry
@@ -48,15 +48,15 @@ class FileEntry
 		add_child(e)
 		return e
 	
-	void add_child(out FileEntry *e)
+	void add_child(out FileEntry e)
 		e.parent = &self
 		if first_sub
 			FileEntry *i = first_sub
 			while i.next
 				i = i.next
-			i.next = e
+			i.next = &e
 		else
-			first_sub = e
+			first_sub = &e
 	
 	FileEntry *get_sub(cstring sname)
 		if strcmp(sname, "..") == 0
@@ -240,7 +240,7 @@ class MountPoint
 	virtual int alloc_inode()
 		return -1
 	
-	virtual int write_inode(FileEntry *e)
+	virtual int write_inode(FileEntry e)
 		return -1
 	
 	virtual int sync()
@@ -319,10 +319,10 @@ class FileSystemData
 				return nil
 		return e
 		
-	int mount(PartitionData *dev, out FileEntry *dir, cstring fs_name)
-		if !dev
+	int mount(PartitionData dev, out FileEntry dir, cstring fs_name)
+		if !&dev
 			return -1
-		if !dir
+		if !&dir
 			return -1
 		prints("mounting ")
 		prints(fs_name)
@@ -345,8 +345,8 @@ class FileSystemData
 			MountPointExt2 *mp_ext2 = mp
 			mp_ext2.__init__()
 			
-		mp.dest = dir
-		mp.dev = dev
+		mp.dest = &dir
+		mp.dev = &dev
 		mp.dirty = false
 		strcpy(mp.type, fs_name)
 		mp.mount()
@@ -444,7 +444,7 @@ class MountPointExt2 extends MountPoint
 			return
 		writable = true
 	
-	int write_inode_simple(FileEntry *e)
+	int write_inode_simple(FileEntry e)
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
@@ -476,7 +476,7 @@ class MountPointExt2 extends MountPoint
 		
 		return 0
 	
-	void read_inode(int index, Ext2Inode inode, out FileEntry *e)
+	void read_inode(int index, Ext2Inode inode, out FileEntry e)
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
 		# group_no!!!!!!!!!!!!!!
@@ -502,7 +502,7 @@ class MountPointExt2 extends MountPoint
 				e.add_block(p[i - 12])
 	
 	
-	cstring *read_inode_contents(FileEntry *e)
+	cstring *read_inode_contents(FileEntry e)
 		cstring *buf = malloc(e.num_blocks * block_size)
 		for i in 0:e.num_blocks
 			read_block(e.blocks[i], &buf[i * block_size])
@@ -514,7 +514,7 @@ class MountPointExt2 extends MountPoint
 #		for i in 0:e.num_blocks
 #			write_block(e.blocks[i], &buf[i * block_size])
 	
-	void read_inode_recursive(int index, out FileEntry *dir)
+	void read_inode_recursive(int index, out FileEntry dir)
 		Ext2Inode inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()
@@ -543,12 +543,12 @@ class MountPointExt2 extends MountPoint
 				read_inode_recursive(d.inode, e)
 		free(cont)
 		
-	override int write_inode(out FileEntry *e)
+	override int write_inode(out FileEntry e)
 		if e.type == FILE_TYPE_DIR
 			return write_inode_dir(e)
 		return write_inode_simple(e)
 	
-	int write_inode_dir(out FileEntry *dir)
+	int write_inode_dir(out FileEntry dir)
 		cstring fn
 		dir.get_path(fn)
 		cstring *b = malloc(4096*8)

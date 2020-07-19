@@ -14,11 +14,11 @@ use "../task/task.kaba"
 
 FileOperationsZero dev_zero_ops
 class FileOperationsZero extends FileOperations
-	override int open(FileEntry *f)
+	override int open(FileEntry f)
 		return 0
-	override int close(FileEntry *f)
+	override int close(FileEntry f)
 		return 0
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int read(FileEntry f, PageDirectory *page_dir, int addr, int size)
 		int zero = 0
 		for i in 0:size
 			page_dir.memcpy2task(addr + i, &zero, 1)
@@ -26,13 +26,13 @@ class FileOperationsZero extends FileOperations
 
 FileOperationsNull dev_null_ops
 class FileOperationsNull extends FileOperations
-	override int write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int write(FileEntry f, PageDirectory *page_dir, int addr, int size)
 		return size
 
 FileOperationsRand dev_rand_ops
 int dev_rand_state
 class FileOperationsRand extends FileOperations
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int read(FileEntry f, PageDirectory *page_dir, int addr, int size)
 		for i in 0:size
 			dev_rand_state = (dev_rand_state * 23434 + 82374) % 8623
 			page_dir.memcpy2task(addr + i, &dev_rand_state, 1)
@@ -46,14 +46,14 @@ bool dev_key_escaped
 bool dev_key_shift, dev_key_control, dev_key_altgr
 int dev_key_reading
 class FileOperationsKey extends FileOperations
-	override int open(FileEntry *f)
+	override int open(FileEntry f)
 		dev_key_num = 0
 		dev_key_reading ++
 		return 0
-	override int close(FileEntry *f)
+	override int close(FileEntry f)
 		dev_key_reading --
 		return 0
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int _size)
+	override int read(FileEntry f, PageDirectory *page_dir, int addr, int _size)
 		int size = _size
 		if dev_key_num == 0
 			return -EWOULDBLOCK
@@ -63,14 +63,14 @@ class FileOperationsKey extends FileOperations
 		dev_key_num -= size
 		memcpy(&dev_key_buf, &dev_key_buf[size], dev_key_num)
 		return size
-	override int write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int write(FileEntry f, PageDirectory *page_dir, int addr, int size)
 		return 0
 	
 FileOperationsMouse dev_mouse_ops
 cstring dev_mouse_buf
 int dev_mouse_num
 class FileOperationsMouse extends FileOperations
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int _size)
+	override int read(FileEntry f, PageDirectory *page_dir, int addr, int _size)
 		int size = _size
 		if dev_mouse_num == 0
 			return -EWOULDBLOCK
@@ -89,7 +89,7 @@ FileOperationsTTY dev_tty_ops
 cstring dev_tty_key_buf
 int dev_tty_key_num
 class FileOperationsTTY extends FileOperations
-	override int read(FileEntry *f, PageDirectory *page_dir, int addr, int _size)
+	override int read(FileEntry f, PageDirectory *page_dir, int addr, int _size)
 		int size = _size
 		if dev_tty_key_num == 0
 			return -EWOULDBLOCK
@@ -99,7 +99,7 @@ class FileOperationsTTY extends FileOperations
 		dev_tty_key_num -= size
 		memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
 		return size
-	override int write(FileEntry *f, PageDirectory *page_dir, int addr, int size)
+	override int write(FileEntry f, PageDirectory *page_dir, int addr, int size)
 		for i in 0:size
 			int offset
 			cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
@@ -149,8 +149,8 @@ void InitDrivers()
 	dev_mouse_ops.__init__()
 	dev_mouse.op = &dev_mouse_ops
 	
-	Task *KeyTask = AddTaskKernel("irq-key", int_key, 1024, KernelTask)
-	Task *MouseTask = AddTaskKernel("irq-mouse", int_mouse, 1024, KernelTask)
+	Task *KeyTask = AddTaskKernel("irq-key", int_key, 1024, kernel_task)
+	Task *MouseTask = AddTaskKernel("irq-mouse", int_mouse, 1024, kernel_task)
  	
 	irq.set_task(33, KeyTask) # IRQ 1
 	irq.set_task(44, MouseTask) # IRQ 12

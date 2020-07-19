@@ -36,7 +36,7 @@ class SysInfo
 		totalswap = 0
 		freeswap = 0
 		procs = 0
-		for t in Tasks
+		for t in tasks
 			if t.status != TASK_STATUS_UNUSED
 				procs ++
 		totalhigh = 0
@@ -100,7 +100,7 @@ void int_syscall()
 		int r = 0
 		
 		#int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		Task* caller = &Tasks[RunningPid]
+		Task* caller = &tasks[RunningPid]
 		#printi(pid)
 		int index = caller.tss.eax
 		int param1 = caller.tss.ebx
@@ -176,8 +176,8 @@ void int_syscall()
 		else if index == 141 # getdents
 			r = caller.sys_getdents(param1, param2, param3)
 		else if index == 158 # sched_yield
-			int pid_next = GetNextTask(RunningPid)
-			ReconnectTasks(pid_next, SysCallTask)
+			int pid_next = Scheduler.get_next_task(RunningPid)
+			Scheduler.reconnect_tasks(pid_next, sys_call_task)
 		else if index == 162 # nanosleep
 			caller.sys_nanosleep(param1, param2)
 			# p1 = &duration
@@ -225,8 +225,8 @@ void int_syscall()
 		# task switch?
 		if caller.status != TASK_STATUS_RUNNING
 			#prints("S")
-			int pid_next = GetNextTask(RunningPid)
-			ReconnectTasks(pid_next, SysCallTask)
+			int pid_next = Scheduler.get_next_task(RunningPid)
+			Scheduler.reconnect_tasks(pid_next, sys_call_task)
 			#printi(pid_next)
 
 		# zurück
@@ -239,8 +239,8 @@ void int_syscall()
 		}
 		#prints("<")
 	
-Task *SysCallTask
+Task* sys_call_task
 
 void InitSysCall()
-	SysCallTask = AddTaskKernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, KernelTask)
-	irq.set_task(0x80, SysCallTask)
+	sys_call_task = AddTaskKernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, kernel_task)
+	irq.set_task(0x80, sys_call_task)
