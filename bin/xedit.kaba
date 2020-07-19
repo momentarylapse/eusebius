@@ -29,7 +29,7 @@ class EditWindow extends MtkWindow
 		else
 			set_title("neues Dokument")
 	void save()
-		File* f = Filesystem.create(filename)
+		let f = Filesystem.create(filename)
 		if f
 			f.write(v.text)
 			del f
@@ -45,17 +45,15 @@ class EditWindow extends MtkWindow
 			
 		
 
-EditWindow* window
-
 void main()
 	mtk_init()
 	string[] arg
 	get_args(arg)
 	
+	string filename
 	if arg.num > 1
-		window = new EditWindow(arg[1])
-	else
-		window = new EditWindow("")
+		filename = arg[1]
+	let window = new EditWindow(filename)
 	window.show()
 	
 	mtk_run()

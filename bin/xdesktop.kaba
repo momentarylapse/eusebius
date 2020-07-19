@@ -20,7 +20,7 @@ class LauncherBar extends MtkWindow
 		#super.__init__("Test", 1024, 32)
 		move(0, 0)#-30)
 		
-		MtkGrid* g = new MtkGrid(1, 5)
+		let g = new MtkGrid(1, 5)
 		put(g)
 	
 		g.put(0, 0, new LauncherButton("Term", ["/bin/xterm"]))
@@ -30,12 +30,10 @@ class LauncherBar extends MtkWindow
 		g.put(0, 4, new LauncherButton("Cake", ["/bin/cake"]))
 		
 
-#TestWindow* window
-
 void main()
 	mtk_init()
 
-	LauncherBar* bar = new LauncherBar()
+	let bar = new LauncherBar()
 	bar.show()
 
 	mtk_run()

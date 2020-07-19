@@ -57,7 +57,7 @@ class FilesView extends MtkWidget
 	override void on_key(int key)
 		if key == KEY_BACKSPACE
 			if dir.num > 2
-				string[] parts = dir.explode("/")
+				let parts = dir.explode("/")
 				string d
 				for i in 1:parts.num-1
 					d += "/"
@@ -77,7 +77,6 @@ class FilesWindow extends MtkWindow
 		
 		
 
-FilesWindow* window
 Image* icon_dir, icon_file
 
 void main()
@@ -87,11 +86,11 @@ void main()
 	
 	icon_dir = new Image(16, 16, color(1, 0.5, 0.5, 0))
 	icon_file = new Image(16, 16, color(1, 0.8, 0.8, 0.8))
-	
+
+	string dir = "/"
 	if arg.num > 1
-		window = new FilesWindow(arg[1])
-	else
-		window = new FilesWindow("/")
+		dir = arg[1]
+	let window = new FilesWindow(dir)
 	window.show()
 
 	mtk_run()

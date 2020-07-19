@@ -1,0 +1,8 @@
+use "lib/std.kaba"
+
+void main()
+	init_lib()
+	#lib_print_endl = false
+	print(getcwd())
+	#print("\n")
+	exit(0)

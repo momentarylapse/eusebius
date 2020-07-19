@@ -162,7 +162,7 @@ void int_syscall()
 		else if index == 67 # sigaction
 			r = caller.sys_sigaction(param1, param2)
 		else if index == 88 # reboot
-			nil
+			pass
 		else if index == 102 # socket
 			r = caller.sys_socket(param1, param2, param3)
 		else if index == 116 # sysinfo
@@ -229,7 +229,7 @@ void int_syscall()
 			Scheduler.reconnect_tasks(pid_next, sys_call_task)
 			#printi(pid_next)
 
-		# zurück
+		# back
 		caller.tss.eax = r
 		
 		#prints(">")

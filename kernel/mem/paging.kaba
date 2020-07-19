@@ -8,7 +8,6 @@ const int MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 # 1 mask = 32 pages = 128k
 
 #const int KERNEL_PAGE_DIRECTORY = 0x00200000
-PageDirectory *KernelPageDir
 
 class Page
 	int[PAGE_TABLE_ENTRIES] e
@@ -18,7 +17,6 @@ class Page
 			e[i] = 0
 
 class PageTable extends Page
-	
 	const int count_entries()
 		int num_entries = 0
 		for ee in e
@@ -244,6 +242,7 @@ class Paging
 	static int num_masks
 	static int pages_allocated
 	static int pages_usable
+	static PageDirectory* kernel_page_dir
 	static void init()
 		prints("enable paging...")
 		num_masks = MemorySize / PAGE_SIZE / 32
@@ -262,11 +261,11 @@ class Paging
 			
 		# kernel: flat paging
 		int nmax = MemorySize / PAGE_SIZE / 1024
-		KernelPageDir = create_page_directory()
-		KernelPageDir.map_lin(0, 0, MemorySize, true)
+		kernel_page_dir = create_page_directory()
+		kernel_page_dir.map_lin(0, 0, MemorySize, true)
 	
 		asm{
-			mov eax, KernelPageDir
+			mov eax, Paging.kernel_page_dir
 			mov cr3, eax
 			mov eax, cr0
 			or eax, 0x80000000

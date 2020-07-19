@@ -14,10 +14,10 @@ class ImageWindow extends MtkWindow
 	void __init__(string filename, Image* im)
 		super.__init__("XImage", im.width, im.height)
 		
-		ImageView* v = new ImageView(im)
+		let v = new ImageView(im)
 		put(v)
 		
-		set_title(filename + " - " + im.width + "x" + im.height)
+		set_title("{{filename}} - {{im.width}}x{{im.height}}")
 		
 
 ImageWindow* window

@@ -70,7 +70,7 @@ class TaskStateSegment
 	int x, y
 	
 	
-	void set(void *stack_pointer, int _cs, int _ds, int pvl, PageDirectory *page_dir, void *task)
+	void set(void *stack_pointer, int _cs, int _ds, int pvl, PageDirectory page_dir, void *task)
 		int _ss = _ds
 		prev = 0 # previous TSS (dynamisch)
 		esp0 = stack_pointer
@@ -79,7 +79,7 @@ class TaskStateSegment
 		ss1 = _ss * 8
 		esp2 = stack_pointer
 		ss2 = _ss * 8
-		cr3 = page_dir
+		cr3 = &page_dir
 		eip = task
 		eflags = 0x200 + pvl * 0x1000 # IterruptFlag + PVL
 		eax = 0
@@ -350,17 +350,14 @@ class Task
 		return 0
 
 #--------------------------------------------------------------
-# Dateizugriff
+# file access
 	
 	OpenFileData *get_handle(int handle)
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
 			return nil
 		return handles[handle]
 
-	int sys_open(int faddr, int flags)
-		cstring filename
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
+	int open(cstring filename, int flags)
 		OpenFileData *of = kernel_open(filename, flags, cur_dir)
 		if !of
 			return -ENOENT
@@ -368,6 +365,12 @@ class Task
 		if index < 0
 			of.unref()
 		return index
+
+	int sys_open(int faddr, int flags)
+		cstring filename
+		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+			return -EFAULT
+		return open(filename, flags)
 
 
 	int sys_read(int handle, int addr, int size)
@@ -819,10 +822,10 @@ class TaskManager
 	
 		t.stack_size = stack_size
 		t.stack = malloc(stack_size)
-		t.page_dir = KernelPageDir
+		t.page_dir = Paging.kernel_page_dir
 		t.mem_bottom = 0
 		t.mem_size = 0
-		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, KernelPageDir, func)
+		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_page_dir, func)
 	
 		gdt[t.desc].set_task(t)
 
