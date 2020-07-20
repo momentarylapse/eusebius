@@ -116,6 +116,23 @@ lib__string getcwd()
 	return r
 
 
+
+bool stat(string filename, void *buf)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	__temp_p2__ = buf
+	asm{
+		mov eax, 0x0000200a
+		mov ebx, __temp_p__
+		mov ecx, __temp_p2__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+
+
 #--------------------------------------------------------------------------
 # dir entry
 
@@ -271,12 +288,29 @@ lib__string lib__Filesystem@@read(string filename)
 	close(h)
 	return content
 
+class StatData
+	cstring name
+	int type
+	int size
+	int inode
+	int mp_inode
+	int time
+	void __assign__(StatData o)
+		pass
+
+
 bool lib__Filesystem@@is_directory(string filename)
+	StatData d
+	if stat(filename, &d)
+		return d.type == 1
 	return false
 
 int64 lib__Filesystem@@size(string filename)
 	pass
-#	return 0
 
 int Filesystem_size32(string filename)
-	return 0
+	StatData d
+	if stat(filename, &d)
+		return d.size
+	return d.size
+	return -1

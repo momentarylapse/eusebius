@@ -84,6 +84,16 @@ class BlockDevice
 	void __assign__(BlockDevice o)
 		pass
 
+class StatData
+	cstring name
+	int type
+	int size
+	int inode
+	int mp_inode
+	int time
+	void __assign__(StatData o)
+		pass
+
 extern void init_lib()
 extern void get_args(string[] arg)
 
@@ -127,6 +137,7 @@ extern bool sysinfo(SysInfo s)
 extern bool taskinfo(int pid, out TaskInfo t)
 extern bool mountinfo(int index, out MountInfo i)
 extern bool blockinfo(int major, int minor, out BlockDevice d)
+extern bool stat(string filename, out StatData s)
 extern bool sched_yield(int pid)
 extern bool uname(void *buf)
 extern bool time(TimeValue t)

@@ -110,7 +110,28 @@ class MountInfo
 
 MountInfo _mount_info
 
-	
+
+class StatData
+	cstring name
+	int type
+	int size
+	int inode
+	int mp_inode
+	int time
+	void __assign__(StatData o)
+		pass
+	int get(cstring filename, FileEntry cur_dir)
+		let e = FileSystem.get(filename, cur_dir)
+		if !e
+			panic(filename)
+			return -1
+		strcpy(name, e.name)
+		type = e.type
+		size = e.size
+		inode = e.inode
+
+StatData _stat_data	
+
 void int_syscall()
 	while true
 		#show_pvl()
@@ -221,7 +242,7 @@ void int_syscall()
 				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
 		else if index == 0x2006 # exit_signal
 			r = caller.sys_exit_signal()
-			asm{
+			asm {
 				# don't overwrite eax with return value
 				jmp __sys_call_return
 			}
@@ -237,6 +258,12 @@ void int_syscall()
 			if d
 				caller.page_dir.memcpy2task(param3, d, sizeof(BlockDevice))
 				r = 0
+		else if index == 0x200a # stat
+			cstring filename
+			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
+			r = _stat_data.get(filename, caller.cur_dir)
+			if r == 0
+				caller.page_dir.memcpy2task(param2, &_stat_data, sizeof(_stat_data))
 		else
 			r = -ENOSYS
 		#TextColor = 4

@@ -779,6 +779,11 @@ class lib__int@list extends lib__@DynamicArray
 					int t = data[i]
 					data[i] = data[j]
 					data[j] = t
+	const int sum()
+		int s = 0
+		for i in 0:num
+			s += data[i]
+		return s
 
 class lib__float@list extends lib__@DynamicArray
 	override float[0]* data

@@ -1,14 +1,51 @@
 use os
 use "lib/std.kaba"
 
+string glue(string dir, string f)
+	if len(dir) == 0
+		return f
+	if dir[len(dir)-1] == '/'
+		return dir + f
+	return dir + "/" + f
 
-string i2s2(int i, int n)
-	string s = str(i)
-	string r
-	for j in len(s):n
-		r.add(' ')
-	return r + s
+string ftype(string path)
+	if Filesystem.is_directory(path)
+		return "d"
+	else
+		return "f"
 
+int[] table_widths(string[] list, int cols, int space)
+	int[] ww
+	for i in 0:cols
+		int w = 0
+		for s,k in list
+			if (k%cols) == i
+				w = max(w, len(s))
+		if i < cols-1
+			w += space
+		ww.add(w)
+	return ww
+
+int[] optimal_table(string[] list, int space, int max_width)
+	int cols = len(list)
+	while cols > 0
+		let w = table_widths(list, cols, space)
+		if w.sum() <= max_width
+			return w
+		cols --
+	return [10]
+
+void print_table(string[] list)
+	let w = optimal_table(list, 2, 80)
+	string o
+	for s,i in list
+		int col = (i % len(w))
+		if col == 0 and i > 0
+			o += "\n"
+		o += s
+		for j in len(s):w[col]
+			o.add(' ')
+	print(o)
 
 void ls(string dirname, bool extended)
 	let l = Filesystem.search(dirname, "", true)
@@ -17,17 +54,10 @@ void ls(string dirname, bool extended)
 
 	if extended
 		for e in l
-			if Filesystem.is_directory(dirname + e)
-				print("directory ")
-			else
-				print("file      ")
-			print(i2s2(Filesystem_size32(dirname + e), 8))
-			print(" {{e}}\n")
+			let path = glue(dirname, e)
+			print("{{ftype(path)|-4}} {{Filesystem_size32(path)|8}} {{e}}\n")
 	else
-		for e,i in l
-			if i > 0
-				print("  ")
-			print(e)
+		print_table(l)
 		print("\n")
 
 
