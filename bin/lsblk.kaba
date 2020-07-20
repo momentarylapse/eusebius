@@ -1,14 +1,5 @@
 use "lib/std.kaba"
 
-
-void show_mount(MountInfo m)
-	BlockDevice d
-	if blockinfo(m.major, m.minor, d)
-		print(" {{cs2s(d.name)|10}} {{fs_type(d)|8}} {{cs2s(m.dir)}}\n")
-	else
-		print(" ???        ???       {{cs2s(m.dir)}}\n")
-
-
 string fs_type(BlockDevice p)
 	if p.type == 0x83
 		return "ext2"
@@ -24,16 +15,19 @@ string fs_type(BlockDevice p)
 		return "extended..."
 	return "???"
 
+void show_dev(BlockDevice d)
+	print(" {{cs2s(d.name)|10}} {{d.major|-2}}:{{d.minor|2}} {{d.size * d.block_size / 1024|-12}} k   {{fs_type(d)|10}}\n")
+
 void main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg
 	get_args(arg)
 	
-	print("Device     Type     Mount point\n")
+	print("Name       Maj:Min        Size    Type\n")
 	for i in 0:16
-		MountInfo m
-		if mountinfo(i, m)
-			show_mount(m)
+		BlockDevice d
+		if blockinfo(0, i, d)
+			show_dev(d)
 	
 	exit(0)

@@ -19,9 +19,15 @@ BINS = \
  bin/kill \
  bin/top \
  bin/mount \
+ bin/lsblk \
  bin/ls \
- bin/hd bin/touch \
- bin/mkdir bin/tr bin/mkfifo bin/less bin/x \
+ bin/hd \
+ bin/touch \
+ bin/mkdir \
+ bin/tr \
+ bin/mkfifo \
+ bin/less \
+ bin/x \
  bin/shmem bin/date bin/sleep bin/uname bin/client \
  bin/lspci bin/sock bin/net bin/sound bin/error \
  bin/k bin/rm bin/rmdir bin/pwd bin/cake bin/c \
@@ -78,6 +84,9 @@ bin/less: bin/less.kaba $(PDEP)
 
 bin/ls: bin/ls.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/ls bin/ls.kaba
+
+bin/lsblk: bin/lsblk.kaba $(PDEP)
+	$(KABA) $(PFLAGS) -o bin/lsblk bin/lsblk.kaba
 
 bin/mkdir: bin/mkdir.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/mkdir bin/mkdir.kaba
