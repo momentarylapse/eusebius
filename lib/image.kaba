@@ -1,0 +1,65 @@
+use "base.kaba"
+use "array.kaba"
+use "syscalls.kaba"
+use "file.kaba"
+use image
+
+class lib__color
+	float a, r, g, b
+	lib__string __str__()
+		lib__string s
+		return s
+
+class lib__Image
+	int width, height
+	int mode, __align__
+	lib__int@list data
+	bool alpha_used
+	bool error
+	void __init__(int w, int h, color c)
+		data.resize(w * h)
+		int ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
+		for i in 0:data.num
+			data.data[i] = ic
+		width = w
+		height = h
+		error = false
+
+	static lib__Image* load(string filename)
+		lib__string temp
+		int h = open(filename, O_RDONLY)
+		if h < 0
+			return nil
+		temp.resize(32)
+		int r = read(h, &temp.data[0], 18)
+		if r < 0
+			close(h)
+			return nil
+		lib__Image* im = lib__@malloc(sizeof(Image))
+		int offset = temp.data[0]
+		int ww = temp.data[13]
+		int width = temp.data[12]
+		width += (ww*256)
+		int hh = temp.data[15]
+		int height = temp.data[14]
+		height += (hh*256)
+	
+		im.__init__(width, height, Red)
+	
+		for i in 0:offset
+			read(h, &temp.data[0], 1)
+	
+		for y in 0:height
+			read(h, &im.data.data[y * width], 4*width)
+				
+		#for y in 0:height
+#			for x in 0:width
+#				int c
+#				if read(h, &c, 4) == 4
+#					im.data.data[x + y * width] = c
+#				else
+#					im.data.data[x + y * width] = 0xffff0000
+			
+		close(h)
+		return im
+

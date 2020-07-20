@@ -4,7 +4,7 @@ use "lib/std.kaba"
 void show_mount(MountInfo m)
 	BlockDevice d
 	if blockinfo(m.major, m.minor, d)
-		print(" {{cs2s(d.name)|10}} {{fs_type(d)|8}} {{cs2s(m.dir)}}\n")
+		print(" {{cs2s(d.name)|-10}} {{fs_type(d)|-8}} {{cs2s(m.dir)}}\n")
 	else
 		print(" ???        ???       {{cs2s(m.dir)}}\n")
 

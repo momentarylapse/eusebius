@@ -1,0 +1,282 @@
+use "base.kaba"
+use "syscalls.kaba"
+use "array.kaba"
+
+
+int open(string filename, int flags)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	__temp_i__ = flags
+	asm{
+		mov eax, 0x00000005
+		mov ebx, __temp_p__
+		mov ecx, __temp_i__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
+int create(string filename)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x00000008
+		mov ebx, __temp_p__
+		mov ecx, 0x00000000
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
+int fork()
+	asm{
+		mov eax, 0x00000002
+		int 0x80
+		mov __temp_i__, eax
+	}
+	if __temp_i__ == 0
+		stdout = open("/dev/tty", O_RDONLY)
+	return __temp_i__
+
+bool mkdir(string filename)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x00000027
+		mov ebx, __temp_p__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+bool rmdir(string filename)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x00000028
+		mov ebx, __temp_p__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+
+bool mkfifo(string filename)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x0000000e
+		mov ebx, __temp_p__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+bool unlink(string filename)
+	cstring tt
+	_s2cs(filename, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x0000000a
+		mov ebx, __temp_p__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+bool chdir(string dir)
+	cstring tt
+	_s2cs(dir, tt)
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x0000000c
+		mov ebx, __temp_p__
+		int 0x80
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+lib__string getcwd()
+	cstring tt
+	__temp_p__ = &tt
+	asm{
+		mov eax, 0x000000b7
+		mov ebx, __temp_p__
+		mov ecx, 0x00000100
+		int 0x80
+		mov lib_error, eax
+	}
+	lib__string r
+	_cs2s(tt, r)
+	return r
+
+
+#--------------------------------------------------------------------------
+# dir entry
+
+class dirent_struct
+	int struct_size
+	int size
+	int type
+	cstring name
+	void __assign__(dirent_struct o)
+		pass
+	#void fill(out lib__DirEntry e)
+	#	_cs2s(name, e.name)
+	#	e.size = size
+	#	e.is_dir = (type == 1)
+
+lib__string@list lib__Filesystem@@search(string dirname, string filter, bool allow_dirs)
+	lib__string@list list_dirs, list_files
+	lib__print("") # ?!?!?!? FIXME
+	int h = open(dirname, O_RDONLY)
+	if h < 0
+		lib_error = -1
+		return list_files
+	dirent_struct d
+	while getdents(h, &d)
+		lib__string s
+		_cs2s(d.name, s)
+		if d.type == 1
+			list_dirs.add(s)
+		else
+			list_files.add(s)
+	close(h)
+	lib_error = 0
+	
+	for i in 0:list_dirs.num-1
+		for j in i+1:list_dirs.num
+			if list_dirs.data[i].compare(list_dirs.data[j]) > 0
+				list_dirs.swap(i, j)
+	for i in 0:list_files.num-1
+		for j in i+1:list_files.num
+			if list_files.data[i].compare(list_files.data[j]) > 0
+				list_files.swap(i, j)
+	return list_dirs + list_files
+
+class lib__File
+	int h
+	int buf_pos
+	int pos
+	
+	void __init__()
+		h = -1
+	
+	void __delete__()
+		close()
+	
+	bool open(string filename)
+		h = xxx_open(filename, O_RDONLY)
+		pos = 0
+		return h >= 0
+	
+	bool create(string filename)
+		h = xxx_create(filename)
+		pos = 0
+		return h >= 0
+	
+	void close()
+		if h < 0
+			return
+		xxx_close(h)
+		h = -1
+	
+	void setBinaryMode(bool b)
+	
+	lib__string read(int size)
+		lib__string s
+		s.resize(size)
+		int r = xxx_read(h, s.data, size)
+		if r < 0
+			r = 0
+		s.resize(r)
+		
+		pos += r
+		return s
+	
+	int write(lib__string s)
+		int r = xxx_write(h, s.data, s.num)
+		if r > 0
+			pos += r
+		return r
+	
+	int getPos()
+		return pos
+		#return xxx_seek(h, 0, SEEK_CUR)
+	
+	void seek(int _pos, bool absolute)
+		if absolute
+			pos = _pos
+			xxx_seek(h, pos, SEEK_SET)
+		else
+			xxx_seek(h, pos, SEEK_CUR)
+
+bool xxx_close(int h)
+	return close(h)
+
+int xxx_open(string filename, int flags)
+	return open(filename, flags)
+
+int xxx_create(string filename)
+	return create(filename)
+
+int xxx_read(int h, void* buf, int size)
+	return read(h, buf, size)
+
+int xxx_write(int h, void* buf, int size)
+	return write(h, buf, size)
+
+int xxx_seek(int h, int pos, int mode)
+	seek(h, pos, mode)
+
+lib__File* lib__Filesystem@@open(string filename)
+	lib__File* f = lib__@malloc(sizeof(lib__File))
+	f.__init__()
+	if !f.open(filename)
+		lib__@free(f)
+		return nil
+	return f
+
+lib__File* lib__Filesystem@@create(string filename)
+	lib__File* f = lib__@malloc(sizeof(lib__File))
+	f.__init__()
+	if !f.create(filename)
+		lib__@free(f)
+		return nil
+	return f
+
+lib__string lib__Filesystem@@read(string filename)
+	lib__string content
+	int h = open(filename, O_RDONLY)
+	if h < 0
+		lib__print("kann Datei nicht oeffnen: ")
+		lib__print(filename)
+		lib__print("\n")
+		return content
+	int size = 0
+	while true
+		content.resize(size + 1024)
+		int r = read(h, &content.data[size], 1024)
+		if r < 0
+			lib__print("Fehler beim Lesen...\n")
+		if r <= 0
+			break
+		size += r
+	content.resize(size)
+	close(h)
+	return content
+
+bool lib__Filesystem@@is_directory(string filename)
+	return false
+
+int64 lib__Filesystem@@size(string filename)
+	pass
+#	return 0
+
+int Filesystem_size32(string filename)
+	return 0

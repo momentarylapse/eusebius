@@ -384,3 +384,43 @@ int sys_socket(int cmd, int p1, int p2)
 		mov lib_error, eax
 	}
 	return lib_error
+
+
+int socket(int type)
+	return sys_socket(1, type, 0)
+
+bool bind(int fd, int port)
+	return sys_socket(2, fd, port) == 0
+
+bool connect(int fd, int port)
+	return sys_socket(3, fd, port) == 0
+
+bool listen(int fd)
+	return sys_socket(4, fd, 0) == 0
+
+int accept(int fd)
+	return sys_socket(5, fd, 0)
+
+
+
+
+void prints(cstring s)
+	__temp_p__ = &s
+	asm{
+		mov eax, 0x00002002
+		mov ebx, __temp_p__
+		int 0x80
+	}
+
+
+void lib__print(string s)
+	int done = 0
+	while done < s.num
+		int r = write(stdout, &s[done], s.num - done)
+		if r == -EWOULDBLOCK
+			continue
+		if r > 0
+			done += r
+	if lib_print_endl
+		int r = write(stdout, &0x0000000a, 1)
+

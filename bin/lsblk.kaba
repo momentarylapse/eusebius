@@ -16,7 +16,7 @@ string fs_type(BlockDevice p)
 	return "???"
 
 void show_dev(BlockDevice d)
-	print(" {{cs2s(d.name)|10}} {{d.major|-2}}:{{d.minor|2}} {{d.size * d.block_size / 1024|-12}} k   {{fs_type(d)|10}}\n")
+	print(" {{cs2s(d.name)|-10}} {{d.major|2}}:{{d.minor|-2}} {{d.size * d.block_size / 1024|12}} k   {{fs_type(d)|-10}}\n")
 
 void main()
 	init_lib()

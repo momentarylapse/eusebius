@@ -175,7 +175,7 @@ bin/c: bin/c.kaba $(PDEP)
 bin/cake: bin/cake.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
 
-lib/kalib: lib/kalib.kaba lib/base.kaba lib/syscalls.kaba
+lib/kalib: lib/kalib.kaba lib/base.kaba lib/syscalls.kaba lib/array.kaba lib/file.kaba lib/math.kaba lib/image.kaba
 	$(KABA) $(LIBFLAGS) -o lib/kalib --export-symbols kalib_symbols lib/kalib.kaba
 
 kalib_symbols : lib/kalib lib/kalib.kaba

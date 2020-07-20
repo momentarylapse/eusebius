@@ -1,0 +1,183 @@
+use "base.kaba"
+use "array.kaba"
+
+
+int lib__clampi(int i, int min, int max)
+	if i > max
+		return max
+	if i < min
+		return min
+	return i
+
+int lib__loopi(int i, int min, int max)
+	int d = max - min + 1
+	if i < min
+		int n = ( (min-i-1) / d ) + 1
+		return i + d * n
+	if i > max
+		int n = ( (i-max-1) / d ) + 1
+		return i - d * n
+	return i
+
+
+int rand_state
+
+int rand_next()
+	rand_state = rand_state * 1664525 + 1013904223
+	return rand_state & 0x00ffffff
+
+void lib__rand_seed(int s)
+	rand_state = s
+
+float lib__rand(float m)
+	return rand_next() * m / float(0x01000000)
+
+int lib__randi(int m)
+	return lib__rand(m)
+
+class lib__int
+	static lib__string __str__(int i)
+		return i2s(i)
+	static lib__string format(int i, lib__string f)
+		int n = int(f)
+		char space = ' '
+		if f.data[0] == '0'
+			space = '0'
+		return str_fill(i2s(i), n, space)
+
+class lib__float
+	static lib__string __str__(float f)
+		return f2s(f, 6)
+
+float lib__sin(float f)
+	__temp_f__ = f
+	asm{
+		fld __temp_f__
+		fsin
+		fst __temp_f__
+	}
+	return __temp_f__
+
+float lib__cos(float f)
+	__temp_f__ = f
+	asm{
+		fld __temp_f__
+		fcos
+		fst __temp_f__
+	}
+	return __temp_f__
+
+float lib__min(float a, float b)
+	if a < b
+		return a
+	return b
+
+float lib__max(float a, float b)
+	if a > b
+		return a
+	return b
+
+float lib__abs(float x)
+	if x < 0
+		return -x
+	return x
+	
+
+int lib__clampi(int i, int min, int max)
+	if max <= min
+		return min
+	if i > max
+		return max
+	if i < min
+		return min
+	return i
+
+int lib_loopi(int i, int min, int max)
+	if max <= min
+		return min
+	int d = max - min + 1
+	if i < min
+		int n= ( (min-i-1) / d ) + 1
+		return i + d * n
+	if i > max
+		int n= ( (i-max-1) / d ) + 1
+		return i - d * n
+	return i
+
+
+
+float lib__sqr(float f)
+	return f * f
+
+float lib__sqrt(float f)
+	__temp_f__ = f
+	asm{
+		sqrtss xmm0, __temp_f__
+		movss __temp_f__, xmm0
+	}
+	return __temp_f__
+
+float lib__clamp(float f, float min, float max)
+	if max < min
+		return min
+	if f > max
+		return max
+	if f < min
+		return min
+	return f
+
+float lib__loop(float f, float min, float max)
+	float d = max - min
+	if f < min
+		int n = int( (min-f) / d ) + 1
+		return f + d * float(n)
+	if f >= max
+		int n= int( (f-max) / d ) + 1
+		return f - d * float(n)
+	return f
+
+
+
+class lib__complex
+	float x, y
+	
+	lib__string __str__()
+		return _complex2s(self)
+
+lib__string _complex2s(lib__complex c)
+	lib__string r
+	r.add('(')
+	r += f2s(c.x, 6)
+	r.add(',')
+	r.add(' ')
+	r += f2s(c.y, 6)
+	r.add(')')
+	return r
+
+
+class lib__complex@list extends lib__@DynamicArray
+	override complex[0]* data
+	void __init__()
+		__mem_init__(sizeof(complex))
+	void __delete__()
+		clear()
+	void clear()
+		__mem_clear__()
+	void resize(int size)
+		if size > num
+			reserve(size)
+		num = size
+	void add(complex c)
+		resize(num + 1)
+		data[num - 1] = c
+	void remove(int index)
+		if (index < 0) or (index >= num)
+			return
+		for i in index : num - 1
+			data[i] = data[i+1]
+		resize(num - 1)
+	void __assign__(lib__complex@list o)
+		resize(o.num)
+		for i in 0:num
+			data[i] = o.data[i]
+
