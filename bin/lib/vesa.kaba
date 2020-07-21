@@ -124,15 +124,12 @@ void vesa_init()
 	
 	pci = new PCIController()
 	pci.scan()
-	PCIDevice *dev = pci.get(0x1111, 0x1234)
+	let dev = pci.get(0x1111, 0x1234)
 	if !dev
-		print("ERROR: pci dev not found\n")
-		return
+		raise(new Exception("pci dev not found\n"))
 		
-	print("pci dev found, mem=")
 	int addr = dev.get_mem_addr(0)
-	print(binary(&addr, 4).hex())
-	print("\n")
+	print("pci dev found, mem=0x{{addr|8x}}\n")
 
 	# 3mb... enough for 1024*768*32
 	int id = shmget(dev.get_mem_addr(0), 0x00300000, IPC_CREAT | SHM_ABSOLUTE)

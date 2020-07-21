@@ -7,8 +7,8 @@ void f(void* p)
 
 void main()
 
-	InitTextMode()
-	clrscr()
+	TextMode.init()
+	TextMode.clear()
 	
 	
 	let p = f

@@ -5,8 +5,8 @@ use "io/text.kaba"
 
 void main()
 
-	InitTextMode()
-	clrscr()
+	TextMode.init()
+	TextMode.clear()
 	
 	prints("hello")
 

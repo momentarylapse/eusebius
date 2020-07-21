@@ -1,15 +1,35 @@
-use "lib/std.kaba"
-use "lib/io.kaba"
+#define __STRING_CONST_AS_CSTRING__
+#define __FUNCTION_POINTER_AS_CODE__
+use "base.kaba"
+use "io/text.kaba"
+use "io/io.kaba"
+use "dev/ata.kaba"
+use "dev/block.kaba"
+use "dev/std_char_devs.kaba"
+use "fs/fs.kaba"
+use "fs/access.kaba"
+#use "fs/pipe.kaba"
+use "mem/heap.kaba"
+use "mem/paging.kaba"
+use "mem/shared.kaba"
+#use "net/socket.kaba"
+use "task/task.kaba"
+use "task/scheduler.kaba"
+use "irq/irq.kaba"
+use "irq/error.kaba"
+#use "syscall.kaba"
 
+
+const int MEM_ADDR = 0x00700000 #0x0e680000
 
 int io_base
-int mem_key
 int[0]* mem
 
 void sound_reset()
-	print("reset...")
+	prints("reset...")
 	outportb(io_base + 6, 1)
-	usleep(5)
+	for i in 0:1000000
+		pass
 	outportb(io_base + 6, 0)
 	#print("wait 1")
 	while (inportb(io_base + 14) & 0x80) == 0
@@ -17,7 +37,7 @@ void sound_reset()
 	#print("wait 2")
 	while inportb(io_base + 10) != 0xaa
 		pass
-	print("ok")
+	prints("  ok\n")
 
 void sound_write(int cmd)
 	while (inportb(io_base + 0x0c) & 0x80) != 0
@@ -30,6 +50,7 @@ int sound_read()
 	return inportb(io_base + 0x0a)
 
 void sound_setup_dma()
+	prints("dma")
 	int channel = 5
 	# Disable the sound card DMA channel by setting the appropriate mask bit
 	outportb(0xd4, 4 + (channel % 4))
@@ -38,37 +59,55 @@ void sound_setup_dma()
 	# mode... single playback
 	outportb(0xd6, 0x48 + (channel % 4))
 	# base addr
-	outportb(0xc4, mem_key >> 1)
-	outportb(0xc4, mem_key >> 9)
+	outportb(0xc4, MEM_ADDR >> 1)
+	outportb(0xc4, MEM_ADDR >> 9)
 	# page
-	outportb(0x8b, mem_key >> 17) # ???
+	outportb(0x8b, MEM_ADDR >> 17) # ???
 	# count (64k div 2 - 1)
 	outportb(0xc6, 0xff) # lo
 	outportb(0xc6, 0x7f) # hi
+	prints("   ok\n")
 
 void sound_set_sample_rate(int sample_rate)
-	print("a")
+	prints("sample rate")
 	sound_write(0x41)
-	print("b")
+	prints("2")
 	sound_write(sample_rate >> 8) # hi
-	print("c")
+	prints("3")
 	sound_write(sample_rate)      # lo
+	prints("   ok\n")
 
 void main()
-	init_lib()
-	string[] arg
-	get_args(arg)
+	read_data_from_init()
+	TextMode.init()
+	
+	Heap.init()
+	Paging.init()
+	SharedMemory.init()
+	
+	#BlockDevManager.init()
+	
+	InitFileAccessData()
+	#PipeManager.init()
+	#SocketManager.init()
+	
+	FileSystem.init()
+	
+	TaskManager.init()
+	
+	irq.init()
+	Error.init()
+	#InitSysCall()
+	
+	TextMode.clear()
+	prints("sound test...\n")
+	
 	
 	io_base = 0x220
 	
 	# 64k... enough
-	mem_key = 0x00700000#0x0e680000 # randi()
-	print(binary(&mem_key, 4).hex())
-	int shm_id = shmget(mem_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
-	if shm_id < 0
-		raise(new Exception("can't create shared memory"))
-	mem = shmat(shm_id, 0)
-	print(p2s(mem))
+	mem = _i2p(MEM_ADDR)
+	printh(&mem, 4)
 	
 
 	for i in 0:16384
@@ -83,23 +122,25 @@ void main()
 	sound_write(0xe1)
 	int maj = sound_read()
 	int min = sound_read()
-	print("version {{maj}}.{{min}}")
+	prints("version ")
+	printi(maj)
+	prints(".")
+	printi(min)
 	if maj < 4
-		raise(new Exception("version < 4"))
+		panic("version < 4")
+	prints("\n")
 
-	print("dma")
 	sound_setup_dma()
 	
-	print("ssr")
 	sound_set_sample_rate(22050)
 	
-	print("start")
+	prints("start\n")
 	sound_write(0xb0) # play
 	sound_write(0x30) # mode = stereo + signed
 	sound_write(0xff) # block size??? lo
 	sound_write(0xff) # block size??? hi
-	print("done?")
+	prints("done?\n")
 	
-	sleep(5)
-	
-	exit(0)
+	while true
+		pass
+

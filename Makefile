@@ -15,6 +15,7 @@ BINS = \
  bin/shell \
  bin/cat \
  bin/cmp \
+ bin/cpuid \
  bin/echo \
  bin/kill \
  bin/top \
@@ -37,7 +38,7 @@ BINS = \
  bin/ximage \
  bin/xfiles \
  bin/xdesktop
-PDEP = lib/kalib.kaba kalib_symbols bin/lib/*.kaba bin/lib/*/*.kaba
+PDEP = lib/*.kaba kalib_symbols bin/lib/*.kaba bin/lib/*/*.kaba
 LIBS = lib/kalib
 
 all : bochs/c.img

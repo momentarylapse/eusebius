@@ -4,37 +4,21 @@ use "lib/io.kaba"
 
 
 void show_device(PCIDevice d)
-	print("[{{d.bus}}:{{d.slot}}:{{d.function}}]   {{binary(&d.vendor, 2).hex())}} : {{binary(&d.device, 2).hex())}}   ")
-	if d._class == CLASS_NET and d.subclass == SUBCLASS_NET_ETHERNET
-		print("ethernet")
-	else if d._class == CLASS_DISPLAY and d.subclass == SUBCLASS_DISPLAY_VGA
-		print("vga")
-	else if d._class == CLASS_DISPLAY and d.subclass == SUBCLASS_DISPLAY_XGA
-		print("xga")
-	else if d._class == CLASS_MULTIMEDIA and d.subclass == SUBCLASS_MULTIMEDIA_MAUDIO
-		print("sound")
-	else if d._class == CLASS_MULTIMEDIA and d.subclass == SUBCLASS_MULTIMEDIA_AUDIO
-		print("sound")
-	else if d._class == CLASS_STORAGE and d.subclass == SUBCLASS_STORAGE_IDE
-		print("ide")
-	else
-		print("class={{d._class}}:{{d.subclass}}")
+	print(" [{{d.bus}}:{{d.slot}}:{{d.function}}]   0x{{d.vendor|4x}}:0x{{d.device|4x}}   {{d._class|2}}:{{d.subclass|-3}}  {{d.usage()|-8}}")
 	#print("  ht=")
 	#print(d.header_type)
 	if d.irq > 0
-		print("  irq={{d.irq}}")
+		print("  {{d.irq}}")
 	print("\n")
 	for i in 0:6
 		if d.bar[i] != 0
-			print("     bar[{{i}}]=")
+			print("   bar[{{i}}]=")
 			if (d.bar[i] & 1) == 1
 				int addr = d.bar[i] & 0xfffffffc
-				print(binary(&addr, 4).hex())
-				print(" (io)\n")
+				print("0x{{addr|8x}} io\n")
 			else
 				int addr = d.bar[i] & 0xfffffff0
-				print(binary(&addr, 4).hex())
-				print(" (mem)\n")
+				print("0x{{addr|8x}} mem\n")
 
 void main()
 	init_lib()
@@ -46,6 +30,7 @@ void main()
 	
 	pci.scan()
 	
+	print("Addr       Vendor:Device   Class  Usage     IRQ\n")
 	for d in pci.devices
 		show_device(d)
 		

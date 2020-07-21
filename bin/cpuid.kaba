@@ -7,7 +7,7 @@ PCIDevice *dev
 
 int temp1, temp2, temp3, temp4
 
-void cpuid(int n, int[4] o)
+void cpuid(int n, out int[4] o)
 	temp1 = n
 	asm{
 		mov eax, temp1
@@ -50,28 +50,29 @@ void show_cpu()
 	#cpuid(0x8000000, o)
 	cpuid(1, o)
 	
-	print("  sse=")
-	print((o[3] & 1<<25) != 0)
-	print("  sse2=")
-	print((o[3] & 1<<26) != 0)
-	print("  sse3=")
-	print((o[2] & 1<<0) != 0)
+	string[] caps
+	if (o[3] & 1<<25) != 0
+		caps.add("sse")
+	if (o[3] & 1<<26) != 0
+		caps.add("sse2")
+	if (o[2] & 1<<0) != 0
+		caps.add("sse3")
 	
 	cpuid(0x8000001, o)
 	
-	print("  x87=")
-	print((o[3] & 1<<0) != 0)
-	print("  mmx=")
-	print((o[3] & 1<<23) != 0)
-	print("  3dnow=")
-	print((o[3] & 1<<31) != 0)
-	print("  fxrestore=")
-	print((o[3] & 1<<24) != 0)
-	print("  sse4a=")
-	print((o[2] & 1<<6) != 0)
-	print("  64=")
-	print((o[3] & 1<<29) != 0)
-	print("\n")
+	if (o[3] & 1<<0) != 0
+		caps.add("x87")
+	if (o[3] & 1<<23) != 0
+		caps.add("mmx")
+	if (o[3] & 1<<31) != 0
+		caps.add("3dnow")
+	if (o[3] & 1<<24) != 0
+		caps.add("fxrestore")
+	if (o[2] & 1<<6) != 0
+		caps.add("sse4a")
+	if (o[3] & 1<<29) != 0
+		caps.add("64")
+	print("{{caps}}\n")
 
 void handler()
 	print("---user handler---\n")
@@ -90,8 +91,7 @@ void main()
 	if dev
 		dev.show()
 		int addr = dev.get_io_addr(0)
-		print(binary(&addr, 4).hex(false))
-		print("\n")
+		print("0x{{addr|8x}}\n")
 	
 	show_cpu()
 	

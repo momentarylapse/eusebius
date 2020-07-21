@@ -32,7 +32,7 @@ class PCIDevice
 	int secondary_bus
 	int irq
 	
-	int get_secondary_bus()
+	const int get_secondary_bus()
 		return -1
 		
 	void __init__()
@@ -40,27 +40,36 @@ class PCIDevice
 			bar[i] = 0
 		irq = -1
 	
-	int get_mem_addr(int index)
+	const int get_mem_addr(int index)
 		if (bar[index] & 1) == 0
 			return bar[index] & 0xfffffff0
 		return 0
 	
-	int get_io_addr(int index)
+	const int get_io_addr(int index)
 		if (bar[index] & 1) == 1
 			return bar[index] & 0xfffffffc
 		return 0
 	
-	void show()
-		print("{{bus}}:{{slot}}:{{function}} ")
-		print(binary(&vendor, 2).hex())
-		print(":")
-		print(binary(&device, 2).hex())
-		print(" class={{_class}}:{{subclass}}")
-		print("  ht=")
-		print(header_type)
+	const void show()
+		print("{{bus}}:{{slot}}:{{function}} {{vendor|4x}}:{{device|4x}} class={{_class}}:{{subclass}}  ht={{header_type}}")
 		if irq >= 0
 			print("  irq={{irq}}")
 		print("\n")
+	
+	const string usage()
+		if _class == CLASS_NET and subclass == SUBCLASS_NET_ETHERNET
+			return "ethernet"
+		if _class == CLASS_DISPLAY and subclass == SUBCLASS_DISPLAY_VGA
+			return "vga"
+		if _class == CLASS_DISPLAY and subclass == SUBCLASS_DISPLAY_XGA
+			return "xga"
+		if _class == CLASS_MULTIMEDIA and subclass == SUBCLASS_MULTIMEDIA_MAUDIO
+			return "sound"
+		if _class == CLASS_MULTIMEDIA and subclass == SUBCLASS_MULTIMEDIA_AUDIO
+			return "sound"
+		if _class == CLASS_STORAGE and subclass == SUBCLASS_STORAGE_IDE
+			return "ide"
+		return "?"
 
 class PCIController
 	int read_config(int bus, int slot, int func, int offset)

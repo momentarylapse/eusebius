@@ -627,7 +627,8 @@ class lib__string extends lib__@DynamicArray
 			i0 = 1
 		for i in i0:num
 			int c = data[i]
-			r = r * 10 + (c - 48)
+			if c >= 48 and c < 58
+				r = r * 10 + (c - 48)
 		if !sign
 			return -r
 		return r

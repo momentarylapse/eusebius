@@ -56,9 +56,11 @@ class lib__Exception
 
 void lib__raise(lib__Exception* e)
 	string* msg = &e.msg
-	lib_print_endl = true
+	lib_print_endl = false
+	lib__print("\n  EXCEPTION:    ")
 	lib__print(*msg)
-	exit(0)	
+	lib__print("\n")
+	exit(1)	
 
 #--------------------------------------------------------------------------
 # start
@@ -67,7 +69,7 @@ void signal_handler_segv()
 	#kprint("--->SEGFAULT<--")
 	lib_print_endl = true
 	lib__print("  -- Segmentation Fault --\n")
-	exit(0)
+	exit(1)
 
 void _init_memory()
 	__free_error__ = false

@@ -35,10 +35,22 @@ float lib__rand(float m)
 int lib__randi(int m)
 	return lib__rand(m)
 
+char hex_nibble(int i)
+	if i >= 10
+		return 'a' + i - 10
+	return '0' + i
+
 class lib__int
 	static lib__string __str__(int i)
 		return i2s(i)
+	static lib__string hex(int i, int n)
+		lib__string r
+		for k in 0:n
+			r.add(hex_nibble((i >> (k*4)) & 0xf))
+		return r.reverse()
 	static lib__string format(int i, lib__string f)
+		if f.data[f.num - 1] == 'x'
+			return hex(i, f.data[0] - '0')
 		int n = int(f)
 		char space = ' '
 		if f.data[0] == '0'

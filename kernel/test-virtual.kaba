@@ -19,8 +19,8 @@ class Derived extends Base
 
 void main()
 
-	InitTextMode()
-	clrscr()
+	TextMode.init()
+	TextMode.clear()
 	
 	Derived d
 	Base* b = &d
