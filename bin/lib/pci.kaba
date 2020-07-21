@@ -23,7 +23,17 @@ const int SUBCLASS_BRIDGE_HOST = 0
 const int CLASS_SERIAL_BUS = 0x0c
 const int SUBCLASS_SERIAL_BUS_USB = 3
 
+
+const int PCI_VENDOR_ID = 0x00
+const int PCI_DEVICE_ID = 0x02
+const int PCI_COMMAND = 0x04
+
+const int PCI_CONFIG_DATA = 0x0cfc
+const int PCI_CONFIG_ADDRESS = 0x0cf8
+
+
 class PCIDevice
+	PCIController* controller
 	int header_type
 	int bus, slot, function
 	int vendor, device
@@ -35,7 +45,8 @@ class PCIDevice
 	const int get_secondary_bus()
 		return -1
 		
-	void __init__()
+	void __init__(PCIController con)
+		controller = &con
 		for i in 0:6
 			bar[i] = 0
 		irq = -1
@@ -70,42 +81,48 @@ class PCIDevice
 		if _class == CLASS_STORAGE and subclass == SUBCLASS_STORAGE_IDE
 			return "ide"
 		return "?"
+	int read_config(int offset)
+		return controller.read_config(bus, slot, function, offset)
+	void write_config(int offset, int value)
+		controller.write_config(bus, slot, function, offset, value)
 
 class PCIController
 	int read_config(int bus, int slot, int func, int offset)
- 
-		# create configuration address as per Figure 1 
+		# configuration address
 		int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
- 
-		# write out the address 
-		outportd(0xcf8, address)
+		outportd(PCI_CONFIG_ADDRESS, address)
 		# read in the data 
 		# (offset & 2) * 8) = 0 will choose the first word of the 32 bits register 
-		return inportd(0xcfc)
+		return inportd(PCI_CONFIG_DATA)
+	void write_config(int bus, int slot, int func, int offset, int value)
+		# configuration address
+		int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
+		outportd(PCI_CONFIG_ADDRESS, address)
+		outportd(PCI_CONFIG_DATA, value)
 
 
 	PCIDevice*[] devices
 
 	PCIDevice* check_device(int bus, int slot, int function)
-		PCIDevice* p = getx(bus, slot, function)
+		let p = getx(bus, slot, function)
 		if p
 			return p
 	
-		int a = read_config(bus, slot, function, 0x00)
+		int a = read_config(bus, slot, function, PCI_VENDOR_ID)
 	
-		int vendor = (a >> 16) & 0xffff
+		int vendor = a & 0xffff
 		if vendor == 0xffff
 			return nil
 		#int b = read_config(bus, slot, function, 0x04)
 		int c = read_config(bus, slot, function, 0x08)
 		int d = read_config(bus, slot, function, 0x0c)
-		p = new PCIDevice()
+		p = new PCIDevice(self)
 		p.header_type = (d >> 16) & 0x7f
 		p.bus = bus
 		p.slot = slot
 		p.function = function
 		p.vendor = vendor
-		p.device = a & 0xffff
+		p.device = (a >> 16) & 0xffff
 		p._class = c >> 24
 		p.subclass = (c >> 16) & 0xff
 		if p.header_type == 0
@@ -161,5 +178,6 @@ class PCIController
 			if (d.vendor == vendor) and (d.device == device)
 				return d
 		return nil
+
 
 

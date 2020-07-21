@@ -25,7 +25,7 @@ const int MEM_ADDR = 0x00700000 #0x0e680000
 int io_base
 int[0]* mem
 
-void sound_reset()
+void sb16_reset()
 	prints("reset...")
 	outportb(io_base + 6, 1)
 	for i in 0:1000000
@@ -39,17 +39,17 @@ void sound_reset()
 		pass
 	prints("  ok\n")
 
-void sound_write(int cmd)
+void sb16_write(int cmd)
 	while (inportb(io_base + 0x0c) & 0x80) != 0
 		pass
 	outportb(io_base + 0x0c, cmd)
 
-int sound_read()
+int sb16_read()
 	while (inportb(io_base + 0x0e) & 0x80) == 0
 		pass
 	return inportb(io_base + 0x0a)
 
-void sound_setup_dma()
+void sb16_setup_dma()
 	prints("dma")
 	int channel = 5
 	# Disable the sound card DMA channel by setting the appropriate mask bit
@@ -68,14 +68,60 @@ void sound_setup_dma()
 	outportb(0xc6, 0x7f) # hi
 	prints("   ok\n")
 
-void sound_set_sample_rate(int sample_rate)
+void sb16_set_sample_rate(int sample_rate)
 	prints("sample rate")
-	sound_write(0x41)
+	sb16_write(0x41)
 	prints("2")
-	sound_write(sample_rate >> 8) # hi
+	sb16_write(sample_rate >> 8) # hi
 	prints("3")
-	sound_write(sample_rate)      # lo
+	sb16_write(sample_rate)      # lo
 	prints("   ok\n")
+
+void test_sb16()
+	prints("sound test sound blaster 16...\n")
+	
+	io_base = 0x220
+	
+	# 64k... enough
+	mem = _i2p(MEM_ADDR)
+	printh(&mem, 4)
+	
+
+	for i in 0:16384
+		mem[i] = 0
+		if (i % 128) > 64
+			mem[i] = 0x23452345
+
+	# todo IRQ...
+	
+	sb16_reset()
+	
+	sb16_write(0xe1)
+	int maj = sb16_read()
+	int min = sb16_read()
+	prints("version ")
+	printi(maj)
+	prints(".")
+	printi(min)
+	if maj < 4
+		panic("version < 4")
+	prints("\n")
+
+	sb16_setup_dma()
+	
+	sb16_set_sample_rate(22050)
+	
+	prints("start\n")
+	sb16_write(0xb0) # play
+	sb16_write(0x30) # mode = stereo + signed
+	sb16_write(0xff) # block size??? lo
+	sb16_write(0xff) # block size??? hi
+	prints("done?\n")
+
+
+void test_ac97()
+	prints("sound test AC97...\n")
+
 
 void main()
 	read_data_from_init()
@@ -100,46 +146,9 @@ void main()
 	#InitSysCall()
 	
 	TextMode.clear()
-	prints("sound test...\n")
 	
-	
-	io_base = 0x220
-	
-	# 64k... enough
-	mem = _i2p(MEM_ADDR)
-	printh(&mem, 4)
-	
-
-	for i in 0:16384
-		mem[i] = 0
-		if (i % 128) > 64
-			mem[i] = 0x23452345
-
-	# todo IRQ...
-	
-	sound_reset()
-	
-	sound_write(0xe1)
-	int maj = sound_read()
-	int min = sound_read()
-	prints("version ")
-	printi(maj)
-	prints(".")
-	printi(min)
-	if maj < 4
-		panic("version < 4")
-	prints("\n")
-
-	sound_setup_dma()
-	
-	sound_set_sample_rate(22050)
-	
-	prints("start\n")
-	sound_write(0xb0) # play
-	sound_write(0x30) # mode = stereo + signed
-	sound_write(0xff) # block size??? lo
-	sound_write(0xff) # block size??? hi
-	prints("done?\n")
+	#test_sb16()
+	test_ac97()
 	
 	while true
 		pass

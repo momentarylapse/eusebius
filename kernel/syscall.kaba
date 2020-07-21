@@ -264,6 +264,9 @@ void int_syscall()
 			r = _stat_data.get(filename, caller.cur_dir)
 			if r == 0
 				caller.page_dir.memcpy2task(param2, &_stat_data, sizeof(_stat_data))
+		else if index == 0x200b # addr2phys
+			int offset
+			r = caller.page_dir.addr2kernel(param1, &offset)
 		else
 			r = -ENOSYS
 		#TextColor = 4

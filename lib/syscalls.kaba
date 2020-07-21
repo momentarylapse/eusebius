@@ -406,7 +406,7 @@ int accept(int fd)
 
 void prints(cstring s)
 	__temp_p__ = &s
-	asm{
+	asm {
 		mov eax, 0x00002002
 		mov ebx, __temp_p__
 		int 0x80
@@ -424,3 +424,14 @@ void lib__print(string s)
 	if lib_print_endl
 		int r = write(stdout, &0x0000000a, 1)
 
+
+	
+int addr2phys(void *p)
+	__temp_p__ = p
+	asm {
+		mov eax, 0x0000200b
+		mov ebx, __temp_p__
+		int 0x80
+		mov __temp_i__, eax
+	}
+	return __temp_i__

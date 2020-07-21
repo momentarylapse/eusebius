@@ -124,9 +124,9 @@ void vesa_init()
 	
 	pci = new PCIController()
 	pci.scan()
-	let dev = pci.get(0x1111, 0x1234)
+	let dev = pci.get(0x1234, 0x1111)
 	if !dev
-		raise(new Exception("pci dev not found\n"))
+		raise(new Exception("pci dev not found"))
 		
 	int addr = dev.get_mem_addr(0)
 	print("pci dev found, mem=0x{{addr|8x}}\n")

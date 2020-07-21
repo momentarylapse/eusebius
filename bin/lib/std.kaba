@@ -146,6 +146,7 @@ extern bool sleep(int sec)
 extern bool usleep(int usec)
 extern bool sigaction(int sig, void* f)
 extern bool mapirq(int irq, int signal)
+extern int addr2phys(void *p)
 
 extern void kprint(string s)
 extern void kprinti(int i)

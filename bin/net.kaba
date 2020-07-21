@@ -13,7 +13,7 @@ void main()
 	
 	let pci = new PCIController()
 	pci.scan()
-	let dev = pci.get(0x8029, 0x10ec)
+	let dev = pci.get(0x10ec, 0x8029)
 	if !dev
 		raise(new Exception("pci dev not found"))
 	

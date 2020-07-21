@@ -1,12 +1,13 @@
 use "lib/std.kaba"
 use "lib/io.kaba"
+use "lib/pci.kaba"
 
 
 int io_base
 int mem_key
 int[0]* mem
 
-void sound_reset()
+void sb16_reset()
 	print("reset...")
 	outportb(io_base + 6, 1)
 	usleep(5)
@@ -19,17 +20,18 @@ void sound_reset()
 		pass
 	print("ok")
 
-void sound_write(int cmd)
+void sb16_write(int cmd)
 	while (inportb(io_base + 0x0c) & 0x80) != 0
 		pass
 	outportb(io_base + 0x0c, cmd)
 
-int sound_read()
+int sb16_read()
 	while (inportb(io_base + 0x0e) & 0x80) == 0
 		pass
 	return inportb(io_base + 0x0a)
 
-void sound_setup_dma()
+void sb16_setup_dma()
+	print("dma")
 	int channel = 5
 	# Disable the sound card DMA channel by setting the appropriate mask bit
 	outportb(0xd4, 4 + (channel % 4))
@@ -46,19 +48,16 @@ void sound_setup_dma()
 	outportb(0xc6, 0xff) # lo
 	outportb(0xc6, 0x7f) # hi
 
-void sound_set_sample_rate(int sample_rate)
-	print("a")
-	sound_write(0x41)
+void sb16_set_sample_rate(int sample_rate)
+	print("set sample rate")
+	sb16_write(0x41)
 	print("b")
-	sound_write(sample_rate >> 8) # hi
+	sb16_write(sample_rate >> 8) # hi
 	print("c")
-	sound_write(sample_rate)      # lo
+	sb16_write(sample_rate)      # lo
 
-void main()
-	init_lib()
-	string[] arg
-	get_args(arg)
-	
+void sb16_test()
+
 	io_base = 0x220
 	
 	# 64k... enough
@@ -78,28 +77,135 @@ void main()
 
 	# todo IRQ...
 	
-	sound_reset()
+	sb16_reset()
 	
-	sound_write(0xe1)
-	int maj = sound_read()
-	int min = sound_read()
+	sb16_write(0xe1)
+	int maj = sb16_read()
+	int min = sb16_read()
 	print("version {{maj}}.{{min}}")
 	if maj < 4
 		raise(new Exception("version < 4"))
 
-	print("dma")
-	sound_setup_dma()
+	sb16_setup_dma()
 	
-	print("ssr")
-	sound_set_sample_rate(22050)
+	sb16_set_sample_rate(22050)
 	
 	print("start")
-	sound_write(0xb0) # play
-	sound_write(0x30) # mode = stereo + signed
-	sound_write(0xff) # block size??? lo
-	sound_write(0xff) # block size??? hi
+	sb16_write(0xb0) # play
+	sb16_write(0x30) # mode = stereo + signed
+	sb16_write(0xff) # block size??? lo
+	sb16_write(0xff) # block size??? hi
 	print("done?")
 	
 	sleep(5)
+
+const int PORT_NAM_RESET = 0x0000
+const int PORT_NAM_MASTER_VOLUME = 0x0002
+const int PORT_NAM_MONO_VOLUME = 0x0006
+const int PORT_NAM_PCM_VOLUME = 0x0018
+const int PORT_NAM_EXT_AUDIO_ID = 0x0028
+const int PORT_NAM_EXT_AUDIO_STC = 0x002a
+const int PORT_NAM_FRONT_SPLRATE = 0x002c
+const int PORT_NAM_LR_SPLRATE = 0x0032
+const int PORT_NABM_POBDBAR = 0x0010
+const int PORT_NABM_POLVI = 0x0015
+const int PORT_NABM_POCONTROL = 0x001b
+const int PORT_NABM_GLB_CTRL_STAT = 0x0060
+
+void ac97_test()
+	let pci = new PCIController()
+	pci.scan()
+	let dev = pci.get(0x8086, 0x2415)
+	if !dev
+		raise(new Exception("pci dev not found"))
+		
+	#int addr = dev.get_mem_addr(0)
+	#print("pci dev found, mem=0x{{addr|8x}}")
+	
+	int nambar = dev.get_io_addr(0)
+	int nabmbar = dev.get_io_addr(1)
+	print("{{nambar|4x}}  {{nabmbar|4x}}")
+	
+	int x = dev.read_config(PCI_COMMAND)
+	print("{{x|8x}}")
+	dev.write_config(PCI_COMMAND, x|5)
+	
+	print("reset")
+	outportw(nambar + PORT_NAM_RESET, 42)
+	outportb(nabmbar + PORT_NABM_GLB_CTRL_STAT, 0x02)
+	
+	usleep(100000)
+	int volume = 0
+	outportw(nambar + PORT_NAM_MASTER_VOLUME, (volume<<8) | volume)
+	outportw(nambar + PORT_NAM_MONO_VOLUME, volume)
+	outportw(nambar + PORT_NAM_PCM_VOLUME, (volume<<8) | volume)
+	
+	int id = inportw(nambar + PORT_NAM_EXT_AUDIO_ID)
+	print("id={{id}}")
+	
+	if ((id & 1) == 0)
+		print("Samplerate fix auf 48 kHz")
+	else
+		print("flex sr")
+		outportw(nambar + PORT_NAM_EXT_AUDIO_STC, inportw(nambar + PORT_NAM_EXT_AUDIO_STC) | 1) # Variable Rate Audio aktivieren
+ 		usleep(10000)
+ 		outportw(nambar + PORT_NAM_FRONT_SPLRATE, 44100) # Allg. Samplerate: 44100 Hz
+ 		outportw(nambar + PORT_NAM_LR_SPLRATE, 44100) # Stereo-Samplerate: 44100 Hz
+ 		usleep(10000)
+ 		# Tatsächliche Samplerate steht jetzt in PORT_NAM_FRONT_SPLRATE bzw. PORT_NAM_LR_SPLRATE
+ 		
+	int shm_id = shmget(13, 1<<20, IPC_CREAT)
+ 	print("shm id {{shm_id}}")
+	if shm_id < 0
+		raise(new Exception("can't create shared memory"))
+	mem = shmat(shm_id, 0)
+	print(p2s(mem))
+ 	
+ 	int samples = 0xfffe
+ 	#buffer.resize(samples * 4)
+ 	int[0]* p = mem#&buffer[0]
+ 	for i in 0:samples
+ 		p[i] = 0
+ 		if (i % 100) > 50
+ 			p[i] = 0x2000
+ 	
+ 	int buf_addr = addr2phys(p)
+ 	print("buf addr: {{buf_addr|8x}}")
+ 	
+ 	bd.resize(2)
+ 	bd[0].addr = buf_addr
+ 	bd[0].length_etc = samples << 16 + 0x0000
+ 	bd[1].addr = buf_addr
+ 	bd[1].length_etc = samples << 16 + 0x0000
+ 	BufferDesc bd2
+ 	bd2.addr = buf_addr
+ 	bd2.length_etc = samples << 16 + 0x0000
+ 	
+ 	#int bd_addr = addr2phys(&bd[0])
+ 	int bd_addr = addr2phys(&bd2)
+ 	print("desc addr: {{bd_addr|8x}}")
+ 	
+ 	outportd(nabmbar + PORT_NABM_POBDBAR, bd_addr)
+ 	outportb(nabmbar + PORT_NABM_POLVI, 1) # final.... count-1?
+ 	outportb(nabmbar + PORT_NABM_POCONTROL, 0x15) # Abspielen, und danach auch Interrupt generieren!
+ 	
+ 	sleep(2)
+
+class BufferDesc
+	void __init__()
+		pass
+	int addr
+	int length_etc
+BufferDesc[] bd
+#BufferDesc* bd2
+
+
+void main()
+	init_lib()
+	string[] arg
+	get_args(arg)
+	
+	#sb16_test()
+	ac97_test()
 	
 	exit(0)
