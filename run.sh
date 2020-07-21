@@ -12,4 +12,5 @@ qemu-system-x86_64 -boot c -m 512 -drive file='bochs/c.img',index=0,media=disk,f
 # -soundhw sb16 \
 
 # -net nic,model=ne2k_pci -netdev user,id=eusebius
+# -soundhw hda
 

@@ -2,6 +2,8 @@ use "lib/std.kaba"
 use "lib/io.kaba"
 use "lib/pci.kaba"
 
+# http://www.lowlevel.eu/wiki/AC97
+
 
 int io_base
 int mem_key
@@ -124,13 +126,12 @@ void ac97_test()
 	
 	int nambar = dev.get_io_addr(0)
 	int nabmbar = dev.get_io_addr(1)
-	print("{{nambar|4x}}  {{nabmbar|4x}}")
+	#print("{{nambar|4x}}  {{nabmbar|4x}}")
 	
 	int x = dev.read_config(PCI_COMMAND)
-	print("{{x|8x}}")
 	dev.write_config(PCI_COMMAND, x|5)
 	
-	print("reset")
+	#print("reset")
 	outportw(nambar + PORT_NAM_RESET, 42)
 	outportb(nabmbar + PORT_NABM_GLB_CTRL_STAT, 0x02)
 	
@@ -141,12 +142,12 @@ void ac97_test()
 	outportw(nambar + PORT_NAM_PCM_VOLUME, (volume<<8) | volume)
 	
 	int id = inportw(nambar + PORT_NAM_EXT_AUDIO_ID)
-	print("id={{id}}")
+	#print("id={{id}}")
 	
 	if ((id & 1) == 0)
-		print("Samplerate fix auf 48 kHz")
+		print("sample rate fixed to 48 kHz")
 	else
-		print("flex sr")
+		print("sample rate 44100 Hz")
 		outportw(nambar + PORT_NAM_EXT_AUDIO_STC, inportw(nambar + PORT_NAM_EXT_AUDIO_STC) | 1) # Variable Rate Audio aktivieren
  		usleep(10000)
  		outportw(nambar + PORT_NAM_FRONT_SPLRATE, 44100) # Allg. Samplerate: 44100 Hz
@@ -154,50 +155,66 @@ void ac97_test()
  		usleep(10000)
  		# Tatsächliche Samplerate steht jetzt in PORT_NAM_FRONT_SPLRATE bzw. PORT_NAM_LR_SPLRATE
  		
-	int shm_id = shmget(13, 1<<20, IPC_CREAT)
- 	print("shm id {{shm_id}}")
+	int shm_id = shmget(13, 1<<26, IPC_CREAT)
+ 	#print("shm id {{shm_id}}")
 	if shm_id < 0
 		raise(new Exception("can't create shared memory"))
 	mem = shmat(shm_id, 0)
-	print(p2s(mem))
+	#print(p2s(mem))
  	
- 	int samples = 0xfffe
- 	#buffer.resize(samples * 4)
- 	int[0]* p = mem#&buffer[0]
+ 	int samples = 0x40000
+ 	int[0]* p = mem
  	for i in 0:samples
  		p[i] = 0
- 		if (i % 100) > 50
- 			p[i] = 0x2000
+ 		float w = sin(float(i) * 0.0002)
+ 		float y = sin(float(i) * 0.07) * w
+ 		int z = (int(y * 0x7f00) & 0xffff)
+ 		p[i] = z | (z << 16)
  	
  	int buf_addr = addr2phys(p)
- 	print("buf addr: {{buf_addr|8x}}")
  	
- 	bd.resize(2)
- 	bd[0].addr = buf_addr
- 	bd[0].length_etc = samples << 16 + 0x0000
- 	bd[1].addr = buf_addr
- 	bd[1].length_etc = samples << 16 + 0x0000
- 	BufferDesc bd2
- 	bd2.addr = buf_addr
- 	bd2.length_etc = samples << 16 + 0x0000
+ 	int N = 0
+ 	int CHUNK = 0x4000 # samples
+ 
+ 	#bd.resize(32)
+ 	int done = 0
+ 	for d in bd
+ 		d.addr = 0
+ 		d.length_etc = 0
+ 	for d in bd
+	 	d.addr = addr2phys(&p[done])
+# 		print("buf addr: {{d.addr|8x}}")
+ 		d.length_etc = CHUNK*2 #(samples << 16) + 0x00004000
+ 		done += CHUNK
+ 		N ++
+ 		if done >= samples
+ 			break
+ 	#bd[N-1].length_etc += 0x40000000
+ 	#print("xxx   {{bd[0].length_etc|8x}}  {{binary(&bd[0].length_etc, 4).hex()}}")
+ 	#print("xxx   {{bd[1].length_etc|8x}}")
+ 	print("{{N}} chunks")
  	
- 	#int bd_addr = addr2phys(&bd[0])
- 	int bd_addr = addr2phys(&bd2)
- 	print("desc addr: {{bd_addr|8x}}")
+ 	#bd[2].length_etc = 0x0
+ 	
+ 	int bd_addr = addr2phys(&bd[0])
+ 	#print("desc addr: {{bd_addr|8x}}")
+ 	usleep(100000)
  	
  	outportd(nabmbar + PORT_NABM_POBDBAR, bd_addr)
- 	outportb(nabmbar + PORT_NABM_POLVI, 1) # final.... count-1?
+ 	outportb(nabmbar + PORT_NABM_POLVI, N) # final.... count-1?
  	outportb(nabmbar + PORT_NABM_POCONTROL, 0x15) # Abspielen, und danach auch Interrupt generieren!
  	
- 	sleep(2)
+ 	# seems we need an extra empty descriptor...
+ 	
+ 	sleep(5)
 
 class BufferDesc
 	void __init__()
 		pass
 	int addr
-	int length_etc
-BufferDesc[] bd
-#BufferDesc* bd2
+	int length_etc # final: bup 0x4000000
+#BufferDesc[] bd
+BufferDesc[32] bd
 
 
 void main()
