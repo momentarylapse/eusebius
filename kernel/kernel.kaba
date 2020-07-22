@@ -23,7 +23,7 @@ const int KALIB_LOCATION = 0x00050000
 
 
 void show_pvl()
-	asm{
+	asm {
 		db 0x9c # pushf
 		pop eax
 		mov __temp_i__, eax
@@ -39,7 +39,6 @@ void load_kalib()
 	int h = kernel_task.open("/lib/kalib", O_RDONLY)
 	if h < 0
 		panic("can not read file /lib/kalib!")
-		return
 	int addr = KALIB_LOCATION
 	int size = 0
 	while true

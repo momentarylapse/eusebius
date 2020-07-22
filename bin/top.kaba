@@ -29,38 +29,44 @@ string sec2s(int _sec)
 	s[3] = '0' + (sec / 10)
 	s[4] = '0' + (sec % 10)
 	if hour > 0
-		return "{{hour|-3}}:{{s}}"
+		return "{{hour|3}}:{{s}}"
 	return "   " + s
 
+string task_mode(TaskInfo t)
+	if t.mode == 0
+		return "K"
+	else
+		return "U"
+
+string task_status(TaskInfo t)
+	if t.status == TASK_STATUS_RUNNING
+		return "R"
+	if t.status == TASK_STATUS_SLEEPING
+		return "S"
+	if t.status == TASK_STATUS_WAITING
+		return "W"
+	if t.status == TASK_STATUS_ZOMBIE
+		return "Z"
+	if t.status == TASK_STATUS_INTERRUPT
+		return "I"
+	return t.status
+
 void show_task(TaskInfo t, bool show_parent)
-	string s = "{{t.pid|-3}}   "
+	string s = "{{t.pid|3}}   "
 	int d = 0
 	if show_parent
-		s += "{{t.ppid|-4}}   "
+		s += "{{t.ppid|4}}   "
 		d = 5
-	s += cs2s(t.name)
-	fill(s, 30+d)
-	if t.mode == 0
-		s += "K "
-	else
-		s += "U "
-	if t.status == TASK_STATUS_RUNNING
-		s += "R"
-	else if t.status == TASK_STATUS_SLEEPING
-		s += "S"
-	else if t.status == TASK_STATUS_WAITING
-		s += "W"
-	else if t.status == TASK_STATUS_ZOMBIE
-		s += "Z"
-	else if t.status == TASK_STATUS_INTERRUPT
-		s += "I"
-	else
-		s += t.status
-	fill(s, 38+d)
-	s += "{{t.cpu/10|-3}}%{{t.mem*4|-9}}k  "
-	s += sec2s(t.life.sec)
+	s += "{{cs2s(t.name)|-22}} {{task_mode(t)}} {{task_status(t)}}    {{t.cpu/10|3}}% {{mem(t.mem*4096)|9}}  {{sec2s(t.life.sec)}}"
 	print(s)
 	print("\n")
+
+string mem(int size)
+	if size < 10000
+		return "{{size}}"
+	if size < 10000000
+		return "{{size>>10}}k"
+	return "{{size>>20}}m"
 
 void main()
 	init_lib()
@@ -78,17 +84,12 @@ void main()
 	
 	SysInfo s
 	if !sysinfo(s)
-		print("sysinfo error\n")
-		exit(1)
+		raise(new Exception("sysinfo error"))
 	print("uptime: {{sec2s(s.uptime)}}\n")
-	print("memory:   {{(s.totalram * s.mem_unit) / 1024|-8}}k total  {{(s.freeram * s.mem_unit) / 1024|-8}}k free   ")
-	print(i2s2(((s.totalram - s.freeram) * s.mem_unit) / 1024, 8))
-	print("k used  ")
-	print(i2s2((s.sharedram * s.mem_unit) / 1024, 8))
-	print("k shared\n")
-	print("heap:     {{(s.totalheap * s.mem_unit) / 1024|-8}}k total  {{(s.freeheap * s.mem_unit) / 1024|-8}}k free   ")
-	print(i2s2(((s.totalheap - s.freeheap) * s.mem_unit) / 1024, 8))
-	print("k used\n")
+	print("memory:   {{mem(s.totalram * s.mem_unit)|8}} total  {{mem(s.freeram * s.mem_unit)|8}} free   ")
+	print("{{mem((s.totalram - s.freeram) * s.mem_unit)|8}} used  {{mem(s.sharedram * s.mem_unit)|8}} shared\n")
+	print("heap:     {{mem(s.totalheap * s.mem_unit)|8}} total  {{mem(s.freeheap * s.mem_unit)|8}} free   ")
+	print("{{mem((s.totalheap - s.freeheap) * s.mem_unit)|8}} used\n")
 	
 	TaskInfo[] tasks
 	TaskInfo tt
@@ -100,7 +101,7 @@ void main()
 	print(" Pid  ")
 	if show_parent
 		print(" PPid")
-	print(" Name                 Status     CPU      Mem       Time\n")
+	print(" Name                 Status   CPU      Mem       Time\n")
 	for t in tasks
 		show_task(t, show_parent)
 	

@@ -31,7 +31,7 @@ class KernelTimer
 
 KernelTimer kernel_timer
 
-void InitTimerInterrupt(out Task *t, int dt_ms)
+void InitTimerInterrupt(out Task t, int dt_ms)
 	# read year from CMOS
 	#outportb(0x70, 0x40 | 0x09)
 	#inportb(0x71)
@@ -40,7 +40,7 @@ void InitTimerInterrupt(out Task *t, int dt_ms)
 	kernel_timer.tv.clear()
 	kernel_timer.dt_nanosec = dt_ms * 1000000
 	
-	irq.set_task(32, t) # IRQ 0
+	irq.set_task(irq.hw2soft(0), &t) # IRQ 0
 	
 	# ticks/s: 1193180
 	# 100Hz:   11932 = 0x2e9c

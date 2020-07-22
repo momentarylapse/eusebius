@@ -155,8 +155,8 @@ class StdCharDevs
 		let key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
 		let mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
 	 	
-		irq.set_task(33, key_task) # IRQ 1
-		irq.set_task(44, mouse_task) # IRQ 12
+		irq.set_task(irq.hw2soft(1), key_task) # IRQ 1
+		irq.set_task(irq.hw2soft(12), mouse_task) # IRQ 12
 
 
 		# Enable the auxiliary mouse device

@@ -114,6 +114,9 @@ const int PORT_NABM_POLVI = 0x0015
 const int PORT_NABM_POCONTROL = 0x001b
 const int PORT_NABM_GLB_CTRL_STAT = 0x0060
 
+void irq_handler()
+	print("--irq--")
+
 void ac97_test()
 	let pci = new PCIController()
 	pci.scan()
@@ -150,8 +153,8 @@ void ac97_test()
 		print("sample rate 44100 Hz")
 		outportw(nambar + PORT_NAM_EXT_AUDIO_STC, inportw(nambar + PORT_NAM_EXT_AUDIO_STC) | 1) # Variable Rate Audio aktivieren
  		usleep(10000)
- 		outportw(nambar + PORT_NAM_FRONT_SPLRATE, 44100) # Allg. Samplerate: 44100 Hz
- 		outportw(nambar + PORT_NAM_LR_SPLRATE, 44100) # Stereo-Samplerate: 44100 Hz
+ 		outportw(nambar + PORT_NAM_FRONT_SPLRATE, 44100/2) # Allg. Samplerate: 44100 Hz
+ 		outportw(nambar + PORT_NAM_LR_SPLRATE, 44100/2) # Stereo-Samplerate: 44100 Hz
  		usleep(10000)
  		# Tatsächliche Samplerate steht jetzt in PORT_NAM_FRONT_SPLRATE bzw. PORT_NAM_LR_SPLRATE
  		
@@ -184,7 +187,7 @@ void ac97_test()
  	for d in bd
 	 	d.addr = addr2phys(&p[done])
 # 		print("buf addr: {{d.addr|8x}}")
- 		d.length_etc = CHUNK*2 #(samples << 16) + 0x00004000
+ 		d.length_etc = CHUNK*2 + 0x8000000 #(samples << 16) + 0x00004000
  		done += CHUNK
  		N ++
  		if done >= samples
@@ -199,6 +202,11 @@ void ac97_test()
  	int bd_addr = addr2phys(&bd[0])
  	#print("desc addr: {{bd_addr|8x}}")
  	usleep(100000)
+ 	
+ 	if !sigaction(23, irq_handler)
+ 		raise(new Exception("sigaction {{lib_error}}"))
+ 	if !mapirq(dev.irq, 23)
+ 		raise(new Exception("mapirq {{lib_error}}"))
  	
  	outportd(nabmbar + PORT_NABM_POBDBAR, bd_addr)
  	outportb(nabmbar + PORT_NABM_POLVI, N) # final.... count-1?

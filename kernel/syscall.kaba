@@ -290,7 +290,7 @@ void int_syscall()
 		caller.tss.eax = r
 		
 		#prints(">")
-		asm{
+		asm {
 		__sys_call_return:
 			iret
 		}
