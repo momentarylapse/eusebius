@@ -21,7 +21,7 @@ class Scheduler
 	static void int_timer()
 		while true
 			#prints("(")
-			kernel_timer.tick()
+			KernelTimer.tick()
 		
 			# IO-waits
 			process_waiting_tasks()
@@ -49,8 +49,8 @@ class Scheduler
 	
 		scheduler_task = TaskManager.add_task_kernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, kernel_task)
 	
-		InitTimerInterrupt(scheduler_task, TASK_SWITCH_DT)
-		next_perf_calc = kernel_timer.tv
+		KernelTimer.init_interrupt(scheduler_task, TASK_SWITCH_DT)
+		next_perf_calc = KernelTimer.tv
 		next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
 		scheduler_task.run_forced()
 
@@ -71,7 +71,7 @@ class Scheduler
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TIME
 					TimeValue *rem = &t.waiting_param_i1
-					rem.dec_nanosec(kernel_timer.dt_nanosec)
+					rem.dec_nanosec(KernelTimer.dt_nanosec)
 					if rem.sec < 0
 						t.tss.eax = 0 # return 0
 						t.activate()
@@ -90,10 +90,10 @@ class Scheduler
 	#	prints(">")
 
 	static void update_times()
-		TaskManager.tasks[running_pid].time_all.inc_nanosec(kernel_timer.dt_nanosec)
-		TaskManager.tasks[running_pid].time_temp.inc_nanosec(kernel_timer.dt_nanosec)
+		TaskManager.tasks[running_pid].time_all.inc_nanosec(KernelTimer.dt_nanosec)
+		TaskManager.tasks[running_pid].time_temp.inc_nanosec(KernelTimer.dt_nanosec)
 	
-		if !kernel_timer.tv.is_before(next_perf_calc)
+		if !KernelTimer.tv.is_before(next_perf_calc)
 			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
 			for t in TaskManager.tasks
 				t.load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)

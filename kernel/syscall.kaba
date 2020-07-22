@@ -25,8 +25,8 @@ class SysInfo
 	int[2] pad
 	int totalheap, freeheap
 	void get()
-		kernel_timer.update()
-		uptime = kernel_timer.tv.sec
+		KernelTimer.update()
+		uptime = KernelTimer.tv.sec
 		for l in loads
 			l = 0
 		mem_unit = 1024 #PAGE_SIZE
@@ -179,9 +179,9 @@ void int_syscall()
 		else if index == 20 # getpid
 			r = Scheduler.running_pid
 		else if index == 25 # stime
-			kernel_timer.update()
+			KernelTimer.update()
 			r = 0
-			if !caller.page_dir.memcpy2task(param1, &kernel_timer.tv, sizeof(TimeValue))
+			if !caller.page_dir.memcpy2task(param1, &KernelTimer.tv, sizeof(TimeValue))
 				r = -EFAULT
 		else if index == 37 # kill
 			r = caller.sys_kill(param1, param2)

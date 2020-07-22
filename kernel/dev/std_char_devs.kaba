@@ -546,7 +546,7 @@ class StdCharDevs
 			# allow more IRQs
 			outportb(0x20, 0x20)
 				
-			asm{
+			asm {
 				iret
 			}		
 
@@ -560,7 +560,7 @@ class StdCharDevs
 			outportb(0xa0, 0x20)
 			outportb(0x20, 0x20)
 				
-			asm{
+			asm {
 				iret
 			}
 

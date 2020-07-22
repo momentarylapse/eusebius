@@ -8,26 +8,30 @@ use kaba
 const int HARDWARE_IRQ_SHIFT = 32
 
 void int_ignore()
-	#prints("[ignore irq]")
-	asm {
-		iret
-	}
+	while true
+		#prints("[ignore irq]")
+		asm {
+			iret
+		}
 Task* ignore_task
 
 void int_task_irq()
 	asm {
 		mov __temp_i__, esi
 	}
-	int irq_no = __temp_i__
-	InterruptToSignalMap *m = &irq.task_maps[irq_no]
+	int hw_irq = __temp_i__
+	InterruptToSignalMap *m = &irq.task_maps[hw_irq]
 	let t = m.utask
 	while true
+		prints("<IRQ ")
+		printi(hw_irq)
+		prints(">")
 		
 		if t.puid == m.puid
 			t.handle_signal(m.signal)
 		
 		# allow more
-		if irq_no >= 8
+		if hw_irq >= 8
 			outportb(0xa0, 0x20)
 		outportb(0x20, 0x20)
 		asm {
@@ -38,28 +42,26 @@ void int_task_irq()
 
 class InterruptDescriptor
 	int a, b
-
-	void set(Function* func)
+	
+	void clear()
 		a = 0
 		b = 0
-		if func
-			int addr = _p2i(func)
-			# Interrupt Gate
-			a = 0x00080000 + (addr & 0xffff) # desc[1],addr[15..0]
-			b = (addr & 0xffff0000) + 0x00008e00 # addr[31..16],typ
+
+	void set(Function func)
+		int addr = _p2i(&func)
+		# Interrupt Gate
+		a = 0x00080000 + (addr & 0xffff) # desc[1],addr[15..0]
+		b = (addr & 0xffff0000) + 0x00008e00 # addr[31..16],typ
 
 
 	# interrupt tasks don't need the cli/sti... we use the IF bit
-	void set_task(out Task* t)
-		a = 0
-		b = 0
-		if t
-			t.tss.eflags = 0x000 # Iterrupt Flag = 0
-			t.status = TASK_STATUS_INTERRUPT
-
-			# Interrupt Task Gate
-			a = 0x00080000*t.desc # desc,0[15..0]
-			b = 0x00008500 # 0[31..16],typ
+	void set_task(out Task t)
+		t.tss.eflags = 0x000 # Iterrupt Flag = 0
+		t.status = TASK_STATUS_INTERRUPT
+		
+		# Interrupt Task Gate
+		a = 0x00080000*t.desc # desc,0[15..0]
+		b = 0x00008500 # 0[31..16],typ
 
 class InterruptToSignalMap
 #	int irq # hardware IRQ  (!= shifted version...)
@@ -82,15 +84,13 @@ class InterruptController
 		task_maps[hw_irq].pid = 0x66666666
 		
 	
-	void set(int soft_irq, Function* func)
+	void set_func(int soft_irq, Function func)
 		idt[soft_irq].set(func)
-		if func
-			deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
+		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
 	
-	void set_task(int soft_irq, out Task* t)
+	void set_task(int soft_irq, out Task t)
 		idt[soft_irq].set_task(t)
-		if t
-			deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
+		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
 	
 	int hw2soft(int hw_irq)
 		return hw_irq + HARDWARE_IRQ_SHIFT
@@ -99,13 +99,14 @@ class InterruptController
 		prints("loading interrupt table...")
 
 		for i in idt
-			i.set(nil)
+			i.clear()
 		for m in task_maps
 			m.pid = -1
 			m.ktask = nil
 			m.utask = nil
 		
 	
+		# ignore the timer for now
 		ignore_task = TaskManager.add_task_kernel("irq-ignore", int_ignore, 128, kernel_task)
 		set_task(hw2soft(0), ignore_task) # IRQ 0
 
@@ -120,7 +121,13 @@ class InterruptController
 		outportb(0xa1, 0x01)
 		outportb(0x21, 0x00) # masks
 		outportb(0xa1, 0x00)
+		disable()
+		
+		load_idt()
+		enable()
+		prints("   ok\n")
 	
+	void load_idt()
 		__temp_p__ = &idt
 
 		asm {
@@ -132,37 +139,40 @@ class InterruptController
 		_after_idt_data:
 			mov eax, __temp_p__
 			mov [_idtr_base], eax
-			cli
+			#cli
 			lidt [_idtr]
-			sti
+			#sti
 		}
 	
-		prints("   ok\n")
-	
-	#void enable()
-	#	asm{
-	#		sti
-	#	}
+	void enable()
+		asm {
+			sti
+		}
+	void disable()
+		asm {
+			cli
+		}
 	
 	int sys_map_irq(int hw_irq, Task t, int signal)
 		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
 			return -EINVAL
 		if signal < 0 or signal >= 32
 			return -EINVAL
-		prints(" IRQ ")
-		printi(hw_irq)
-		prints("  ")
-		InterruptToSignalMap* m = &task_maps[hw_irq]
+
+		let m = &task_maps[hw_irq]
 		if m.pid >= 0
 			return -EEXIST
-		if !m.ktask
+		if !m.ktask or true
 			m.ktask = TaskManager.add_task_kernel("irq-task", int_task_irq, 4096, kernel_task)
 			set_task(hw2soft(hw_irq), m.ktask)
+			
+			# task function will see this as a parameter
 			m.ktask.tss.esi = hw_irq
 		m.pid = t.pid
 		m.puid = t.puid
 		m.signal = signal
 		m.utask = &t
+		#load_idt()
 		return 0
 		
 

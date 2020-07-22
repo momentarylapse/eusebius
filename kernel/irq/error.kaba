@@ -168,6 +168,7 @@ class Error
 
 	static Function*[16] handler
 	static Task*[16] tasks
+	static Function* ignore_handler
 
 	static void init()
 		prints("setting error handler")
@@ -197,9 +198,9 @@ class Error
 		# tell the cpu to ignore sse/task-switch-exceptions
 		asm {
 			mov eax, _ignore_interrupt_handler
-			mov __temp_p__, eax
+			mov Error.ignore_handler, eax
 		}
-		irq.set(7, __temp_p__)
+		irq.set_func(7, ignore_handler)
 	
 		prints("   ok\n")
 

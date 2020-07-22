@@ -132,6 +132,8 @@ void ac97_test()
 	#print("{{nambar|4x}}  {{nabmbar|4x}}")
 	
 	int x = dev.read_config(PCI_COMMAND)
+	print("command {{x|4x}}")
+	x = x & 0xfffffbff # clear bit #10 (IRQ disable)
 	dev.write_config(PCI_COMMAND, x|5)
 	
 	#print("reset")
