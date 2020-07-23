@@ -883,13 +883,6 @@ lib__string f2s(float _f, int n)
 			s.add(((after / e) % 10) + 0x30)
 	return s
 
-lib__string lib__p2s(void *p)
-	lib__string r
-	r.resize(sizeof(p))
-	void *pp = &p
-	memcpy(r.data, pp, sizeof(p))
-	return r.hex()
-
 lib__string b2s(bool b)
 	lib__string r
 	if b

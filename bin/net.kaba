@@ -1,10 +1,133 @@
+#define __FUNCTION_POINTER_AS_CODE__
 use "lib/std.kaba"
 use "lib/pci.kaba"
 use "lib/io.kaba"
 
+void my_signal_handler()
+	print("-------signal-------")
 
-int io_base
-int[0]* net_mem
+class DriverNE2k
+	static int io_base
+	static int[0]* net_mem
+	
+	static bool test(out PCIController pci)
+		let dev = pci.get(0x10ec, 0x8029)
+		if !dev
+			return false
+		print("card found: ne2k")
+	
+		io_base = dev.get_io_addr(0)
+		print("io: 0x{{io_base|4x}}")
+		
+		
+		# 64k... enough
+		int shm_key = 0x0e640000 # randi()
+		print("key:  {{binary(&shm_key, 4).hex()}}")
+		int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
+		if shm_id < 0
+			raise(new Exception("can't create shared memory for window"))
+		net_mem = shmat(shm_id, 0)
+		print("mem: {{p2s(net_mem)}}")
+
+
+		
+		
+		# perform reset
+		int reset = inportb(io_base + 0x1f)
+		outportb(io_base + 0x1f, reset)
+		
+		# wait
+		while ((inportb(io_base + 0x07) & 0x80) == 0)
+			pass
+		outportb(io_base + 0x07, 0xff)                     # mask interrupts
+
+		char[32] prom
+		outportb(io_base, (1 << 5) | 1)	# page 0, no DMA, stop
+		outportb(io_base + 0x0e, 0x49)		# set word-wide access
+		outportb(io_base + 0x0a, 0)		# clear the count regs
+		outportb(io_base + 0x0b, 0)
+		outportb(io_base + 0x0f, 0)		# mask completion IRQ
+		outportb(io_base + 0x07, 0xff)
+		outportb(io_base + 0x0c, 0x20)		# set to monitor
+		outportb(io_base + 0x0d, 0x02)		# and loopback mode.
+		outportb(io_base + 0x0a, 32)		# reading 32 bytes
+		outportb(io_base + 0x0b, 0)		# count high
+		outportb(io_base + 0x08, 0)		# start DMA at 0
+		outportb(io_base + 0x09, 0)		# start DMA high
+		outportb(io_base, 0x0a)		# start the read
+
+		for i in 0:32
+			prom[i] = inportb(io_base + 0x10)
+		print("MAC: {{binary(&prom, 6).hex()}}")
+		
+
+		# program the PAR0..PAR5 registers to listen for packets to our MAC address!		
+	#	for (i=0; i<6; i++)
+	#	{
+	#  writeRegister(nif, 1, 0x01+i, prom[i]);
+	#};
+		return true
+
+void *ppp
+
+class DriverRTL8139
+	static int io_base
+	static int[0]* mem
+	static bool test(out PCIController pci)
+		let dev = pci.get(0x10ec, 0x8139)
+		if !dev
+			return false
+		print("card found: rtl8139")
+		
+		io_base = dev.get_io_addr(0)
+		print("io: 0x{{io_base|4x}}")
+		
+		# 64k... enough
+		int shm_key = 0x0e640000 # randi()
+		print("key:  {{shm_key|8x}}")
+		int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT)
+		if shm_id < 0
+			raise(new Exception("can't create shared memory for window"))
+		mem = shmat(shm_id, 0)
+		print("mem: {{p2s(mem)}}")
+		
+		int r = inportb(io_base + 0x37)
+		print("command {{r|2x}}")
+		
+		print("mapirq")
+		if !sigaction(29, my_signal_handler)
+			raise(new Exception("sigaction"))
+		if !mapirq(11, 29)
+			raise(new Exception("mapirq"))
+		
+		# reset
+		print("reset...")
+		usleep(1000000)
+		outportb(io_base + 0x37, inportb(io_base + 0x37) | 0x10)
+		
+		# enable transmit/receive
+		outportb(io_base + 0x37, inportb(io_base + 0x37) | 0x0c)
+		
+		outportd(io_base + 0x40, 0x03000700) # TCR
+		outportd(io_base + 0x44, 0x0000070a) # PCR
+		outportd(io_base + 0x30, addr2phys(mem)) # RBSTART
+		
+		outportw(io_base + 0x3c, 0xffff)
+		
+		string mac
+		for i in 0:6
+			mac.add(inportb(io_base + i))
+		print(mac.hex())
+		
+		print("IRQ?")
+		usleep(1000000)
+		asm {
+			int 0x2b
+		}
+		print("done")
+		usleep(1000000)
+		
+		return true
 
 void main()
 	init_lib()
@@ -13,59 +136,12 @@ void main()
 	
 	let pci = new PCIController()
 	pci.scan()
-	let dev = pci.get(0x10ec, 0x8029)
-	if !dev
-		raise(new Exception("pci dev not found"))
-	
-	io_base = dev.get_io_addr(0)
-	print("pci dev found, io: 0x{{io_base|4x}}")
-	
-	
-	# 64k... enough
-	int shm_key = 0x0e640000 # randi()
-	print("key:  {{binary(&shm_key, 4).hex()}}")
-	int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
-	if shm_id < 0
-		raise(new Exception("can't create shared memory for window"))
-	net_mem = shmat(shm_id, 0)
-	print("mem: {{p2s(net_mem)}}")
-
-
-	
-	
-	# perform reset
-	int reset = inportb(io_base + 0x1f)
-	outportb(io_base + 0x1f, reset)
-	
-	# wait
-	while ((inportb(io_base + 0x07) & 0x80) == 0)
+	if DriverNE2k.test(pci)
 		pass
-	outportb(io_base + 0x07, 0xff)                     # mask interrupts
-
-	char[32] prom
-	outportb(io_base, (1 << 5) | 1)	# page 0, no DMA, stop
-	outportb(io_base + 0x0e, 0x49)		# set word-wide access
-	outportb(io_base + 0x0a, 0)		# clear the count regs
-	outportb(io_base + 0x0b, 0)
-	outportb(io_base + 0x0f, 0)		# mask completion IRQ
-	outportb(io_base + 0x07, 0xff)
-	outportb(io_base + 0x0c, 0x20)		# set to monitor
-	outportb(io_base + 0x0d, 0x02)		# and loopback mode.
-	outportb(io_base + 0x0a, 32)		# reading 32 bytes
-	outportb(io_base + 0x0b, 0)		# count high
-	outportb(io_base + 0x08, 0)		# start DMA at 0
-	outportb(io_base + 0x09, 0)		# start DMA high
-	outportb(io_base, 0x0a)		# start the read
-
-	for i in 0:32
-		prom[i] = inportb(io_base + 0x10)
-	print("MAC: {{binary(&prom, 6).hex()}}")
-	
-
-	# program the PAR0..PAR5 registers to listen for packets to our MAC address!		
-#	for (i=0; i<6; i++)
-#	{
-#  writeRegister(nif, 1, 0x01+i, prom[i]);
-#};
+	else if DriverRTL8139.test(pci)
+		pass
+	else
+		raise(new Exception("no known ethernet card found"))
 	
 	exit(0)
+

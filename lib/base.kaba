@@ -17,6 +17,8 @@ const int SEEK_SET = 1
 const int SEEK_CUR = 2
 const int SEEK_END = 3
 
+const int SIGSEGV = 11
+
 int stdin, stdout
 
 int lib_error

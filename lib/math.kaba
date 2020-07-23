@@ -45,9 +45,10 @@ class lib__int
 		return i2s(i)
 	static lib__string hex(int i, int n)
 		lib__string r
+		r.resize(n)
 		for k in 0:n
-			r.add(hex_nibble((i >> (k*4)) & 0xf))
-		return r.reverse()
+			r.data[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
+		return r
 	static lib__string format(int i, lib__string f)
 		if f.data[f.num - 1] == 'x'
 			return hex(i, f.data[0] - '0')
@@ -193,3 +194,11 @@ class lib__complex@list extends lib__@DynamicArray
 		for i in 0:num
 			data[i] = o.data[i]
 
+
+lib__string lib__p2s(void *p)
+	lib__string r
+	int* i = &p
+	r.add('0')
+	r.add('x')
+	return r + lib__int.hex(*i, 8)
+	

@@ -1,15 +1,37 @@
+#define __FUNCTION_POINTER_AS_CODE__
 use "lib/std.kaba"
+
+#extern void signal_handler_x()
 
 void handler()
 	print("---user handler---   \\(^_^)/\n")
 
-void main()
-	init_lib()
-	lib_print_endl = false
+
+void test_slow_output()
 	print("Hallo Welt\n")
-	
-	sigaction(23, handler)
-	
 	while true
 		usleep(100000)
 		print(".")
+
+
+void test_signal_handler()
+	print("start\n")
+	
+	sigaction(23, handler)
+	
+	kill(getpid(), 23)
+	mapirq(11, 23)
+	while true
+		usleep(1000000)
+		print(".")
+		
+		asm {
+			int 0x2b
+		}
+
+void main()
+	init_lib()
+	lib_print_endl = false
+	
+	#test_slow_output()
+	test_signal_handler()

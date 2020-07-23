@@ -25,8 +25,8 @@ class Error
 		
 		# TODO send signal
 		
-		if i == 13 or i == 14
-			t.handle_signal(SIGSEGV)
+		if i == 13 or i == 14 # GPF / page fault
+			t.handle_signal_link_iret(SIGSEGV)
 		else
 			t.die(i-666)
 		
@@ -96,9 +96,9 @@ class Error
 	static void int_handler(int i)
 		while true
 			# task?
-			Task* e = Error.tasks[i]
+			let e = Error.tasks[i]
 			int prev_pid = e.get_prev_pid()
-			Task *prev = &TaskManager.tasks[prev_pid]
+			let prev = &TaskManager.tasks[prev_pid]
 			
 			# handle error
 			if prev.kernel_mode
@@ -106,7 +106,7 @@ class Error
 			else
 				handle_task_error(prev, e, i)
 			
-			asm{
+			asm {
 				iret
 			}
 

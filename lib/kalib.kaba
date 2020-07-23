@@ -70,6 +70,11 @@ void signal_handler_segv()
 	lib_print_endl = true
 	lib__print("  -- Segmentation Fault --\n")
 	exit(1)
+void signal_handler_x()
+	#kprint("--->SEGFAULT<--")
+	lib_print_endl = true
+	lib__print("  -- XXXX --\n")
+	exit(1)
 
 void _init_memory()
 	__free_error__ = false
@@ -98,7 +103,7 @@ void init_lib()
 	
 	rand_state = 0
 	
-	sigaction(11, signal_handler_segv)
+	sigaction(SIGSEGV, signal_handler_segv)
 	
 	stdin = 0
 	stdout = 1

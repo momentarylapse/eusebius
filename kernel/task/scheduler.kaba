@@ -96,5 +96,5 @@ class Scheduler
 		if !KernelTimer.tv.is_before(next_perf_calc)
 			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
 			for t in TaskManager.tasks
-				t.load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
+				t.cpu_load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
 				t.time_temp.clear()

@@ -88,7 +88,7 @@ class TaskInfo
 		if t.kernel_mode
 			mode = 0
 		mem = t.pages_alloced()
-		cpu = t.load
+		cpu = t.cpu_load
 		life = t.time_all
 		return 0
 

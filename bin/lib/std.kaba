@@ -37,6 +37,12 @@ const int SEEK_SET = 1
 const int SEEK_CUR = 2
 const int SEEK_END = 3
 
+const int SIGKILL = 9
+const int SIGSEGV = 11
+const int SIGCONT = 18
+const int SIGSTOP = 19
+const int SIGX = 23
+
 
 
 const int SHM_ABSOLUTE = 1 << 20

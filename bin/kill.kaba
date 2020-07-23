@@ -5,7 +5,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	int signal = 9
+	int signal = SIGKILL
 	int[] pid
 	
 	if len(arg) > 1
@@ -20,5 +20,5 @@ void main()
 				print("kill: process {{p}} not found")
 				exit(-1)
 	else
-		print("kill: kill <PID>")
+		print("kill: kill [-SIGNAL] <PID>")
 	exit(0)

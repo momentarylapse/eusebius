@@ -20,6 +20,7 @@ const int SIGSEGV = 11
 const int SIGCONT = 18
 const int SIGSTOP = 19
 const int SIGX = 23
+const int MAX_SIGNALS = 32
 
 
 #--------------------------------------------------------------
@@ -115,7 +116,6 @@ class TaskSharedMemoryRef
 	int dest # task space
 
 
-int __handler_p__	
 
 class Task
 	TaskStateSegment tss
@@ -135,13 +135,13 @@ class Task
 	int mem_bottom, mem_size
 	
 	TimeValue time_all, time_temp
-	int load # 1/1000
+	int cpu_load # 0:1000
 	
 	bool kernel_mode
 	OpenFileData*[MAX_OPEN_FILES_PER_TASK] handles
 	TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK] shmem
 	
-	int[32] signal_handlers
+	int[MAX_SIGNALS] signal_handlers # task address space!
 	TaskStateSegment signal_reg_buf
 	bool in_signal
 	
@@ -176,7 +176,7 @@ class Task
 #	GlobalDescriptorTable[t.desc].set_task(t)
 	
 		time_all.clear()
-		load = 0
+		cpu_load = 0
 		time_temp.clear()
 	
 	void __assign__(Task o)
@@ -296,21 +296,29 @@ class Task
 	int get_prev_pid()
 		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 		
-	int handle_signal(int signal)
-		if signal < 0 or signal >= 32
+	int handle_signal_link_iret(int signal)
+		if signal < 0 or signal >= MAX_SIGNALS
 			return -EINVAL
+		#prints(" handle/link:")
 		
+		#printi(signal)
+		#prints(" ")
+		#printi(signal_handlers[signal])
 		if in_signal
+			prints(" in sig...die")
 			die(0) # we're very friendly :-P
 
-
-		if signal_handlers[signal] != 0
+		else if signal_handlers[signal] != 0
+			#prints("...user > link iret ")
 			in_signal = true
+			# save registers
 			memcpy(&signal_reg_buf, &tss, sizeof(TaskStateSegment))
-			tss.eax = signal_handlers[signal]
-			__handler_p__ = tss.eax
-			tss.esp = _i2p(_p2i(tss.esp) + 1024)
+			
+			tss.edx = signal_handlers[signal]
+			# allocate some extra space on the stack
+			tss.esp = _i2p(_p2i(tss.esp) - 2048)
 			tss.ebp = tss.esp
+			# run the handler "loader stage" (in kernel memory)
 			tss.eip = TaskManager.task_signal_handler
 		else
 			# default actions
@@ -337,7 +345,7 @@ class Task
 		return handles[handle]
 
 	int open(cstring filename, int flags)
-		OpenFileData *of = kernel_open(filename, flags, cur_dir)
+		let of = kernel_open(filename, flags, cur_dir)
 		if !of
 			return -ENOENT
 		int index = add_handle(of)
@@ -353,7 +361,7 @@ class Task
 
 
 	int sys_read(int handle, int addr, int size)
-		OpenFileData *of = get_handle(handle)
+		let of = get_handle(handle)
 		if !of
 			return -EBADF
 		int r = of.read(page_dir, addr, size)
@@ -363,7 +371,7 @@ class Task
 
 
 	int sys_write(int handle, int addr, int size)
-		OpenFileData *of = get_handle(handle)
+		let of = get_handle(handle)
 		if !of
 			return -EBADF
 		int r = of.write(page_dir, addr, size)
@@ -372,20 +380,20 @@ class Task
 		return r
 
 	int sys_getdents(int handle, int addr, int num)
-		OpenFileData *of = get_handle(handle)
+		let of = get_handle(handle)
 		if !of
 			return -EBADF
 		return of.getdents(page_dir, addr, num)
 
 
 	int sys_seek(int handle, int offset, int mode)
-		OpenFileData *of = get_handle(handle)
+		let of = get_handle(handle)
 		if !of
 			return -EBADF
 		return of.seek(offset, mode)
 
 	int sys_close(int handle)
-		OpenFileData *of = get_handle(handle)
+		let of = get_handle(handle)
 		if !of
 			return -EBADF
 		of.unref()
@@ -393,20 +401,20 @@ class Task
 		return 0
 	
 	int sys_dup(int fd)
-		OpenFileData *of = get_handle(fd)
+		let of = get_handle(fd)
 		if !of
 			return -EBADF
 		int index = add_handle(of)
 		return index
 	
 	int sys_pipe(int addr)
-		FileEntry *e = create_file_entry(":pipe:", FILE_TYPE_PIPE, nil)
+		let e = create_file_entry(":pipe:", FILE_TYPE_PIPE, nil)
 		if !e
 			return -ENFILE
 		if !PipeManager.create(e)
 			return -3
-		OpenFileData *of_in = kernel_open_entry(e, O_RDONLY)
-		OpenFileData *of_out = kernel_open_entry(e, O_WRONLY)
+		let of_in = kernel_open_entry(e, O_RDONLY)
+		let of_out = kernel_open_entry(e, O_WRONLY)
 		int[2] fd
 		fd[0] = add_handle(of_in)
 		fd[1] = add_handle(of_out)
@@ -450,11 +458,11 @@ class Task
 		int h = sys_open(faddr, O_RDONLY)
 		if h < 0
 			return -ENOENT
-		OpenFileData *of = handles[h]
+		let of = handles[h]
 		cstring filename
 		of.entry.get_path(filename)
 		int addr = TASK_IMAGE_POS # task space...
-		Task* t = TaskManager.add_task_user(filename, _i2p(addr), &self)
+		let t = TaskManager.add_task_user(filename, _i2p(addr), &self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
@@ -468,8 +476,8 @@ class Task
 			addr += r
 		sys_close(h)
 		
-		OpenFileData *of_in = get_handle(fd_in)
-		OpenFileData *of_out = get_handle(fd_out)
+		let of_in = get_handle(fd_in)
+		let of_out = get_handle(fd_out)
 		t.add_handle(of_in)
 		t.add_handle(of_out)
 	
@@ -497,7 +505,7 @@ class Task
 		let t = TaskManager.get_task(_pid)
 		if !t
 			return -ESRCH
-		return t.handle_signal(signal)
+		return t.handle_signal_link_iret(signal)
 	
 	int sys_nanosleep(int p1, int p2)
 		TimeValue tv
@@ -646,7 +654,7 @@ class Task
 			if e < 0
 				return e
 			# port
-			KSocket *s = SocketManager.get_by_port(e)
+			let s = SocketManager.get_by_port(e)
 			if !s
 				return -1
 			of = kernel_open_entry(s.e, O_RDWR)
@@ -654,15 +662,18 @@ class Task
 		return -EINVAL
 	
 	int sys_sigaction(int sig, int addr)
-		if sig < 0 or sig >= 32 or sig == SIGSTOP or sig == SIGKILL
+		if sig < 0 or sig >= MAX_SIGNALS or sig == SIGSTOP or sig == SIGKILL
 			return -EINVAL
-		signal_handlers[sig] = addr
+		#prints(" SIGAC ")
+		#printh(&addr, 4)
+		signal_handlers[sig] = addr # task address space!
 		return 0
 		
 	int sys_exit_signal()
 		if !in_signal
 			return -1
 		
+		#prints(" EXSIG ")
 		in_signal = false
 		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
 		return 0
@@ -753,6 +764,8 @@ class TaskManager
 	static Task* idle_task
 	static int next_pid_to_assign
 	static int next_puid_to_assign
+	
+	static int __handler_p__
 
 
 	static GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] gdt
@@ -816,21 +829,29 @@ class TaskManager
 			asm {
 				hlt
 			}
+	static int get_pvl()
+		asm {
+			db 0x9c # pushf
+			pop eax
+			mov __temp_i__, eax
+		}
+		int eflags = __temp_i__
+		return (eflags >> 12) & 3
 
 
+	# running in task space
 	static void task_signal_handler()#void *p)
 		asm {
-			#mov __handler_p__, eax
+			mov TaskManager.__handler_p__, edx
 		}
-		#__temp_p__ = p
-		#prints("-----signal-handler-----\n")
+		#prints("[task-signal-handler] ")
 		#printh(&__handler_p__, 4)
-		#__temp_p__ = p
+		#prints(" [call]\n")
 		asm {
-			mov eax, __handler_p__
+			mov eax, TaskManager.__handler_p__
 			call eax
 		}
-		#prints("[fertig...return]\n")
+		#prints("[done...return]\n")
 		asm {
 			# return from handler
 			mov eax, 0x00002006

@@ -22,18 +22,6 @@ const int KALIB_LOCATION = 0x00050000
 
 
 
-void show_pvl()
-	asm {
-		db 0x9c # pushf
-		pop eax
-		mov __temp_i__, eax
-	}
-	int eflags = __temp_i__
-	int pvl = (eflags >> 12) & 3
-	prints("[PVL:")
-	printi(pvl)
-	prints("]")
-
 void load_kalib()
 	prints("loading kalib... ")
 	int h = kernel_task.open("/lib/kalib", O_RDONLY)
