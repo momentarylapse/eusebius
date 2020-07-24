@@ -53,9 +53,6 @@ void show_cpu()
 		caps.add("64")
 	print("caps: {{caps}}\n")
 
-void handler()
-	print("---user handler---\n")
-
 void main()
 	init_lib()
 	lib_print_endl = false
@@ -67,19 +64,10 @@ void main()
 	
 	let dev = pci.get(0x8029, 0x10ec)
 	if dev
-		dev.show()
+		print(dev)
 		int addr = dev.get_io_addr(0)
 		print("0x{{addr|8x}}\n")
 	
 	show_cpu()
-	
-#	if !sigaction(23, handler)
-#		print("---E1\n")
-#	if !mapirq(1, 23) # key
-#		print("---E2\n")
-#	print("ok\n")
-#	while true
-#		print(".")
-#		sleep(1)
 	
 	exit(0)

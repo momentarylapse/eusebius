@@ -144,6 +144,7 @@ class Task
 	int[MAX_SIGNALS] signal_handlers # task address space!
 	TaskStateSegment signal_reg_buf
 	bool in_signal
+	int in_hw_irq
 	
 	void init(int _pid, cstring _name, Task *_parent)
 		for s in signal_handlers
@@ -163,6 +164,9 @@ class Task
 		else
 			cur_dir = FileSystem.root
 		kernel_mode = false
+		
+		in_signal = false
+		in_hw_irq = -1
 	
 		#t.stack_size = TASK_STACK_SIZE
 #	t.stack = _i2p(TASK_STACK_POS)
@@ -180,7 +184,7 @@ class Task
 		time_temp.clear()
 	
 	void __assign__(Task o)
-		nil
+		pass
 	
 	void activate()
 		if sleep_and_wait
@@ -259,6 +263,8 @@ class Task
 		clean_up_resources()
 		status = TASK_STATUS_UNUSED
 		puid = -1
+		#if in_hw_irq >= 0
+		#	TaskManager.ack_hw_irq = in_hw_irq
 		
 	
 	void send_death_message()
@@ -306,6 +312,9 @@ class Task
 		#printi(signal_handlers[signal])
 		if in_signal
 			prints(" in sig...die")
+			if in_hw_irq >= 0
+				TaskManager.ack_hw_irq = in_hw_irq
+				in_hw_irq = -1
 			die(0) # we're very friendly :-P
 
 		else if signal_handlers[signal] != 0
@@ -675,6 +684,9 @@ class Task
 		
 		#prints(" EXSIG ")
 		in_signal = false
+		if in_hw_irq >= 0
+			TaskManager.ack_hw_irq = in_hw_irq
+			in_hw_irq = -1
 		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
 		return 0
 	
@@ -766,6 +778,7 @@ class TaskManager
 	static int next_puid_to_assign
 	
 	static int __handler_p__
+	static int ack_hw_irq
 
 
 	static GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS] gdt
@@ -862,6 +875,7 @@ class TaskManager
 
 	static void init()
 		prints("init tasks...")
+		ack_hw_irq = -1
 	
 		# null descriptor
 		for g in gdt

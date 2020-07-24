@@ -119,6 +119,13 @@ class irq
 		asm {
 			cli
 		}
+	static void end_of_interrupt(int hw_irq)
+		#if hw_irq > 0
+		#	prints(" END")
+		#	printi(hw_irq)
+		if hw_irq >= 8
+			outportb(0xa0, 0x20)
+		outportb(0x20, 0x20)
 	
 	static int sys_map_irq(int hw_irq, Task t, int signal)
 		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
@@ -128,8 +135,11 @@ class irq
 
 		let m = &task_maps[hw_irq]
 		if m.pid >= 0
-			return -EEXIST
-		if !m.ktask or true
+			if TaskManager.tasks[m.pid].status != TASK_STATUS_UNUSED
+				return -EEXIST
+			else
+				prints("  REUSE  ")
+		if !m.ktask
 			m.ktask = TaskManager.add_task_kernel("irq-task", int_task_irq, 4096, kernel_task)
 			set_task(hw2soft(hw_irq), m.ktask)
 			
@@ -149,21 +159,23 @@ class irq
 		}
 		int hw_irq = __temp_i__
 		let m = &irq.task_maps[hw_irq]
-		let t = m.utask
 		while true
 			#prints("<IRQ ")
 			#printi(hw_irq)
 			#prints(">")
+			let t = m.utask
+			#printi(t.status)
+			#if t.status == TASK_STATUS_UNUSED
 		
 			if t.puid == m.puid
 				# link the task return into the handler...
+				t.in_hw_irq = hw_irq
 				if t.handle_signal_link_iret(m.signal) != 0
 					prints("err")
-		
-			# allow more
-			if hw_irq >= 8
-				outportb(0xa0, 0x20)
-			outportb(0x20, 0x20)
+			else
+				# task dead?
+				#prints(" no handler ")
+				end_of_interrupt(hw_irq)
 			#prints(" <IRET> ")
 			asm {
 				iret

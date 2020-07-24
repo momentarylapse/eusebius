@@ -36,7 +36,8 @@ class Scheduler
 			#prints(")")
 
 			# allow more timer IRQs
-			outportb(0x20,0x20)
+			irq.end_of_interrupt(0)
+			#outportb(0x20,0x20)
 
 			# return to (other) task
 			asm {

@@ -279,6 +279,11 @@ void int_syscall()
 		#while true
 		#	nil
 		
+		if TaskManager.ack_hw_irq >= 0
+			#prints(" <ACK> ")
+			irq.end_of_interrupt(TaskManager.ack_hw_irq)
+			TaskManager.ack_hw_irq = -1
+		
 		# task switch?
 		if caller.status != TASK_STATUS_RUNNING
 			#prints("S")

@@ -6,31 +6,61 @@ use "lib/io.kaba"
 void my_signal_handler()
 	print("-------signal-------")
 
-class DriverNE2k
-	static int io_base
-	static int[0]* net_mem
-	
-	static bool test(out PCIController pci)
-		let dev = pci.get(0x10ec, 0x8029)
-		if !dev
-			return false
-		print("card found: ne2k")
-	
+
+
+class Driver
+	int io_base
+	int[0]* buf_send
+	int[0]* buf_recv
+	int vendor_id, product_id
+	PCIDevice* dev
+	string mac
+	string name
+	void __init__()
+		dev = nil
+	void install_base()
+		print("installing ethernet card: {{name}}")
+		print(str(dev))
+		
 		io_base = dev.get_io_addr(0)
 		print("io: 0x{{io_base|4x}}")
 		
-		
 		# 64k... enough
-		int shm_key = 0x0e640000 # randi()
-		print("key:  {{binary(&shm_key, 4).hex()}}")
-		int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT | SHM_ABSOLUTE) # SHM_DEST)
+		int shm_id = shmget(randi(10000000), 0x00010000, IPC_CREAT)
 		if shm_id < 0
-			raise(new Exception("can't create shared memory for window"))
-		net_mem = shmat(shm_id, 0)
-		print("mem: {{p2s(net_mem)}}")
+			raise(new Exception("can't create shared memory for send buffer"))
+		buf_send = shmat(shm_id, 0)
+		shm_id = shmget(randi(10000000), 0x00010000, IPC_CREAT)
+		if shm_id < 0
+			raise(new Exception("can't create shared memory for receive buffer"))
+		buf_recv = shmat(shm_id, 0)
+		print("mem: {{p2s(buf_send)}} {{p2s(buf_recv)}}")
+	bool get_device(out PCIController pci)
+		dev = pci.get(vendor_id, product_id)
+		return dev
+	
+	virtual void install()
+		install_base()
+	virtual void test()
+	static Driver* choose()
+		let pci = new PCIController()
+		pci.scan()
+		Driver*[] drivers
+		drivers.add(new DriverNE2k())
+		drivers.add(new DriverRTL8139())
+		for d in drivers
+			if d.get_device(pci)
+				return d
+		raise(new Exception("no known ethernet card found"))
+	
 
-
-		
+class DriverNE2k extends Driver
+	override void __init__()
+		vendor_id = 0x10ec
+		product_id = 0x8029
+		name = "ne2k"
+	override void install()
+		install_base()
 		
 		# perform reset
 		int reset = inportb(io_base + 0x1f)
@@ -59,6 +89,7 @@ class DriverNE2k
 		for i in 0:32
 			prom[i] = inportb(io_base + 0x10)
 		print("MAC: {{binary(&prom, 6).hex()}}")
+	override void test()
 		
 
 		# program the PAR0..PAR5 registers to listen for packets to our MAC address!		
@@ -66,39 +97,30 @@ class DriverNE2k
 	#	{
 	#  writeRegister(nif, 1, 0x01+i, prom[i]);
 	#};
-		return true
 
-void *ppp
-
-class DriverRTL8139
-	static int io_base
-	static int[0]* mem
-	static bool test(out PCIController pci)
-		let dev = pci.get(0x10ec, 0x8139)
-		if !dev
-			return false
-		print("card found: rtl8139")
-		
-		io_base = dev.get_io_addr(0)
-		print("io: 0x{{io_base|4x}}")
-		
-		# 64k... enough
-		int shm_key = 0x0e640000 # randi()
-		print("key:  {{shm_key|8x}}")
-		int shm_id = shmget(shm_key, 0x00010000, IPC_CREAT)
-		if shm_id < 0
-			raise(new Exception("can't create shared memory for window"))
-		mem = shmat(shm_id, 0)
-		print("mem: {{p2s(mem)}}")
-		
-		int r = inportb(io_base + 0x37)
-		print("command {{r|2x}}")
+class DriverRTL8139 extends Driver
+	override void __init__()
+		vendor_id = 0x10ec
+		product_id = 0x8139
+		name = "rtl8139"
+	override void install()
+		install_base()
 		
 		print("mapirq")
 		if !sigaction(29, my_signal_handler)
 			raise(new Exception("sigaction"))
 		if !mapirq(11, 29)
 			raise(new Exception("mapirq"))
+		
+		# power on
+	#	outportb(io_base + 0x52, 0x00)
+		# reset
+	#	outportb(io_base + 0x37, 0x10)
+	#	while (inportb(io_base + 0x37) & 0x10) != 0
+	#		pass
+		
+		int r = inportb(io_base + 0x37)
+		print("command {{r|2x}}")
 		
 		# reset
 		print("reset...")
@@ -110,14 +132,20 @@ class DriverRTL8139
 		
 		outportd(io_base + 0x40, 0x03000700) # TCR
 		outportd(io_base + 0x44, 0x0000070a) # PCR
-		outportd(io_base + 0x30, addr2phys(mem)) # RBSTART
+		outportd(io_base + 0x30, addr2phys(buf_recv)) # RBSTART
 		
 		outportw(io_base + 0x3c, 0xffff)
 		
-		string mac
 		for i in 0:6
 			mac.add(inportb(io_base + i))
 		print(mac.hex())
+	override void test()
+		outportd(io_base + 0x20, addr2phys(buf_send)) # TSAD0
+		outportd(io_base + 0x10, 64) # TSD0 size
+		
+		print("run")
+		while true
+			pass
 		
 		print("IRQ?")
 		usleep(1000000)
@@ -126,22 +154,15 @@ class DriverRTL8139
 		}
 		print("done")
 		usleep(1000000)
-		
-		return true
 
 void main()
 	init_lib()
 	string[] arg
 	get_args(arg)
 	
-	let pci = new PCIController()
-	pci.scan()
-	if DriverNE2k.test(pci)
-		pass
-	else if DriverRTL8139.test(pci)
-		pass
-	else
-		raise(new Exception("no known ethernet card found"))
+	let driver = Driver.choose()
+	driver.install()
+	driver.test()
 	
 	exit(0)
 

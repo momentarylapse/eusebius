@@ -61,11 +61,11 @@ class PCIDevice
 			return bar[index] & 0xfffffffc
 		return 0
 	
-	const void show()
-		print("{{bus}}:{{slot}}:{{function}} {{vendor|4x}}:{{device|4x}} class={{_class}}:{{subclass}}  ht={{header_type}}")
+	const string __str__()
+		string s = "{{bus}}:{{slot}}:{{function}} {{vendor|4x}}:{{device|4x}} class={{_class}}:{{subclass}}  ht={{header_type}}"
 		if irq >= 0
-			print("  irq={{irq}}")
-		print("\n")
+			s += "  irq={{irq}}"
+		return s
 	
 	const string usage()
 		if _class == CLASS_NET and subclass == SUBCLASS_NET_ETHERNET
@@ -142,7 +142,7 @@ class PCIController
 					check_device(bus, slot, function)
 	
 	void scan()
-		PCIDevice *d = check_device(0, 0, 0)
+		let d = check_device(0, 0, 0)
 		if !d
 			return
 		if (d.header_type & 0x80) == 0
@@ -165,7 +165,7 @@ class PCIController
 	
 	void show()
 		for d in devices
-			d.show()
+			print(str(d))
 
 	PCIDevice* getx(int bus, int slot, int function)
 		for d in devices
