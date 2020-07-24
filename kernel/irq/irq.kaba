@@ -42,6 +42,7 @@ class InterruptToSignalMap
 class irq
 	static InterruptDescriptor[256] idt
 	static InterruptToSignalMap[MAX_HW_IRQS] task_maps
+	static int inside_hw_irq
 	
 	static void deny_user_map(int hw_irq)
 		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
@@ -71,6 +72,7 @@ class irq
 			m.pid = -1
 			m.ktask = nil
 			m.utask = nil
+		inside_hw_irq = -1
 		
 	
 		# ignore the timer for now
@@ -160,6 +162,7 @@ class irq
 		int hw_irq = __temp_i__
 		let m = &irq.task_maps[hw_irq]
 		while true
+			inside_hw_irq= hw_irq
 			#prints("<IRQ ")
 			#printi(hw_irq)
 			#prints(">")

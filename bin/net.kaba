@@ -3,8 +3,6 @@ use "lib/std.kaba"
 use "lib/pci.kaba"
 use "lib/io.kaba"
 
-void my_signal_handler()
-	print("-------signal-------")
 
 
 
@@ -18,9 +16,12 @@ class Driver
 	string name
 	void __init__()
 		dev = nil
+	static Driver* installed
+	static void my_signal_handler()
+		installed.on_irq()
 	void install_base()
-		print("installing ethernet card: {{name}}")
-		print(str(dev))
+		print("installing ethernet card: {{name}}\n")
+		#print(str(dev))
 		
 		io_base = dev.get_io_addr(0)
 		print("io: 0x{{io_base|4x}}")
@@ -34,7 +35,7 @@ class Driver
 		if shm_id < 0
 			raise(new Exception("can't create shared memory for receive buffer"))
 		buf_recv = shmat(shm_id, 0)
-		print("mem: {{p2s(buf_send)}} {{p2s(buf_recv)}}")
+		print("mem: {{p2s(buf_send)}} {{p2s(buf_recv)}}\n")
 	bool get_device(out PCIController pci)
 		dev = pci.get(vendor_id, product_id)
 		return dev
@@ -42,6 +43,8 @@ class Driver
 	virtual void install()
 		install_base()
 	virtual void test()
+	virtual void on_irq()
+		print("-------IRQ-------\n")
 	static Driver* choose()
 		let pci = new PCIController()
 		pci.scan()
@@ -50,6 +53,7 @@ class Driver
 		drivers.add(new DriverRTL8139())
 		for d in drivers
 			if d.get_device(pci)
+				installed = d
 				return d
 		raise(new Exception("no known ethernet card found"))
 	
@@ -88,7 +92,7 @@ class DriverNE2k extends Driver
 
 		for i in 0:32
 			prom[i] = inportb(io_base + 0x10)
-		print("MAC: {{binary(&prom, 6).hex()}}")
+		print("MAC: {{binary(&prom, 6).hex()}}\n")
 	override void test()
 		
 
@@ -99,14 +103,16 @@ class DriverNE2k extends Driver
 	#};
 
 class DriverRTL8139 extends Driver
+	int cur_send_buf
 	override void __init__()
 		vendor_id = 0x10ec
 		product_id = 0x8139
 		name = "rtl8139"
+		cur_send_buf = 0
 	override void install()
 		install_base()
 		
-		print("mapirq")
+		print("mapirq\n")
 		if !sigaction(29, my_signal_handler)
 			raise(new Exception("sigaction"))
 		if !mapirq(11, 29)
@@ -120,10 +126,10 @@ class DriverRTL8139 extends Driver
 	#		pass
 		
 		int r = inportb(io_base + 0x37)
-		print("command {{r|2x}}")
+		print("command {{r|2x}}\n")
 		
 		# reset
-		print("reset...")
+		print("reset...\n")
 		usleep(1000000)
 		outportb(io_base + 0x37, inportb(io_base + 0x37) | 0x10)
 		
@@ -138,13 +144,28 @@ class DriverRTL8139 extends Driver
 		
 		for i in 0:6
 			mac.add(inportb(io_base + i))
-		print(mac.hex())
+		print("MAC {{mac.hex()}}\n")
+	void read_package()
+		print("receive\n")
+		print(binary(buf_recv, 20).hex())
+		print("------------END-------")
+		exit(0)
+	void send_package(string s)
+		int c = cur_send_buf
+		cur_send_buf = ((cur_send_buf + 1) % 4)
+		int[0]* buf = &buf_send[c * 4096]
+		memcpy(buf, &s[0], len(s))
+		outportd(io_base + 0x20 + c*4, addr2phys(buf)) # TSAD0
+		outportd(io_base + 0x10 + c*4, len(s)) # TSD0 size
 	override void test()
-		outportd(io_base + 0x20, addr2phys(buf_send)) # TSAD0
-		outportd(io_base + 0x10, 64) # TSD0 size
-		
-		print("run")
 		while true
+			print("send\n")
+			usleep(1000000)
+			send_package("hallo bloeder test")
+		
+		print("run\n")
+		while true
+			#usleep(1000)
 			pass
 		
 		print("IRQ?")
@@ -154,9 +175,25 @@ class DriverRTL8139 extends Driver
 		}
 		print("done")
 		usleep(1000000)
+	override void on_irq()
+		int r = inportw(io_base + 0x3e)
+		print("irq  0x{{r|4x}} ")
+		if (r & 0x8000) > 0 # system error
+			raise(new Exception("ERROR"))
+		else if (r & 0x4) > 0 # transmit ok
+			print("trans\n")
+			# receive ok
+			outportw(io_base + 0x3e, 0x0004)
+		else if (r & 0x1) > 0 # receive ok
+			print("read\n")
+			while (inportb(io_base + 0x37) & 0x01) == 0
+				read_package()
+				# receive ok
+				outportw(io_base + 0x3e, 0x0001)
 
 void main()
 	init_lib()
+	lib_print_endl = false
 	string[] arg
 	get_args(arg)
 	
