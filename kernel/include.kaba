@@ -1,0 +1,90 @@
+use "io/io.kaba"
+
+const int SCREEN_WIDTH = 80
+const int SCREEN_HEIGHT = 25
+
+
+class TextMode
+
+	static void* video_memory
+	static char text_color, text_color2
+	static int pos, line
+
+	static void clear()
+		cstring *d = video_memory
+		for i in 0:SCREEN_WIDTH * SCREEN_HEIGHT
+			d[i * 2] = ' '
+			d[1 * 2 + 1] = 0
+		line = 0
+		pos = 0
+
+	static void init()
+		video_memory = _i2p(0x000b8000)
+		
+		clear()
+		text_color = 7
+
+	static void etm_shift()
+		cstring *d = video_memory
+		cstring *d2 = &d[SCREEN_WIDTH * 2]
+		for i in 0:SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
+			d[i] = d2[i]
+		d2 = &d[SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2]
+		for i in 0:SCREEN_WIDTH
+			d2[i * 2] = ' '
+			d2[i * 2 + 1] = 0
+
+	static void prints_low(cstring *str, int size)
+		cstring *d = video_memory
+		d = &d[2*(SCREEN_WIDTH * line + pos)]
+		for i in 0:size
+			if str[i] == 0x7f or str[i] == 0x08 # BACKSPACE
+				d[-2] = 0x20
+				pos --
+				if pos < 0
+					if line > 0
+						pos = SCREEN_WIDTH - 1
+						line --
+					else
+						pos = 0
+						line = 0
+				continue
+			if str[i] != '\n'
+				d[0] = str[i]
+				d[1] = text_color
+				d = &d[2]
+				pos ++
+			if (pos >= SCREEN_WIDTH) or (str[i] == '\n')
+				pos = 0
+				line ++
+				if line >= SCREEN_HEIGHT
+					etm_shift()
+					line --
+				d = video_memory
+				d = &d[2*(SCREEN_WIDTH * line)]
+		int position = (line * SCREEN_WIDTH) + pos
+		# cursor LOW port to vga INDEX register
+		outportb(0x3d4, 0x0f)
+		outportb(0x3d5, position)
+		# cursor HIGH port to vga INDEX register
+		outportb(0x3d4, 0x0e)
+		outportb(0x3d5, position >> 8)
+
+
+
+void prints(cstring s)
+	TextMode.prints_low(&s, strlen(s))
+
+int strlen(cstring s)
+	for i in 0:256
+		if s[i] == 0
+			return i
+	return 256
+
+
+class PointerWrapper
+	void *p
+
+void *_i2p(int i)
+	PointerWrapper *p = &i
+	return p.p

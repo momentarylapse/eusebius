@@ -5,28 +5,35 @@ use "io/text.kaba"
 
 class Base
 	void __init__()
+		prints("Base.init\n")
 	#virtual void __delete__()
 	void __assign__(Base b)
 	virtual void f()
-		prints("Base.f()")
+		prints("Base.f()\n")
 
 class Derived extends Base
 	override void __init__()
+		prints("Derived.init\n")
 	#virtual void __delete__()
 	void __assign__(Derived d)
 	override void f()
-		prints("Derived.f()")
+		prints("Derived.f()\n")
 
+		
 void main()
 
 	TextMode.init()
 	TextMode.clear()
+	prints("test...\n")
 	
-	Derived d
-	Base* b = &d
+	if true
+		Derived d
+		Base* b = &d
 	
-	b.f()
+		prints("a\n")
+		b.f()
+		prints("b\n")
 	
 	while true
-		nil
+		pass
 

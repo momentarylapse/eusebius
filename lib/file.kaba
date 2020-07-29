@@ -143,10 +143,8 @@ class dirent_struct
 	cstring name
 	void __assign__(dirent_struct o)
 		pass
-	#void fill(out lib__DirEntry e)
-	#	_cs2s(name, e.name)
-	#	e.size = size
-	#	e.is_dir = (type == 1)
+
+
 
 lib__string@list lib__Filesystem@@search(string dirname, string filter, bool allow_dirs)
 	lib__string@list list_dirs, list_files
@@ -271,7 +269,7 @@ lib__string lib__Filesystem@@read(string filename)
 	lib__string content
 	int h = open(filename, O_RDONLY)
 	if h < 0
-		lib__print("kann Datei nicht oeffnen: ")
+		lib__print("can not open file: ")
 		lib__print(filename)
 		lib__print("\n")
 		return content
@@ -280,7 +278,7 @@ lib__string lib__Filesystem@@read(string filename)
 		content.resize(size + 1024)
 		int r = read(h, &content.data[size], 1024)
 		if r < 0
-			lib__print("Fehler beim Lesen...\n")
+			lib__print("Error while reading...\n")
 		if r <= 0
 			break
 		size += r

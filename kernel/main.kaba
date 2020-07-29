@@ -7,3 +7,4 @@ use "kernel.kaba"
 #use "test-virtual.kaba"
 #use "test-func-pointer.kaba"
 #use "test-sound.kaba"
+
