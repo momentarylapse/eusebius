@@ -1,7 +1,7 @@
 use image
-use "std.kaba"
-use "x.kaba"
-use "ttfx.kaba"
+use lib.std
+use lib.x
+use lib.ttfx
 
 int col2i(color c)
 	int ir = c.r * 255.0

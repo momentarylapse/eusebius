@@ -1,6 +1,6 @@
-use "lib/std.kaba"
-use "lib/pci.kaba"
-use "lib/io.kaba"
+use lib.std
+use lib.pci
+use lib.io
 
 
 void show_device(PCIDevice d)

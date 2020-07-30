@@ -1,5 +1,5 @@
 use os
-use "std.kaba"
+use lib.std
 
 string hex(void* _p, int size)
 	char[0]* p = _p

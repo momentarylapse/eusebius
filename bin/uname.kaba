@@ -1,4 +1,4 @@
-use "lib/std.kaba"
+use lib.std
 
 class UTSName
 	cstring sysname

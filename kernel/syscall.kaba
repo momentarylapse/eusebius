@@ -1,16 +1,16 @@
-use "base.kaba"
-use "io/text.kaba"
-use "fs/fs.kaba"
-use "fs/access.kaba"
-use "dev/block.kaba"
-use "mem/heap.kaba"
-use "mem/paging.kaba"
-use "mem/shared.kaba"
-use "task/task.kaba"
-use "task/scheduler.kaba"
-use "time/timevalue.kaba"
-use "time/timer.kaba"
-use "irq/irq.kaba"
+use common
+use io.text
+use fs.fs
+use fs.access
+use dev.block
+use mem.heap
+use mem.paging
+use mem.shared
+use task.task
+use task.scheduler
+use time.timevalue
+use time.timer
+use irq.irq
 
 const int SYSCALL_STACK_SIZE = 65536
 

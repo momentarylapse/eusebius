@@ -1,5 +1,5 @@
 use os
-use "lib/std.kaba"
+use lib.std
 
 string glue(string dir, string f)
 	if len(dir) == 0

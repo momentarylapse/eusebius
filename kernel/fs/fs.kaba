@@ -1,8 +1,8 @@
-use "../base.kaba"
-use "../mem/heap.kaba"
-use "../dev/ata.kaba"
-use "../dev/block.kaba"
-use "../io/text.kaba"
+use common
+use mem.heap
+use dev.ata
+use dev.block
+use io.text
 use kaba
 
 const int FILE_TYPE_FILE = 0

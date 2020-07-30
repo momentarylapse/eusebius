@@ -1,6 +1,6 @@
-use "lib/std.kaba"
-use "lib/io.kaba"
-use "lib/pci.kaba"
+use lib.std
+use lib.io
+use lib.pci
 
 int temp1, temp2, temp3, temp4
 

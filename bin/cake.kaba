@@ -1,7 +1,7 @@
-use "lib/std.kaba"
-use "lib/x.kaba"
-use "lib/draw.kaba"
-use "lib/ttfx.kaba"
+use lib.std
+use lib.x
+use lib.draw
+use lib.ttfx
 
 
 color bg

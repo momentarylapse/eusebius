@@ -1,6 +1,6 @@
-use "std.kaba"
-use "io.kaba"
-use "pci.kaba"
+use lib.std
+use lib.io
+use lib.pci
 
 extern int _p2i(void *p)
 extern void* _i2p(int i)

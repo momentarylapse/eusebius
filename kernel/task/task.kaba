@@ -1,13 +1,13 @@
-use "../base.kaba"
-use "../io/text.kaba"
-use "../fs/fs.kaba"
-use "../fs/pipe.kaba"
-use "../fs/access.kaba"
-use "../mem/heap.kaba"
-use "../mem/paging.kaba"
-use "../mem/shared.kaba"
-use "../net/socket.kaba"
-use "../time/timevalue.kaba"
+use common
+use io.text
+use fs.fs
+use fs.pipe
+use fs.access
+use mem.heap
+use mem.paging
+use mem.shared
+use net.socket
+use time.timevalue
 
 
 

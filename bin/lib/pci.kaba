@@ -1,5 +1,5 @@
-use "std.kaba"
-use "io.kaba"
+use lib.std
+use lib.io
 
 const int CLASS_STORAGE = 1
 const int SUBCLASS_STORAGE_IDE = 1

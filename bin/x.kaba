@@ -1,9 +1,9 @@
 use image
-use "lib/std.kaba"
-use "lib/io.kaba"
-use "lib/pci.kaba"
-use "lib/vesa.kaba"
-#use "lib/x.kaba"
+use lib.std
+use lib.io
+use lib.pci
+use lib.vesa
+#use lib.x
 use hui
 
 

@@ -1,10 +1,10 @@
-use "../base.kaba"
-use "../io/text.kaba"
-use "fs.kaba"
-use "pipe.kaba"
-use "../net/socket.kaba"
-use "../mem/heap.kaba"
-use "../mem/paging.kaba"
+use common
+use io.text
+use fs.fs
+use fs.pipe
+use net.socket
+use mem.heap
+use mem.paging
 
 
 const int MAX_OPEN_FILES = 128

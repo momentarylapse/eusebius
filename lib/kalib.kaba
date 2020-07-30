@@ -1,10 +1,10 @@
 #define __FUNCTION_POINTER_AS_CODE__
-use "base.kaba"
-use "syscalls.kaba"
-use "array.kaba"
-use "file.kaba"
-use "math.kaba"
-use "image.kaba"
+use lib_base
+use lib_syscalls
+use lib_array
+use lib_file
+use lib_math
+use lib_image
 
 
 int execute(string[] arg, int fd_in, int fd_out)

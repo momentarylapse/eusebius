@@ -1,7 +1,7 @@
-use "base.kaba"
-use "array.kaba"
-use "syscalls.kaba"
-use "file.kaba"
+use lib_base
+use lib_array
+use lib_syscalls
+use lib_file
 use image
 
 class lib__color

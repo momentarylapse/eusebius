@@ -1,22 +1,22 @@
 #define __STRING_CONST_AS_CSTRING__
 #define __FUNCTION_POINTER_AS_CODE__
-use "base.kaba"
-use "io/text.kaba"
-use "dev/ata.kaba"
-use "dev/block.kaba"
-use "dev/std_char_devs.kaba"
-use "fs/fs.kaba"
-use "fs/access.kaba"
-use "fs/pipe.kaba"
-use "mem/heap.kaba"
-use "mem/paging.kaba"
-use "mem/shared.kaba"
-use "net/socket.kaba"
-use "task/task.kaba"
-use "task/scheduler.kaba"
-use "irq/irq.kaba"
-use "irq/error.kaba"
-use "syscall.kaba"
+use common
+use io.text
+use dev.ata
+use dev.block
+use dev.std_char_devs
+use fs.fs
+use fs.access
+use fs.pipe
+use mem.heap
+use mem.paging
+use mem.shared
+use net.socket
+use task.task
+use task.scheduler
+use irq.irq
+use irq.error
+use syscall
 
 const int KALIB_LOCATION = 0x00050000
 

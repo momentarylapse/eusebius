@@ -2,7 +2,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
 
-use "kernel.kaba"
+use kernel
 #use "test-base.kaba"
 #use "test-virtual.kaba"
 #use "test-func-pointer.kaba"

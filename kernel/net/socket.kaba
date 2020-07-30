@@ -1,8 +1,8 @@
-use "../base.kaba"
-use "../fs/fs.kaba"
-use "../io/text.kaba"
-use "../mem/heap.kaba"
-use "../mem/paging.kaba"
+use common
+use fs.fs
+use io.text
+use mem.heap
+use mem.paging
 
 
 

@@ -1,6 +1,6 @@
 use file
-use "lib/std.kaba"
-use "lib/io.kaba"
+use lib.std
+use lib.io
 
 const int CHAR_NL = 0x0a
 const int CHAR_TAB = 0x09

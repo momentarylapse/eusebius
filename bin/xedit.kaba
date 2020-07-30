@@ -1,7 +1,7 @@
 use os
-use "lib/std.kaba"
-use "lib/mtk/mtk.kaba"
-use "lib/draw.kaba"
+use lib.std
+use lib.mtk.mtk
+use lib.draw
 use hui
 
 class EditWindow extends MtkWindow

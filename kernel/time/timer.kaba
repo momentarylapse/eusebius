@@ -1,8 +1,8 @@
-use "../base.kaba"
-use "../io/io.kaba"
-use "timevalue.kaba"
-use "../task/task.kaba"
-use "../irq/irq.kaba"
+use common
+use io.io
+use time.timevalue
+use task.task
+use irq.irq
 
 class KernelTimer
 	#int[2] state

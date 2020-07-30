@@ -1,4 +1,4 @@
-use "std.kaba"
+use lib.std
 use file
 
 string hex(char[0]* p, int size)

@@ -1,7 +1,7 @@
-use "../base.kaba"
-use "../io/text.kaba"
-use "heap.kaba"
-use "paging.kaba"
+use common
+use io.text
+use mem.heap
+use mem.paging
 
 const int MAX_SHARED_MEMORY_BLOCKS = 256
 

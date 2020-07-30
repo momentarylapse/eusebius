@@ -1,7 +1,7 @@
-use "../std.kaba"
-use "../x.kaba"
-use "../draw.kaba"
-use "../ttfx.kaba"
+use lib.std
+use lib.x
+use lib.draw
+use lib.ttfx
 use hui
 
 const int FRAME_BAR = 30

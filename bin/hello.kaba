@@ -1,5 +1,5 @@
 #define __FUNCTION_POINTER_AS_CODE__
-use "lib/std.kaba"
+use lib.std
 
 #extern void signal_handler_x()
 

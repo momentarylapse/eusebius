@@ -1,10 +1,10 @@
-use "../base.kaba"
-use "../io/text.kaba"
-use "../io/io.kaba"
-use "task.kaba"
-use "../time/timevalue.kaba"
-use "../time/timer.kaba"
-use "../irq/irq.kaba"
+use common
+use io.text
+use io.io
+use task.task
+use time.timevalue
+use time.timer
+use irq.irq
 
 const int SCHEDULER_STACK_SIZE = 8192
 

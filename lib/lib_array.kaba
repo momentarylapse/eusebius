@@ -1,5 +1,5 @@
-use "base.kaba"
-use "syscalls.kaba"
+use lib_base
+use lib_syscalls
 
 
 

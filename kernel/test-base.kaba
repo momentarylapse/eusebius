@@ -1,7 +1,7 @@
 #define __STRING_CONST_AS_CSTRING__
 
-use "base.kaba"
-use "io/text.kaba"
+use common
+use io.text
 
 void main()
 

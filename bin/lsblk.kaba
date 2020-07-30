@@ -1,4 +1,4 @@
-use "lib/std.kaba"
+use lib.std
 
 string fs_type(BlockDevice p)
 	if p.type == 0x83

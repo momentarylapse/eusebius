@@ -1,6 +1,6 @@
-use "base.kaba"
-use "syscalls.kaba"
-use "array.kaba"
+use lib_base
+use lib_syscalls
+use lib_array
 
 
 int open(string filename, int flags)

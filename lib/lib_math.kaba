@@ -1,5 +1,5 @@
-use "base.kaba"
-use "array.kaba"
+use lib_base
+use lib_array
 
 
 int lib__clampi(int i, int min, int max)

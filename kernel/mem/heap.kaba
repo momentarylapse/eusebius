@@ -1,5 +1,5 @@
-use "../base.kaba"
-use "../io/text.kaba"
+use common
+use io.text
 
 
 #--------------------------------------------------------------

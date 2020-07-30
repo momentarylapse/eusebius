@@ -1,6 +1,6 @@
-use "../base.kaba"
-use "../io/text.kaba"
-use "ata.kaba"
+use common
+use io.text
+use ata
 
 
 class BlockDevice
