@@ -1,4 +1,5 @@
 use lib.std
+use os
 
 
 void hd(int h, int _skip, int _length)
@@ -34,7 +35,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	string[] files
+	Path[] files
 	
 	int length = 2000000000
 	int skip = 0

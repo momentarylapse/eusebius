@@ -1,9 +1,10 @@
 use lib.std
+use os
 
 
-void _mkdir(string filename)
-	if !mkdir(filename)
-		print("mkdir: can not create directory: " + filename)
+void _mkdir(Path path)
+	if !mkdir(path)
+		print("mkdir: can not create directory: {{path}}")
 		exit(lib_error)
 
 

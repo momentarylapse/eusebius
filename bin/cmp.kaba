@@ -36,17 +36,14 @@ void main()
 	get_args(arg)
 	
 	if arg.num != 3
-		print("call: cmp FILE1 FILE2")
-		exit(-1)
+		raise(new Exception("call: cmp FILE1 FILE2"))
 		
 	int h1 = open(arg[1], O_RDONLY)
 	if h1 < 0
-		print("cat: can not open file: " + arg[1])
-		exit(-1)
+		raise(new Exception("cat: can not open file: " + arg[1]))
 	int h2 = open(arg[2], O_RDONLY)
 	if h2 < 0
-		print("cat: can not open file: " + arg[2])
-		exit(-1)
+		raise(new Exception("cat: can not open file: " + arg[2]))
 	cmp(h1, h2)
 	close(h1)
 	close(h2)

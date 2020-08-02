@@ -1,4 +1,5 @@
 use lib.std
+use os
 
 
 class Prompt
@@ -40,7 +41,7 @@ class Prompt
 		if history_pos < len(history) - 1
 			history_jump(history_pos + 1)
 	void show()
-		print(getcwd() + ": ")
+		print(str(Filesystem.current_directory()) + ": ")
 		
 	void process(int k)
 		if k < 0

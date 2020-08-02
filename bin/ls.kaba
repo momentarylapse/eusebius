@@ -1,14 +1,8 @@
 use os
 use lib.std
 
-string glue(string dir, string f)
-	if len(dir) == 0
-		return f
-	if dir[len(dir)-1] == '/'
-		return dir + f
-	return dir + "/" + f
 
-string ftype(string path)
+string ftype(Path path)
 	if Filesystem.is_directory(path)
 		return "d"
 	else
@@ -47,14 +41,14 @@ void print_table(string[] list)
 			o.add(' ')
 	print(o)
 
-void ls(string dirname, bool extended)
+void ls(Path dirname, bool extended)
 	let l = Filesystem.search(dirname, "", true)
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
 
 	if extended
 		for e in l
-			let path = glue(dirname, e)
+			let path = dirname << e
 			print("{{ftype(path)|-4}} {{Filesystem_size32(path)|8}} {{e}}\n")
 	else
 		print_table(l)
@@ -68,15 +62,16 @@ void main()
 	get_args(arg)
 	
 	bool extended = false
-	int n_shown = 0
+	Path[] paths
 	
 	for i in 1:arg.num
 		if arg[i] == "-l"
 			extended = true
 		else
-			ls(arg[i], extended)
-			n_shown ++
-	if n_shown == 0
-		ls(getcwd(), extended)
+			paths.add(arg[i])
+	for p in paths
+		ls(p, extended)
+	if len(paths) == 0
+		ls(Filesystem.current_directory(), extended)
 	
 	exit(0)

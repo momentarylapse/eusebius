@@ -1,8 +1,9 @@
 use lib.std
+use os
 
 void main()
 	init_lib()
 	#lib_print_endl = false
-	print(getcwd())
+	print(Filesystem.current_directory())
 	#print("\n")
 	exit(0)

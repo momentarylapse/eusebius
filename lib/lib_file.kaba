@@ -101,7 +101,7 @@ bool chdir(string dir)
 	}
 	return lib_error == 0
 
-lib__string getcwd()
+lib__string lib__Filesystem@@current_directory()
 	cstring tt
 	__temp_p__ = &tt
 	asm{
@@ -132,6 +132,49 @@ bool stat(string filename, void *buf)
 	return lib_error == 0
 
 
+
+class lib__Path
+	lib__string s
+	void __init__()
+	void __init__(lib__string p)
+		s = p
+	const lib__string __str__()
+		return s
+	const bool is_empty()
+		return len(s) == 0
+	const bool is_absolute()
+		if len(s) == 0
+			return false
+		return s.data[0] == '/'
+	const bool is_relative()
+		return not is_absolute()
+	const bool has_dir_ending()
+		if len(s) == 0
+			return false
+		return s.data[len(s)-1] == '/'
+	const lib__Path __lshift__(lib__Path p)
+		if is_empty()
+			return p
+		if has_dir_ending()
+			return lib__Path(s + p.s)
+		lib__string r = s
+		r.add('/')
+		return lib__Path(r + p.s)
+	const lib__Path __lshift__(lib__string p)
+		return self << lib__Path(p)
+	static lib__Path @from_str(lib__string p)
+		return lib__Path(p)
+
+
+#class lib__Path@list extends lib__string@list
+# not working because this does not export new functions...
+
+class lib__Path@list
+	lib__string@list l
+	void __init__()
+	void add(lib__Path p)
+		l.add(p.s)
+		
 
 #--------------------------------------------------------------------------
 # dir entry

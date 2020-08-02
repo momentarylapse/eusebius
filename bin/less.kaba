@@ -43,7 +43,7 @@ void main()
 		exit(1)
 	int h = open(arg[1], O_RDONLY)
 	if h < 0
-		print("less: can not open file: " + arg[1] + "\n")
+		print("less: can not open file: {{arg[1]}}\n")
 		exit(-1)
 	
 	string cont
