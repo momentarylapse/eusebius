@@ -89,12 +89,12 @@ class ShellView extends MtkWidget
 		
 	override void draw()
 		max_lines = (p.height - 10) / LINE_HEIGHT
-		p.set_color(color(1, 0,0,0))
+		p.set_color(color(0,0,0, 1))
 		p.rectangle(p.all)
 		p.fill()
 		p.line_width = 1
 
-		p.set_color(White)
+		p.set_color(color.WHITE)
 		int offset = max_lines - hist.lines.num
 		if offset > 0
 			offset = 0

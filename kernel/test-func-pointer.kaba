@@ -3,7 +3,7 @@ use common
 use io.text
 
 void f(void* p)
-	prints("hallo")
+	prints("hallo func pointer")
 
 void main()
 

@@ -166,7 +166,7 @@ void *_i2p(int i)
 
 class Word
 	char[2] c
-	int _int()
+	const int _int()
 		int a = c[0]
 		int b = c[1]
 		return a + b * 256

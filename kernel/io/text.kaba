@@ -97,26 +97,26 @@ void printi(int i)
 	_i2s(i, s)
 	prints(s)
 
-int printh(void* _data,int size)
+void printh(void* _data, int size)
 	cstring* data = _data
 	cstring ttt
 	for i in 0:size
 		int d = data[i]
-		int d1 = (d>>4)
-		int d2 = (d&15)
+		int d1 = (d>>4) & 0xf
+		int d2 = (d & 0xf)
 		if d1 < 10
-			ttt[0] = d1+48
+			ttt[0] = '0'+d1
 		else
-			ttt[0] = d1+87
-		if d2<10
-			ttt[1] = d2+48
+			ttt[0] = 'a'-10+d1
+		if d2 < 10
+			ttt[1] = '0'+d2
 		else
-			ttt[1] = d2+87
+			ttt[1] = 'a'-10+d2
 		if i == size-1
 			ttt[2] = 0
 		else
 			ttt[2] = '.'
-			ttt[3] = 0
+		ttt[3] = 0
 		prints(ttt)
 
 #void WasteTime()

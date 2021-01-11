@@ -1,4 +1,5 @@
 #define __STRING_CONST_AS_CSTRING__
+#define __FUNCTION_POINTER_AS_CODE__
 
 use common
 use io.text
@@ -7,7 +8,7 @@ class Base
 	void __init__()
 		prints("Base.init\n")
 	#virtual void __delete__()
-	void __assign__(Base b)
+	#void __assign__(Base b)
 	virtual void f()
 		prints("Base.f()\n")
 
@@ -29,6 +30,7 @@ void main()
 	if true
 		Derived d
 		Base* b = &d
+#		Base b
 	
 		prints("a\n")
 		b.f()

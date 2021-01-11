@@ -210,7 +210,7 @@ class KeyboardController
 		if k == 0x33
 			return KEY_COMMA
 		if k == 0x56
-			return KEY_SMALLER
+			return KEY_LESS
 		if k == 0x2b
 			return KEY_FENCE
 		if k == 0x1b

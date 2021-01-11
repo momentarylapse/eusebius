@@ -1,11 +1,13 @@
-KABA  = kaba
-#KABA  = ~/Projekte/Kaba/kaba
+#KABA  = kaba
+KABA  = ~/Projekte/Kaba/kaba
+#KABA  = ~/Projekte/Kaba/kaba --verbose
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --x86
 FLAGS =  $(MACHINE) --no-std-lib
 LOADERFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7c00
 INITFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7e00
-KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib --remove-unused
+KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
+# --remove-unused
 PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point --import-symbols kalib_symbols
 LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs

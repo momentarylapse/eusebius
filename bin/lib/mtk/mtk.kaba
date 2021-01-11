@@ -40,7 +40,7 @@ string key_to_str(int _key)
 		return " "
 	if key == KEY_TAB
 		return "\t"
-	if key == KEY_SMALLER
+	if key == KEY_LESS
 		return "<"
 	if key == KEY_PLUS
 		return "+"
@@ -104,7 +104,7 @@ string key_to_str(int _key)
 			return ":"
 		if key == KEY_MINUS
 			return "_"
-		if key == KEY_SMALLER
+		if key == KEY_LESS
 			return ">"
 	if (key & KEY_ALT) > 0
 		key -= KEY_ALT
@@ -120,7 +120,7 @@ string key_to_str(int _key)
 			return "}"
 		if key == KEY_PLUS
 			return "~"
-		if key == KEY_SMALLER
+		if key == KEY_LESS
 			return "|"
 		if key == KEY_Q
 			return "@"
@@ -130,13 +130,12 @@ class MtkSizeNegotiationData
 	int min_height
 	bool expand_x
 	bool expand_y
-MtkSizeNegotiationData MtkSizeNegotiationData(int min_w, int min_h, bool exp_x, bool exp_y)
-	MtkSizeNegotiationData snd
-	snd.min_width = min_w
-	snd.min_height = min_h
-	snd.expand_x = exp_x
-	snd.expand_y = exp_y
-	return snd
+	
+	void __init__(int min_w, int min_h, bool exp_x, bool exp_y)
+		min_width = min_w
+		min_height = min_h
+		expand_x = exp_x
+		expand_y = exp_y
 
 class MtkWidget
 	MtkWindow* win
@@ -607,7 +606,7 @@ class MtkWindow extends XWindow
 		p.set_color(col_title)
 		p.draw_str(FRAME_WIDTH, 4.0, title)
 		if button_close_hover
-			p.set_color(Red)
+			p.set_color(color.RED)
 			p.draw_str(w - 20, 4, "X")
 		
 	override void on_mouse_move()
@@ -705,18 +704,18 @@ void mtk_init()
 	idles.__init__()
 	mtk_windows.__init__()
 	
-	col_window_frame = White
-	col_text = Black
-	col_background = color(1, 0.9, 0.9, 0.9)
-	col_title = Black
-	col_button = color(1, 0.6, 0.6, 0.95)
-	col_button_frame = color(1, 0.4, 0.4, 0.80)
-	col_button_hover = color(1, 0.7, 0.7, 1.0)
-	col_button_hover_frame = color(1, 0.5, 0.5, 0.85)
-	col_button_click = color(1, 0.4, 0.4, 0.8)
-	col_button_click_frame = color(1, 0.2, 0.2, 0.5)
-	col_frame = color(1, 0.6, 0.6, 0.6)
-	col_frame_active = color(1, 0.4, 0.4, 0.80)
+	col_window_frame = color.WHITE
+	col_text = color.BLACK
+	col_background = [0.9, 0.9, 0.9, 1]
+	col_title = color.BLACK
+	col_button = (0.6, 0.6, 0.95, 1)
+	col_button_frame = (0.4, 0.4, 0.80, 1)
+	col_button_hover = (0.7, 0.7, 1.0, 1)
+	col_button_hover_frame = (0.5, 0.5, 0.85, 1)
+	col_button_click = (0.4, 0.4, 0.8, 1)
+	col_button_click_frame = (0.2, 0.2, 0.5, 1)
+	col_frame = (0.6, 0.6, 0.6, 1)
+	col_frame_active = (0.4, 0.4, 0.80, 1)
 	
 	xcon = new XConnection()
 	if xcon.error

@@ -48,7 +48,7 @@ void main()
 	prints(KERNEL_NAME)
 	prints(" ")
 	prints(KERNEL_VERSION)
-	prints("   (c) by MichiSoft TM 2020\n")
+	prints("   (c) by MichiSoft TM 2021\n")
 	prints("memory: ")
 	printi(MemorySize / 1024)
 	prints("k\n")
@@ -81,7 +81,7 @@ void main()
 	
 	# assume a default disk layout...
 	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
-	FileEntry *boot = FileSystem.get("/boot", FileSystem.root)
+	let boot = FileSystem.get("/boot", FileSystem.root)
 	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 	TaskManager.init()

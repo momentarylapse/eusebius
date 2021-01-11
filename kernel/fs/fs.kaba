@@ -336,12 +336,15 @@ class FileSystem
 		let mp = add_mount_point()
 		if !mp
 			return -1
+
+		# hahaha, we are evil :D
 		if strcmp(fs_name, "michifs") == 0
 			MountPointMichiFS *mp_michi = mp
 			mp_michi.__init__()
 		else if strcmp(fs_name, "ext2") == 0
 			MountPointExt2 *mp_ext2 = mp
 			mp_ext2.__init__()
+		# better to register a list of (stateless) fs drivers?
 			
 		mp.dest = &dir
 		mp.dev = &dev
@@ -394,11 +397,13 @@ class MountPointMichiFS extends MountPoint
 			int num_blocks = read_int()
 			for i in 0:num_blocks
 				e.add_block(first_block + i)
+		return 0
 
 
 class MountPointExt2 extends MountPoint
 	
 	override int mount()
+		#prints("EXT2.mount")
 		buf = Heap.malloc(4096)
 		update_sizes(1024, 0) # temp
 		
@@ -430,6 +435,7 @@ class MountPointExt2 extends MountPoint
 		test_compatibility()
 		if readable
 			read_inode_recursive(2, dest)
+		return 0
 	
 	void write_meta_data()
 		AtaController.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)

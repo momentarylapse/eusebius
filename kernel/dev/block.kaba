@@ -79,6 +79,7 @@ class BlockDevManager
 	#		DrawHex(n*3,2,&AtaBuffer[n],1)
 			
 	static void show()
+		#printi(num_devs)
 		prints("primary partitions:       offset   size\n")
 		for n in 0:num_devs
 			let p = &devs[n]

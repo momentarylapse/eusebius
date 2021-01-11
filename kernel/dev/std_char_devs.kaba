@@ -119,12 +119,16 @@ class StdCharDevs
 		dev_key_reading = 0
 		
 		#FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
-		FileEntry *dev = FileSystem.get("/dev", FileSystem.root)
-		
+		let dev = FileSystem.get("/dev", FileSystem.root)
+		if !dev
+			panic("/dev not found")
+			#dev = FileSystem.root.create_child("dev", FILE_TYPE_DIR, nil)
+			#dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
+
 		FileEntry *dev_zero = dev.create_child("zero", FILE_TYPE_CHAR, nil)
 		dev_zero_ops.__init__()
 		dev_zero.op = &dev_zero_ops
-		
+				
 		FileEntry *dev_null = dev.create_child("null", FILE_TYPE_CHAR, nil)
 		dev_null_ops.__init__()
 		dev_null.op = &dev_null_ops

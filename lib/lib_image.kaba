@@ -44,7 +44,7 @@ class lib__Image
 		int height = temp.data[14]
 		height += (hh*256)
 	
-		im.__init__(width, height, Red)
+		im.__init__(width, height, color.RED)
 	
 		for i in 0:offset
 			read(h, &temp.data[0], 1)

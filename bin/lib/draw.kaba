@@ -15,14 +15,14 @@ void i2col(out color c, int i)
 	int ig = (i >> 8) & 255
 	int ib = i & 255
 	int ia = i >> 24
-	c = color(float(ia) / 255.0, float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0)
+	c = color(float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0, float(ia) / 255.0)
 
 int add_blend(int i1, int i2, float t)
 	float s = 1 - t
 	color c1, c2
 	i2col(c1, i1)
 	i2col(c2, i2)
-	return col2i(color(1, s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b))
+	return col2i(color(s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b, 1))
 
 class XCircle
 	complex m
@@ -67,7 +67,7 @@ class XPainter
 		error = false
 		
 		font = nil
-		set_color(Black)
+		set_color(color.BLACK)
 		all = rect(0, width, 0, height)
 		pos = complex(0, 0)
 		line_width = 1.0

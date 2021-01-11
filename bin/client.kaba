@@ -24,11 +24,11 @@ void main()
 		
 	let p = new XPainter(win)
 
-	p.set_color(color(1, rand(0.5), rand(0.5), rand(0.5)))
+	p.set_color(color(rand(0.5), rand(0.5), rand(0.5), 1))
 	p.rectangle(p.all)
 	p.fill()
 	
-	p.set_color(White)
+	p.set_color(color.WHITE)
 	p.rectangle(rect(10, 30, 10, 30))
 	p.fill()
 	

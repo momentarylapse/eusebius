@@ -15,7 +15,7 @@ void draw_cancle(out XPainter p, float x, float y)
 	p.draw_circle(x, y-30, 20)
 	#p.fill()
 	
-	p.set_color(White)
+	p.set_color(color.WHITE)
 	p.move_to(x-10, y)
 	p.line_to(x-10, y-60)
 	p.line_to(x+10, y-60)
@@ -48,12 +48,12 @@ void main()
 	FontDB* font_db = new FontDB()
 	p.font = font_db.get("Cantarell", 30)
 
-	bg = color(1, 0.1765, 0.1608, 0.4706)
+	bg = color(0.1765, 0.1608, 0.4706, 1)
 	p.set_color(bg)
 	p.rectangle(p.all)
 	p.fill()
 	
-	p.set_color(White)
+	p.set_color(color.WHITE)
 	p.draw_str(10, 30, "Herzlichen")
 	p.draw_str(20, 65, "Glueckwunsch")
 	
