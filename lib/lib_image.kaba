@@ -17,13 +17,13 @@ class lib__Image
 	bool alpha_used
 	bool error
 	void __init__(int w, int h, color c)
-		data.resize(w * h)
-		int ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
-		for i in 0:data.num
-			data.data[i] = ic
 		width = w
 		height = h
 		error = false
+		data.resize(w * h)
+		int ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
+		for i in 0:len(data)
+			data.data[i] = ic
 
 	static lib__Image* load(string filename)
 		lib__string temp
@@ -44,7 +44,11 @@ class lib__Image
 		int height = temp.data[14]
 		height += (hh*256)
 	
-		im.__init__(width, height, color.RED)
+		color c
+		c.r = 1
+		c.g = 0
+		c.b = 0
+		im.__init__(width, height, c)#color.RED)
 	
 		for i in 0:offset
 			read(h, &temp.data[0], 1)
