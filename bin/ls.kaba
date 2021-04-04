@@ -42,16 +42,22 @@ void print_table(string[] list)
 	print(o)
 
 void ls(Path dirname, bool extended)
-	let l = Filesystem.search(dirname, "", true)
+	let l = Filesystem.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
+	print(len(l))
+	for e in l
+		print("..")
+		print(str(e))
+		print("==")
+	return
 
 	if extended
 		for e in l
 			let path = dirname << e
 			print("{{ftype(path)|-4}} {{Filesystem_size32(path)|8}} {{e}}\n")
 	else
-		print_table(l)
+		print_table([for f in l str(f)])
 		print("\n")
 
 

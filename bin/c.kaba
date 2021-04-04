@@ -42,7 +42,7 @@ class CWindow extends XWindow
 #			for y in 0:10
 #				p.draw_glyph(40*x, 40*y, x + 10*y, 0.02)
 
-		p.set_color(color.WHITE)
+		p.set_color([1,1,1, 1]) #color.WHITE)
 		p.draw_str(20,  50, "Hallo Welt")
 		p.draw_str(20, 140, "ABCDEFG")
 	

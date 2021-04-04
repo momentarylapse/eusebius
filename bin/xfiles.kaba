@@ -7,7 +7,7 @@ use image
 
 class FilesView extends MtkWidget
 	string dir
-	string[] list
+	Path[] list
 	void __init__(string dir)
 		set_dir(dir)
 		snd = MtkSizeNegotiationData(30, 30, true, true)
@@ -21,7 +21,7 @@ class FilesView extends MtkWidget
 			dir.remove(dir.num-1)
 		if dir == ""
 			dir = "/"
-		list = Filesystem.search(dir, "*", true)
+		list = Filesystem.search(dir, "*", "fd")
 		if win
 			win.set_title(dir)
 			win.invalidate_all()

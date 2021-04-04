@@ -136,8 +136,12 @@ bool stat(string filename, void *buf)
 class lib__Path
 	lib__string s
 	void __init__()
+		lib__print("P+")
 	void __init__(lib__string p)
+		lib__print("P++")
 		s = p
+	void __delete__()
+		lib__print("P-")
 	const lib__string __str__()
 		return s
 	const bool is_empty()
@@ -189,7 +193,7 @@ class dirent_struct
 
 
 
-lib__string@list lib__Filesystem@@search(string dirname, string filter, bool allow_dirs)
+lib__string@list lib__Filesystem@@search(string dirname, string filter, string options)
 	lib__string@list list_dirs, list_files
 	lib__print("") # ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
@@ -207,14 +211,24 @@ lib__string@list lib__Filesystem@@search(string dirname, string filter, bool all
 	close(h)
 	lib_error = 0
 	
-	for i in 0:list_dirs.num-1
-		for j in i+1:list_dirs.num
-			if list_dirs.data[i].compare(list_dirs.data[j]) > 0
-				list_dirs.swap(i, j)
-	for i in 0:list_files.num-1
-		for j in i+1:list_files.num
-			if list_files.data[i].compare(list_files.data[j]) > 0
-				list_files.swap(i, j)
+	bool flag_dir = false
+	bool flag_file = false
+	for c in options
+		if c == 'f'
+			flag_file = true
+		else if c == 'd'
+			flag_dir = true
+	
+	if flag_dir
+		for i in 0:list_dirs.num-1
+			for j in i+1:list_dirs.num
+				if list_dirs.data[i].compare(list_dirs.data[j]) > 0
+					list_dirs.swap(i, j)
+	if flag_file
+		for i in 0:list_files.num-1
+			for j in i+1:list_files.num
+				if list_files.data[i].compare(list_files.data[j]) > 0
+					list_files.swap(i, j)
 	return list_dirs + list_files
 
 class lib__File

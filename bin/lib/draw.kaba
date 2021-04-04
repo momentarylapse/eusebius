@@ -67,7 +67,7 @@ class XPainter
 		error = false
 		
 		font = nil
-		set_color(color.BLACK)
+		set_color([0,0,0, 1]) #color.BLACK)
 		all = rect(0, width, 0, height)
 		pos = complex(0, 0)
 		line_width = 1.0

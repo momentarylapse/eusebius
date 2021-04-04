@@ -794,7 +794,7 @@ class TaskManager
 				return i
 		return -1
 
-	static Task* add_task_user(cstring name, void *func, Task *parent)
+	static Task* add_task_user(cstring name, void *F, Task *parent)
 		int pid = get_next_pid()
 		if pid < 0
 			return nil
@@ -811,12 +811,12 @@ class TaskManager
 		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
 		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
 			panic("incomplete page dir") # ...
-		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
 		gdt[t.desc].set_task(t)
 
 		return t
 
-	static Task* add_task_kernel(cstring name, void *func, int stack_size, Task* parent)
+	static Task* add_task_kernel(cstring name, void *F, int stack_size, Task* parent)
 		int pid = get_next_pid()
 		if pid < 0
 			return nil
@@ -830,7 +830,7 @@ class TaskManager
 		t.page_dir = Paging.kernel_page_dir
 		t.mem_bottom = 0
 		t.mem_size = 0
-		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_page_dir, func)
+		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_page_dir, F)
 	
 		gdt[t.desc].set_task(t)
 

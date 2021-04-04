@@ -87,16 +87,16 @@ class PCIDevice
 		controller.write_config(bus, slot, function, offset, value)
 
 class PCIController
-	int read_config(int bus, int slot, int func, int offset)
+	int read_config(int bus, int slot, int _func, int offset)
 		# configuration address
-		int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
+		int address = ((bus << 16) | (slot << 11) | (_func << 8) | (offset & 0xfc) | (0x80000000))
 		outportd(PCI_CONFIG_ADDRESS, address)
 		# read in the data 
 		# (offset & 2) * 8) = 0 will choose the first word of the 32 bits register 
 		return inportd(PCI_CONFIG_DATA)
-	void write_config(int bus, int slot, int func, int offset, int value)
+	void write_config(int bus, int slot, int _func, int offset, int value)
 		# configuration address
-		int address = ((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | (0x80000000))
+		int address = ((bus << 16) | (slot << 11) | (_func << 8) | (offset & 0xfc) | (0x80000000))
 		outportd(PCI_CONFIG_ADDRESS, address)
 		outportd(PCI_CONFIG_DATA, value)
 

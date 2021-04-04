@@ -15,7 +15,7 @@ void draw_cancle(out XPainter p, float x, float y)
 	p.draw_circle(x, y-30, 20)
 	#p.fill()
 	
-	p.set_color(color.WHITE)
+	p.set_color([1,1,1, 1]) #color.WHITE)
 	p.move_to(x-10, y)
 	p.line_to(x-10, y-60)
 	p.line_to(x+10, y-60)
@@ -53,7 +53,7 @@ void main()
 	p.rectangle(p.all)
 	p.fill()
 	
-	p.set_color(color.WHITE)
+	p.set_color([1,1,1, 1]) #color.WHITE)
 	p.draw_str(10, 30, "Herzlichen")
 	p.draw_str(20, 65, "Glueckwunsch")
 	

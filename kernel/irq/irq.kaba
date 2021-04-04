@@ -16,8 +16,8 @@ class InterruptDescriptor
 		a = 0
 		b = 0
 
-	void set(Function func)
-		int addr = _p2i(&func)
+	void set(Function F)
+		int addr = _p2i(&F)
 		# Interrupt Gate
 		a = 0x00080000 + (addr & 0xffff) # desc[1],addr[15..0]
 		b = (addr & 0xffff0000) + 0x00008e00 # addr[31..16],typ
@@ -52,8 +52,8 @@ class irq
 		task_maps[hw_irq].pid = 0x66666666
 		
 	
-	static void set_func(int soft_irq, Function func)
-		idt[soft_irq].set(func)
+	static void set_func(int soft_irq, Function F)
+		idt[soft_irq].set(F)
 		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
 	
 	static void set_task(int soft_irq, out Task t)

@@ -1,20 +1,26 @@
-string hex(char[0]* p, int size)
+use os
+use hui
+
+# https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6hmtx.html
+
+string hex(void* _p, int size)
+	char[0]* p = _p
 	string s
 	for i in 0:size
 		s.add(p[i])
-	return s.hex(false)
+	return s.hex()
 string i2h(int i)
 	return hex(&i, 4)
 
 class BEUShort
 	char[2] c
-	int int()
+	int __int__()
 		int a = c[0]
 		int b = c[1]
 		return (a << 8) + b
 class BESShort
 	char[2] c
-	int int()
+	int __int__()
 		int a = c[0]
 		int b = c[1]
 		int r = (a << 8) + b
@@ -23,7 +29,7 @@ class BESShort
 		return r
 class BELong
 	char[4] x
-	int int()
+	int __int__()
 		int a = x[0]
 		int b = x[1]
 		int c = x[2]
@@ -35,10 +41,11 @@ class Fixed
 
 class F214
 	BESShort t
-	float float()
-		return t.int() / 16384.0
+	float __float__()
+		return int(t) / 16384.0
 
-void read(File *f, char[0]* p, int size)
+void read(out File *f, void* _p, int size)
+	char[0]* p = _p
 	string s = f.read(size)
 	for i in 0:size
 		p[i] = s[i]
@@ -95,12 +102,12 @@ class TTFMapTable
 	
 	int map(int code)
 		if format == 4
-			for i in 0:end_code.num
+			for i in 0:len(end_code)
 				if code >= start_code[i] and code <= end_code[i]
 					return (code + id_delta[i]) & 0x0000ffff
 			return -1
 		if format == 6
-			if code < first_code or code >= (first_code + glyph_id_array.num)
+			if code < first_code or code >= (first_code + len(glyph_id_array))
 				return -1
 			return glyph_id_array[code - first_code]
 		return -1
@@ -144,17 +151,17 @@ class TTF
 	int readL()
 		BELong t
 		read(f, &t, 4)
-		return t.int()
+		return int(t)
 
 	int readUS()
 		BEUShort t
 		read(f, &t, 2)
-		return t.int()
+		return int(t)
 
 	int readSS()
 		BESShort t
 		read(f, &t, 2)
-		return t.int()
+		return int(t)
 
 	int readUB()
 		int t = 0
@@ -164,12 +171,12 @@ class TTF
 	float readF214()
 		F214 t
 		read(f, &t, 2)
-		return t.float()
+		return float(t)
 	
 	bool read_table_directory()
 	
 		read(f, &td, 12)
-		int n = td.num_tables.int()
+		int n = int(td.num_tables)
 		if n > 1000
 			return false
 		for i in 0:n
@@ -178,30 +185,30 @@ class TTF
 			tdentries.add(e)
 	
 		for ee in tdentries
-			print(ee.name() + " " + ee.offset.int())
+			print("{{ee.name()}} {{int(ee.offset)}}")
 		return true
 	
 	bool read_head()
-		TTFTableDirectoryEntry *te = get_table("head")
+		let te = get_table("head")
 		if !te
 			print("no head table")
 			return false
-		f.seek(te.offset.int(), true)
+		f.set_pos(int(te.offset))
 		print("head-----------------------------")
 		
 		read(f, &head, 32)
-		print(head.units_per_em.int())
+		print(int(head.units_per_em))
 		
 		return true
 	
 	bool try_read_hhead()
-		TTFTableDirectoryEntry *te = get_table("hhea")
+		let te = get_table("hhea")
 		if !te
 			return false
-		f.seek(te.offset.int(), true)
+		f.set_pos(int(te.offset))
 		print("hhead-----------------------------")
 		
-		f.seek(34, false)
+		f.seek(34)
 		int n = readUS()
 		print(n)
 		lsb.resize(n)
@@ -210,28 +217,28 @@ class TTF
 		return true
 		
 	bool try_read_hmetrix()
-		TTFTableDirectoryEntry *te = get_table("hmtx")
+		let te = get_table("hmtx")
 		if !te
 			return false
-		f.seek(te.offset.int(), true)
+		f.set_pos(int(te.offset))
 		print("hmetrix-----------------------------")
-		for i in 0:lsb.num
+		for i in 0:len(lsb)
 			advance[i] = readUS()
 			lsb[i] = readSS()
 		
 		return true
 	
 	bool read_mapping()
-		TTFTableDirectoryEntry *te = get_table("cmap")
+		let te = get_table("cmap")
 		if !te
 			print("no cmap table")
 			return false
-		f.seek(te.offset.int(), true)
+		f.set_pos(int(te.offset))
 		
 		read(f, &mh, 4)
-		int n = mh.num_tables.int()
+		int n = int(mh.num_tables)
 		print("map-----------------------------")
-		print(i2h(f.getPos()))
+		print(i2h(f.get_pos()))
 		#print mh.version.int()
 		#print n
 		if n > 100000
@@ -250,22 +257,22 @@ class TTF
 			print(m.offset)
 			print(m.platform)
 			print(m.encoding)
-			f.seek(te.offset.int() + m.offset, true)
+			f.set_pos(int(te.offset) + m.offset)
 			m.format = readUS()
 			
 			if m.format == 0
 				int length = readUS()
-				print("l " + length)
+				print("l {{length}}")
 				int version = readUS()
 				for i in 0:256
 					m.glyph_id_array.add(readUB())
 				#print m.glyph_id_array
 			else if m.format == 4
 				int length = readUS()
-				print("l " + length)
+				print("l {{length}}")
 				int version = readUS()
 				int seg_count = readUS() / 2
-				print("s " + seg_count)
+				print("s {{seg_count}}")
 				int search_range = readUS()
 				int entry_selector = readUS()
 				int range_shift = readUS()
@@ -279,7 +286,7 @@ class TTF
 				for i in 0:seg_count
 					m.id_range_offset.add(readUS())
 				int rs = seg_count * 8 + 16
-				print("r: " + (length - rs))
+				print("r: {{length - rs}}")
 				int na = (length - rs) / 2
 				for i in 0:na
 					m.glyph_id_array.add(readUS())
@@ -308,7 +315,7 @@ class TTF
 				#return false
 			else if m.format == 6
 				int length = readUS()
-				print("l " + length)
+				print("l {{length}}")
 				int version = readUS()
 				m.first_code = readUS()
 				int entry_count = readUS()
@@ -319,11 +326,11 @@ class TTF
 			else if m.format == 12
 				readUS() # "padding"
 				int length = readL()
-				print("l " + length)
+				print("l {{length}}")
 				int version = readL()
 				
 				int group_count = readL() / 2
-				print("s " + group_count)
+				print("s {{group_count}}")
 				
 				for i in 0:group_count
 					int start_code = readL()
@@ -332,29 +339,29 @@ class TTF
 					m.id_delta.add(readL() - start_code)
 					
 			else
-				print("unhandled format: " + m.format)
+				print("unhandled format: {{m.format}}")
 				return false
 				
 				
 		return true
 	
-	bool read_glyph(TTFGlyph g)
+	bool read_glyph(out TTFGlyph g)
 		print("glyph---------------------------------")
-		print(i2h(f.getPos()))
+		print(i2h(f.get_pos()))
 		int num_contours = readSS()
 		print(num_contours)
 		if num_contours == 0
 			#print("--empty")
 			return true
 		if num_contours > 200
-			print("too many contours: " + num_contours)
+			print("too many contours: {{num_contours}}")
 			return false
 		
 		g.code = -1
 		g.xmin = readSS()
 		g.ymin = readSS()
 		g.xmax = readSS()
-		g.ymin = readSS()
+		g.ymax = readSS()
 		#print "" + g.xmin + ":" + g.xmax
 		#print "" + g.ymin + ":" + g.ymax
 		
@@ -395,19 +402,19 @@ class TTF
 				break
 			n ++
 			if n > 50
-				print("too many sub glyphs: " + n)
+				print("too many sub glyphs: {{n}}")
 				return false
 		
 		if (flags & 0x0100) != 0
 			int instrlen = readUS()
 			if instrlen > 10000
-				print("too many instructions: " + instrlen)
+				print("too many instructions: {{instrlen}}")
 				return false
 			f.read(instrlen)
 			
 		return true
 	
-	bool read_glyph_simple(TTFGlyph g, int num_contours)
+	bool read_glyph_simple(out TTFGlyph g, int num_contours)
 		#print("simple")
 		
 		# endpoints
@@ -418,19 +425,19 @@ class TTF
 		for e in endpoints
 			#print "e " + e
 			if e > 1000
-				print("invalid endpoint: " + e)
+				print("invalid endpoint: {{e}}")
 				return false
 		
 		# instructions???
 		int instrlen = readUS()
 		if instrlen > 10000
-			print("too many instructions: " + instrlen)
+			print("too many instructions: {{instrlen}}")
 			return false
 		#print "instr: " + instrlen
 		f.read(instrlen) # instr
 		
 		if num_contours > 0
-			int num_points = endpoints[endpoints.num-1] + 1
+			int num_points = endpoints[len(endpoints)-1] + 1
 			#print "points: " + num_points
 		
 			# flags
@@ -458,7 +465,7 @@ class TTF
 		#print i2h(f.getPos())
 		
 		# 4byte alignment
-		int n = f.getPos()
+		int n = f.get_pos()
 		if (n & 3) != 0
 			f.read(4 - (n & 3))
 		return true
@@ -508,24 +515,24 @@ class TTF
 		return x
 	
 	bool read_glyphs()
-		TTFTableDirectoryEntry *te = get_table("glyf")
+		let te = get_table("glyf")
 		if !te
 			print("no glyf table")
 			return false
-		f.seek(te.offset.int(), true)
-		int _max = te.offset.int() + te.length.int() - 32
+		f.set_pos(int(te.offset))
+		int _max = int(te.offset) + int(te.length) - 32
 		
 		TTFGlyph gg
 		glyphs.add(gg)
 		glyphs.add(gg)
 		glyphs.add(gg)
 		
-		while f.getPos() < _max
+		while f.get_pos() < _max
 			TTFGlyph g
 			if !read_glyph(g)
 				return false
 			glyphs.add(g)
-		print("Glyphs: " + glyphs.num)
+		print("Glyphs: {{len(glyphs)}}")
 		#for gg in glyphs
 #			print "---- " + gg.contours.num
 #			for c in gg.contours
@@ -540,10 +547,9 @@ class TTF
 	
 	bool load(string filename)
 
-		f = FileOpen(filename)
+		f = os.Filesystem.open(filename)
 		if !f
 			return false
-		f.setBinaryMode(true)
 		
 		if !read_table_directory()
 			return false
@@ -559,7 +565,7 @@ class TTF
 		update_codes()
 		update_size()
 	
-		delete f
+		del f
 		return true
 		
 	TTFTableDirectoryEntry* get_table(string tag)
@@ -571,15 +577,15 @@ class TTF
 	int map(int code)
 		for m in map_tables
 			int n = m.map(code)
-			if n >= glyphs.num
-				print("mapping error: " + code + " => " + n)
+			if n >= len(glyphs)
+				print("mapping error: {{code}} => {{n}}")
 				return -1
 			if n >= 0
 				return n
 		return -1
 	
 	TTFGlyph* get(int code)
-		print("get " + code)
+		print("get {{code}}")
 		int n = map(code)
 		print(n)
 		if n < 0
@@ -587,7 +593,7 @@ class TTF
 		return &glyphs[n]
 	
 	void map_code(int index, int code)
-		if index < glyphs.num
+		if index < len(glyphs)
 			glyphs[index].code = code
 			bool contains = false
 			for c in glyphs[index].codes
@@ -595,7 +601,7 @@ class TTF
 					contains = true
 			if !contains
 				glyphs[index].codes.add(code)
-			print("E: " + index + " => " + code)
+			print("E: {{index}} => {{code}}")
 	
 	void update_codes()
 	
@@ -606,8 +612,8 @@ class TTF
 					map_code(n, m.first_code + i)
 			else if m.format == 4
 				print("----------------------- 444")
-				print(m.end_code.num)
-				for i in 0:m.end_code.num
+				print(len(m.end_code))
+				for i in 0:len(m.end_code)
 					print("----")
 					print(m.start_code[i])
 					print(m.end_code[i])
@@ -617,13 +623,13 @@ class TTF
 						if m.id_range_offset[i] == 0
 							n = (code + m.id_delta[i]) & 0x0000ffff
 						else
-							int index = (code - m.start_code[i]) + m.id_range_offset[i]/2 - (m.id_range_offset.num - i)
+							int index = (code - m.start_code[i]) + m.id_range_offset[i]/2 - (len(m.id_range_offset) - i)
 							n = m.glyph_id_array[index]
 						map_code(n, code)
 			else if m.format == 12
 				print("----------------------- 12 12 12")
-				print(m.end_code.num)
-				for i in 0:m.end_code.num
+				print(len(m.end_code))
+				for i in 0:len(m.end_code)
 					print("----")
 					print(m.start_code[i])
 					print(m.end_code[i])
@@ -631,45 +637,44 @@ class TTF
 					for code in m.start_code[i]:(m.end_code[i]+1)
 						map_code(code + m.id_delta[i], code)
 			else
-				print("---------------- UNHANDLED " + m.format)
+				print("---------------- UNHANDLED {{m.format}}")
 	
 	void update_size()
-		float scale = 1.0 / head.units_per_em.int()
+		float scale = 1.0 / int(head.units_per_em)
 		float w = 0
 		for g,i in glyphs
 			g.lsb = 0
 			g.width = g.xmax - g.xmin
-			if i < lsb.num
+			if i < len(lsb)
 				g.lsb = lsb[i]
 				g.width = advance[i]
 				w = g.width
-			else if lsb.num > 0
+			else if len(lsb) > 0
 				g.width = w
 			
 	
 	
 	void export(string filename)
 	
-		File *f = FileCreate(filename)
-		f.setBinaryMode(true)
+		File *f = os.Filesystem.create(filename)
 		
 		int num_glyphs = 0
 		for g in glyphs
-			num_glyphs += g.codes.num
+			num_glyphs += len(g.codes)
 		
 		f << num_glyphs
 		int num_p = 0
-		float scale = 1.0 / head.units_per_em.int()
+		float scale = 1.0 / int(head.units_per_em)
 		for g in glyphs
 			for code in g.codes
 				f << code
 				f << g.width * scale
 				f << 0.0
-				f << g.contours.num
+				f << len(g.contours)
 				for c in g.contours
 					f << num_p
-					f << c.p.num
-					num_p += c.p.num
+					f << len(c.p)
+					num_p += len(c.p)
 		f << num_p
 		int xx = 0
 		complex[] pp
@@ -683,31 +688,31 @@ class TTF
 						xx ++
 		for g in glyphs
 			for c in g.contours
-				if c.flags.num > 0
+				if len(c.flags) > 0
 					if (c.flags[0] & 1) == 0
 						print("-----[0] not on curve!")
 				for x in c.flags
 					f << ((x & 1) != 0)
 		
 		
-		delete(f)
+		del f
 
 class FontWindow extends Window
 	float scale
 	int index
 	void __init__()
-		super.__init__("test", -1, -1, 500, 500)
-		addDrawingArea("!grabfocus", 0, 0, 0, 0, "area")
+		super.__init__("test", 500, 500)
+		add_drawing_area("!grabfocus", 0, 0, "area")
 		index = 0
 		float font_size = 500.0
-		scale = font_size / font.head.units_per_em.int()
+		scale = font_size / int(font.head.units_per_em)
 	
-	override void onKeyDown()
-		if HuiGetEvent().key == KeyLeft
+	override void on_key_down()
+		if hui.get_event().key == hui.KEY_LEFT
 			index --
-		if HuiGetEvent().key == KeyRight
+		if hui.get_event().key == hui.KEY_RIGHT
 			index ++
-		index = loopi(index, 0, font.glyphs.num)
+		index = loop(index, 0, len(font.glyphs))
 		redraw("area")
 	
 	float xx(float x)
@@ -716,61 +721,96 @@ class FontWindow extends Window
 	float yy(float y)
 		return 400 -y*scale
 	
-	override void onDraw(Painter *p)
+	override void on_draw(Painter p)
 		#Painter *p = beginDraw("area")
 		float w = p.width
 		float h = p.height
-		TTFGlyph *g = &font.glyphs[index]
+		let g = &font.glyphs[index]
 		
-		p.setColor(White)
-		p.drawRect(0, 0, w, h)
+		p.set_color(color.WHITE)
+		p.draw_rect(rect(0, w, 0, h))
 		
-		p.setColor(color(1, 0.9, 0.9, 0.9))
-		p.drawRect(xx(g.xmin - g.lsb), 0, xx(g.width) - xx(0.0), h)
+		p.set_color(color(1, 0.9, 0.9, 0.9))
+		p.draw_rect(rect(xx(g.xmin - g.lsb), xx(g.xmin - g.lsb + g.width), 0, h))
+		#p.draw_rect(rect(xx(g.lsb), xx(g.lsb + g.width), 0, h))
 		
-		p.setColor(color(1, 0.7, 0.7, 0.7))
-		p.drawRect(xx(g.xmin), yy(g.ymin), xx(g.xmax) - xx(g.xmin), yy(g.ymax) - yy(g.ymin))
+		p.set_color(color(1, 0.7, 0.7, 0.7))
+		p.draw_rect(rect(xx(g.xmin), xx(g.xmax), yy(g.ymin), yy(g.ymax)))
 		
-		p.setColor(Black)
-		p.drawStr(20, 20, index)
-		
-		p.drawStr(220, 20, g.code)
+		p.set_color(color.BLACK)
 		string s = utf32_to_utf8(g.codes)
+		p.draw_str(20, 20, "id={{index}}")
+		
+		
+		p.draw_str(120, 20, "code={{g.code}}")
 		#s.add(g.code)
-		p.drawStr(300, 20, s)
+		p.draw_str(300, 20, "char={{s}}")
+		#p.draw_str(20,40,"{{g.xmin}}  {{g.xmax}}    {{g.lsb}} {{g.width}}")
 		
 		for c in g.contours
-			p.setColor(Black)
+			p.set_color(color.BLACK)
 			#print("--")
-			for i in 0:c.p.num
-				int i1 = (i+1) % c.p.num
-				#print("" + c.p[i].x + "  " + c.p[i].y + "       ")
-				p.drawLine(xx(c.p[i].x), yy(c.p[i].y), xx(c.p[i1].x), yy(c.p[i1].y))
+			draw_contour(p, c)
 				
-			for i in 0:c.p.num
-				int i1 = (i+1) % c.p.num
+			for i in 0:len(c.p)
+				int i1 = (i+1) % len(c.p)
 				
 				if (c.flags[i] & 1) != 0
-					p.setColor(Red)
+					p.set_color(color.RED)
 				else
-					p.setColor(Blue)
-				p.drawCircle(xx(c.p[i].x), yy(c.p[i].y), 3)
+					p.set_color(color.BLUE)
+				p.draw_circle(xx(c.p[i].x), yy(c.p[i].y), 3)
 		
+		
+		p.set_color(color.BLACK)
+		p.set_line_dash([5,5])
+		p.draw_line(xx(0),0, xx(0),h)
+		p.draw_line(0,yy(0), w,yy(0))
+		
+	func draw_quad(Painter p, complex a, complex b, complex c)
+		let prev = a
+		for t in 0.1:0.9:0.1
+			let cur = (1-t)*((1-t)*a + t*b) + t*((1-t)*b+t*c)
+			p.draw_line(xx(prev.x), yy(prev.y), xx(cur.x), yy(cur.y))
+			prev = cur
+		p.draw_line(xx(prev.x), yy(prev.y), xx(c.x), yy(c.y))
+	
+
+	func draw_contour(Painter p, TTFContour c)
+		for i in 0:len(c.p)
+			bool on = ((c.flags[i] & 1) != 0)
+			let cur = c.p[i]
+			complex next = c.p[(i+1) % len(c.p)]
+			bool next_on = ((c.flags[(i+1) % len(c.p)] & 1) != 0)
+			complex nnext = c.p[(i+2) % len(c.p)]
+			bool nnext_on = ((c.flags[(i+2) % len(c.p)] & 1) != 0)
+			
+			if on and next_on
+				p.draw_line(xx(cur.x), yy(cur.y), xx(next.x), yy(next.y))
+			else if on and not next_on and nnext_on
+				draw_quad(p, cur, next, nnext)
+			else if not on and not next_on and not nnext_on
+				draw_quad(p, (cur+next)*0.5, next, (next+nnext)*0.5)
+			else if on and not next_on and not nnext_on
+				draw_quad(p, cur, next, (next+nnext)*0.5)
+			else if not on and not next_on and nnext_on
+				draw_quad(p, (cur+next)*0.5, next, nnext)		
 		
 TTF *font
 
 void main(string[] arg)
-	if arg.num == 0
+	if len(arg) == 0
+		print("call: <TTF_INPUT> [EXPORT]")
 		return
 	
-	font = new TTF
+	font = new TTF()
 	if !font.load(arg[0])
 		return
 	
-	if arg.num > 1
+	if len(arg) > 1
 		font.export(arg[1])
 	
-	FontWindow *w = new FontWindow
+	let w = new FontWindow()
 	w.show()
 	w.run()
 	print("ok")

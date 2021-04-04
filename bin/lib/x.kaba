@@ -32,8 +32,8 @@ class XRect
 		return y1 - y0
 	bool inside(int x, int y)
 		return x >= x0 and x < x1 and y >= y0 and y < y1
-	string str()
-		return "" + x0 + "/" + y0 + ":" + x1 + "/" + y1
+	string __str__()
+		return "{{x0}}/{{y0}}:{{x1}}/{{y1}}"
 
 class XWindow
 	int x, y, w, h
@@ -145,7 +145,8 @@ class XConnection
 		buf[3] = p3
 		buf[4] = p4
 		buf[5] = p5
-		kprint(write(sock, &buf[0], 4*8))
+		let r = write(sock, &buf[0], 4*8)
+		kprint(str(r))
 		kprint(" c:/send ")
 	
 	void send(int cmd, int p1, int p2, int p3, int p4, int p5)

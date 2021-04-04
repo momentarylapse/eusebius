@@ -2,13 +2,14 @@ use os
 
 const int ClusterSize = 2048
 
-void main(string[] arg)
-	if arg.num < 2
+func main(string[] arg)
+	if len(arg) < 2
 		print("usage: kaba makemfs.kaba <out-file> <in-dir>")
 		return
-	let list = Filesystem.search(arg[1], "*", false)
-	print(list)
-	File *f = Filesystem.create(arg[0])
+	let dir = Path(arg[1])
+	let list = Filesystem.search(dir, "*", "f")
+	print(str(list))
+	let f = Filesystem.create(arg[0])
 	f.seek(ClusterSize)
 
 	# root directory
@@ -16,28 +17,28 @@ void main(string[] arg)
 	f << list.num
 	int offset = 4
 	for e in list
-		f << e
-		if Filesystem.is_directory(arg[1] + e)
+		f << str(e)
+		if Filesystem.is_directory(dir << e)
 			f << 1 # flags
 		else
 			f << 0
-		int size = Filesystem.size(arg[1] + e)
+		int size = Filesystem.size(dir << e)
 		f << size
 		f << 1 # number of file parts
 		f << cluster
 		int num_clusters = (size - 1) / ClusterSize + 1
 		f << num_clusters
 		cluster += num_clusters
-		offset += len(e) + 22
+		offset += len(str(e)) + 22
 	f.seek(ClusterSize * cluster)
 	del f
-		
+
 	# files
 	cluster = 2
 	for e in list
-		string s="dd if='{{arg[1] + e}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
+		string s = "dd if='{{dir << e}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
 		shell_execute(s)
-		int size = Filesystem.size(arg[1] + e)
+		int size = Filesystem.size(dir << e)
 		int num_clusters = (size - 1) / ClusterSize + 1
 		cluster += num_clusters
 		#string t = FileRead(arg[1] + e.name)

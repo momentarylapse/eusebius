@@ -49,7 +49,7 @@ string task_status(TaskInfo t)
 		return "Z"
 	if t.status == TASK_STATUS_INTERRUPT
 		return "I"
-	return t.status
+	return str(t.status)
 
 void show_task(TaskInfo t, bool show_parent)
 	string s = "{{t.pid|3}}   "

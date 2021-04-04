@@ -28,7 +28,7 @@ void main()
 	p.rectangle(p.all)
 	p.fill()
 	
-	p.set_color(color.WHITE)
+	p.set_color([1,1,1, 1]) #color.WHITE)
 	p.rectangle(rect(10, 30, 10, 30))
 	p.fill()
 	
