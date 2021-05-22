@@ -3,9 +3,9 @@ use lib_syscalls
 use lib_array
 
 
-int open(string filename, int flags)
+int open(lib__Path filename, int flags)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
 	__temp_i__ = flags
 	asm{
@@ -17,9 +17,9 @@ int open(string filename, int flags)
 	}
 	return __temp_i__
 
-int create(string filename)
+int create(lib__Path filename)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x00000008
@@ -37,12 +37,13 @@ int fork()
 		mov __temp_i__, eax
 	}
 	if __temp_i__ == 0
-		stdout = open("/dev/tty", O_RDONLY)
+		lib__Path* p = &"/dev/tty"
+		stdout = open(*p, O_RDONLY)
 	return __temp_i__
 
-bool mkdir(string filename)
+bool mkdir(lib__Path filename)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x00000027
@@ -52,9 +53,9 @@ bool mkdir(string filename)
 	}
 	return lib_error == 0
 
-bool rmdir(string filename)
+bool rmdir(lib__Path filename)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x00000028
@@ -65,9 +66,9 @@ bool rmdir(string filename)
 	return lib_error == 0
 
 
-bool mkfifo(string filename)
+bool mkfifo(lib__Path filename)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x0000000e
@@ -77,9 +78,9 @@ bool mkfifo(string filename)
 	}
 	return lib_error == 0
 
-bool unlink(string filename)
+bool unlink(lib__Path filename)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x0000000a
@@ -89,9 +90,9 @@ bool unlink(string filename)
 	}
 	return lib_error == 0
 
-bool chdir(string dir)
+bool chdir(lib__Path dir)
 	cstring tt
-	_s2cs(dir, tt)
+	_s2cs(dir.s, tt)
 	__temp_p__ = &tt
 	asm{
 		mov eax, 0x0000000c
@@ -116,12 +117,11 @@ lib__string lib__Filesystem@@current_directory()
 	return r
 
 
-
-bool stat(string filename, void *buf)
+bool stat(lib__Path filename, StatData buf)
 	cstring tt
-	_s2cs(filename, tt)
+	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
-	__temp_p2__ = buf
+	__temp_p2__ = &buf
 	asm{
 		mov eax, 0x0000200a
 		mov ebx, __temp_p__
@@ -136,12 +136,9 @@ bool stat(string filename, void *buf)
 class lib__Path
 	lib__string s
 	void __init__()
-		lib__print("P+")
 	void __init__(lib__string p)
-		lib__print("P++")
 		s = p
 	void __delete__()
-		lib__print("P-")
 	const lib__string __str__()
 		return s
 	const bool is_empty()
@@ -156,18 +153,18 @@ class lib__Path
 		if len(s) == 0
 			return false
 		return s.data[len(s)-1] == '/'
-	const lib__Path __lshift__(lib__Path p)
+	const lib__string __lshift__(lib__Path p)
 		if is_empty()
-			return p
+			return p.s
 		if has_dir_ending()
-			return lib__Path(s + p.s)
+			return s + p.s
 		lib__string r = s
 		r.add('/')
-		return lib__Path(r + p.s)
-	const lib__Path __lshift__(lib__string p)
-		return self << lib__Path(p)
+		return r + p.s
 	static lib__Path @from_str(lib__string p)
 		return lib__Path(p)
+	void __assign__(lib__Path p)
+		s = p.s
 
 
 #class lib__Path@list extends lib__string@list
@@ -175,9 +172,14 @@ class lib__Path
 
 class lib__Path@list
 	lib__string@list l
-	void __init__()
 	void add(lib__Path p)
 		l.add(p.s)
+	lib__string@list __add__(lib__Path@list o)
+		return l + o.l
+	void __iadd__(lib__Path@list o)
+		l + o.l
+	void __assign__(lib__Path@list o)
+		l = o.l
 		
 
 #--------------------------------------------------------------------------
@@ -193,7 +195,7 @@ class dirent_struct
 
 
 
-lib__string@list lib__Filesystem@@search(string dirname, string filter, string options)
+lib__string@list lib__Filesystem@@search(lib__Path dirname, string filter, string options)
 	lib__string@list list_dirs, list_files
 	lib__print("") # ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
@@ -242,12 +244,12 @@ class lib__File
 	void __delete__()
 		close()
 	
-	bool open(string filename)
+	bool open(lib__Path filename)
 		h = xxx_open(filename, O_RDONLY)
 		pos = 0
 		return h >= 0
 	
-	bool create(string filename)
+	bool create(lib__Path filename)
 		h = xxx_create(filename)
 		pos = 0
 		return h >= 0
@@ -291,10 +293,10 @@ class lib__File
 bool xxx_close(int h)
 	return close(h)
 
-int xxx_open(string filename, int flags)
+int xxx_open(lib__Path filename, int flags)
 	return open(filename, flags)
 
-int xxx_create(string filename)
+int xxx_create(lib__Path filename)
 	return create(filename)
 
 int xxx_read(int h, void* buf, int size)
@@ -306,7 +308,7 @@ int xxx_write(int h, void* buf, int size)
 int xxx_seek(int h, int pos, int mode)
 	seek(h, pos, mode)
 
-lib__File* lib__Filesystem@@open(string filename)
+lib__File* lib__Filesystem@@open(lib__Path filename)
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.open(filename)
@@ -314,7 +316,7 @@ lib__File* lib__Filesystem@@open(string filename)
 		return nil
 	return f
 
-lib__File* lib__Filesystem@@create(string filename)
+lib__File* lib__Filesystem@@create(lib__Path filename)
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.create(filename)
@@ -322,12 +324,12 @@ lib__File* lib__Filesystem@@create(string filename)
 		return nil
 	return f
 
-lib__string lib__Filesystem@@read(string filename)
+lib__string lib__Filesystem@@read(lib__Path filename)
 	lib__string content
 	int h = open(filename, O_RDONLY)
 	if h < 0
 		lib__print("can not open file: ")
-		lib__print(filename)
+		#lib__print(filename.s)
 		lib__print("\n")
 		return content
 	int size = 0
@@ -354,16 +356,16 @@ class StatData
 		pass
 
 
-bool lib__Filesystem@@is_directory(string filename)
+bool lib__Filesystem@@is_directory(lib__Path filename)
 	StatData d
 	if stat(filename, &d)
 		return d.type == 1
 	return false
 
-int64 lib__Filesystem@@size(string filename)
+int64 lib__Filesystem@@size(lib__Path filename)
 	pass
 
-int Filesystem_size32(string filename)
+int Filesystem_size32(lib__Path filename)
 	StatData d
 	if stat(filename, &d)
 		return d.size

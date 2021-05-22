@@ -239,8 +239,11 @@ bool yield(int pid)
 	}
 	return lib_error == 0
 
-bool sysinfo(void *buf)
-	__temp_p__ = buf
+class SysInfo
+	int dummy
+
+bool sysinfo(SysInfo buf)
+	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00000074
 		mov ebx, __temp_p__
@@ -249,9 +252,12 @@ bool sysinfo(void *buf)
 	}
 	return lib_error == 0
 
-bool taskinfo(int pid, void *buf)
+class TaskInfo
+	int dummy
+
+bool taskinfo(int pid, TaskInfo buf)
 	__temp_i__ = pid
-	__temp_p__ = buf
+	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00002005
 		mov ebx, __temp_i__
@@ -261,9 +267,12 @@ bool taskinfo(int pid, void *buf)
 	}
 	return lib_error == 0
 
-bool mountinfo(int pid, void *buf)
+class MountInfo
+	int dummy
+
+bool mountinfo(int pid, MountInfo buf)
 	__temp_i__ = pid
-	__temp_p__ = buf
+	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00002008
 		mov ebx, __temp_i__
@@ -273,10 +282,13 @@ bool mountinfo(int pid, void *buf)
 	}
 	return lib_error == 0
 
-bool blockinfo(int major, int minor, void *buf)
+class BlockDevice
+	int _dummy
+
+bool blockinfo(int major, int minor, BlockDevice buf)
 	__temp_i__ = major
 	__temp_i2__ = minor
-	__temp_p__ = buf
+	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00002009
 		mov ebx, __temp_i__
@@ -298,8 +310,11 @@ bool uname(void *buf)
 	}
 	return lib_error == 0
 
-bool time(void *buf)
-	__temp_p__ = buf
+class TimeValue
+	int sec, nanosec
+
+bool time(TimeValue buf)
+	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00000019
 		mov ebx, __temp_p__
@@ -308,8 +323,8 @@ bool time(void *buf)
 	}
 	return lib_error == 0
 
-bool nanosleep(void *buf, void *buf2)
-	__temp_p__ = buf
+bool nanosleep(TimeValue buf, TimeValue buf2)
+	__temp_p__ = &buf
 	asm{
 		mov eax, 0x000000a2
 		mov ebx, __temp_p__
@@ -319,16 +334,16 @@ bool nanosleep(void *buf, void *buf2)
 	return lib_error == 0
 
 bool sleep(int sec)
-	int[2] tv
-	tv[0] = sec
-	tv[1] = 0
-	return nanosleep(&tv, nil)
+	TimeValue tv, tv0
+	tv.sec = sec
+	tv.nanosec = 0
+	return nanosleep(tv, tv0)
 
 bool usleep(int usec)
-	int[2] tv
-	tv[0] = usec / 1000000
-	tv[1] = (usec % 1000000) * 1000
-	return nanosleep(&tv, nil)
+	TimeValue tv, tv0
+	tv.sec = usec / 1000000
+	tv.nanosec = (usec % 1000000) * 1000
+	return nanosleep(tv, tv0)
 
 bool sched_yield(int pid)
 	__temp_i__ = pid

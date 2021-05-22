@@ -123,14 +123,15 @@ class StatData
 	int get(cstring filename, FileEntry cur_dir)
 		let e = FileSystem.get(filename, cur_dir)
 		if !e
-			panic(filename)
+			#panic(filename)
 			return -1
 		strcpy(name, e.name)
 		type = e.type
 		size = e.size
 		inode = e.inode
+		return 0
 
-StatData _stat_data	
+StatData _stat_data
 
 void int_syscall()
 	while true

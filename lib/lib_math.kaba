@@ -2,14 +2,14 @@ use lib_base
 use lib_array
 
 
-int lib__clampi(int i, int min, int max)
+int lib__clamp(int i, int min, int max)
 	if i > max
 		return max
 	if i < min
 		return min
 	return i
 
-int lib__loopi(int i, int min, int max)
+int lib__loop(int i, int min, int max)
 	int d = max - min + 1
 	if i < min
 		int n = ( (min-i-1) / d ) + 1
@@ -96,7 +96,7 @@ float lib__abs(float x)
 	return x
 	
 
-int lib__clampi(int i, int min, int max)
+int lib__clamp(int i, int min, int max)
 	if max <= min
 		return min
 	if i > max
@@ -105,7 +105,7 @@ int lib__clampi(int i, int min, int max)
 		return min
 	return i
 
-int lib_loopi(int i, int min, int max)
+int lib_loop(int i, int min, int max)
 	if max <= min
 		return min
 	int d = max - min + 1
@@ -117,6 +117,15 @@ int lib_loopi(int i, int min, int max)
 		return i - d * n
 	return i
 
+int lib__min(int a, int b)
+	if a < b
+		return a
+	return b
+
+int lib__max(int a, int b)
+	if a > b
+		return a
+	return b
 
 
 float lib__sqr(float f)

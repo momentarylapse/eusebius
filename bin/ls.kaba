@@ -42,24 +42,17 @@ void print_table(string[] list)
 	print(o)
 
 void ls(Path dirname, bool extended)
-	let l = Filesystem.search(dirname, "", "df")
+	let list = Filesystem.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
-	print(len(l))
-	for e in l
-		print("..")
-		print(str(e))
-		print("==")
-	return
 
 	if extended
-		for e in l
+		for e in list
 			let path = dirname << e
 			print("{{ftype(path)|-4}} {{Filesystem_size32(path)|8}} {{e}}\n")
 	else
-		print_table([for f in l str(f)])
+		print_table([for f in list str(f)])
 		print("\n")
-
 
 void main()
 	init_lib()
@@ -68,8 +61,9 @@ void main()
 	get_args(arg)
 	
 	bool extended = false
+
 	Path[] paths
-	
+
 	for i in 1:arg.num
 		if arg[i] == "-l"
 			extended = true
@@ -79,5 +73,5 @@ void main()
 		ls(p, extended)
 	if len(paths) == 0
 		ls(Filesystem.current_directory(), extended)
-	
+
 	exit(0)

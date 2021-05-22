@@ -3,9 +3,9 @@ use lib_syscalls
 
 
 
-void _s2cs(string s, out cstring cs)
+void _s2cs(lib__string s, out cstring cs)
 	for i in 0:s.num
-		cs[i] = s[i]
+		cs[i] = s.data[i]
 	cs[s.num] = 0
 
 void _cs2s(cstring cs, out lib__string s)

@@ -1,8 +1,8 @@
-#KABA  = kaba
-KABA  = ~/Projekte/Kaba/kaba
+KABA  = kaba
+#KABA  = ~/Projekte/Kaba/kaba
 #KABA  = ~/Projekte/Kaba/kaba --verbose
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
-MACHINE = --x86
+MACHINE = --arch x86:gnu
 FLAGS =  $(MACHINE) --no-std-lib
 LOADERFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7c00
 INITFLAGS = $(MACHINE) --os --no-function-frames --code-origin 0x7e00

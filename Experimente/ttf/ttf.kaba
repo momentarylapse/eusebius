@@ -595,11 +595,7 @@ class TTF
 	void map_code(int index, int code)
 		if index < len(glyphs)
 			glyphs[index].code = code
-			bool contains = false
-			for c in glyphs[index].codes
-				if c == code
-					contains = true
-			if !contains
+			if code in glyphs[index].codes
 				glyphs[index].codes.add(code)
 			print("E: {{index}} => {{code}}")
 	
