@@ -65,7 +65,7 @@ class MouseController
 		
 	void create()
 
-		let im = Image.load("/images/cursor.tga")
+		var im = Image.load("/images/cursor.tga")
 	
 		if im
 			cursor = new XWindow(nil, x - im.width/2, y - im.height/2, im.width, im.height, WF_TRANSPARENT | 7)
@@ -503,7 +503,7 @@ class Client
 		buf[3] = p3
 		buf[4] = p4
 		buf[5] = p5
-		let r = write(sock, &buf[0], 4*8)
+		var r = write(sock, &buf[0], 4*8)
 		kprint(str(r))
 		#return buf[32]
 		kprint(" x:/send ")

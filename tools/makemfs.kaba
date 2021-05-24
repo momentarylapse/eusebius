@@ -2,14 +2,14 @@ use os
 
 const int ClusterSize = 2048
 
-func main(string[] arg)
+func main(arg: string[])
 	if len(arg) < 2
 		print("usage: kaba makemfs.kaba <out-file> <in-dir>")
 		return
-	let dir = Path(arg[1])
-	let list = Filesystem.search(dir, "*", "f")
+	var dir = Path(arg[1])
+	var list = Filesystem.search(dir, "*", "f")
 	print(str(list))
-	let f = Filesystem.create(arg[0])
+	var f = Filesystem.create(arg[0])
 	f.seek(ClusterSize)
 
 	# root directory

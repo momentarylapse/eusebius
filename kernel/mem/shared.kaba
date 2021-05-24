@@ -85,7 +85,7 @@ class SharedMemory
 		return &blocks[id]
 		
 	static int shm_get(int key, int size, int flags, int pid)
-		let s = get_by_key(key)
+		var s = get_by_key(key)
 		if s
 			if (flags & IPC_CREAT) > 0 and (flags & IPC_EXCL) > 0
 				return -EEXIST

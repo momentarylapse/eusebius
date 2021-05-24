@@ -81,7 +81,7 @@ void main()
 	
 	# assume a default disk layout...
 	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
-	let boot = FileSystem.get("/boot", FileSystem.root)
+	var boot = FileSystem.get("/boot", FileSystem.root)
 	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 	TaskManager.init()

@@ -46,7 +46,7 @@ class Driver
 	virtual void on_irq()
 		print("-------IRQ-------\n")
 	static Driver* choose()
-		let pci = new PCIController()
+		var pci = new PCIController()
 		pci.scan()
 		Driver*[] drivers
 		drivers.add(new DriverNE2k())
@@ -197,7 +197,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	let driver = Driver.choose()
+	var driver = Driver.choose()
 	driver.install()
 	driver.test()
 	

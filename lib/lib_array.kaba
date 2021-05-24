@@ -723,7 +723,7 @@ class lib__string@list extends lib__@DynamicArray
 	lib__string __str__()
 		return lib__@sa2s(self)
 	void swap(int i, int j)
-		let t = data[i]
+		var t = data[i]
 		data[i] = data[j]
 		data[j] = t
 	lib__string@list __add__(lib__string@list o)

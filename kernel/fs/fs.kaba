@@ -333,7 +333,7 @@ class FileSystem
 		cstring dirname
 		dir.get_path(dirname)
 		prints(dirname)
-		let mp = add_mount_point()
+		var mp = add_mount_point()
 		if !mp
 			return -1
 

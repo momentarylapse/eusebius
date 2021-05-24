@@ -32,7 +32,7 @@ class BlockDevManager
 		show()
 	
 	static BlockDevice* add_dev(int major, int minor)
-		let p = &devs[num_devs]
+		var p = &devs[num_devs]
 		p.major = major
 		p.minor = minor
 		num_devs ++
@@ -46,7 +46,7 @@ class BlockDevManager
 		
 
 	static void read_partitions_from_disk(int disk_no)
-		let p = add_dev(0, 0)
+		var p = add_dev(0, 0)
 		p.block_size = 512
 		p.disk_no = disk_no
 		p.offset = 0
@@ -82,7 +82,7 @@ class BlockDevManager
 		#printi(num_devs)
 		prints("primary partitions:       offset   size\n")
 		for n in 0:num_devs
-			let p = &devs[n]
+			var p = &devs[n]
 			prints("/dev/")
 			prints(p.name)
 			TextMode.pos = 60

@@ -75,7 +75,7 @@ class TaskInfo
 	void __assign__(TaskInfo o)
 		pass
 	int get(int _pid)
-		let t = TaskManager.get_task(_pid)
+		var t = TaskManager.get_task(_pid)
 		if !t
 			return -1
 		strcpy(name, t.name)
@@ -100,7 +100,7 @@ class MountInfo
 	void __assign__(MountInfo o)
 		pass
 	int get(int _index)
-		let m = &FileSystem.mounts[_index]
+		var m = &FileSystem.mounts[_index]
 		if !m.dev
 			return -1
 		major = m.dev.major
@@ -121,7 +121,7 @@ class StatData
 	void __assign__(StatData o)
 		pass
 	int get(cstring filename, FileEntry cur_dir)
-		let e = FileSystem.get(filename, cur_dir)
+		var e = FileSystem.get(filename, cur_dir)
 		if !e
 			#panic(filename)
 			return -1
@@ -139,7 +139,7 @@ void int_syscall()
 		int r = 0
 		
 		#int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		let caller = &TaskManager.tasks[Scheduler.running_pid]
+		var caller = &TaskManager.tasks[Scheduler.running_pid]
 		#printi(pid)
 		int index = caller.tss.eax
 		int param1 = caller.tss.ebx
@@ -255,7 +255,7 @@ void int_syscall()
 				caller.page_dir.memcpy2task(param2, &_mount_info, sizeof(_mount_info))
 		else if index == 0x2009 # blockinfo
 			r = -1
-			let d = BlockDevManager.get(param1, param2)
+			var d = BlockDevManager.get(param1, param2)
 			if d
 				caller.page_dir.memcpy2task(param3, d, sizeof(BlockDevice))
 				r = 0

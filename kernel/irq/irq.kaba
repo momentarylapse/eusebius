@@ -135,7 +135,7 @@ class irq
 		if signal < 0 or signal >= MAX_SIGNALS
 			return -EINVAL
 
-		let m = &task_maps[hw_irq]
+		var m = &task_maps[hw_irq]
 		if m.pid >= 0
 			if TaskManager.tasks[m.pid].status != TASK_STATUS_UNUSED
 				return -EEXIST
@@ -160,13 +160,13 @@ class irq
 			mov __temp_i__, esi
 		}
 		int hw_irq = __temp_i__
-		let m = &irq.task_maps[hw_irq]
+		var m = &irq.task_maps[hw_irq]
 		while true
 			inside_hw_irq= hw_irq
 			#prints("<IRQ ")
 			#printi(hw_irq)
 			#prints(">")
-			let t = m.utask
+			var t = m.utask
 			#printi(t.status)
 			#if t.status == TASK_STATUS_UNUSED
 		

@@ -125,7 +125,7 @@ class TTFFont
 		return w * scale
 
 TTFFont *LoadTTF(string filename)
-	let f = new TTFFont()
+	var f = new TTFFont()
 	if f.load(filename)
 		return f
 	del f
@@ -147,7 +147,7 @@ class FontDB
 		for d in descriptors
 			if d.font.name == name and d.size == size
 				return d
-		let d = new FontDescriptor()
+		var d = new FontDescriptor()
 		d.size = size
 		for f in fonts
 			if f.name == name

@@ -57,7 +57,7 @@ class FilesView extends MtkWidget
 	override void on_key(int key)
 		if key == KEY_BACKSPACE
 			if dir.num > 2
-				let parts = dir.explode("/")
+				var parts = dir.explode("/")
 				string d
 				for i in 1:parts.num-1
 					d += "/"
@@ -90,7 +90,7 @@ void main()
 	string dir = "/"
 	if arg.num > 1
 		dir = arg[1]
-	let window = new FilesWindow(dir)
+	var window = new FilesWindow(dir)
 	window.show()
 
 	mtk_run()

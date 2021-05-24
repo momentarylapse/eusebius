@@ -354,7 +354,7 @@ class Task
 		return handles[handle]
 
 	int open(cstring filename, int flags)
-		let of = kernel_open(filename, flags, cur_dir)
+		var of = kernel_open(filename, flags, cur_dir)
 		if !of
 			return -ENOENT
 		int index = add_handle(of)
@@ -370,7 +370,7 @@ class Task
 
 
 	int sys_read(int handle, int addr, int size)
-		let of = get_handle(handle)
+		var of = get_handle(handle)
 		if !of
 			return -EBADF
 		int r = of.read(page_dir, addr, size)
@@ -380,7 +380,7 @@ class Task
 
 
 	int sys_write(int handle, int addr, int size)
-		let of = get_handle(handle)
+		var of = get_handle(handle)
 		if !of
 			return -EBADF
 		int r = of.write(page_dir, addr, size)
@@ -389,20 +389,20 @@ class Task
 		return r
 
 	int sys_getdents(int handle, int addr, int num)
-		let of = get_handle(handle)
+		var of = get_handle(handle)
 		if !of
 			return -EBADF
 		return of.getdents(page_dir, addr, num)
 
 
 	int sys_seek(int handle, int offset, int mode)
-		let of = get_handle(handle)
+		var of = get_handle(handle)
 		if !of
 			return -EBADF
 		return of.seek(offset, mode)
 
 	int sys_close(int handle)
-		let of = get_handle(handle)
+		var of = get_handle(handle)
 		if !of
 			return -EBADF
 		of.unref()
@@ -410,20 +410,20 @@ class Task
 		return 0
 	
 	int sys_dup(int fd)
-		let of = get_handle(fd)
+		var of = get_handle(fd)
 		if !of
 			return -EBADF
 		int index = add_handle(of)
 		return index
 	
 	int sys_pipe(int addr)
-		let e = create_file_entry(":pipe:", FILE_TYPE_PIPE, nil)
+		var e = create_file_entry(":pipe:", FILE_TYPE_PIPE, nil)
 		if !e
 			return -ENFILE
 		if !PipeManager.create(e)
 			return -3
-		let of_in = kernel_open_entry(e, O_RDONLY)
-		let of_out = kernel_open_entry(e, O_WRONLY)
+		var of_in = kernel_open_entry(e, O_RDONLY)
+		var of_out = kernel_open_entry(e, O_WRONLY)
 		int[2] fd
 		fd[0] = add_handle(of_in)
 		fd[1] = add_handle(of_out)
@@ -467,11 +467,11 @@ class Task
 		int h = sys_open(faddr, O_RDONLY)
 		if h < 0
 			return -ENOENT
-		let of = handles[h]
+		var of = handles[h]
 		cstring filename
 		of.entry.get_path(filename)
 		int addr = TASK_IMAGE_POS # task space...
-		let t = TaskManager.add_task_user(filename, _i2p(addr), &self)
+		var t = TaskManager.add_task_user(filename, _i2p(addr), &self)
 		if !t
 			sys_close(h)
 			return -ENOMEM
@@ -485,8 +485,8 @@ class Task
 			addr += r
 		sys_close(h)
 		
-		let of_in = get_handle(fd_in)
-		let of_out = get_handle(fd_out)
+		var of_in = get_handle(fd_in)
+		var of_out = get_handle(fd_out)
 		t.add_handle(of_in)
 		t.add_handle(of_out)
 	
@@ -497,7 +497,7 @@ class Task
 		die(r)
 
 	int sys_waitpid(int _pid, int status_addr, int options)
-		let t = TaskManager.get_task(_pid)
+		var t = TaskManager.get_task(_pid)
 		if !t
 			return -ECHILD
 		if t.status == TASK_STATUS_ZOMBIE
@@ -511,7 +511,7 @@ class Task
 		return 0
 
 	int sys_kill(int _pid, int signal)
-		let t = TaskManager.get_task(_pid)
+		var t = TaskManager.get_task(_pid)
 		if !t
 			return -ESRCH
 		return t.handle_signal_link_iret(signal)
@@ -534,7 +534,7 @@ class Task
 		return new_top
 	
 	int sys_fcntl(int fd, int op, int param)
-		let of = get_handle(fd)
+		var of = get_handle(fd)
 		if !of
 			return -EBADF
 		if op == F_GETFL
@@ -545,7 +545,7 @@ class Task
 		return -EINVAL
 	
 	int sys_fork()
-		let t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
+		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
 		if !t
 			return -ENOMEM
 		
@@ -606,7 +606,7 @@ class Task
 			set_wait(WAITING_MODE_MESSAGE, 0, 0, 0)
 			return 0
 		else if cmd == 1002 # yield / wake-up
-			let t = TaskManager.get_task(p1)
+			var t = TaskManager.get_task(p1)
 			if t
 				t.activate()
 			set_wait(WAITING_MODE_TIME, 0, 0, 0)
@@ -615,7 +615,7 @@ class Task
 	
 	int sys_socket(int cmd, int p1, int p2)
 		if cmd == SYS_SOCKET
-			let e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+			var e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
 			if !e
 				return -ENFILE
 			if !SocketManager.create(e, p1)
@@ -630,7 +630,7 @@ class Task
 				return -ENOTSOCK
 			return of.socket.bind(p2)
 		else if cmd == SYS_CONNECT
-			let of = get_handle(p1)
+			var of = get_handle(p1)
 			if !of
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
@@ -641,14 +641,14 @@ class Task
 			set_wait(WAITING_MODE_SOCKET_CONNECT, of.socket.port, 0, 0)
 			return 0
 		else if cmd == SYS_LISTEN
-			let of = get_handle(p1)
+			var of = get_handle(p1)
 			if !of
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
 				return -ENOTSOCK
 			return of.socket.listen()
 		else if cmd == SYS_ACCEPT
-			let of = get_handle(p1)
+			var of = get_handle(p1)
 			if !of
 				return -EBADF
 			if of.entry.type != FILE_TYPE_SOCKET
@@ -663,7 +663,7 @@ class Task
 			if e < 0
 				return e
 			# port
-			let s = SocketManager.get_by_port(e)
+			var s = SocketManager.get_by_port(e)
 			if !s
 				return -1
 			of = kernel_open_entry(s.e, O_RDWR)
@@ -727,7 +727,7 @@ class Task
 						tss.eax = add_handle(of) # return 0
 				activate()
 		else if waiting_mode == WAITING_MODE_SOCKET_CONNECT
-			let s = SocketManager.get_by_port(waiting_param_i1)
+			var s = SocketManager.get_by_port(waiting_param_i1)
 			if !s
 				tss.eax = -EINVAL # return ...
 				activate()
@@ -767,7 +767,7 @@ class TaskManager
 	static Task *get_task(int pid)
 		if pid < 0 or pid >= MAX_TASKS
 			return nil
-		let t = &tasks[pid]
+		var t = &tasks[pid]
 		if t.status == TASK_STATUS_UNUSED
 			return nil
 		return t
@@ -798,7 +798,7 @@ class TaskManager
 		int pid = get_next_pid()
 		if pid < 0
 			return nil
-		let t = &tasks[pid]
+		var t = &tasks[pid]
 	
 		t.init(pid, name, parent)
 		t.kernel_mode = false
@@ -820,7 +820,7 @@ class TaskManager
 		int pid = get_next_pid()
 		if pid < 0
 			return nil
-		let t = &tasks[pid]
+		var t = &tasks[pid]
 
 		t.init(pid, name, parent)
 		t.kernel_mode = true

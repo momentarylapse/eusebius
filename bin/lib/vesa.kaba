@@ -124,7 +124,7 @@ void vesa_init()
 	
 	pci = new PCIController()
 	pci.scan()
-	let dev = pci.get(0x1234, 0x1111)
+	var dev = pci.get(0x1234, 0x1111)
 	if !dev
 		raise(new Exception("pci dev not found"))
 		

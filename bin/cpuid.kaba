@@ -59,10 +59,10 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	let pci = new PCIController()
+	var pci = new PCIController()
 	pci.scan()
 	
-	let dev = pci.get(0x8029, 0x10ec)
+	var dev = pci.get(0x8029, 0x10ec)
 	if dev
 		print(dev)
 		int addr = dev.get_io_addr(0)

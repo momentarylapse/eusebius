@@ -189,7 +189,7 @@ class TTF
 		return true
 	
 	bool read_head()
-		let te = get_table("head")
+		var te = get_table("head")
 		if !te
 			print("no head table")
 			return false
@@ -202,7 +202,7 @@ class TTF
 		return true
 	
 	bool try_read_hhead()
-		let te = get_table("hhea")
+		var te = get_table("hhea")
 		if !te
 			return false
 		f.set_pos(int(te.offset))
@@ -217,7 +217,7 @@ class TTF
 		return true
 		
 	bool try_read_hmetrix()
-		let te = get_table("hmtx")
+		var te = get_table("hmtx")
 		if !te
 			return false
 		f.set_pos(int(te.offset))
@@ -229,7 +229,7 @@ class TTF
 		return true
 	
 	bool read_mapping()
-		let te = get_table("cmap")
+		var te = get_table("cmap")
 		if !te
 			print("no cmap table")
 			return false
@@ -515,7 +515,7 @@ class TTF
 		return x
 	
 	bool read_glyphs()
-		let te = get_table("glyf")
+		var te = get_table("glyf")
 		if !te
 			print("no glyf table")
 			return false
@@ -721,7 +721,7 @@ class FontWindow extends Window
 		#Painter *p = beginDraw("area")
 		float w = p.width
 		float h = p.height
-		let g = &font.glyphs[index]
+		var g = &font.glyphs[index]
 		
 		p.set_color(color.WHITE)
 		p.draw_rect(rect(0, w, 0, h))
@@ -763,19 +763,19 @@ class FontWindow extends Window
 		p.draw_line(xx(0),0, xx(0),h)
 		p.draw_line(0,yy(0), w,yy(0))
 		
-	func draw_quad(Painter p, complex a, complex b, complex c)
-		let prev = a
+	func draw_quad(p: Painter, a: complex, b: complex, c: complex)
+		var prev = a
 		for t in 0.1:0.9:0.1
-			let cur = (1-t)*((1-t)*a + t*b) + t*((1-t)*b+t*c)
+			var cur = (1-t)*((1-t)*a + t*b) + t*((1-t)*b+t*c)
 			p.draw_line(xx(prev.x), yy(prev.y), xx(cur.x), yy(cur.y))
 			prev = cur
 		p.draw_line(xx(prev.x), yy(prev.y), xx(c.x), yy(c.y))
 	
 
-	func draw_contour(Painter p, TTFContour c)
+	func draw_contour(p: Painter, c: TTFContour)
 		for i in 0:len(c.p)
 			bool on = ((c.flags[i] & 1) != 0)
-			let cur = c.p[i]
+			var cur = c.p[i]
 			complex next = c.p[(i+1) % len(c.p)]
 			bool next_on = ((c.flags[(i+1) % len(c.p)] & 1) != 0)
 			complex nnext = c.p[(i+2) % len(c.p)]
@@ -794,7 +794,7 @@ class FontWindow extends Window
 		
 TTF *font
 
-void main(string[] arg)
+func main(arg: string[])
 	if len(arg) == 0
 		print("call: <TTF_INPUT> [EXPORT]")
 		return
@@ -806,7 +806,7 @@ void main(string[] arg)
 	if len(arg) > 1
 		font.export(arg[1])
 	
-	let w = new FontWindow()
+	var w = new FontWindow()
 	w.show()
 	w.run()
 	print("ok")

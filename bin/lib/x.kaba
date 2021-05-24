@@ -145,7 +145,7 @@ class XConnection
 		buf[3] = p3
 		buf[4] = p4
 		buf[5] = p5
-		let r = write(sock, &buf[0], 4*8)
+		var r = write(sock, &buf[0], 4*8)
 		kprint(str(r))
 		kprint(" c:/send ")
 	

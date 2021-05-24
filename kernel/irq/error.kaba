@@ -96,9 +96,9 @@ class Error
 	static void int_handler(int i)
 		while true
 			# task?
-			let e = Error.tasks[i]
+			var e = Error.tasks[i]
 			int prev_pid = e.get_prev_pid()
-			let prev = &TaskManager.tasks[prev_pid]
+			var prev = &TaskManager.tasks[prev_pid]
 			
 			# handle error
 			if prev.kernel_mode

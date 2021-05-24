@@ -215,7 +215,7 @@ class PageDirectory extends PageTable
 		PageTable *pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
 		#int n = pt.e[page_no] & 0xfffff000
 		while npages > 0
-			let pout = _i2p(pt2.e[page_no2] & 0xfffff000)
+			var pout = _i2p(pt2.e[page_no2] & 0xfffff000)
 			memcpy(pout, _i2p(pt1.e[page_no1] & 0xfffff000), PAGE_SIZE)
 			page_no1 ++
 			if page_no1 >= PAGE_SIZE

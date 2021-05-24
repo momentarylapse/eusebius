@@ -118,9 +118,9 @@ void irq_handler()
 	print("--irq--")
 
 void ac97_test()
-	let pci = new PCIController()
+	var pci = new PCIController()
 	pci.scan()
-	let dev = pci.get(0x8086, 0x2415)
+	var dev = pci.get(0x8086, 0x2415)
 	if !dev
 		raise(new Exception("pci dev not found"))
 		

@@ -23,14 +23,14 @@ int[] table_widths(string[] list, int cols, int space)
 int[] optimal_table(string[] list, int space, int max_width)
 	int cols = len(list)
 	while cols > 0
-		let w = table_widths(list, cols, space)
+		var w = table_widths(list, cols, space)
 		if w.sum() <= max_width
 			return w
 		cols --
 	return [10]
 
 void print_table(string[] list)
-	let w = optimal_table(list, 2, 80)
+	var w = optimal_table(list, 2, 80)
 	string o
 	for s,i in list
 		int col = (i % len(w))
@@ -42,13 +42,13 @@ void print_table(string[] list)
 	print(o)
 
 void ls(Path dirname, bool extended)
-	let list = Filesystem.search(dirname, "", "df")
+	var list = Filesystem.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
 
 	if extended
 		for e in list
-			let path = dirname << e
+			var path = dirname << e
 			print("{{ftype(path)|-4}} {{Filesystem_size32(path)|8}} {{e}}\n")
 	else
 		print_table([for f in list str(f)])

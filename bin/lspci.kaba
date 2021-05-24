@@ -26,7 +26,7 @@ void main()
 	string[] arg
 	get_args(arg)
 	
-	let pci = new PCIController()
+	var pci = new PCIController()
 	
 	pci.scan()
 	

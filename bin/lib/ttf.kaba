@@ -1,11 +1,11 @@
 use lib.std
-use file
+use os
 
 string hex(char[0]* p, int size)
 	string s
 	for i in 0:size
 		s.add(p[i])
-	return s.hex(false)
+	return s.hex()
 string i2h(int i)
 	return hex(&i, 4)
 

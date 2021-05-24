@@ -1,3 +1,5 @@
+use os
+
 class BinaryFile extends File
 	int xread(void* p, int size)
 		cstring *pp = p
@@ -111,7 +113,7 @@ class Ext2Reader
 		writable = true
 	
 	void read(string filename)
-		f = FileOpen(filename)
+		f = Filesystem.open(filename)
 		if !f
 			return
 		f.setBinaryMode(true)

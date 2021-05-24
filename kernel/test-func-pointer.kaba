@@ -11,7 +11,7 @@ void main()
 	TextMode.clear()
 	
 	
-	let p = f
+	var p = f
 	call_p(p, nil)
 
 

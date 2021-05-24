@@ -104,7 +104,7 @@ class PCIController
 	PCIDevice*[] devices
 
 	PCIDevice* check_device(int bus, int slot, int function)
-		let p = getx(bus, slot, function)
+		var p = getx(bus, slot, function)
 		if p
 			return p
 	
@@ -142,7 +142,7 @@ class PCIController
 					check_device(bus, slot, function)
 	
 	void scan()
-		let d = check_device(0, 0, 0)
+		var d = check_device(0, 0, 0)
 		if !d
 			return
 		if (d.header_type & 0x80) == 0
@@ -159,7 +159,7 @@ class PCIController
 				check_device(bus, slot, function)
 	
 	void check_function(int bus, int slot, int function)
-		let d = getx(bus, slot, function)
+		var d = getx(bus, slot, function)
 		if (d._class == 0x06) and (d.subclass == 0x04)
 			check_bus(d.get_secondary_bus())
 	
