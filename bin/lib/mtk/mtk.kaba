@@ -4,35 +4,35 @@ use lib.draw
 use lib.ttfx
 use hui
 
-const int FRAME_BAR = 30
-const int FRAME_WIDTH = 2
-const float WIDGET_FRAME_WIDTH = 2.0
-const int GRID_MARGIN = 10
-const float FONT_SIZE = 15.0
-const float FONT_SIZE_BAR = 17.0
-const string FONT_NAME = "Cantarell"
+const FRAME_BAR = 30
+const FRAME_WIDTH = 2
+const WIDGET_FRAME_WIDTH = 2.0
+const GRID_MARGIN = 10
+const FONT_SIZE = 15.0
+const FONT_SIZE_BAR = 17.0
+const FONT_NAME = "Cantarell"
 
-color col_window_frame
-color col_text
-color col_background
-color col_title
-color col_button
-color col_button_frame
-color col_button_hover
-color col_button_hover_frame
-color col_button_click
-color col_button_click_frame
-color col_frame
-color col_frame_active
+var col_window_frame: color
+var col_text: color
+var col_background: color
+var col_title: color
+var col_button: color
+var col_button_frame: color
+var col_button_hover: color
+var col_button_hover_frame: color
+var col_button_click: color
+var col_button_click_frame: color
+var col_frame: color
+var col_frame_active: color
 
 
-string dir_append(string dir, string e)
+func dir_append(dir: string, e: string) -> string
 	string r = dir
 	if r.tail(1) != "/"
 		r += "/"
 	return r + e
 
-string key_to_str(int _key)
+func key_to_str(_key: int) -> string
 	int key = _key
 	if key == KEY_RETURN
 		return "\n"
@@ -126,10 +126,10 @@ string key_to_str(int _key)
 			return "@"
 
 class MtkSizeNegotiationData
-	int min_width
-	int min_height
-	bool expand_x
-	bool expand_y
+	var min_width: int
+	var min_height: int
+	var expand_x: bool
+	var expand_y: bool
 	
 	void __init__(int min_w, int min_h, bool exp_x, bool exp_y)
 		min_width = min_w
@@ -138,12 +138,12 @@ class MtkSizeNegotiationData
 		expand_y = exp_y
 
 class MtkWidget
-	MtkWindow* win
-	XPainter* p
-	XRect r # relative to window
-	int mx, my
-	MtkSizeNegotiationData snd
-	FontDescriptor* font
+	var win: MtkWindow*
+	var p: XPainter*
+	var r: XRect # relative to window
+	var mx, my: int
+	var snd: MtkSizeNegotiationData
+	var font: FontDescriptor*
 	
 	void __init__()
 		win = nil
@@ -192,7 +192,7 @@ class MtkWidget
 	virtual void on_key(int key)
 
 class MtkLabel extends MtkWidget
-	string text
+	var text: string
 	void __init__(string text)
 		self.text = text
 		snd = MtkSizeNegotiationData(default_font.get_str_width(text)+10, 25, false, false)
@@ -212,11 +212,11 @@ class MtkLabel extends MtkWidget
 		p.draw_str(5, 5, text)
 
 class MtkGrid extends MtkWidget
-	int nx, ny
-	MtkWidget*[] children
-	bool[] child_exp_x, child_exp_y
-	int[] child_min_w, child_min_h
-	int[] child_w, child_h
+	var nx, ny: int
+	var children: MtkWidget*[]
+	var child_exp_x, child_exp_y: bool[]
+	var child_min_w, child_min_h: int[]
+	var child_w, child_h: int[]
 	void __init__(int _nx, int _ny)
 		nx = _nx
 		ny = _ny
@@ -330,8 +330,8 @@ enum
 	BUTTON_STATE_CLICK
 
 class MtkButton extends MtkWidget
-	string text
-	int state
+	var text: string
+	var state: int
 	void __init__(string text)
 		self.text = text
 		state = BUTTON_STATE_DEFAULT
@@ -396,9 +396,9 @@ class MtkButton extends MtkWidget
 	virtual void on_click()
 
 class MtkTextView extends MtkWidget
-	string text
-	int cursor_pos
-	bool multi_line
+	var text: string
+	var cursor_pos: int
+	var multi_line: bool
 	
 	override void __init__()
 		cursor_pos = 0
@@ -517,26 +517,19 @@ class MtkEdit extends MtkTextView
 		snd = MtkSizeNegotiationData(30, 30, true, false)
 
 class MtkWindow extends XWindow
-	XPainter* p
-	string title
-	MtkWidget* widget
-	MtkWidget*[] widgets
-	MtkWidget* input_widget
-	bool shown
-	bool dragging
-	bool frame
-	bool killed
-	bool button_close_hover
+	var p: XPainter*
+	var title: string
+	var widget: MtkWidget* = nil
+	var widgets: MtkWidget*[]
+	var input_widget: MtkWidget* = nil
+	var shown = false
+	var dragging = false
+	var frame = true
+	var killed = false
+	var button_close_hover = false
 	
 	void __init__(string title, int w, int h)
 		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
-		widget = nil
-		input_widget = nil
-		shown = false
-		dragging = false
-		frame = true
-		killed = false
-		button_close_hover = false
 		mtk_windows.add(&self)
 		
 		self.title = title
@@ -691,12 +684,12 @@ class MtkIdle
 	virtual void do()
 		nil
 
-XConnection* xcon
-MtkIdle*[] idles
-FontDescriptor* default_font
-FontDescriptor* title_font
-FontDB* font_db
-MtkWindow*[] mtk_windows
+var xcon: XConnection*
+var idles: MtkIdle*[]
+var default_font: FontDescriptor*
+var title_font: FontDescriptor*
+var font_db: FontDB*
+var mtk_windows: MtkWindow*[]
 
 void mtk_init()
 	init_lib()

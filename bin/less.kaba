@@ -1,19 +1,19 @@
 use lib.std
 
-string[] lines
-int cur_line
+var lines: string[]
+var cur_line: int
 
-const int WIDTH = 80
-const int HEIGHT = 25
+const WIDTH = 80
+const HEIGHT = 25
 
-void clear()
+func clear()
 	string s
 	s.add(0x7f)
 	for y in 0:HEIGHT
 		for x in 0:WIDTH
 			print(s)
 
-void show()
+func show()
 	clear()
 	for y in 0:HEIGHT
 		int l = cur_line + y
@@ -29,7 +29,7 @@ void show()
 	
 
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	lib_print_endl = false

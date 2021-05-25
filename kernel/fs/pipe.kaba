@@ -6,25 +6,25 @@ use mem.paging
 
 
 
-const int MAX_PIPES = 64
-const int PIPE_BUFFER_SIZE = 1024
+const MAX_PIPES = 64
+const PIPE_BUFFER_SIZE = 1024
 
 
 
 class Pipe
-	bool used
-	FileEntry *e
-	int read_ref_count
-	int write_ref_count
-	char[0]* buffer
-	int buffer_used
-	int write(PageDirectory page_dir, int addr, int size)
+	var used: bool
+	var e: FileEntry*
+	var read_ref_count: int
+	var write_ref_count: int
+	var buffer: char[0]*
+	var buffer_used: int
+	func write(page_dir: PageDirectory, addr: int, size: int) -> int
 		if buffer_used + size > PIPE_BUFFER_SIZE
 			return -EWOULDBLOCK
 		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
 		buffer_used += size
 		return size
-	int read(PageDirectory page_dir, int addr, int _size)
+	func read(page_dir: PageDirectory, addr: int, _size: int) -> int
 		int size = _size
 		if buffer_used == 0
 			# no data... block if we have a writer
@@ -47,7 +47,7 @@ class Pipe
 #		prints(":")
 #		printi write_ref_count
 #		prints("  ")
-	void unref(bool writing)
+	func unref(writing: bool)
 		if writing
 			write_ref_count --
 		else
@@ -62,7 +62,7 @@ class Pipe
 			# only auto-delete if anonymous
 			clean_up()
 	
-	void clean_up()
+	func clean_up()
 		if !e.parent
 			# anonymous pipe
 			FileSystem.delete(e)
@@ -72,11 +72,11 @@ class Pipe
 
 
 class PipeManager
-	static Pipe[MAX_PIPES] pipes
+	var static pipes: Pipe[MAX_PIPES]
 
 
 
-	static Pipe* create(FileEntry e)
+	func static create(e: FileEntry) -> Pipe*
 		for p in pipes
 			if !p.used
 				p.used = true
@@ -88,13 +88,13 @@ class PipeManager
 				return &p
 		return nil
 
-	static Pipe* get(FileEntry e)
+	func static get(e: FileEntry) -> Pipe*
 		for p in pipes
 			if p.used and p.e == &e
 				return &p
 		return nil
 
 
-	static void init()
+	func static init()
 		for p in pipes
 			p.used = false

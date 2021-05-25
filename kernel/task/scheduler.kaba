@@ -6,19 +6,19 @@ use time.timevalue
 use time.timer
 use irq.irq
 
-const int SCHEDULER_STACK_SIZE = 8192
+const SCHEDULER_STACK_SIZE = 8192
 
-const int TASK_SWITCH_DT = 5 # ms
-const int PERF_UPDATE_DT = 1000000000 # 1000 ns
+const TASK_SWITCH_DT = 5 # ms
+const PERF_UPDATE_DT = 1000000000 # 1000 ns
 
 
 class Scheduler
-	static Task* scheduler_task
+	var static scheduler_task: Task*
 
-	static TimeValue next_perf_calc
-	static int running_pid
+	var static next_perf_calc: TimeValue
+	var static running_pid: int
 
-	static void int_timer()
+	func static int_timer()
 		while true
 			#prints("(")
 			KernelTimer.tick()
@@ -44,7 +44,7 @@ class Scheduler
 				iret
 			}
 
-	static void start()
+	func static start()
 		running_pid = 0
 		prints("starting scheduler\n")
 	
@@ -58,7 +58,7 @@ class Scheduler
 
 
 	# Scheduler
-	static int get_next_task(int pid)
+	func static get_next_task(pid: int) -> int
 		for i in pid + 1:MAX_TASKS
 			if TaskManager.tasks[i].status == TASK_STATUS_RUNNING
 				return i
@@ -67,7 +67,7 @@ class Scheduler
 				return i
 		return TaskManager.idle_task.pid
 
-	static void process_waiting_tasks()
+	func static process_waiting_tasks()
 		for t in TaskManager.tasks
 			if t.status == TASK_STATUS_WAITING
 				if t.waiting_mode == WAITING_MODE_TIME
@@ -80,7 +80,7 @@ class Scheduler
 					t.do_wait_update()
 
 
-	static void reconnect_tasks(int pid_next, out Task irq_task)
+	func static reconnect_tasks(pid_next: int, out irq_task: Task)
 		#int pid_cur = irq_task.get_prev_task()
 		TaskManager.gdt[TaskManager.tasks[running_pid].desc].set_busy(false)
 		TaskManager.gdt[TaskManager.tasks[pid_next].desc].set_busy(true)
@@ -90,7 +90,7 @@ class Scheduler
 	#	printi pid_next
 	#	prints(">")
 
-	static void update_times()
+	func static update_times()
 		TaskManager.tasks[running_pid].time_all.inc_nanosec(KernelTimer.dt_nanosec)
 		TaskManager.tasks[running_pid].time_temp.inc_nanosec(KernelTimer.dt_nanosec)
 	

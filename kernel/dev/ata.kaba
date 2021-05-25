@@ -8,37 +8,37 @@ use io.io
 #--------------------------------------------------------------
 # Ata Treiber
 
-const int ATA_MASK_BUSY = 0x80
-const int ATA_MASK_READY = 0x40
-const int ATA_MASK_DATA = 0x08
+const ATA_MASK_BUSY = 0x80
+const ATA_MASK_READY = 0x40
+const ATA_MASK_DATA = 0x08
 
 class AtaDiskInfo
-	bool isAvailable
-	bool isAtapi
-	int size
-	cstring name
-	void __assign__(AtaDiskInfo i)
+	var isAvailable: bool
+	var isAtapi: bool
+	var size: int
+	var name: cstring
+	func __assign__(i: AtaDiskInfo)
 
 class AtaController
 
-	static int nAta
-	static int Status
-	static int IOBase, IOCtrl, ide_no, ide_ms
-	static char MSMask
+	var static nAta: int
+	var static Status: int
+	var static IOBase, IOCtrl, ide_no, ide_ms: int
+	var static MSMask: char
 
-	static char[512] buffer
-	static int[0]* BufferDW
-	static int Size
+	var static buffer: char[512]
+	var static BufferDW: int[0]*
+	var static Size: int
 
-	static char[16] atapi_buffer
+	var static atapi_buffer: char[16]
 	
-	static AtaDiskInfo[4] disk_info
+	var static disk_info: AtaDiskInfo[4]
 
-	static void wait_400_ns()
+	func static wait_400_ns()
 		for i in 0:100
 			inportb(IOBase + 7)
 
-	static bool wait_status(char mask, char value)
+	func static wait_status(mask: char, value: char) -> bool
 		char AtaStatusChar = inportb(IOBase + 7)
 		int n = 1000000000
 		while ((AtaStatusChar & mask)!=value) and (n >= 0)
@@ -46,7 +46,7 @@ class AtaController
 			n--
 		return n >= 0
 
-	static void set_disk_add(int disk_no)
+	func static set_disk_add(disk_no: int)
 		ide_no = (disk_no/2)
 		ide_ms = (disk_no%2)
 		# Adressierungs-Daten
@@ -59,7 +59,7 @@ class AtaController
 		if ide_ms == 1
 			MSMask = 0x10
 
-	static bool test_disk(int disk_no)
+	func static test_disk(disk_no: int) -> bool
 		set_disk_add(disk_no)
 		disk_info[disk_no].isAvailable = false
 

@@ -1,7 +1,7 @@
 use lib.std
 
 
-void touch(string filename)
+func touch(filename: string)
 	int h = create(filename)
 	if h < 0
 		print("touch: can not create file: " + filename)
@@ -9,7 +9,7 @@ void touch(string filename)
 	close(h)
 
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	get_args(arg)

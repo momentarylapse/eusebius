@@ -6,8 +6,8 @@ use irq.irq
 
 class KernelTimer
 	#int[2] state
-	static TimeValue tv
-	static int dt_nanosec
+	var static tv: TimeValue
+	var static dt_nanosec: int
 	
 	#void update_state()
 #		asm{
@@ -19,16 +19,16 @@ class KernelTimer
 #		state[0] = __temp_i2__
 #		state[1] = __temp_i__
 	
-	static void update()
+	func static update()
 		#update_state()
 		# TODO   :P
 		#tv.sec = (state[0] << 8) + (state[1] >> 24)
 		#tv.nanosec = 0
 		#tv.nanosec = (state[1] << 6) & 0x3fffffff
-	static void tick()
+	func static tick()
 		tv.inc_nanosec(dt_nanosec)
 
-	static void init_interrupt(out Task t, int dt_ms)
+	func static init_interrupt(out t: Task, dt_ms: int)
 		# read year from CMOS
 		#outportb(0x70, 0x40 | 0x09)
 		#int rr = inportb(0x71)

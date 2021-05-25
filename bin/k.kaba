@@ -1,6 +1,6 @@
 use lib.std
 
-void main()
+func main()
 	init_lib()
 	print("TODO")
 	exit(0)

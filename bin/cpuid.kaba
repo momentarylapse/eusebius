@@ -2,9 +2,9 @@ use lib.std
 use lib.io
 use lib.pci
 
-int temp1, temp2, temp3, temp4
+var temp1, temp2, temp3, temp4: int
 
-void cpuid(int n, out int[4] o)
+func cpuid(n: int, out o: int[4])
 	temp1 = n
 	asm {
 		mov eax, temp1
@@ -20,7 +20,7 @@ void cpuid(int n, out int[4] o)
 	o[2] = temp3
 	o[3] = temp4
 
-void show_cpu()
+func show_cpu()
 	int[4] o
 	cpuid(0, o)
 	
@@ -53,7 +53,7 @@ void show_cpu()
 		caps.add("64")
 	print("caps: {{caps}}\n")
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

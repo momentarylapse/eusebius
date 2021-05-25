@@ -3,16 +3,16 @@ use lib.mtk.mtk
 use lib.draw
 use hui
 
-const int LINE_HEIGHT = 17
+const LINE_HEIGHT = 17
 
 
 class History
-	ShellView* view
-	string[] lines
-	void __init__()
+	var view: ShellView*
+	var lines: string[]
+	func __init__()
 		view = nil
 		lines.add("")
-	void add(string s)
+	func add(s: string)
 		for c in s
 			if c == 10
 				lines.add("")
@@ -27,10 +27,10 @@ class History
 		
 
 class Job extends MtkIdle
-	int pid
-	bool done
-	int[2] pipe_in, pipe_out # from job's point of view
-	void __init__(string[] c)
+	var pid: int
+	var done: bool
+	var pipe_in, pipe_out: int[2] # from job's point of view
+	func __init__(c: string[])
 		done = false
 		pipe_in[0] = -1
 		pipe_in[1] = -1
@@ -50,14 +50,14 @@ class Job extends MtkIdle
 		#string s = "ls\n"
 		#write(pipe_in[1], &s[0], s.num)
 	
-	override void __delete__()
+	func override __delete__()
 		close(pipe_in[1])
 		close(pipe_out[0])
 
-	override void do()
+	func override do()
 		test()
 	
-	void test()
+	func test()
 		string s
 		s.resize(512)
 		int r = read(pipe_out[0], &s[0], s.num)
@@ -79,15 +79,15 @@ class Job extends MtkIdle
 		done = true
 
 class ShellView extends MtkWidget
-	History *hist
-	int max_lines
+	var hist: History*
+	var max_lines: int
 	
-	void __init__(History *_hist)
+	func __init__(_hist: History*)
 		hist = _hist
 		max_lines = 0
 		hist.view = &self
 		
-	override void draw()
+	func override draw()
 		max_lines = (p.height - 10) / LINE_HEIGHT
 		p.set_color(color(0,0,0, 1))
 		p.rectangle(p.all)
@@ -105,10 +105,10 @@ class ShellView extends MtkWidget
 	
 
 class ShellWindow extends MtkWindow
-	History* history
-	Job* shell
-	ShellView* view
-	void __init__()
+	var history: History*
+	var shell: Job*
+	var view: ShellView*
+	func __init__()
 		super.__init__("XTerm", 600, 400)
 		history = new History()
 		view = new ShellView(history)
@@ -117,7 +117,7 @@ class ShellWindow extends MtkWindow
 		shell = new Job(["/bin/shell"])
 		mtk_add_idle(shell)
 	
-	override void on_key(int key)
+	func override on_key(key: int)
 		if key == KEY_BACKSPACE
 			write(shell.pipe_in[1], &0x7f, 1)
 		else if key == KEY_UP
@@ -139,9 +139,9 @@ class ShellWindow extends MtkWindow
 			if s.num > 0
 				write(shell.pipe_in[1], &s[0], s.num)
 
-ShellWindow *window
+var window: ShellWindow*
 
-void main()
+func main()
 	mtk_init()
 	#lib_mem_debug = true
 	#kprint("START XTERM")

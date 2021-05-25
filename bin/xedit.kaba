@@ -5,9 +5,9 @@ use lib.draw
 use hui
 
 class EditWindow extends MtkWindow
-	string filename
-	MtkTextView* v
-	void __init__(string filename)
+	var filename: string
+	var v: MtkTextView*
+	func __init__(filename: string)
 		super.__init__("XEdit", 600, 400)
 		self.filename = filename
 		
@@ -28,12 +28,12 @@ class EditWindow extends MtkWindow
 			set_title(filename)
 		else
 			set_title("neues Dokument")
-	void save()
+	func save()
 		var f = Filesystem.create(filename)
 		if f
 			f.write(v.text)
 			del f
-	override void on_key(int key)
+	func override on_key(key: int)
 		if key == KEY_CONTROL + KEY_S
 			mtk_error_box("save")
 			if filename.num > 0
@@ -45,7 +45,7 @@ class EditWindow extends MtkWindow
 			
 		
 
-void main()
+func main()
 	mtk_init()
 	string[] arg
 	get_args(arg)

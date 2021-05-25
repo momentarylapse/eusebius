@@ -5,51 +5,51 @@ use dev.block
 use io.text
 use kaba
 
-const int FILE_TYPE_FILE = 0
-const int FILE_TYPE_DIR = 1
-const int FILE_TYPE_PIPE = 2
-const int FILE_TYPE_SOCKET = 4
-const int FILE_TYPE_CHAR = 8
-const int FILE_TYPE_BLOCK = 16
+const FILE_TYPE_FILE = 0
+const FILE_TYPE_DIR = 1
+const FILE_TYPE_PIPE = 2
+const FILE_TYPE_SOCKET = 4
+const FILE_TYPE_CHAR = 8
+const FILE_TYPE_BLOCK = 16
 
-const int MAX_MOUNT_POINTS = 32
+const MAX_MOUNT_POINTS = 32
 
 
 
 class FileOperations
-	virtual int open(FileEntry e)
+	func virtual open(e: FileEntry) -> int
 		return 0
-	virtual int close(FileEntry e)
+	func virtual close(e: FileEntry) -> int
 		return 0
-	virtual int read(FileEntry e, void* page_dir, int addr, int size) # PageDirectory
+	func virtual read(e: FileEntry, page_dir: void*, addr: int, size: int) -> int
 		return 0
-	virtual int write(FileEntry e, void* page_dir, int addr, int size) # PageDirectory
+	func virtual write(e: FileEntry, page_dir: void*, addr: int, size: int) -> int
 		return 0
 
 class FileEntry
-	cstring name
-	int type
-	int size
-	int num_blocks
-	int[0]* blocks
-	int inode
-	int mp_inode
-	MountPoint *mount
-	FileEntry *parent
-	FileEntry *next
-	FileEntry *first_sub
-	FileOperations *op
+	var name: cstring
+	var type: int
+	var size: int
+	var num_blocks: int
+	var blocks: int[0]*
+	var inode: int
+	var mp_inode: int
+	var mount: MountPoint*
+	var parent: FileEntry*
+	var next: FileEntry*
+	var first_sub: FileEntry*
+	var op: FileOperations*
 	
-	void __assign__(FileEntry o)
+	func __assign__(o: FileEntry)
 		pass
 	
 	
-	FileEntry *create_child(cstring _name, int _type, MountPoint *_mount)
+	func create_child(_name: cstring, _type: int, _mount: MountPoint*) -> FileEntry*
 		FileEntry *e = create_file_entry(_name, _type, _mount)
 		add_child(e)
 		return e
 	
-	void add_child(out FileEntry e)
+	func add_child(out e: FileEntry)
 		e.parent = &self
 		if first_sub
 			FileEntry *i = first_sub
@@ -59,7 +59,7 @@ class FileEntry
 		else
 			first_sub = &e
 	
-	FileEntry *get_sub(cstring sname)
+	func get_sub(sname: cstring) -> FileEntry*
 		if strcmp(sname, "..") == 0
 			return parent
 		if strcmp(sname, ".") == 0
@@ -72,7 +72,7 @@ class FileEntry
 		return nil
 		
 	
-	const void get_path(out cstring path)
+	func const get_path(out path: cstring)
 		if parent
 			parent.get_path(path)
 			if parent.parent
@@ -82,20 +82,20 @@ class FileEntry
 			strcpy(path, "/")
 	
 	# allocate list int blocks of int[16]
-	void add_block(int b)
+	func add_block(b: int)
 		if (num_blocks & 0x0f) == 0
 			blocks = Heap.realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
 		blocks[num_blocks] = b
 		num_blocks ++
 	
-	void shrink_block_list(int n)
+	func shrink_block_list(n: int)
 		while num_blocks > n
 			mount.free_block(blocks[num_blocks - 1])
 			num_blocks --
 
 
 	
-FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
+func create_file_entry(name: cstring, type: int, mount: MountPoint*) -> FileEntry*
 	FileEntry *e = Heap.malloc(sizeof(FileEntry))
 	e.inode = 0
 	e.mp_inode = 0
@@ -112,153 +112,153 @@ FileEntry *create_file_entry(cstring name, int type, MountPoint *mount)
 
 
 class Ext2Inode
-	Word rights
-	Word user
-	int size
-	int atime, ctime, mtime, dtime
-	Word group
-	Word hard_links
-	int blocks
-	int flags
-	int version
-	int[15] iblock
-	int file_version
-	int acl
-	int size_high
-	int dummy
-	int[3] xx_high
-	const bool isDir()
+	var rights: Word
+	var user: Word
+	var size: int
+	var atime, ctime, mtime, dtime: int
+	var group: Word
+	var hard_links: Word
+	var blocks: int
+	var flags: int
+	var version: int
+	var iblock: int[15]
+	var file_version: int
+	var acl: int
+	var size_high: int
+	var dummy: int
+	var xx_high: int[3]
+	func const isDir() -> bool
 		return (rights._int() & 0xf000) == 0x4000
-	const bool isFile()
+	func const isFile() -> bool
 		return (rights._int() & 0xf000) == 0x8000
 
 class Ext2SuperBlock
-	int inodes_count
-	int blocks_count
-	int reserved_blocks_count
-	int free_blocks_count
-	int free_inodes_count
-	int first_data_block
-	int log_block_size
-	int log_cluster_size
-	int blocks_per_group
-	int obso_frags_per_group
-	int inodes_per_group
-	int mtime, wtime
-	Word mnt_count, max_mnt_count
-	Word magic
-	Word state
-	Word errors
-	Word minor_rev_level
-	int lastcheck, checkinterval
-	int creator_os
-	int rev_level
-	Word def_resuid, def_resgid
-	int first_ino
-	Word inode_size
-	Word block_group_nr
-	int feature_compat, feature_incompat, feature_ro_compat
-	char[16] uuid
-	char[16] volume_name
-	char[64] last_mounted
-	char[1024-200] _filler_
+	var inodes_count: int
+	var blocks_count: int
+	var reserved_blocks_count: int
+	var free_blocks_count: int
+	var free_inodes_count: int
+	var first_data_block: int
+	var log_block_size: int
+	var log_cluster_size: int
+	var blocks_per_group: int
+	var obso_frags_per_group: int
+	var inodes_per_group: int
+	var mtime, wtime: int
+	var mnt_count, max_mnt_count: Word
+	var magic: Word
+	var state: Word
+	var errors: Word
+	var minor_rev_level: Word
+	var lastcheck, checkinterval: int
+	var creator_os: int
+	var rev_level: int
+	var def_resuid, def_resgid: Word
+	var first_ino: int
+	var inode_size: Word
+	var block_group_nr: Word
+	var feature_compat, feature_incompat, feature_ro_compat: int
+	var uuid: char[16]
+	var volume_name: char[16]
+	var last_mounted: char[64]
+	var _filler_: char[1024-200]
 
 class Ext2BlockGroupDescriptor
-	int block_bitmap
-	int inode_bitmap
-	int inode_table
-	Word free_blocks_count, free_inodes_count
-	Word used_dirs_count
-	Word flags
-	int exclude_bitmap
-	Word block_bitmap_csum, inode_bitmap_csum
-	Word itable_unused
-	Word checksum
+	var block_bitmap: int
+	var inode_bitmap: int
+	var inode_table: int
+	var free_blocks_count, free_inodes_count: Word
+	var used_dirs_count: Word
+	var flags: Word
+	var exclude_bitmap: int
+	var block_bitmap_csum, inode_bitmap_csum: Word
+	var itable_unused: Word
+	var checksum: Word
 
 class Ext2DirEntryHeader
-	int inode
-	Word rec_len
-	char name_len
-	char file_type
+	var inode: int
+	var rec_len: Word
+	var name_len: char
+	var file_type: char
 
 
 class MountPoint
-	cstring type
-	BlockDevice *dev # nil => unused
-	FileEntry *dest
-	int block_offset
-	int block_size
+	var type: cstring
+	var dev: BlockDevice*
+	var dest: FileEntry*
+	var block_offset: int
+	var block_size: int
 	
-	int dev_blocks_per_block
-	int dev_block_offset
+	var dev_blocks_per_block: int
+	var dev_block_offset: int
 	
-	char[0] *buf
-	int buf_used
+	var buf: char[0]*
+	var buf_used: int
 	
-	int inodes_per_block
-	Ext2SuperBlock sb
-	Ext2BlockGroupDescriptor bg
-	bool readable, writable
+	var inodes_per_block: int
+	var sb: Ext2SuperBlock
+	var bg: Ext2BlockGroupDescriptor
+	var readable, writable: bool
 	
-	bool dirty
+	var dirty: bool
 	
-	int[0]* inode_bitmap
-	int[0]* block_bitmap
+	var inode_bitmap: int[0]*
+	var block_bitmap: int[0]*
 	
-	void __init__()
+	func __init__()
 		pass
-	void __assign__(MountPoint o)
+	func __assign__(o: MountPoint)
 		pass
 		
-	virtual int mount()
+	func virtual mount() -> int
 		return -1
 	
-	void update_sizes(int _bs, int _bo)
+	func update_sizes(_bs: int, _bo: int)
 		block_size = _bs
 		dev_blocks_per_block = _bs / dev.block_size
 		block_offset = _bo
 		dev_block_offset = _bo / dev.block_size
 	
-	void read_block(int block_no, void *_buf)
+	func read_block(block_no: int, _buf: void*)
 		cstring *buf = _buf
 		for i in 0:dev_blocks_per_block
 			AtaController.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 
-	void write_block(int block_no, void *_buf)
+	func write_block(block_no: int, _buf: void*)
 		cstring *buf = _buf
 		for i in 0:dev_blocks_per_block
 			AtaController.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 	
-	virtual int alloc_block()
+	func virtual alloc_block() -> int
 		return -1
 	
-	virtual int free_block(int index)
+	func virtual free_block(index: int) -> int
 		return -1
 	
-	virtual int free_inode(int index)
+	func virtual free_inode(index: int) -> int
 		return -1
 	
-	virtual int alloc_inode()
+	func virtual alloc_inode() -> int
 		return -1
 	
-	virtual int write_inode(FileEntry e)
+	func virtual write_inode(e: FileEntry) -> int
 		return -1
 	
-	virtual int sync()
+	func virtual sync() -> int
 		return -1
 
 
 
 class FileSystem
-	static MountPoint[MAX_MOUNT_POINTS] mounts
-	static FileEntry *root
+	var static mounts: MountPoint[MAX_MOUNT_POINTS]
+	var static root: FileEntry*
 	
-	static void init()
+	func static init()
 		for m in mounts
 			m.dev = nil
 		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
 	
-	static int delete(out FileEntry *e)
+	func static delete(out e: FileEntry*) -> int
 		#prints("[del]")
 		#prints e.name
 		if e.first_sub
@@ -282,7 +282,7 @@ class FileSystem
 		clean_up(e)
 		return 0
 	
-	static void clean_up(out FileEntry *e)
+	func static clean_up(out e: FileEntry*)
 		FileEntry *p = e.parent
 		e.shrink_block_list(0)
 		if e.mount
@@ -292,7 +292,7 @@ class FileSystem
 			p.mount.write_inode(p)
 			p.mount.sync()
 	
-	static FileEntry *get(cstring path, FileEntry cur_dir)
+	func static get(path: cstring, cur_dir: FileEntry) -> FileEntry*
 		int ppos = 0
 		FileEntry *e = &cur_dir
 		if path[0] == '/'
@@ -320,7 +320,7 @@ class FileSystem
 				return nil
 		return e
 		
-	static int mount(BlockDevice dev, out FileEntry dir, cstring fs_name)
+	func static mount(dev: BlockDevice, out dir: FileEntry, fs_name: cstring) -> int
 		if !&dev
 			return -1
 		if !&dir
@@ -354,13 +354,13 @@ class FileSystem
 		dir.mount = mp
 		prints(" ok\n")
 		return 0
-	static MountPoint* add_mount_point()
+	func static add_mount_point() -> MountPoint*
 		for m in mounts
 			if !m.dev
 				return &m
 		return nil
 	
-	static void sync()
+	func static sync()
 		for m in mounts
 			if m.dev
 				m.sync()
@@ -368,18 +368,18 @@ class FileSystem
 
 class MountPointMichiFS extends MountPoint
 	
-	int read_int()
+	func read_int() -> int
 		int *p = &buf[buf_used]
 		buf_used += 4
 		return *p
-	void read_str(out cstring s)
+	func read_str(out s: cstring)
 		int l = buf[buf_used] + buf[buf_used+1]*256
 		buf_used += 2
 		for i in 0:l
 			s[i] = buf[buf_used + i]
 		buf_used += l
 		s[l] = 0
-	override int mount()
+	func override mount() -> int
 		buf = Heap.malloc(2048)
 		update_sizes(2048, 0)
 		read_block(1, buf)
@@ -402,7 +402,7 @@ class MountPointMichiFS extends MountPoint
 
 class MountPointExt2 extends MountPoint
 	
-	override int mount()
+	func override mount() -> int
 		#prints("EXT2.mount")
 		buf = Heap.malloc(4096)
 		update_sizes(1024, 0) # temp
@@ -437,12 +437,12 @@ class MountPointExt2 extends MountPoint
 			read_inode_recursive(2, dest)
 		return 0
 	
-	void write_meta_data()
+	func write_meta_data()
 		AtaController.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)
 		write_block(1 + block_size / 1024, &bg)
 			
 	
-	void test_compatibility()
+	func test_compatibility()
 		readable = false
 		writable = false
 		if (sb.feature_incompat & 0xfffffffd) > 0
@@ -452,7 +452,7 @@ class MountPointExt2 extends MountPoint
 			return
 		writable = true
 	
-	int write_inode_simple(FileEntry e)
+	func write_inode_simple(e: FileEntry) -> int
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
@@ -484,7 +484,7 @@ class MountPointExt2 extends MountPoint
 		
 		return 0
 	
-	void read_inode(int index, Ext2Inode inode, out FileEntry e)
+	func read_inode(index: int, inode: Ext2Inode, out e: FileEntry)
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
 		# group_no!!!!!!!!!!!!!!
@@ -510,7 +510,7 @@ class MountPointExt2 extends MountPoint
 				e.add_block(p[i - 12])
 	
 	
-	cstring *read_inode_contents(FileEntry e)
+	func read_inode_contents(e: FileEntry) -> cstring*
 		cstring *buf = Heap.malloc(e.num_blocks * block_size)
 		for i in 0:e.num_blocks
 			read_block(e.blocks[i], &buf[i * block_size])
@@ -522,7 +522,7 @@ class MountPointExt2 extends MountPoint
 #		for i in 0:e.num_blocks
 #			write_block(e.blocks[i], &buf[i * block_size])
 	
-	void read_inode_recursive(int index, out FileEntry dir)
+	func read_inode_recursive(index: int, out dir: FileEntry)
 		Ext2Inode inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()
@@ -551,12 +551,12 @@ class MountPointExt2 extends MountPoint
 				read_inode_recursive(d.inode, e)
 		Heap.free(cont)
 		
-	override int write_inode(out FileEntry e)
+	func override write_inode(out e: FileEntry) -> int
 		if e.type == FILE_TYPE_DIR
 			return write_inode_dir(e)
 		return write_inode_simple(e)
 	
-	int write_inode_dir(out FileEntry dir)
+	func write_inode_dir(out dir: FileEntry) -> int
 		cstring fn
 		dir.get_path(fn)
 		cstring *b = Heap.malloc(4096*8)
@@ -602,7 +602,7 @@ class MountPointExt2 extends MountPoint
 		Heap.free(b)
 		return 0
 	
-	override int alloc_inode()
+	func override alloc_inode() -> int
 		int n = sb.inodes_per_group / 32
 		for i in 0:n
 			int b = inode_bitmap[i]
@@ -618,7 +618,7 @@ class MountPointExt2 extends MountPoint
 					return i * 32 + j
 		return -1
 	
-	override int alloc_block()
+	func override alloc_block() -> int
 		#prints(" AB ")
 		int n = sb.blocks_per_group / 32
 		for i in 0:n
@@ -636,7 +636,7 @@ class MountPointExt2 extends MountPoint
 					return i * 32 + j
 		return -1
 	
-	override int free_block(int index)
+	func override free_block(index: int) -> int
 		#prints(" FB ")
 		#printi(index)
 		int bmi = index >> 5 # index/32
@@ -653,7 +653,7 @@ class MountPointExt2 extends MountPoint
 		dirty = true
 		return 0
 	
-	override int free_inode(int index)
+	func override free_inode(index: int) -> int
 		int bmi = index >> 5 # index/32
 		int bit = index & 0x1f # index%32
 		int mask = 1 << bit
@@ -668,7 +668,7 @@ class MountPointExt2 extends MountPoint
 		dirty = true
 		return 0
 	
-	override int sync()
+	func override sync() -> int
 		if !dirty
 			return 0
 		write_meta_data()

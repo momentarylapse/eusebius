@@ -2,10 +2,10 @@
 use common
 use io.text
 
-void f(void* p)
+func f(p: void*)
 	prints("hallo func pointer")
 
-void main()
+func main()
 
 	TextMode.init()
 	TextMode.clear()

@@ -1,7 +1,7 @@
 use lib.std
 
 
-void show_mount(MountInfo m)
+func show_mount(m: MountInfo)
 	BlockDevice d
 	if blockinfo(m.major, m.minor, d)
 		print(" {{cs2s(d.name)|-10}} {{fs_type(d)|-8}} {{cs2s(m.dir)}}\n")
@@ -9,7 +9,7 @@ void show_mount(MountInfo m)
 		print(" ???        ???       {{cs2s(m.dir)}}\n")
 
 
-string fs_type(BlockDevice p)
+func fs_type(p: BlockDevice) -> string
 	if p.type == 0x83
 		return "ext2"
 	if p.type == 0x20
@@ -24,7 +24,7 @@ string fs_type(BlockDevice p)
 		return "extended..."
 	return "???"
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

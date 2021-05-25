@@ -1,25 +1,25 @@
 use common
 
-const int MAX_SEMAPHORES_PER_SET = 32
-const int MAX_SEMAPHORE_SETS = 64
+const MAX_SEMAPHORES_PER_SET = 32
+const MAX_SEMAPHORE_SETS = 64
 
 class Semaphore
-	int value
+	var value: int
 
 class SemaphoreSet
-	int key
-	int pid
-	int num
-	Semaphore[MAX_SEMAPHORES_PER_SET] sem
+	var key: int
+	var pid: int
+	var num: int
+	var sem: Semaphore[MAX_SEMAPHORES_PER_SET]
 
 class SemaphoreController
-	SemaphoreSet[MAX_SEMAPHORE_SETS] sets
+	var sets: SemaphoreSet[MAX_SEMAPHORE_SETS]
 	
-	void init()
+	func init()
 		for s in sets
 			s.key = -1
 	
-	int create(int key, int num, int pid)
+	func create(key: int, num: int, pid: int) -> int
 		if num > MAX_SEMAPHORES_PER_SET
 			return -1
 		for s,i in sets

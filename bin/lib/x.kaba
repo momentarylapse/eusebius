@@ -1,51 +1,51 @@
 use lib.std
 
-const int XCMD_KILL = 666
-const int XCMD_NEW_WINDOW = 1024
-const int XCMD_DEL_WINDOW = 1025
-const int XCMD_WINDOW_MOVE = 1026
-const int XCMD_WINDOW_INVALIDATE = 1027
-const int XCMD_WINDOW_GET_SIZE = 2048
-const int XCMD_WINDOW_GET_POS = 2049
-const int XCMD_WINDOW_DRAG_START = 2050
-const int XCMD_WINDOW_DRAG_STOP = 2051
-const int XCMD_WINDOW_ACTIVATE = 2052
-const int XCMD_POINTER_GET_WINDOW = 3072
-const int XCMD_EXECUTE = 4096
+const XCMD_KILL = 666
+const XCMD_NEW_WINDOW = 1024
+const XCMD_DEL_WINDOW = 1025
+const XCMD_WINDOW_MOVE = 1026
+const XCMD_WINDOW_INVALIDATE = 1027
+const XCMD_WINDOW_GET_SIZE = 2048
+const XCMD_WINDOW_GET_POS = 2049
+const XCMD_WINDOW_DRAG_START = 2050
+const XCMD_WINDOW_DRAG_STOP = 2051
+const XCMD_WINDOW_ACTIVATE = 2052
+const XCMD_POINTER_GET_WINDOW = 3072
+const XCMD_EXECUTE = 4096
 
-const int XCMD_EVENT_MOUSE = 3072
-const int XCMD_EVENT_KEY = 3073
-const int XCMD_EVENT_DRAW = 3074
+const XCMD_EVENT_MOUSE = 3072
+const XCMD_EVENT_KEY = 3073
+const XCMD_EVENT_DRAW = 3074
 
-const int CON_STATUS_CLEAR = 0
-const int CON_STATUS_BUSY = 13
-const int CON_STATUS_SERVER_SEND = 1
-const int CON_STATUS_SERVER_ANSWER = 2
-const int CON_STATUS_CLIENT_SEND = 3
-const int CON_STATUS_CLIENT_ANSWER = 4
+const CON_STATUS_CLEAR = 0
+const CON_STATUS_BUSY = 13
+const CON_STATUS_SERVER_SEND = 1
+const CON_STATUS_SERVER_ANSWER = 2
+const CON_STATUS_CLIENT_SEND = 3
+const CON_STATUS_CLIENT_ANSWER = 4
 
 class XRect
-	int x0, y0, x1, y1
-	int w()
+	var x0, y0, x1, y1: int
+	func w() -> int
 		return x1 - x0
-	int h()
+	func h() -> int
 		return y1 - y0
-	bool inside(int x, int y)
+	func inside(x: int, y: int) -> bool
 		return x >= x0 and x < x1 and y >= y0 and y < y1
-	string __str__()
+	func __str__() -> string
 		return "{{x0}}/{{y0}}:{{x1}}/{{y1}}"
 
 class XWindow
-	int x, y, w, h
-	int id
-	int[0]* buf
-	XConnection *con
+	var x, y, w, h: int
+	var id: int
+	var buf: int[0]*
+	var con: XConnection*
 	
-	bool active
-	bool lbut, mbut, rbut
-	int mx, my
+	var active: bool
+	var lbut, mbut, rbut: bool
+	var mx, my: int
 	
-	void __init__(out XConnection *c, int x, int y, int w, int h)
+	func __init__(out c: XConnection*, x: int, y: int, w: int, h: int)
 		con = c
 		buf = nil
 		self.x = x
@@ -59,63 +59,63 @@ class XWindow
 		my = 0
 		active = false
 		c._create_win(&self, x, y, w, h)
-	virtual void __delete__()
+	func virtual __delete__()
 		if buf
 			shmdt(buf)
 		for w,i in con.windows
 			if w == &self
 				con.windows.remove(i)
 				break
-	void create_buf(int _id, int key)
+	func create_buf(_id: int, key: int)
 		id = _id
 		int mem_id = shmget(key, 0, 0)
 		buf = shmat(mem_id, 0)
 		if !buf
 			kprint("  -- client: konnte Fenster-Puffer nicht anlegen --\n")
-	void invalidate(int x0, int y0, int x1, int y1)
+	func invalidate(x0: int, y0: int, x1: int, y1: int)
 		print("inval...")
 		con.send(XCMD_WINDOW_INVALIDATE, id, x0, y0, x1, y1)
-	void invalidate_all()
+	func invalidate_all()
 		print("inval all...")
 		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
-	void move(int x, int y)
+	func move(x: int, y: int)
 		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
-	void get_size(out int *w, out int *h)
+	func get_size(out w: int*, out h: int*)
 		con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
 		con.wait_recv(XCMD_WINDOW_GET_SIZE)
 		*w = con.buf[2]
 		*h = con.buf[3]
-	void activate()
+	func activate()
 		con.send(XCMD_WINDOW_ACTIVATE, id, 0, 0, 0, 0)
-	void drag_start()
+	func drag_start()
 		con.just_send(XCMD_WINDOW_DRAG_START, id, 0, 0, 0, 0)
-	void drag_stop()
+	func drag_stop()
 		con.just_send(XCMD_WINDOW_DRAG_STOP, id, 0, 0, 0, 0)
-	void close()
+	func close()
 		con.just_send(XCMD_DEL_WINDOW, id, 0, 0, 0, 0)
-	virtual void on_key(int key)
+	func virtual on_key(key: int)
 		#print("c-win: key " + key + "\n")
-	virtual void on_mouse_move()
-	virtual void on_mouse_left_button_down()
-	virtual void on_mouse_left_button_up()
-	virtual void on_mouse_middle_button_down()
-	virtual void on_mouse_middle_button_up()
-	virtual void on_mouse_right_button_down()
-	virtual void on_mouse_right_button_up()
+	func virtual on_mouse_move()
+	func virtual on_mouse_left_button_down()
+	func virtual on_mouse_left_button_up()
+	func virtual on_mouse_middle_button_down()
+	func virtual on_mouse_middle_button_up()
+	func virtual on_mouse_right_button_down()
+	func virtual on_mouse_right_button_up()
 		#print("c-win: mouse " + x + "/" + y + "   " + flags + "\n")
-	virtual void handle_activate()
+	func virtual handle_activate()
 		
 
 class XConnection
-	int sock
-	int[8] buf
-	bool error
-	XWindow*[] windows
-	int mx, my
-	bool lbut, mbut, rbut
-	XWindow* cursor_win
+	var sock: int
+	var buf: int[8]
+	var error: bool
+	var windows: XWindow*[]
+	var mx, my: int
+	var lbut, mbut, rbut: bool
+	var cursor_win: XWindow*
 	
-	void __init__()
+	func __init__()
 		error = true
 		
 		lbut = false
@@ -131,13 +131,13 @@ class XConnection
 	
 		error = false
 		
-	void __delete__()
+	func __delete__()
 		if error
 			return
 		send_exit()
 		close(sock)
 	
-	void just_send(int cmd, int p1, int p2, int p3, int p4, int p5)
+	func just_send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
 		kprint(" c:send ")
 		buf[0] = cmd
 		buf[1] = p1
@@ -149,14 +149,14 @@ class XConnection
 		kprint(str(r))
 		kprint(" c:/send ")
 	
-	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
+	func send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
 		just_send(cmd, p1, p2, p3, p4, p5)
 	
-	void send_string(string s)
+	func send_string(s: string)
 		write(sock, &s.num, 4)
 		write(sock, &s[0], s.num)
 	
-	void wait_recv(int cmd)
+	func wait_recv(cmd: int)
 		kprint(" WAIT ")
 		while true
 			if poll()
@@ -165,10 +165,10 @@ class XConnection
 			usleep(100)
 		kprint(" /WAIT ")
 
-	void send_exit()
+	func send_exit()
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
-	bool _create_win(out XWindow *win, int x, int y, int w, int h)
+	func _create_win(out win: XWindow*, x: int, y: int, w: int, h: int) -> bool
 		kprint("client: send new win\n")
 		just_send(XCMD_NEW_WINDOW, x, y, w, h, 0)
 		

@@ -5,26 +5,26 @@ use io.text
 #--------------------------------------------------------------
 # memory "management"
 
-const int MEM_HEAP_OFFSET = 0x00280000
-const int MEM_HEAP_SIZE = 0x00580000 # 5.5mb
+const MEM_HEAP_OFFSET = 0x00280000
+const MEM_HEAP_SIZE = 0x00580000 # 5.5mb
 
 class Heap
 
-	static int allocated # includes overhead of all headers
+	var static allocated: int # includes overhead of all headers
 
 
 	class MallocHeader
-		int size # header + payload
-		MallocHeader *next
-		MallocHeader *prev
-		const void *after()
+		var size: int
+		var next: MallocHeader*
+		var prev: MallocHeader*
+		func const after() -> void*
 			char[0]* pp = &self
 			return &pp[size]
-		const void *payload()
+		func const payload() -> void*
 			char[0]* pp = &self
 			return &pp[sizeof(MallocHeader)]
-	static MallocHeader *first_free
-	static MallocHeader *end_marker
+	var static first_free: MallocHeader*
+	var static end_marker: MallocHeader*
 
 	# heap is split into a (hole-free) list of blocks
 	# blocks are either free or allocated
@@ -32,7 +32,7 @@ class Heap
 	# allocated blocks are not linked
 
 
-	static void *malloc(int _size)
+	func static malloc(_size: int) -> void*
 		int size = ceil_quot(_size, 8) << 3
 		#prints "<+"
 		#printi size
@@ -64,7 +64,7 @@ class Heap
 		panic("malloc: fail")
 		return nil
 
-	static void _cleanup(out MallocHeader *h)
+	func static _cleanup(out h: MallocHeader*)
 		if h.after() == h.next
 			allocated -= sizeof(MallocHeader)
 			#prints(" merge after ")
@@ -78,7 +78,7 @@ class Heap
 			h.next.prev = h.prev
 			h.prev.next = h.next
 
-	static void free(void *p)
+	func static free(p: void*)
 		if !p
 			return
 		int ip = _p2i(p)
@@ -121,7 +121,7 @@ class Heap
 
 
 
-	static void memcheck()
+	func static memcheck()
 		MallocHeader *h = first_free
 		while h.next
 			if _p2i(h.next) < _p2i(h) + h.size
@@ -130,7 +130,7 @@ class Heap
 				panic("memcheck: h!=h.next.prev")
 			h = h.next
 
-	static void* realloc(void* po, int old_size, int new_size)
+	func static realloc(po: void*, old_size: int, new_size: int) -> void*
 		void *pn = malloc(new_size)
 		int n = old_size
 		if new_size < n
@@ -139,7 +139,7 @@ class Heap
 		free(po)
 		return pn
 
-	static void init()
+	func static init()
 		# intentionally leave a 8b gap to prevent merging
 		allocated = sizeof(MallocHeader)*2 - 8
 		first_free = _i2p(MEM_HEAP_OFFSET)

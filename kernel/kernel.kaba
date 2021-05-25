@@ -18,11 +18,11 @@ use irq.irq
 use irq.error
 use syscall
 
-const int KALIB_LOCATION = 0x00050000
+const KALIB_LOCATION = 0x00050000
 
 
 
-void load_kalib()
+func load_kalib()
 	prints("loading kalib... ")
 	int h = kernel_task.open("/lib/kalib", O_RDONLY)
 	if h < 0
@@ -40,7 +40,7 @@ void load_kalib()
 	prints("b  ok\n")
 
 
-void main()
+func main()
 	read_data_from_init()
 	TextMode.init()
 	

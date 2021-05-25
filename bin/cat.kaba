@@ -1,7 +1,7 @@
 use lib.std
 
 
-void cat(int h)
+func cat(h: int)
 	string s
 	while true
 		s.resize(128)
@@ -14,7 +14,7 @@ void cat(int h)
 		print(s)
 
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

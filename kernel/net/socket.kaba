@@ -6,8 +6,8 @@ use mem.paging
 
 
 
-const int MAX_SOCKETS = 64
-const int SOCKET_BUFFER_SIZE = 1024
+const MAX_SOCKETS = 64
+const SOCKET_BUFFER_SIZE = 1024
 
 
 enum
@@ -19,21 +19,21 @@ enum
 
 
 class KSocket
-	int _index
-	bool used
-	FileEntry *e
-	int type # ...
-	int port
-	int peer_port
-	int state
-	bool blocking
-	int ref_count
-	char[0]* buffer
-	int buffer_used
+	var _index: int
+	var used: bool
+	var e: FileEntry*
+	var type: int
+	var port: int
+	var peer_port: int
+	var state: int
+	var blocking: bool
+	var ref_count: int
+	var buffer: char[0]*
+	var buffer_used: int
 	
-	int _accept_wait_port
+	var _accept_wait_port: int
 	
-	int write(PageDirectory page_dir, int addr, int size)
+	func write(page_dir: PageDirectory, addr: int, size: int) -> int
 		if peer_port < 0
 			return -ENOTCONN
 		KSocket *s = SocketManager.get_by_port(peer_port)
@@ -45,7 +45,7 @@ class KSocket
 		s.buffer_used += size
 		return size
 	
-	int read(PageDirectory page_dir, int addr, int _size)
+	func read(page_dir: PageDirectory, addr: int, _size: int) -> int
 		int size = _size
 		if buffer_used == 0
 			if peer_port < 0
@@ -60,26 +60,26 @@ class KSocket
 			buffer[i] = buffer[i + size]
 		return size
 	
-	void set_state(int _state)
+	func set_state(_state: int)
 		state = _state
 		
-	int bind(int _port)
+	func bind(_port: int) -> int
 		if SocketManager.get_by_port(_port)
 			return -EADDRINUSE
 		port = _port
 		return 0
 		
-	void link(out KSocket *s)
+	func link(out s: KSocket*)
 		s.peer_port = port
 		peer_port = s.port
 		
-	int listen()
+	func listen() -> int
 		if port < 0
 			return -EINVAL
 		set_state(SOCK_STATE_LISTENING)
 		return 0
 		
-	int accept()
+	func accept() -> int
 		if state == SOCK_STATE_WAIT_ACCEPT
 			# "remote socket"
 			KSocket *rs = SocketManager.get_by_port(_accept_wait_port)
@@ -100,7 +100,7 @@ class KSocket
 			return -ECONNREFUSED
 		return -EWOULDBLOCK
 		
-	int connect(int _port)
+	func connect(_port: int) -> int
 		KSocket *rs = SocketManager.get_by_port(_port)
 		if !rs
 			return -ECONNREFUSED
@@ -114,13 +114,13 @@ class KSocket
 		
 		return -EWOULDBLOCK
 		
-	void assign_available_port()
+	func assign_available_port()
 		for p in 10000:20000
 			if !SocketManager.get_by_port(p)
 				bind(p)
 				return
 		
-	void unref()
+	func unref()
 		ref_count --
 			
 		if ref_count < 0
@@ -129,7 +129,7 @@ class KSocket
 		if ref_count == 0
 			clean_up()
 	
-	void clean_up()
+	func clean_up()
 		if peer_port >= 0
 			# "unconnect"
 			KSocket *s = SocketManager.get_by_port(peer_port)
@@ -141,11 +141,11 @@ class KSocket
 
 
 class SocketManager
-	static KSocket[MAX_SOCKETS] sockets
+	var static sockets: KSocket[MAX_SOCKETS]
 
 
 
-	static KSocket* create(FileEntry e, int type)
+	func static create(e: FileEntry, type: int) -> KSocket*
 		for s in sockets
 			if !s.used
 				s.used = true
@@ -162,20 +162,20 @@ class SocketManager
 		return nil
 
 
-	static KSocket* get_by_port(int port)
+	func static get_by_port(port: int) -> KSocket*
 		for s in sockets
 			if s.used and s.port == port
 				return &s
 		return nil
 	
-	static KSocket* get(FileEntry e)
+	func static get(e: FileEntry) -> KSocket*
 		for s in sockets
 			if s.used and s.e == &e
 				return &s
 		return nil
 
 
-	static void init()
+	func static init()
 		for s,i in sockets
 			s._index = i
 			s.used = false

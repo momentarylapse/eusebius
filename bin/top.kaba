@@ -9,17 +9,17 @@ enum
 	TASK_STATUS_INTERRUPT
 	#TASK_STATUS_DEAD
 
-void fill(out string s, int n)
+func fill(out s: string, n: int)
 	while len(s) < n
 		s.add(' ')
 
-string i2s2(int i, int n)
+func i2s2(i: int, n: int) -> string
 	string s2 = str(i)
 	string s1
 	fill(s1, n - len(s2))
 	return s1 + s2
 
-string sec2s(int _sec)
+func sec2s(_sec: int) -> string
 	int hour = _sec / 3600
 	int min = (_sec / 60) % 60
 	int sec = _sec % 60
@@ -32,13 +32,13 @@ string sec2s(int _sec)
 		return "{{hour|3}}:{{s}}"
 	return "   " + s
 
-string task_mode(TaskInfo t)
+func task_mode(t: TaskInfo) -> string
 	if t.mode == 0
 		return "K"
 	else
 		return "U"
 
-string task_status(TaskInfo t)
+func task_status(t: TaskInfo) -> string
 	if t.status == TASK_STATUS_RUNNING
 		return "R"
 	if t.status == TASK_STATUS_SLEEPING
@@ -51,7 +51,7 @@ string task_status(TaskInfo t)
 		return "I"
 	return str(t.status)
 
-void show_task(TaskInfo t, bool show_parent)
+func show_task(t: TaskInfo, show_parent: bool)
 	string s = "{{t.pid|3}}   "
 	int d = 0
 	if show_parent
@@ -61,14 +61,14 @@ void show_task(TaskInfo t, bool show_parent)
 	print(s)
 	print("\n")
 
-string mem(int size)
+func mem(size: int) -> string
 	if size < 10000
 		return "{{size}}"
 	if size < 10000000
 		return "{{size>>10}}k"
 	return "{{size>>20}}m"
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

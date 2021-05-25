@@ -7,7 +7,7 @@ use lib_math
 use lib_image
 
 
-int execute(string[] arg, int fd_in, int fd_out)
+func execute(arg: string[], fd_in: int, fd_out: int) -> int
 	cstring tt_arg
 	sa2cs(arg, tt_arg)
 	__temp_p__ = &tt_arg
@@ -24,7 +24,7 @@ int execute(string[] arg, int fd_in, int fd_out)
 	return lib_error
 
 
-void get_args(out lib__string@list arg)
+func get_args(out arg: lib__string@list)
 	cstring cs
 	__temp_p__ = &cs
 	asm{
@@ -48,13 +48,13 @@ void get_args(out lib__string@list arg)
 
 
 class lib__Exception
-	lib__string msg
-	void __init__(lib__string _msg)
+	var msg: lib__string
+	func __init__(_msg: lib__string)
 		msg = _msg
-	virtual lib__string __str__()
+	func virtual __str__() -> lib__string
 		return msg
 
-void lib__raise(lib__Exception* e)
+func lib__raise(e: lib__Exception*)
 	string* msg = &e.msg
 	lib_print_endl = false
 	lib__print("\n  EXCEPTION:    ")
@@ -65,18 +65,18 @@ void lib__raise(lib__Exception* e)
 #--------------------------------------------------------------------------
 # start
 
-void signal_handler_segv()
+func signal_handler_segv()
 	#kprint("--->SEGFAULT<--")
 	lib_print_endl = true
 	lib__print("  -- Segmentation Fault --\n")
 	exit(1)
-void signal_handler_x()
+func signal_handler_x()
 	#kprint("--->SEGFAULT<--")
 	lib_print_endl = true
 	lib__print("  -- XXXX --\n")
 	exit(1)
 
-void _init_memory()
+func _init_memory()
 	__free_error__ = false
 	lib_mem_debug = false
 	
@@ -97,7 +97,7 @@ void _init_memory()
 	malloc_small_block = lib__@malloc(sizeof(MallocSmallBlock))
 	malloc_small_block.init()
 
-void init_lib()
+func init_lib()
 	lib_print_endl = true
 	_init_memory()
 	

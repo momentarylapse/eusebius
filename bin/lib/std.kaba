@@ -1,170 +1,170 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use os
 
-const int O_RDONLY = 1
-const int O_WRONLY = 2
-const int O_RDWR = 3
-const int O_APPEND = 16
-const int O_CREATE = 32
-const int O_NONBLOCK = 64
-const int O_TRUNC = 128
+const O_RDONLY = 1
+const O_WRONLY = 2
+const O_RDWR = 3
+const O_APPEND = 16
+const O_CREATE = 32
+const O_NONBLOCK = 64
+const O_TRUNC = 128
 
 
-const int EWOULDBLOCK = 128
-const int ENOSPC = 127
-const int EACCES = 126
-const int EEXIST = 125
-const int EINVAL = 124
-const int ENOENT = 123
-const int ENOMEM = 122
-const int ESRCH = 121
-const int ECHILD = 120
-const int EBADF = 119
-const int ENFILE = 118
-const int EFAULT = 117
-const int ENOSYS = 116
-const int ENOTDIR = 115
-const int EISDIR = 114
-const int ENOTEMPTY = 113
-const int ENOTSOCK = 112
-const int EADDRINUSE = 111
-const int ECONNREFUSED = 110
-const int ENOTCONN = 109
+const EWOULDBLOCK = 128
+const ENOSPC = 127
+const EACCES = 126
+const EEXIST = 125
+const EINVAL = 124
+const ENOENT = 123
+const ENOMEM = 122
+const ESRCH = 121
+const ECHILD = 120
+const EBADF = 119
+const ENFILE = 118
+const EFAULT = 117
+const ENOSYS = 116
+const ENOTDIR = 115
+const EISDIR = 114
+const ENOTEMPTY = 113
+const ENOTSOCK = 112
+const EADDRINUSE = 111
+const ECONNREFUSED = 110
+const ENOTCONN = 109
 
-const int F_GETFL = 1
-const int F_SETFL = 2
+const F_GETFL = 1
+const F_SETFL = 2
 
-const int SEEK_SET = 1
-const int SEEK_CUR = 2
-const int SEEK_END = 3
+const SEEK_SET = 1
+const SEEK_CUR = 2
+const SEEK_END = 3
 
-const int SIGKILL = 9
-const int SIGSEGV = 11
-const int SIGCONT = 18
-const int SIGSTOP = 19
-const int SIGX = 23
+const SIGKILL = 9
+const SIGSEGV = 11
+const SIGCONT = 18
+const SIGSTOP = 19
+const SIGX = 23
 
 
 
-const int SHM_ABSOLUTE = 1 << 20
-const int SHM_DEST = 1<<11
-const int IPC_CREAT = 1<<12
-const int IPC_EXCL = 1<<13
+const SHM_ABSOLUTE = 1 << 20
+const SHM_DEST = 1<<11
+const IPC_CREAT = 1<<12
+const IPC_EXCL = 1<<13
 
 class TimeValue
-	int sec, nanosec
+	var sec, nanosec: int
 
 class SysInfo
-	int uptime
-	int[3] loads
-	int totalram, freeram, sharedram, bufferram
-	int totalswap, freeswap
-	int procs
-	int totalhigh, freehigh
-	int mem_unit
-	int[2] pad
-	int totalheap, freeheap
+	var uptime: int
+	var loads: int[3]
+	var totalram, freeram, sharedram, bufferram: int
+	var totalswap, freeswap: int
+	var procs: int
+	var totalhigh, freehigh: int
+	var mem_unit: int
+	var pad: int[2]
+	var totalheap, freeheap: int
 
 class TaskInfo
-	cstring name
-	int pid, ppid, mode, status
-	int mem
-	int cpu
-	TimeValue life
-	void __assign__(TaskInfo o)
+	var name: cstring
+	var pid, ppid, mode, status: int
+	var mem: int
+	var cpu: int
+	var life: TimeValue
+	func __assign__(o: TaskInfo)
 		pass
 
 class MountInfo
-	int major, minor
-	cstring dir
-	void __assign__(MountInfo o)
+	var major, minor: int
+	var dir: cstring
+	func __assign__(o: MountInfo)
 		pass
 class BlockDevice
-	int major, minor
-	int disk_no
-	int offset, size
-	int block_size
-	char type
-	bool active
-	cstring name
-	void *p
-	void __assign__(BlockDevice o)
+	var major, minor: int
+	var disk_no: int
+	var offset, size: int
+	var block_size: int
+	var type: char
+	var active: bool
+	var name: cstring
+	var p: void*
+	func __assign__(o: BlockDevice)
 		pass
 
 class StatData
-	cstring name
-	int type
-	int size
-	int inode
-	int mp_inode
-	int time
-	void __assign__(StatData o)
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
+	func __assign__(o: StatData)
 		pass
 
-extern void init_lib()
-extern void get_args(string[] arg)
+func extern init_lib()
+func extern get_args(arg: string[])
 
-extern int *malloc_first_free
+var extern malloc_first_free: int*
 
-extern int stdin, stdout
-extern int lib_error
-extern bool lib_mem_debug
-extern bool lib_print_endl
+var extern stdin, stdout: int
+var extern lib_error: int
+var extern lib_mem_debug: bool
+var extern lib_print_endl: bool
 
-extern string cs2s(cstring cs)
-extern string binary(void *p, int num)
+func extern cs2s(cs: cstring) -> string
+func extern binary(p: void*, num: int) -> string
 
-extern bool exit(int r)
-extern int execute(string[] arg, int fd_in, int fd_out)
-extern int fork()
-extern int open(Path filename, int flags)
-extern int create(Path filename)
-extern bool close(int h)
-extern int read(int h, void *buf, int size)
-extern int write(int h, void *buf, int size)
-extern int seek(int h, int offset, int mode)
-extern bool mkdir(Path filename)
-extern bool rmdir(Path filename)
-extern bool mkfifo(Path filename)
-extern bool unlink(Path filename)
-extern int dup(int h)
-extern bool pipe(int[2] h)
-extern int fcntl(int h, int op, int param)
-extern int getpid()
-extern bool chdir(Path dir)
-extern int waitpid(int pid, void *status, bool block)
-extern bool kill(int pid, int signal)
-extern int shmget(int key, int size, int flags)
-extern void* shmat(int id, int flags)
-extern bool shmdt(void* p)
-extern bool waitmsg()
-extern bool yield(int pid)
-extern bool sysinfo(SysInfo s)
-extern bool taskinfo(int pid, out TaskInfo t)
-extern bool mountinfo(int index, out MountInfo i)
-extern bool blockinfo(int major, int minor, out BlockDevice d)
-extern bool stat(Path filename, out StatData s)
-extern bool sched_yield(int pid)
-extern bool uname(void *buf)
-extern bool time(TimeValue t)
-extern bool nanosleep(TimeValue a, TimeValue b)
-extern bool sleep(int sec)
-extern bool usleep(int usec)
-extern bool sigaction(int sig, void* f)
-extern bool mapirq(int irq, int signal)
-extern int addr2phys(void *p)
+func extern exit(r: int) -> bool
+func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
+func extern fork() -> int
+func extern open(filename: Path, flags: int) -> int
+func extern create(filename: Path) -> int
+func extern close(h: int) -> bool
+func extern read(h: int, buf: void*, size: int) -> int
+func extern write(h: int, buf: void*, size: int) -> int
+func extern seek(h: int, offset: int, mode: int) -> int
+func extern mkdir(filename: Path) -> bool
+func extern rmdir(filename: Path) -> bool
+func extern mkfifo(filename: Path) -> bool
+func extern unlink(filename: Path) -> bool
+func extern dup(h: int) -> int
+func extern pipe(h: int[2]) -> bool
+func extern fcntl(h: int, op: int, param: int) -> int
+func extern getpid() -> int
+func extern chdir(dir: Path) -> bool
+func extern waitpid(pid: int, status: void*, block: bool) -> int
+func extern kill(pid: int, signal: int) -> bool
+func extern shmget(key: int, size: int, flags: int) -> int
+func extern shmat(id: int, flags: int) -> void*
+func extern shmdt(p: void*) -> bool
+func extern waitmsg() -> bool
+func extern yield(pid: int) -> bool
+func extern sysinfo(s: SysInfo) -> bool
+func extern taskinfo(pid: int, out t: TaskInfo) -> bool
+func extern mountinfo(index: int, out i: MountInfo) -> bool
+func extern blockinfo(major: int, minor: int, out d: BlockDevice) -> bool
+func extern stat(filename: Path, out s: StatData) -> bool
+func extern sched_yield(pid: int) -> bool
+func extern uname(buf: void*) -> bool
+func extern time(t: TimeValue) -> bool
+func extern nanosleep(a: TimeValue, b: TimeValue) -> bool
+func extern sleep(sec: int) -> bool
+func extern usleep(usec: int) -> bool
+func extern sigaction(sig: int, f: void*) -> bool
+func extern mapirq(irq: int, signal: int) -> bool
+func extern addr2phys(p: void*) -> int
 
-extern void kprint(string s)
-extern void kprinti(int i)
+func extern kprint(s: string)
+func extern kprinti(i: int)
 
-extern int socket(int type)
-extern bool bind(int fd, int port)
-extern bool connect(int fd, int port)
-extern bool listen(int fd)
-extern int accept(int fd)
+func extern socket(type: int) -> int
+func extern bind(fd: int, port: int) -> bool
+func extern connect(fd: int, port: int) -> bool
+func extern listen(fd: int) -> bool
+func extern accept(fd: int) -> int
 
-extern void memcpy(void* dest, void* source, int size)
+func extern memcpy(dest: void*, source: void*, size: int)
 
 # because std lib is 64bit...
-extern int Filesystem_size32(Path filename)
+func extern Filesystem_size32(filename: Path) -> int
 

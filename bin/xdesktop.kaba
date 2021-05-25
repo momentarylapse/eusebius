@@ -3,19 +3,19 @@ use lib.mtk.mtk
 use lib.draw
 
 class LauncherButton extends MtkButton
-	string[] program
-	override void __init__(string title) # kaba bug...
+	var program: string[]
+	func override __init__(title: string)
 	
-	void __init__(string title, string[] program)
+	func __init__(title: string, program: string[])
 		super.__init__(title)
 		self.program = program
-	override void on_click()
+	func override on_click()
 		if xcon.execute(program) < 0
 			#print("run " + program + " FAIL")
 			mtk_error_box("run {{program}} FAIL")
 
 class LauncherBar extends MtkWindow
-	void __init__()
+	func __init__()
 		super.__init__("", 95, 200)
 		#super.__init__("Test", 1024, 32)
 		move(0, 0)#-30)
@@ -30,7 +30,7 @@ class LauncherBar extends MtkWindow
 		g.put(0, 4, new LauncherButton("Cake", ["/bin/cake"]))
 		
 
-void main()
+func main()
 	mtk_init()
 
 	var bar = new LauncherBar()

@@ -3,21 +3,21 @@ use io.text
 use mem.heap
 use mem.paging
 
-const int MAX_SHARED_MEMORY_BLOCKS = 256
+const MAX_SHARED_MEMORY_BLOCKS = 256
 
 
 class SharedMemory
 
 	class Block
-		int id
-		int key # -1 = unused
-		int pid
-		int size
-		int p
-		int refcount
-		int flags
+		var id: int
+		var key: int
+		var pid: int
+		var size: int
+		var p: int
+		var refcount: int
+		var flags: int
 	
-		void unref()
+		func unref()
 			refcount --
 		
 			if refcount == 0 and (flags & SHM_DEST) > 0
@@ -25,24 +25,24 @@ class SharedMemory
 			if refcount < 0
 				panic("SharedMem.refcount < 0")
 	
-		void clean_up()
+		func clean_up()
 			Paging.free_chunk(p, size)
 			key = -1
-	static Block[MAX_SHARED_MEMORY_BLOCKS] blocks
+	var static blocks: Block[MAX_SHARED_MEMORY_BLOCKS]
 	
-	static void init()
+	func static init()
 		for b,i in blocks
 			b.id = i
 			b.key = -1
 	
-	static int get_used()
+	func static get_used() -> int
 		int size = 0
 		for b in blocks
 			if b.key >= 0
 				size += b.size
 		return size
 	
-	static int create(int key, int size, int flags, int pid)
+	func static create(key: int, size: int, flags: int, pid: int) -> int
 		bool absolute = (flags & SHM_ABSOLUTE) != 0
 		if key < 0 and !absolute
 			return -EINVAL
@@ -68,7 +68,7 @@ class SharedMemory
 			return i
 		return -ENOSPC
 		
-	static Block* get_by_key(int key)
+	func static get_by_key(key: int) -> Block*
 		if key == -1
 			return nil
 		for b,i in blocks
@@ -77,14 +77,14 @@ class SharedMemory
 				return &b
 		return nil
 		
-	static Block* get(int id)
+	func static get(id: int) -> Block*
 		if id < 0 or id >= MAX_SHARED_MEMORY_BLOCKS
 			return nil
 		if blocks[id].key == -1
 			return nil
 		return &blocks[id]
 		
-	static int shm_get(int key, int size, int flags, int pid)
+	func static shm_get(key: int, size: int, flags: int, pid: int) -> int
 		var s = get_by_key(key)
 		if s
 			if (flags & IPC_CREAT) > 0 and (flags & IPC_EXCL) > 0

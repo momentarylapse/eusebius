@@ -4,14 +4,14 @@ use lib.mtk.mtk
 use lib.draw
 
 class ImageView extends MtkWidget
-	Image* im
-	void __init__(Image* im)
+	var im: Image*
+	func __init__(im: Image*)
 		self.im = im
-	override void draw()
+	func override draw()
 		p.draw_image(0, 0, im)
 
 class ImageWindow extends MtkWindow
-	void __init__(string filename, Image* im)
+	func __init__(filename: string, im: Image*)
 		super.__init__("XImage", im.width, im.height)
 		
 		var v = new ImageView(im)
@@ -20,9 +20,9 @@ class ImageWindow extends MtkWindow
 		set_title("{{filename}} - {{im.width}}x{{im.height}}")
 		
 
-ImageWindow* window
+var window: ImageWindow*
 
-void main()
+func main()
 	mtk_init()
 	string[] arg
 	get_args(arg)

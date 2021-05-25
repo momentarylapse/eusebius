@@ -1,7 +1,7 @@
 use lib.std
 
 
-void cmp(int h1, int h2)
+func cmp(h1: int, h2: int)
 	string s1, s2
 	while true
 		s1.resize(128)
@@ -30,7 +30,7 @@ void cmp(int h1, int h2)
 			return
 
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	get_args(arg)

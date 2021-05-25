@@ -17,12 +17,12 @@ use irq.irq
 use irq.error
 
 
-const int MEM_ADDR = 0x00700000 #0x0e680000
+const MEM_ADDR = 0x00700000 #0x0e680000
 
-int io_base
-int[0]* mem
+var io_base: int
+var mem: int[0]*
 
-void sb16_reset()
+func sb16_reset()
 	prints("reset...")
 	outportb(io_base + 6, 1)
 	for i in 0:1000000
@@ -36,17 +36,17 @@ void sb16_reset()
 		pass
 	prints("  ok\n")
 
-void sb16_write(int cmd)
+func sb16_write(cmd: int)
 	while (inportb(io_base + 0x0c) & 0x80) != 0
 		pass
 	outportb(io_base + 0x0c, cmd)
 
-int sb16_read()
+func sb16_read() -> int
 	while (inportb(io_base + 0x0e) & 0x80) == 0
 		pass
 	return inportb(io_base + 0x0a)
 
-void sb16_setup_dma()
+func sb16_setup_dma()
 	prints("dma")
 	int channel = 5
 	# Disable the sound card DMA channel by setting the appropriate mask bit
@@ -65,7 +65,7 @@ void sb16_setup_dma()
 	outportb(0xc6, 0x7f) # hi
 	prints("   ok\n")
 
-void sb16_set_sample_rate(int sample_rate)
+func sb16_set_sample_rate(sample_rate: int)
 	prints("sample rate")
 	sb16_write(0x41)
 	prints("2")
@@ -74,7 +74,7 @@ void sb16_set_sample_rate(int sample_rate)
 	sb16_write(sample_rate)      # lo
 	prints("   ok\n")
 
-void test_sb16()
+func test_sb16()
 	prints("sound test sound blaster 16...\n")
 	
 	io_base = 0x220
@@ -116,11 +116,11 @@ void test_sb16()
 	prints("done?\n")
 
 
-void test_ac97()
+func test_ac97()
 	prints("sound test AC97...\n")
 
 
-void main()
+func main()
 	read_data_from_init()
 	TextMode.init()
 	

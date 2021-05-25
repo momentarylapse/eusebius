@@ -7,19 +7,19 @@ use lib.io
 
 
 class Driver
-	int io_base
-	int[0]* buf_send
-	int[0]* buf_recv
-	int vendor_id, product_id
-	PCIDevice* dev
-	string mac
-	string name
-	void __init__()
+	var io_base: int
+	var buf_send: int[0]*
+	var buf_recv: int[0]*
+	var vendor_id, product_id: int
+	var dev: PCIDevice*
+	var mac: string
+	var name: string
+	func __init__()
 		dev = nil
-	static Driver* installed
-	static void my_signal_handler()
+	var static installed: Driver*
+	func static my_signal_handler()
 		installed.on_irq()
-	void install_base()
+	func install_base()
 		print("installing ethernet card: {{name}}\n")
 		#print(str(dev))
 		
@@ -36,16 +36,16 @@ class Driver
 			raise(new Exception("can't create shared memory for receive buffer"))
 		buf_recv = shmat(shm_id, 0)
 		print("mem: {{p2s(buf_send)}} {{p2s(buf_recv)}}\n")
-	bool get_device(out PCIController pci)
+	func get_device(out pci: PCIController) -> bool
 		dev = pci.get(vendor_id, product_id)
 		return dev
 	
-	virtual void install()
+	func virtual install()
 		install_base()
-	virtual void test()
-	virtual void on_irq()
+	func virtual test()
+	func virtual on_irq()
 		print("-------IRQ-------\n")
-	static Driver* choose()
+	func static choose() -> Driver*
 		var pci = new PCIController()
 		pci.scan()
 		Driver*[] drivers
@@ -59,11 +59,11 @@ class Driver
 	
 
 class DriverNE2k extends Driver
-	override void __init__()
+	func override __init__()
 		vendor_id = 0x10ec
 		product_id = 0x8029
 		name = "ne2k"
-	override void install()
+	func override install()
 		install_base()
 		
 		# perform reset
@@ -93,7 +93,7 @@ class DriverNE2k extends Driver
 		for i in 0:32
 			prom[i] = inportb(io_base + 0x10)
 		print("MAC: {{binary(&prom, 6).hex()}}\n")
-	override void test()
+	func override test()
 		
 
 		# program the PAR0..PAR5 registers to listen for packets to our MAC address!		
@@ -103,13 +103,13 @@ class DriverNE2k extends Driver
 	#};
 
 class DriverRTL8139 extends Driver
-	int cur_send_buf
-	override void __init__()
+	var cur_send_buf: int
+	func override __init__()
 		vendor_id = 0x10ec
 		product_id = 0x8139
 		name = "rtl8139"
 		cur_send_buf = 0
-	override void install()
+	func override install()
 		install_base()
 		
 		print("mapirq\n")
@@ -145,19 +145,19 @@ class DriverRTL8139 extends Driver
 		for i in 0:6
 			mac.add(inportb(io_base + i))
 		print("MAC {{mac.hex()}}\n")
-	void read_package()
+	func read_package()
 		print("receive\n")
 		print(binary(buf_recv, 20).hex())
 		print("------------END-------")
 		exit(0)
-	void send_package(string s)
+	func send_package(s: string)
 		int c = cur_send_buf
 		cur_send_buf = ((cur_send_buf + 1) % 4)
 		int[0]* buf = &buf_send[c * 4096]
 		memcpy(buf, &s[0], len(s))
 		outportd(io_base + 0x20 + c*4, addr2phys(buf)) # TSAD0
 		outportd(io_base + 0x10 + c*4, len(s)) # TSD0 size
-	override void test()
+	func override test()
 		while true
 			print("send\n")
 			usleep(1000000)
@@ -175,7 +175,7 @@ class DriverRTL8139 extends Driver
 		}
 		print("done")
 		usleep(1000000)
-	override void on_irq()
+	func override on_irq()
 		int r = inportw(io_base + 0x3e)
 		print("irq  0x{{r|4x}} ")
 		if (r & 0x8000) > 0 # system error
@@ -191,7 +191,7 @@ class DriverRTL8139 extends Driver
 				# receive ok
 				outportw(io_base + 0x3e, 0x0001)
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

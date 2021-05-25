@@ -3,7 +3,7 @@
 use common
 use io.text
 
-void main()
+func main()
 
 	TextMode.init()
 	TextMode.clear()

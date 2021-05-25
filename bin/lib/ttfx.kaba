@@ -1,65 +1,65 @@
 use os
 use lib.std
 
-string hex(void* _p, int size)
+func hex(_p: void*, size: int) -> string
 	char[0]* p = _p
 	string s
 	for i in 0:size
 		s.add(p[i])
 	return s.hex()
-string i2h(int i)
+func i2h(i: int) -> string
 	return hex(&i, 4)
 
 
-float time_dif(TimeValue t1, TimeValue t2)
+func time_dif(t1: TimeValue, t2: TimeValue) -> float
 	float d = t2.sec - t1.sec
 	d += float(t2.nanosec - t1.nanosec) * 0.000000001
 	return d
 
 
-void _read(out File *f, void* _p, int size)
+func _read(out f: File*, _p: void*, size: int)
 	char[0]* p = _p
 	string s = f.read(size)
 	for i in 0:size
 		p[i] = s[i]
 
 class TTFContour
-	int start, num
+	var start, num: int
 	
 
 class TTFGlyph
-	int code
-	float width
-	float _dummy_
-	int _num_contours_
-	TTFContour[] contours
+	var code: int
+	var width: float
+	var _dummy_: float
+	var _num_contours_: int
+	var contours: TTFContour[]
 
 class TTFFont
 	
-	string name
-	complex[] points
-	bool[] on_curve
-	TTFGlyph[] glyphs
+	var name: string
+	var points: complex[]
+	var on_curve: bool[]
+	var glyphs: TTFGlyph[]
 	
-	File *f
+	var f: File*
 	
-	int readI()
+	func readI() -> int
 		int i
 		_read(f, &i, 4)
 		return i
 	
-	float readF()
+	func readF() -> float
 		float r
 		_read(f, &r, 4)
 		return r
 	
-	bool readB()
+	func readB() -> bool
 		bool r
 		_read(f, &r, 1)
 		return r
 		
 	
-	bool load(string filename)
+	func load(filename: string) -> bool
 
 		f = Filesystem.open(filename)
 		if !f
@@ -100,7 +100,7 @@ class TTFFont
 		return true
 		
 	
-	TTFGlyph* get(int code)
+	func get(code: int) -> TTFGlyph*
 		#print("get ")
 		for g,i in glyphs
 			if g.code == code
@@ -108,7 +108,7 @@ class TTFFont
 				return &g
 		return &glyphs[0]
 		
-	float get_str_width(string text, float font_size)
+	func get_str_width(text: string, font_size: float) -> float
 		float scale = font_size
 		float w = 0
 		for c,i in text
@@ -124,7 +124,7 @@ class TTFFont
 					break
 		return w * scale
 
-TTFFont *LoadTTF(string filename)
+func LoadTTF(filename: string) -> TTFFont*
 	var f = new TTFFont()
 	if f.load(filename)
 		return f
@@ -132,18 +132,18 @@ TTFFont *LoadTTF(string filename)
 	return nil
 
 class FontDescriptor
-	TTFFont *font
-	float size
+	var font: TTFFont*
+	var size: float
 	
-	void __init__()
-	float get_str_width(string text)
+	func __init__()
+	func get_str_width(text: string) -> float
 		return font.get_str_width(text, size)
 
 class FontDB
-	TTFFont*[] fonts
-	FontDescriptor*[] descriptors
+	var fonts: TTFFont*[]
+	var descriptors: FontDescriptor*[]
 	
-	FontDescriptor* get(string name, float size)
+	func get(name: string, size: float) -> FontDescriptor*
 		for d in descriptors
 			if d.font.name == name and d.size == size
 				return d

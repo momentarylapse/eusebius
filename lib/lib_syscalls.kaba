@@ -3,7 +3,7 @@ use lib_base
 #--------------------------------------------------------------------------
 # system calls
 
-bool exit(int r)
+func exit(r: int) -> bool
 	__temp_i__ = r
 	asm{
 		mov eax, 0x00000001
@@ -13,7 +13,7 @@ bool exit(int r)
 	}
 	return lib_error == 0
 
-int brk(int size)
+func brk(size: int) -> int
 	__temp_i__ = size
 	asm{
 		mov eax, 0x0000002d
@@ -25,7 +25,7 @@ int brk(int size)
 
 
 
-bool close(int h)
+func close(h: int) -> bool
 	__temp_i__ = h
 	asm{
 		mov eax, 0x00000006
@@ -35,7 +35,7 @@ bool close(int h)
 	}
 	return lib_error == 0
 
-int read(int h, void *buf, int size)
+func read(h: int, buf: void*, size: int) -> int
 	__temp_i__ = h
 	__temp_i2__ = size
 	__temp_p__ = buf
@@ -49,7 +49,7 @@ int read(int h, void *buf, int size)
 	}
 	return __temp_i3__
 	
-int write(int h, void *buf, int size)
+func write(h: int, buf: void*, size: int) -> int
 	__temp_i__ = h
 	__temp_i2__ = size
 	__temp_p__ = buf
@@ -63,7 +63,7 @@ int write(int h, void *buf, int size)
 	}
 	return __temp_i3__
 
-int seek(int h, int pos, int mode)
+func seek(h: int, pos: int, mode: int) -> int
 	__temp_i__ = h
 	__temp_i2__ = pos
 	__temp_i3__ = mode
@@ -79,7 +79,7 @@ int seek(int h, int pos, int mode)
 
 
 
-bool getdents(int h, void *buf)#lib__DirEntry)
+func getdents(h: int, buf: void*) -> bool
 	__temp_i__ = h
 	__temp_i2__ = 1
 	__temp_p__ = buf
@@ -93,7 +93,7 @@ bool getdents(int h, void *buf)#lib__DirEntry)
 	}
 	return lib_error > 0
 
-int dup(int h)
+func dup(h: int) -> int
 	__temp_i__ = h
 	asm{
 		mov eax, 0x00000029
@@ -103,7 +103,7 @@ int dup(int h)
 	}
 	return __temp_i__
 
-bool pipe(int[2] h)
+func pipe(h: int[2]) -> bool
 	__temp_p__ = &h
 	asm{
 		mov eax, 0x0000002a
@@ -113,7 +113,7 @@ bool pipe(int[2] h)
 	}
 	return lib_error == 0
 
-int fcntl(int h, int op, int param)
+func fcntl(h: int, op: int, param: int) -> int
 	__temp_i__ = h
 	__temp_i2__ = op
 	__temp_i3__ = param
@@ -127,7 +127,7 @@ int fcntl(int h, int op, int param)
 	}
 	return __temp_i__
 
-int getpid()
+func getpid() -> int
 	asm{
 		mov eax, 0x00000014
 		int 0x80
@@ -135,7 +135,7 @@ int getpid()
 	}
 	return __temp_i__
 
-bool sigaction(int sig, void *f)
+func sigaction(sig: int, f: void*) -> bool
 	__temp_i__ = sig
 	__temp_p__ = f
 	asm{
@@ -147,7 +147,7 @@ bool sigaction(int sig, void *f)
 	}
 	return lib_error == 0
 	
-int waitpid(int pid, void *status, bool block)
+func waitpid(pid: int, status: void*, block: bool) -> int
 	__temp_i__ = pid
 	__temp_p__ = status
 	__temp_i2__ = 0
@@ -163,7 +163,7 @@ int waitpid(int pid, void *status, bool block)
 	}
 	return __temp_i3__
 	
-bool kill(int pid, int signal)
+func kill(pid: int, signal: int) -> bool
 	__temp_i__ = pid
 	__temp_i2__ = signal
 	asm{
@@ -175,7 +175,7 @@ bool kill(int pid, int signal)
 	}
 	return lib_error == 0
 
-int shmget(int key, int size, int flags)
+func shmget(key: int, size: int, flags: int) -> int
 	__temp_i__ = key
 	__temp_i2__ = size
 	__temp_i3__ = flags
@@ -190,7 +190,7 @@ int shmget(int key, int size, int flags)
 	}
 	return __temp_i3__
 
-void* shmat(int id, int flags)
+func shmat(id: int, flags: int) -> void*
 	void *p
 	__temp_i__ = id
 	__temp_p__ = &p
@@ -208,7 +208,7 @@ void* shmat(int id, int flags)
 		return nil
 	return p
 	
-bool shmdt(void* addr)
+func shmdt(addr: void*) -> bool
 	__temp_p__ = addr
 	asm{
 		mov eax, 0x00000075 # ipc
@@ -219,7 +219,7 @@ bool shmdt(void* addr)
 	}
 	return lib_error == 0
 	
-bool waitmsg()
+func waitmsg() -> bool
 	asm{
 		mov eax, 0x00000075 # ipc
 		mov ebx, 0x000003e9 # 1001 = wait-msg
@@ -228,7 +228,7 @@ bool waitmsg()
 	}
 	return lib_error == 0
 	
-bool yield(int pid)
+func yield(pid: int) -> bool
 	__temp_i__ = pid
 	asm{
 		mov eax, 0x00000075 # ipc
@@ -240,9 +240,9 @@ bool yield(int pid)
 	return lib_error == 0
 
 class SysInfo
-	int dummy
+	var dummy: int
 
-bool sysinfo(SysInfo buf)
+func sysinfo(buf: SysInfo) -> bool
 	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00000074
@@ -253,9 +253,9 @@ bool sysinfo(SysInfo buf)
 	return lib_error == 0
 
 class TaskInfo
-	int dummy
+	var dummy: int
 
-bool taskinfo(int pid, TaskInfo buf)
+func taskinfo(pid: int, buf: TaskInfo) -> bool
 	__temp_i__ = pid
 	__temp_p__ = &buf
 	asm{
@@ -268,9 +268,9 @@ bool taskinfo(int pid, TaskInfo buf)
 	return lib_error == 0
 
 class MountInfo
-	int dummy
+	var dummy: int
 
-bool mountinfo(int pid, MountInfo buf)
+func mountinfo(pid: int, buf: MountInfo) -> bool
 	__temp_i__ = pid
 	__temp_p__ = &buf
 	asm{
@@ -283,9 +283,9 @@ bool mountinfo(int pid, MountInfo buf)
 	return lib_error == 0
 
 class BlockDevice
-	int _dummy
+	var _dummy: int
 
-bool blockinfo(int major, int minor, BlockDevice buf)
+func blockinfo(major: int, minor: int, buf: BlockDevice) -> bool
 	__temp_i__ = major
 	__temp_i2__ = minor
 	__temp_p__ = &buf
@@ -300,7 +300,7 @@ bool blockinfo(int major, int minor, BlockDevice buf)
 	return lib_error == 0
 
 
-bool uname(void *buf)
+func uname(buf: void*) -> bool
 	__temp_p__ = buf
 	asm{
 		mov eax, 0x0000007a
@@ -311,9 +311,9 @@ bool uname(void *buf)
 	return lib_error == 0
 
 class TimeValue
-	int sec, nanosec
+	var sec, nanosec: int
 
-bool time(TimeValue buf)
+func time(buf: TimeValue) -> bool
 	__temp_p__ = &buf
 	asm{
 		mov eax, 0x00000019
@@ -323,7 +323,7 @@ bool time(TimeValue buf)
 	}
 	return lib_error == 0
 
-bool nanosleep(TimeValue buf, TimeValue buf2)
+func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
 	__temp_p__ = &buf
 	asm{
 		mov eax, 0x000000a2
@@ -333,19 +333,19 @@ bool nanosleep(TimeValue buf, TimeValue buf2)
 	}
 	return lib_error == 0
 
-bool sleep(int sec)
+func sleep(sec: int) -> bool
 	TimeValue tv, tv0
 	tv.sec = sec
 	tv.nanosec = 0
 	return nanosleep(tv, tv0)
 
-bool usleep(int usec)
+func usleep(usec: int) -> bool
 	TimeValue tv, tv0
 	tv.sec = usec / 1000000
 	tv.nanosec = (usec % 1000000) * 1000
 	return nanosleep(tv, tv0)
 
-bool sched_yield(int pid)
+func sched_yield(pid: int) -> bool
 	__temp_i__ = pid
 	asm{
 		mov eax, 0x0000009e
@@ -355,7 +355,7 @@ bool sched_yield(int pid)
 	}
 	return lib_error == 0
 	
-void kprint(string s)
+func kprint(s: string)
 	__temp_p__ = &s[0]
 	__temp_i__ = s.num
 	asm{
@@ -365,7 +365,7 @@ void kprint(string s)
 		int 0x80
 	}
 	
-void kprinti(int i)
+func kprinti(i: int)
 	__temp_i__ = i
 	asm{
 		mov eax, 0x00002003
@@ -373,7 +373,7 @@ void kprinti(int i)
 		int 0x80
 	}
 	
-bool mapirq(int irq, int signal)
+func mapirq(irq: int, signal: int) -> bool
 	__temp_i__ = irq
 	__temp_i2__ = signal
 	asm{
@@ -386,7 +386,7 @@ bool mapirq(int irq, int signal)
 	return lib_error == 0
 
 
-int sys_socket(int cmd, int p1, int p2)
+func sys_socket(cmd: int, p1: int, p2: int) -> int
 	__temp_i__ = cmd
 	__temp_i2__ = p1
 	__temp_i3__ = p2
@@ -401,25 +401,25 @@ int sys_socket(int cmd, int p1, int p2)
 	return lib_error
 
 
-int socket(int type)
+func socket(type: int) -> int
 	return sys_socket(1, type, 0)
 
-bool bind(int fd, int port)
+func bind(fd: int, port: int) -> bool
 	return sys_socket(2, fd, port) == 0
 
-bool connect(int fd, int port)
+func connect(fd: int, port: int) -> bool
 	return sys_socket(3, fd, port) == 0
 
-bool listen(int fd)
+func listen(fd: int) -> bool
 	return sys_socket(4, fd, 0) == 0
 
-int accept(int fd)
+func accept(fd: int) -> int
 	return sys_socket(5, fd, 0)
 
 
 
 
-void prints(cstring s)
+func prints(s: cstring)
 	__temp_p__ = &s
 	asm {
 		mov eax, 0x00002002
@@ -428,7 +428,7 @@ void prints(cstring s)
 	}
 
 
-void lib__print(string s)
+func lib__print(s: string)
 	int done = 0
 	while done < s.num
 		int r = write(stdout, &s[done], s.num - done)
@@ -441,7 +441,7 @@ void lib__print(string s)
 
 
 	
-int addr2phys(void *p)
+func addr2phys(p: void*) -> int
 	__temp_p__ = p
 	asm {
 		mov eax, 0x0000200b

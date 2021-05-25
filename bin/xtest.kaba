@@ -3,8 +3,8 @@ use lib.mtk.mtk
 use lib.draw
 
 class TestWindow extends MtkWindow
-	MtkLabel* l
-	void __init__()
+	var l: MtkLabel*
+	func __init__()
 		super.__init__("Test", 600, 400)
 		
 		MtkGrid* g = new MtkGrid(2, 2)
@@ -23,10 +23,10 @@ class TestWindow extends MtkWindow
 		g.put(1, 1, e2)
 
 class Idle extends MtkIdle
-	int n
-	override void __init__()
+	var n: int
+	func override __init__()
 		n = 0
-	override void do()
+	func override do()
 		#window.l.set_text("" + window.x + " / " + window.y)
 		n ++
 		if n > 2000
@@ -34,9 +34,9 @@ class Idle extends MtkIdle
 			exit(0)
 		
 
-TestWindow* window
+var window: TestWindow*
 
-void main()
+func main()
 	mtk_init()
 	
 	window = new TestWindow()

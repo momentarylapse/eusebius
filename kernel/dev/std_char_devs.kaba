@@ -12,48 +12,49 @@ use task.task
 #--------------------------------------------------------------
 # device files
 
-FileOperationsZero dev_zero_ops
 class FileOperationsZero extends FileOperations
-	override int open(FileEntry f)
+	func override open(f: FileEntry) -> int
 		return 0
-	override int close(FileEntry f)
+	func override close(f: FileEntry) -> int
 		return 0
-	override int read(FileEntry f, PageDirectory *page_dir, int addr, int size)
+	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
 		int zero = 0
 		for i in 0:size
 			page_dir.memcpy2task(addr + i, &zero, 1)
 		return size
+var dev_zero_ops: FileOperationsZero
 
-FileOperationsNull dev_null_ops
+
 class FileOperationsNull extends FileOperations
-	override int write(FileEntry f, PageDirectory *page_dir, int addr, int size)
+	func override write(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
 		return size
+var dev_null_ops: FileOperationsNull
 
-FileOperationsRand dev_rand_ops
+
 class FileOperationsRand extends FileOperations
-	int state
-	override int read(FileEntry f, PageDirectory *page_dir, int addr, int size)
+	var state: int
+	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
 		for i in 0:size
 			state = (state * 23434 + 82374) % 8623
 			page_dir.memcpy2task(addr + i, &state, 1)
 		return size
+var dev_rand_ops: FileOperationsRand
 
 
-FileOperationsKey dev_key_ops
-cstring dev_key_buf
-int dev_key_num
-bool dev_key_escaped
-bool dev_key_shift, dev_key_control, dev_key_altgr
-int dev_key_reading
+var dev_key_buf: cstring
+var dev_key_num: int
+var dev_key_escaped: bool
+var dev_key_shift, dev_key_control, dev_key_altgr: bool
+var dev_key_reading: int
 class FileOperationsKey extends FileOperations
-	override int open(FileEntry f)
+	func override open(f: FileEntry) -> int
 		dev_key_num = 0
 		dev_key_reading ++
 		return 0
-	override int close(FileEntry f)
+	func override close(f: FileEntry) -> int
 		dev_key_reading --
 		return 0
-	override int read(FileEntry f, PageDirectory *page_dir, int addr, int _size)
+	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, _size: int) -> int
 		int size = _size
 		if dev_key_num == 0
 			return -EWOULDBLOCK
@@ -63,14 +64,15 @@ class FileOperationsKey extends FileOperations
 		dev_key_num -= size
 		memcpy(&dev_key_buf, &dev_key_buf[size], dev_key_num)
 		return size
-	override int write(FileEntry f, PageDirectory *page_dir, int addr, int size)
+	func override write(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
 		return 0
+var dev_key_ops: FileOperationsKey
 	
-FileOperationsMouse dev_mouse_ops
-cstring dev_mouse_buf
-int dev_mouse_num
+
+var dev_mouse_buf: cstring
+var dev_mouse_num: int
 class FileOperationsMouse extends FileOperations
-	override int read(FileEntry f, PageDirectory *page_dir, int addr, int _size)
+	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, _size: int) -> int
 		int size = _size
 		if dev_mouse_num == 0
 			return -EWOULDBLOCK
@@ -84,12 +86,13 @@ class FileOperationsMouse extends FileOperations
 		dev_mouse_num -= size
 		memcpy(&dev_mouse_buf, &dev_mouse_buf[size], dev_mouse_num)
 		return size
+var dev_mouse_ops: FileOperationsMouse
 
-FileOperationsTTY dev_tty_ops
-cstring dev_tty_key_buf
-int dev_tty_key_num
+
+var dev_tty_key_buf: cstring
+var dev_tty_key_num: int
 class FileOperationsTTY extends FileOperations
-	override int read(FileEntry f, PageDirectory *page_dir, int addr, int _size)
+	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, _size: int) -> int
 		int size = _size
 		if dev_tty_key_num == 0
 			return -EWOULDBLOCK
@@ -99,17 +102,18 @@ class FileOperationsTTY extends FileOperations
 		dev_tty_key_num -= size
 		memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
 		return size
-	override int write(FileEntry f, PageDirectory *page_dir, int addr, int size)
+	func override write(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
 		for i in 0:size
 			int offset
 			cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
 			TextMode.prints_low(buf, 1)
 		return size
+var dev_tty_ops: FileOperationsTTY
 
 
 class StdCharDevs
 
-	static void init()
+	func static init()
 		prints("init drivers... ")
 		dev_key_escaped = false
 		dev_key_shift = false
@@ -192,29 +196,29 @@ class StdCharDevs
 		prints("ok\n")
 
 
-	static void mouse_wait_data()
+	func static mouse_wait_data()
 		for i in 0:100000
 			if ((inportb(0x64) & 1) == 1)
 				return
 
-	static void mouse_wait_signal()
+	func static mouse_wait_signal()
 		for i in 0:100000
 			if ((inportb(0x64) & 2) == 0)
 				return
 
 
-	static void mouse_write(int data)
+	func static mouse_write(data: int)
 		mouse_wait_signal()
 		outportb(0x64, 0xd4)
 		mouse_wait_signal()
 		outportb(0x60, data)
 
-	static int mouse_read()
+	func static mouse_read() -> int
 		mouse_wait_data()
 		return inportb(0x60)
 
 
-	static int getchar(int k)
+	func static getchar(k: int) -> int
 		if dev_key_control
 			if k == 0x2e # 'C'
 				return 0x03
@@ -487,10 +491,10 @@ class StdCharDevs
 					dev_tty_key_buf[dev_tty_key_num + 2] = k
 					dev_tty_key_num += 3
 
-	static int[4] mouse_temp
-	static int mouse_temp_no
+	var static mouse_temp: int[4]
+	var static mouse_temp_no: int
 
-	static void ps2_read_mouse(int _d)
+	func static ps2_read_mouse(_d: int)
 		int d = _d
 		mouse_temp[mouse_temp_no] = d & 0x000000ff
 		mouse_temp_no ++
@@ -528,7 +532,7 @@ class StdCharDevs
 			memcpy(&dev_mouse_buf[dev_mouse_num], &mouse_temp, 4*4)
 			dev_mouse_num += 4*4
 
-	static void ps2_try_read()
+	func static ps2_try_read()
 		int k = inportb(0x64)
 		if (k & 0x01) == 0
 			return
@@ -541,7 +545,7 @@ class StdCharDevs
 
 
 
-	static void int_key()
+	func static int_key()
 		while true
 			#prints("<key>")
 			
@@ -554,7 +558,7 @@ class StdCharDevs
 				iret
 			}		
 
-	static void int_mouse()
+	func static int_mouse()
 		while true
 			#prints("<mouse>")
 			

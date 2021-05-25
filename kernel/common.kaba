@@ -1,81 +1,81 @@
 #define __STRING_CONST_AS_CSTRING__
 use kaba
 
-const int O_RDONLY = 1
-const int O_WRONLY = 2
-const int O_RDWR = 3
-const int O_APPEND = 16
-const int O_CREATE = 32
-const int O_NONBLOCK = 64
-const int O_TRUNC = 128
+const O_RDONLY = 1
+const O_WRONLY = 2
+const O_RDWR = 3
+const O_APPEND = 16
+const O_CREATE = 32
+const O_NONBLOCK = 64
+const O_TRUNC = 128
 
-const int EWOULDBLOCK = 128
-const int ENOSPC = 127
-const int EACCES = 126
-const int EEXIST = 125
-const int EINVAL = 124
-const int ENOENT = 123
-const int ENOMEM = 122
-const int ESRCH = 121
-const int ECHILD = 120
-const int EBADF = 119
-const int ENFILE = 118
-const int EFAULT = 117
-const int ENOSYS = 116
-const int ENOTDIR = 115
-const int EISDIR = 114
-const int ENOTEMPTY = 113
-const int ENOTSOCK = 112
-const int EADDRINUSE = 111
-const int ECONNREFUSED = 110
-const int ENOTCONN = 109
+const EWOULDBLOCK = 128
+const ENOSPC = 127
+const EACCES = 126
+const EEXIST = 125
+const EINVAL = 124
+const ENOENT = 123
+const ENOMEM = 122
+const ESRCH = 121
+const ECHILD = 120
+const EBADF = 119
+const ENFILE = 118
+const EFAULT = 117
+const ENOSYS = 116
+const ENOTDIR = 115
+const EISDIR = 114
+const ENOTEMPTY = 113
+const ENOTSOCK = 112
+const EADDRINUSE = 111
+const ECONNREFUSED = 110
+const ENOTCONN = 109
 
-const int F_GETFL = 1
-const int F_SETFL = 2
+const F_GETFL = 1
+const F_SETFL = 2
 
-const int SEEK_SET = 1
-const int SEEK_CUR = 2
-const int SEEK_END = 3
+const SEEK_SET = 1
+const SEEK_CUR = 2
+const SEEK_END = 3
 
-const int SHMAT = 9
-const int SHMDT = 10
-const int SHMGET = 11
+const SHMAT = 9
+const SHMDT = 10
+const SHMGET = 11
 
-const int SYS_SOCKET = 1
-const int SYS_BIND = 2
-const int SYS_CONNECT = 3
-const int SYS_LISTEN = 4
-const int SYS_ACCEPT = 5
-const int SYS_SEND = 10
-const int SYS_SENDTO = 11
-const int SYS_RECV = 12
-const int SYS_RECVFROM = 13
+const SYS_SOCKET = 1
+const SYS_BIND = 2
+const SYS_CONNECT = 3
+const SYS_LISTEN = 4
+const SYS_ACCEPT = 5
+const SYS_SEND = 10
+const SYS_SENDTO = 11
+const SYS_RECV = 12
+const SYS_RECVFROM = 13
 
-const int SHM_ABSOLUTE = 1<<20
-const int SHM_DEST = 1<<11
-const int IPC_CREAT = 1<<12
-const int IPC_EXCL = 1<<13
+const SHM_ABSOLUTE = 1<<20
+const SHM_DEST = 1<<11
+const IPC_CREAT = 1<<12
+const IPC_EXCL = 1<<13
 
 
-int MemorySize # in bytes
+var MemorySize: int
 
-const cstring KERNEL_NAME = "Eusebius"
-const cstring KERNEL_VERSION = "0.2.2.1"
-const cstring MACHINE_TYPE = "x86"
+const KERNEL_NAME = "Eusebius"
+const KERNEL_VERSION = "0.2.2.1"
+const MACHINE_TYPE = "x86"
 
 class BiosMemoryMapEntry
-	int offset, offset_hi
-	int size, size_hi
-	int type, dummy # type < 0 -> end
+	var offset, offset_hi: int
+	var size, size_hi: int
+	var type, dummy: int # type < 0 -> end
 
-BiosMemoryMapEntry[64] bios_mem_map
+var bios_mem_map: BiosMemoryMapEntry[64]
 
 
 #--------------------------------------------------------------
 # Low Level
 
 
-void read_data_from_init()
+func read_data_from_init()
 	asm{
 		mov eax, [0x00005100]
 		shl eax, 0x0a
@@ -95,7 +95,7 @@ void read_data_from_init()
 			break
 
 
-void memcpy(out void* _dest, void* _source, int size)
+func memcpy(out _dest: void*, _source: void*, size: int)
 	cstring* dest = _dest
 	cstring* source = _source
 	for n in 0:size
@@ -116,26 +116,26 @@ void memcpy(out void* _dest, void* _source, int size)
 #				loop _mem_cpy_loop
 #		}
 
-int strlen(cstring s)
+func strlen(s: cstring) -> int
 	for i in 0:256
 		if s[i] == 0
 			return i
 	return 256
 
-void strcpy(out cstring a, cstring b)
+func strcpy(out a: cstring, b: cstring)
 	for i in 0:256
 		a[i] = b[i]
 		if b[i] == 0
 			break
 
-void strcat(out cstring a, cstring b)
+func strcat(out a: cstring, b: cstring)
 	int n = strlen(a)
 	for i in 0:256
 		a[i+n] = b[i]
 		if b[i] == 0
 			break
 
-int strcmp(cstring a, cstring b)
+func strcmp(a: cstring, b: cstring) -> int
 	for i in 0:256
 		if a[i] > b[i]
 			return 1
@@ -147,38 +147,38 @@ int strcmp(cstring a, cstring b)
 
 
 
-int ceil_quot(int n, int m)
+func ceil_quot(n: int, m: int) -> int
 	return (n + m - 1) / m
 
-int __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__
-void* __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__
-int _p2i(void* p)
+var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int
+var __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__: void*
+func _p2i(p: void*) -> int
 	int* i = &p
 	return *i
 
 class PointerWrapper
-	void *p
+	var p: void*
 
-void *_i2p(int i)
+func _i2p(i: int) -> void*
 	PointerWrapper *p = &i
 	return p.p
 
 
 class Word
-	char[2] c
-	const int _int()
+	var c: char[2]
+	func const _int() -> int
 		int a = c[0]
 		int b = c[1]
 		return a + b * 256
-	void set(int i)
+	func set(i: int)
 		c[0] = i
 		c[1] = i >> 8
-	void __iadd__(int d)
+	func __iadd__(d: int)
 		set(_int() + d)
 		
 
 
-int _call_ppii(Function *f, void *a, void *b, int c, int d)
+func _call_ppii(f: Function*, a: void*, b: void*, c: int, d: int) -> int
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -197,7 +197,7 @@ int _call_ppii(Function *f, void *a, void *b, int c, int d)
 	return __temp_i__
 
 
-int _call_ppi(Function *f, void *a, void *b, int c)
+func _call_ppi(f: Function*, a: void*, b: void*, c: int) -> int
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -214,7 +214,7 @@ int _call_ppi(Function *f, void *a, void *b, int c)
 	return __temp_i__
 
 
-int _call_pi(Function *f, void *a, int b)
+func _call_pi(f: Function*, a: void*, b: int) -> int
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_i__ = b
@@ -229,7 +229,7 @@ int _call_pi(Function *f, void *a, int b)
 	return __temp_i__
 
 
-int _call_pp(Function *f, void *a, void *b)
+func _call_pp(f: Function*, a: void*, b: void*) -> int
 	__temp_p__ = f
 	__temp_p2__ = a
 	__temp_p3__ = b
@@ -243,7 +243,7 @@ int _call_pp(Function *f, void *a, void *b)
 	}
 	return __temp_i__
 
-int call_p(Function *f, void *a)
+func call_p(f: Function*, a: void*) -> int
 	__temp_p__ = f
 	__temp_p2__ = a
 	asm{

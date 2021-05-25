@@ -5,12 +5,12 @@ use task.scheduler
 use irq.irq
 use kaba
 
-const int ERROR_STACK_SIZE = 4096
+const ERROR_STACK_SIZE = 4096
 
 
 class Error
 
-	static void handle_task_error(out Task t, out Task e, int i)
+	func static handle_task_error(out t: Task, out e: Task, i: int)
 		int pid = t.pid
 		#prints("\n    -- Interrupt #")
 	#	printi(i)
@@ -34,7 +34,7 @@ class Error
 		Scheduler.reconnect_tasks(pid_next, e)
 		
 
-	static void handle_kernel_error(Task t, int i)
+	func static handle_kernel_error(t: Task, i: int)
 		cstring s
 		get_error_text(i, s)
 		
@@ -56,7 +56,7 @@ class Error
 	#		prints("xxxx")
 		panic(s)
 
-	static void get_error_text(int i, out cstring s)
+	func static get_error_text(i: int, out s: cstring)
 		cstring nn
 		strcpy(s, "Int ")
 		_i2s(i, nn)
@@ -93,7 +93,7 @@ class Error
 			strcat(s, ": coprocessor error")
 		strcat(s, "  8-P")
 
-	static void int_handler(int i)
+	func static int_handler(i: int)
 		while true
 			# task?
 			var e = Error.tasks[i]
@@ -110,21 +110,21 @@ class Error
 				iret
 			}
 
-	static void int_00()
+	func static int_00()
 		int_handler(0)
-	static void int_01()
+	func static int_01()
 		int_handler(1)
-	static void int_02()
+	func static int_02()
 		int_handler(2)
-	static void int_03()
+	func static int_03()
 		int_handler(3)
-	static void int_04()
+	func static int_04()
 		int_handler(4)
-	static void int_05()
+	func static int_05()
 		int_handler(5)
-	static void int_06()
+	func static int_06()
 		int_handler(6)
-	static void int_07()
+	func static int_07()
 		int_handler(7)
 		prints("[CP]")
 		asm {
@@ -132,29 +132,29 @@ class Error
 			db 0x06
 			iret
 		}
-	static void int_08()
+	func static int_08()
 		int_handler(8)
-	static void int_09()
+	func static int_09()
 		int_handler(9)
-	static void int_10()
+	func static int_10()
 		int_handler(10)
-	static void int_11()
+	func static int_11()
 		int_handler(11)
-	static void int_12()
+	func static int_12()
 		int_handler(12)
-	static void int_13()
+	func static int_13()
 		int_handler(13)
-	static void int_14()
+	func static int_14()
 		int_handler(14)
-	static void int_15()
+	func static int_15()
 		int_handler(15)
-	static void int_16()
+	func static int_16()
 		int_handler(16)
-	static void int_XX()
+	func static int_XX()
 		int_handler(2004)
 		
 		
-	static void int_ignore_dummy()
+	func static int_ignore_dummy()
 		asm {
 			_ignore_interrupt_handler:
 		}
@@ -166,11 +166,11 @@ class Error
 		}
 
 
-	static Function*[16] handler
-	static Task*[16] tasks
-	static Function* ignore_handler
+	var static handler: Function*[16]
+	var static tasks: Task*[16]
+	var static ignore_handler: Function*
 
-	static void init()
+	func static init()
 		prints("setting error handler")
 
 		handler[ 0] = int_00

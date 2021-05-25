@@ -4,12 +4,12 @@ use lib.draw
 use lib.ttfx
 
 
-color bg
+var bg: color
 
-XConnection* xcon
+var xcon: XConnection*
 
 
-void draw_cancle(out XPainter p, float x, float y)
+func draw_cancle(out p: XPainter, x: float, y: float)
 	p.set_color(bg)
 	#p.rectangle(rect(x-12, x+12, y-60, y))
 	p.draw_circle(x, y-30, 20)
@@ -27,7 +27,7 @@ void draw_cancle(out XPainter p, float x, float y)
 	p.draw_spline(complex(x-5,y-115), complex(x+5,y-95), complex(x+12, y-90))
 	p.draw_spline(complex(x+12, y-90), complex(x+10, y-75), complex(x+2, y-60))
 
-void main()
+func main()
 	init_lib()
 	
 	stdout = open("/dev/tty", O_WRONLY)

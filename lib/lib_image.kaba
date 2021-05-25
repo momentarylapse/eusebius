@@ -5,18 +5,18 @@ use lib_file
 use image
 
 class lib__color
-	float a, r, g, b
-	lib__string __str__()
+	var a, r, g, b: float
+	func __str__() -> lib__string
 		lib__string s
 		return s
 
 class lib__Image
-	int width, height
-	int mode, __align__
-	lib__int@list data
-	bool alpha_used
-	bool error
-	void __init__(int w, int h, color c)
+	var width, height: int
+	var mode, __align__: int
+	var data: lib__int@list
+	var alpha_used: bool
+	var error: bool
+	func __init__(w: int, h: int, c: color)
 		width = w
 		height = h
 		error = false
@@ -25,7 +25,7 @@ class lib__Image
 		for i in 0:len(data)
 			data.data[i] = ic
 
-	static lib__Image* load(lib__Path filename)
+	func static load(filename: lib__Path) -> lib__Image*
 		lib__string temp
 		int h = open(filename, O_RDONLY)
 		if h < 0

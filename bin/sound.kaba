@@ -5,11 +5,11 @@ use lib.pci
 # http://www.lowlevel.eu/wiki/AC97
 
 
-int io_base
-int mem_key
-int[0]* mem
+var io_base: int
+var mem_key: int
+var mem: int[0]*
 
-void sb16_reset()
+func sb16_reset()
 	print("reset...")
 	outportb(io_base + 6, 1)
 	usleep(5)
@@ -22,17 +22,17 @@ void sb16_reset()
 		pass
 	print("ok")
 
-void sb16_write(int cmd)
+func sb16_write(cmd: int)
 	while (inportb(io_base + 0x0c) & 0x80) != 0
 		pass
 	outportb(io_base + 0x0c, cmd)
 
-int sb16_read()
+func sb16_read() -> int
 	while (inportb(io_base + 0x0e) & 0x80) == 0
 		pass
 	return inportb(io_base + 0x0a)
 
-void sb16_setup_dma()
+func sb16_setup_dma()
 	print("dma")
 	int channel = 5
 	# Disable the sound card DMA channel by setting the appropriate mask bit
@@ -50,7 +50,7 @@ void sb16_setup_dma()
 	outportb(0xc6, 0xff) # lo
 	outportb(0xc6, 0x7f) # hi
 
-void sb16_set_sample_rate(int sample_rate)
+func sb16_set_sample_rate(sample_rate: int)
 	print("set sample rate")
 	sb16_write(0x41)
 	print("b")
@@ -58,7 +58,7 @@ void sb16_set_sample_rate(int sample_rate)
 	print("c")
 	sb16_write(sample_rate)      # lo
 
-void sb16_test()
+func sb16_test()
 
 	io_base = 0x220
 	
@@ -101,23 +101,23 @@ void sb16_test()
 	
 	sleep(5)
 
-const int PORT_NAM_RESET = 0x0000
-const int PORT_NAM_MASTER_VOLUME = 0x0002
-const int PORT_NAM_MONO_VOLUME = 0x0006
-const int PORT_NAM_PCM_VOLUME = 0x0018
-const int PORT_NAM_EXT_AUDIO_ID = 0x0028
-const int PORT_NAM_EXT_AUDIO_STC = 0x002a
-const int PORT_NAM_FRONT_SPLRATE = 0x002c
-const int PORT_NAM_LR_SPLRATE = 0x0032
-const int PORT_NABM_POBDBAR = 0x0010
-const int PORT_NABM_POLVI = 0x0015
-const int PORT_NABM_POCONTROL = 0x001b
-const int PORT_NABM_GLB_CTRL_STAT = 0x0060
+const PORT_NAM_RESET = 0x0000
+const PORT_NAM_MASTER_VOLUME = 0x0002
+const PORT_NAM_MONO_VOLUME = 0x0006
+const PORT_NAM_PCM_VOLUME = 0x0018
+const PORT_NAM_EXT_AUDIO_ID = 0x0028
+const PORT_NAM_EXT_AUDIO_STC = 0x002a
+const PORT_NAM_FRONT_SPLRATE = 0x002c
+const PORT_NAM_LR_SPLRATE = 0x0032
+const PORT_NABM_POBDBAR = 0x0010
+const PORT_NABM_POLVI = 0x0015
+const PORT_NABM_POCONTROL = 0x001b
+const PORT_NABM_GLB_CTRL_STAT = 0x0060
 
-void irq_handler()
+func irq_handler()
 	print("--irq--")
 
-void ac97_test()
+func ac97_test()
 	var pci = new PCIController()
 	pci.scan()
 	var dev = pci.get(0x8086, 0x2415)
@@ -219,15 +219,15 @@ void ac97_test()
  	sleep(5)
 
 class BufferDesc
-	void __init__()
+	func __init__()
 		pass
-	int addr
-	int length_etc # final: bup 0x4000000
+	var addr: int
+	var length_etc: int
 #BufferDesc[] bd
-BufferDesc[32] bd
+var bd: BufferDesc[32]
 
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	get_args(arg)

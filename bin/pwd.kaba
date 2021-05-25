@@ -1,7 +1,7 @@
 use lib.std
 use os
 
-void main()
+func main()
 	init_lib()
 	#lib_print_endl = false
 	print(Filesystem.current_directory())

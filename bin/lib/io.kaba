@@ -1,11 +1,11 @@
 use lib.std
 
 
-int _temp_port_no_
-int _temp_port_data_
+var _temp_port_no_: int
+var _temp_port_data_: int
 
 
-void outportb(int port, char data)
+func outportb(port: int, data: char)
 	_temp_port_no_ = port
 	_temp_port_data_ = data
 	asm{
@@ -14,7 +14,7 @@ void outportb(int port, char data)
 		out dx, al
 	}
 
-char inportb(int port)
+func inportb(port: int) -> char
 	_temp_port_no_ = port
 	asm{
 		mov edx, _temp_port_no_
@@ -24,7 +24,7 @@ char inportb(int port)
 	}
 	return _temp_port_data_
 
-void outportd(int port,int data)
+func outportd(port: int, data: int)
 	_temp_port_no_ = port
 	_temp_port_data_ = data
 	asm{
@@ -33,7 +33,7 @@ void outportd(int port,int data)
 		out dx, eax
 	}
 
-int inportd(int port)
+func inportd(port: int) -> int
 	_temp_port_no_ = port
 	asm{
 		mov edx, _temp_port_no_
@@ -42,7 +42,7 @@ int inportd(int port)
 	}
 	return _temp_port_data_
 
-void outportw(int port,int data)
+func outportw(port: int, data: int)
 	_temp_port_no_ = port
 	_temp_port_data_ = data
 	asm{
@@ -52,7 +52,7 @@ void outportw(int port,int data)
 		out dx, eax
 	}
 
-int inportw(int port)
+func inportw(port: int) -> int
 	_temp_port_no_ = port
 	asm{
 		mov edx, _temp_port_no_

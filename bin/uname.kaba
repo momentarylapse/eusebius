@@ -1,16 +1,16 @@
 use lib.std
 
 class UTSName
-	cstring sysname
-	cstring nodename
-	cstring release
-	cstring version
-	cstring machine
-	cstring domainname
-	void __assign__(UTSName o)
+	var sysname: cstring
+	var nodename: cstring
+	var release: cstring
+	var version: cstring
+	var machine: cstring
+	var domainname: cstring
+	func __assign__(o: UTSName)
 		pass
 
-void main()
+func main()
 	init_lib()
 	
 	UTSName u

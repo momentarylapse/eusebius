@@ -4,14 +4,14 @@ use lib.draw
 use lib.ttfx
 
 class CWindow extends XWindow
-	XPainter *p
-	void __init__(int x, int y, int w, int h)
+	var p: XPainter*
+	func __init__(x: int, y: int, w: int, h: int)
 		super.__init__(xcon, x, y, w, h)
 		p = new XPainter(&self)
 		FontDB* font_db = new FontDB()
 		p.font = font_db.get("Cantarell", 60)
 	
-	override void on_key(int key)
+	func override on_key(key: int)
 		if key == 'w'
 			y -= 5
 		if key == 's'
@@ -23,7 +23,7 @@ class CWindow extends XWindow
 		move(x, y)
 			
 
-	void redraw()
+	func redraw()
 		p.set_color(color(0,0,0, 1))
 		p.rectangle(p.all)
 		p.fill()
@@ -56,9 +56,9 @@ class CWindow extends XWindow
 		p.end()
 
 
-XConnection *xcon
+var xcon: XConnection*
 
-void main()
+func main()
 	init_lib()
 	
 	

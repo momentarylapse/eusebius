@@ -2,14 +2,14 @@ use lib_base
 use lib_array
 
 
-int lib__clamp(int i, int min, int max)
+func lib__clamp(i: int, min: int, max: int) -> int
 	if i > max
 		return max
 	if i < min
 		return min
 	return i
 
-int lib__loop(int i, int min, int max)
+func lib__loop(i: int, min: int, max: int) -> int
 	int d = max - min + 1
 	if i < min
 		int n = ( (min-i-1) / d ) + 1
@@ -20,36 +20,36 @@ int lib__loop(int i, int min, int max)
 	return i
 
 
-int rand_state
+var rand_state: int
 
-int rand_next()
+func rand_next() -> int
 	rand_state = rand_state * 1664525 + 1013904223
 	return rand_state & 0x00ffffff
 
-void lib__rand_seed(int s)
+func lib__rand_seed(s: int)
 	rand_state = s
 
-float lib__rand(float m)
+func lib__rand(m: float) -> float
 	return rand_next() * m / float(0x01000000)
 
-int lib__randi(int m)
+func lib__randi(m: int) -> int
 	return lib__rand(m)
 
-char hex_nibble(int i)
+func hex_nibble(i: int) -> char
 	if i >= 10
 		return 'a' + i - 10
 	return '0' + i
 
 class lib__int
-	static lib__string __str__(int i)
+	func static __str__(i: int) -> lib__string
 		return i2s(i)
-	static lib__string hex(int i, int n)
+	func static hex(i: int, n: int) -> lib__string
 		lib__string r
 		r.resize(n)
 		for k in 0:n
 			r.data[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
 		return r
-	static lib__string format(int i, lib__string f)
+	func static format(i: int, f: lib__string) -> lib__string
 		if f.data[f.num - 1] == 'x'
 			return hex(i, f.data[0] - '0')
 		int n = int(f)
@@ -59,10 +59,10 @@ class lib__int
 		return str_fill(i2s(i), n, space)
 
 class lib__float
-	static lib__string __str__(float f)
+	func static __str__(f: float) -> lib__string
 		return f2s(f, 6)
 
-float lib__sin(float f)
+func lib__sin(f: float) -> float
 	__temp_f__ = f
 	asm{
 		fld __temp_f__
@@ -71,7 +71,7 @@ float lib__sin(float f)
 	}
 	return __temp_f__
 
-float lib__cos(float f)
+func lib__cos(f: float) -> float
 	__temp_f__ = f
 	asm{
 		fld __temp_f__
@@ -80,23 +80,23 @@ float lib__cos(float f)
 	}
 	return __temp_f__
 
-float lib__min(float a, float b)
+func lib__min(a: float, b: float) -> float
 	if a < b
 		return a
 	return b
 
-float lib__max(float a, float b)
+func lib__max(a: float, b: float) -> float
 	if a > b
 		return a
 	return b
 
-float lib__abs(float x)
+func lib__abs(x: float) -> float
 	if x < 0
 		return -x
 	return x
 	
 
-int lib__clamp(int i, int min, int max)
+func lib__clamp(i: int, min: int, max: int) -> int
 	if max <= min
 		return min
 	if i > max
@@ -105,7 +105,7 @@ int lib__clamp(int i, int min, int max)
 		return min
 	return i
 
-int lib_loop(int i, int min, int max)
+func lib_loop(i: int, min: int, max: int) -> int
 	if max <= min
 		return min
 	int d = max - min + 1
@@ -117,21 +117,21 @@ int lib_loop(int i, int min, int max)
 		return i - d * n
 	return i
 
-int lib__min(int a, int b)
+func lib__min(a: int, b: int) -> int
 	if a < b
 		return a
 	return b
 
-int lib__max(int a, int b)
+func lib__max(a: int, b: int) -> int
 	if a > b
 		return a
 	return b
 
 
-float lib__sqr(float f)
+func lib__sqr(f: float) -> float
 	return f * f
 
-float lib__sqrt(float f)
+func lib__sqrt(f: float) -> float
 	__temp_f__ = f
 	asm{
 		sqrtss xmm0, __temp_f__
@@ -139,7 +139,7 @@ float lib__sqrt(float f)
 	}
 	return __temp_f__
 
-float lib__clamp(float f, float min, float max)
+func lib__clamp(f: float, min: float, max: float) -> float
 	if max < min
 		return min
 	if f > max
@@ -148,7 +148,7 @@ float lib__clamp(float f, float min, float max)
 		return min
 	return f
 
-float lib__loop(float f, float min, float max)
+func lib__loop(f: float, min: float, max: float) -> float
 	float d = max - min
 	if f < min
 		int n = int( (min-f) / d ) + 1
@@ -161,12 +161,12 @@ float lib__loop(float f, float min, float max)
 
 
 class lib__complex
-	float x, y
+	var x, y: float
 	
-	lib__string __str__()
+	func __str__() -> lib__string
 		return _complex2s(self)
 
-lib__string _complex2s(lib__complex c)
+func _complex2s(c: lib__complex) -> lib__string
 	lib__string r
 	r.add('(')
 	r += f2s(c.x, 6)
@@ -178,33 +178,33 @@ lib__string _complex2s(lib__complex c)
 
 
 class lib__complex@list extends lib__@DynamicArray
-	override complex[0]* data
-	void __init__()
+	var override data: complex[0]*
+	func __init__()
 		__mem_init__(sizeof(complex))
-	void __delete__()
+	func __delete__()
 		clear()
-	void clear()
+	func clear()
 		__mem_clear__()
-	void resize(int size)
+	func resize(size: int)
 		if size > num
 			reserve(size)
 		num = size
-	void add(complex c)
+	func add(c: complex)
 		resize(num + 1)
 		data[num - 1] = c
-	void remove(int index)
+	func remove(index: int)
 		if (index < 0) or (index >= num)
 			return
 		for i in index : num - 1
 			data[i] = data[i+1]
 		resize(num - 1)
-	void __assign__(lib__complex@list o)
+	func __assign__(o: lib__complex@list)
 		resize(o.num)
 		for i in 0:num
 			data[i] = o.data[i]
 
 
-lib__string lib__p2s(void *p)
+func lib__p2s(p: void*) -> lib__string
 	lib__string r
 	int* i = &p
 	r.add('0')

@@ -2,13 +2,13 @@ use lib.std
 use os
 
 
-void _mkdir(Path path)
+func _mkdir(path: Path)
 	if !mkdir(path)
 		print("mkdir: can not create directory: {{path}}")
 		exit(lib_error)
 
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	get_args(arg)

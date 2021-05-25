@@ -3,24 +3,24 @@ use os
 
 
 class Prompt
-	string cur
-	string[] history
-	int history_pos
-	void __init__()
+	var cur: string
+	var history: string[]
+	var history_pos: int
+	func __init__()
 		history_pos = 0
 		history.add("")
-	void add(int k)
+	func add(k: int)
 		cur.add(k)
 		string s
 		s.add(k)
 		print(s)
-	void clear()
+	func clear()
 		string s
 		s.add(0x7f)
 		for i in 0:len(cur)
 			print(s)
 		cur.clear()
-	void add_to_history()
+	func add_to_history()
 		if len(history) > 1
 			if history[len(history) - 2] == cur
 				history_pos = len(history) - 1
@@ -28,22 +28,22 @@ class Prompt
 		history[len(history) - 1] = cur
 		history.add("")
 		history_pos = len(history) - 1
-	void history_jump(int pos)
+	func history_jump(pos: int)
 		history[history_pos] = cur
 		history_pos = pos
 		clear()
 		cur = history[history_pos]
 		print(cur)
-	void history_up()
+	func history_up()
 		if history_pos > 0
 			history_jump(history_pos - 1)
-	void history_down()
+	func history_down()
 		if history_pos < len(history) - 1
 			history_jump(history_pos + 1)
-	void show()
+	func show()
 		print(str(Filesystem.current_directory()) + ": ")
 		
-	void process(int k)
+	func process(k: int)
 		if k < 0
 			return
 		int c = k
@@ -95,14 +95,14 @@ class Prompt
 		#else
 		#	printh(&k, 2)
 
-Prompt prompt
+var prompt: Prompt
 
 class Variable
-	string name, value
+	var name, value: string
 class VariableSet
-	Variable*[] var
-	void __init__()
-	selfref Variable *get(string name)
+	var var: Variable*[]
+	func __init__()
+	func selfref get(name: string) -> Variable*
 		for v in var
 			if v.name == name
 				return v
@@ -110,18 +110,18 @@ class VariableSet
 		v.name = name
 		var.add(v)
 		return v
-	void show()
+	func show()
 		for v in var
 			print("{{v.name}} = {{v.value}}\n")
-VariableSet vars
+var vars: VariableSet
 
 class Job
-	string cmd
-	int pid, id
-	bool done
-	int[2] pipe_in, pipe_out # from job's point of view
-	bool as_bg
-	void __init__(out string[] c, string _cmd)
+	var cmd: string
+	var pid, id: int
+	var done: bool
+	var pipe_in, pipe_out: int[2] # from job's point of view
+	var as_bg: bool
+	func __init__(out c: string[], _cmd: string)
 		cmd = _cmd
 		done = false
 		pipe_in[0] = -1
@@ -168,11 +168,11 @@ class Job
 			print("\n")
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
 	
-	void __delete__()
+	func __delete__()
 		close(pipe_in[1])
 		close(pipe_out[0])
 	
-	void test()
+	func test()
 		string s
 		s.resize(512)
 		int r = read(pipe_out[0], &s[0], len(s))
@@ -193,24 +193,24 @@ class Job
 		done = true
 
 class JobManager
-	Job*[] job
-	Job *fg
-	void __init__()
+	var job: Job*[]
+	var fg: Job*
+	func __init__()
 		fg = nil
-	int get_next_id()
+	func get_next_id() -> int
 		int id = 1
 		for j in job
 			if j.id >= id
 				id = j.id + 1
 		return id
-	Job *get(int id)
+	func get(id: int) -> Job*
 		if (id == -1) and (len(job) > 0)
 			return job[len(job) - 1]
 		for j in job
 			if j.id == id
 				return j
 		return nil
-	Job *create(out string[] c, string cmd)
+	func create(out c: string[], cmd: string) -> Job*
 		Job *j = new Job(c, cmd)
 		if j.pid < 0
 			del j
@@ -220,7 +220,7 @@ class JobManager
 		if !j.as_bg
 			fg = j
 		return j
-	void test_all()
+	func test_all()
 		for j in job
 			j.test()
 		for i in 0:len(job)
@@ -231,14 +231,14 @@ class JobManager
 				del job[i]
 				job.remove(i)
 				i --
-	void show()
+	func show()
 		for j in job
 			print("{{j.id}} - {{j.cmd}}\n")
 
-JobManager jobs
+var jobs: JobManager
 
 
-string parse_var_name(string cmd, int pos)
+func parse_var_name(cmd: string, pos: int) -> string
 	string name
 	for i in pos:len(cmd)
 		if cmd[i] == ' ' or cmd[i] == '"' or cmd[i] == '$' or cmd[i] == '.' or cmd[i] == ':' or cmd[i] == ',' or cmd[i] == '<' or cmd[i] == '>' or cmd[i] == '|'
@@ -264,7 +264,7 @@ string parse_single(string cmd, out int *pos)
 		*pos = j
 	return t
 
-void parse(string cmd0, out string[] c)
+func parse(cmd0: string, out c: string[])
 	string cmd = cmd0
 	for i in 0:len(cmd)
 		if cmd[i] == ' '
@@ -275,16 +275,16 @@ void parse(string cmd0, out string[] c)
 				break
 		c.add(t)
 
-void execute_assign(string cmd)
+func execute_assign(cmd: string)
 	string[] a = cmd.explode("=")
 	if len(a) == 2
 		vars.get(a[0]).value = a[1]
 
-bool execute_job(out string[] c, string cmd)
+func execute_job(out c: string[], cmd: string) -> bool
 	Job *j = jobs.create(c, cmd)
 	return j
 
-void do_fg(string[] c)
+func do_fg(c: string[])
 	int id = -1
 	if len(c) >= 2
 		id = int(c[1])
@@ -296,7 +296,7 @@ void do_fg(string[] c)
 	else
 		print("no job\n")
 
-void do_bg(string[] c)
+func do_bg(c: string[])
 	int id = -1
 	if len(c) >= 2
 		id = int(c[1])
@@ -307,14 +307,14 @@ void do_bg(string[] c)
 	else
 		print("no job\n")
 
-void do_cd(string[] c)
+func do_cd(c: string[])
 	if len(c) > 1
 		if !chdir(c[1])
 			print("no valid directory: {{c[1]}}\n")
 	else
 		print("directory?\n")
 
-void exec(string cmd)
+func exec(cmd: string)
 	string cmd0 = cmd
 	string[] c
 	parse(cmd, c)
@@ -346,7 +346,7 @@ void exec(string cmd)
 		print("unknown command: {{cc}}\n")
 
 
-int getkey()
+func getkey() -> int
 	int buf = 0
 	int key = 0
 	int r = read(stdin, &key, 1)
@@ -366,7 +366,7 @@ int getkey()
 	key = (key << 8) + buf
 	return key
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	prompt.__init__()

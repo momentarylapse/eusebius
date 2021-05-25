@@ -3,18 +3,18 @@ use lib.std
 
 #extern void signal_handler_x()
 
-void handler()
+func handler()
 	print("---user handler---   \\(^_^)/\n")
 
 
-void test_slow_output()
+func test_slow_output()
 	print("Hallo Welt\n")
 	while true
 		usleep(100000)
 		print(".")
 
 
-void test_signal_handler()
+func test_signal_handler()
 	print("start\n")
 	
 	sigaction(23, handler)
@@ -29,7 +29,7 @@ void test_signal_handler()
 			int 0x2b
 		}
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	

@@ -2,23 +2,23 @@ use common
 
 
 class TimeValue
-	int sec
-	int nanosec
-	void clear()
+	var sec: int
+	var nanosec: int
+	func clear()
 		sec = 0
 		nanosec = 0
 	
-	bool is_before(TimeValue t)
+	func is_before(t: TimeValue) -> bool
 		if sec < t.sec
 			return true
 		if sec > t.sec
 			return false
 		return nanosec < t.nanosec
 
-	bool is_valid()
+	func is_valid() -> bool
 		return (nanosec >= 0) and (nanosec < 1000000000)
 	
-	void inc_nanosec(int ns)
+	func inc_nanosec(ns: int)
 		nanosec += ns
   		if nanosec > 1000000000
   			sec ++

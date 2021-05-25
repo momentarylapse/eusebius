@@ -1,23 +1,23 @@
 use lib.std
 use os
 
-string hex(char[0]* p, int size)
+func hex(p: char[0]*, size: int) -> string
 	string s
 	for i in 0:size
 		s.add(p[i])
 	return s.hex()
-string i2h(int i)
+func i2h(i: int) -> string
 	return hex(&i, 4)
 
 class BEUShort
-	char[2] c
-	int int()
+	var c: char[2]
+	func int() -> int
 		int a = c[0]
 		int b = c[1]
 		return (a << 8) + b
 class BESShort
-	char[2] c
-	int int()
+	var c: char[2]
+	func int() -> int
 		int a = c[0]
 		int b = c[1]
 		int r = (a << 8) + b
@@ -25,8 +25,8 @@ class BESShort
 			r -= 1<<16
 		return r
 class BELong
-	char[4] x
-	int int()
+	var x: char[4]
+	func int() -> int
 		int a = x[0]
 		int b = x[1]
 		int c = x[2]
@@ -37,25 +37,25 @@ class Fixed
 	BEUShort a, b
 
 class F214
-	BESShort t
-	float float()
+	var t: BESShort
+	func float() -> float
 		return t.int() / 16384.0
 
-void _read(File *f, char[0]* p, int size)
+func _read(*f: File, p: char[0]*, size: int)
 	string s = f.read(size)
 	for i in 0:size
 		p[i] = s[i]
 
 class TTFTableDirectory
-	Fixed version
-	BEUShort num_tables
-	BEUShort seach_range
-	BEUShort entry_selector
-	BEUShort range_shift
+	var version: Fixed
+	var num_tables: BEUShort
+	var seach_range: BEUShort
+	var entry_selector: BEUShort
+	var range_shift: BEUShort
 
 class TTFTableDirectoryEntry
 	BELong tag, chksum, offset, length
-	string name()
+	func name() -> string
 		string s
 		s.add(tag.x[0])
 		s.add(tag.x[1])
@@ -68,20 +68,20 @@ class TTFMapHeader
 
 class TTFMapTable
 	int platform, encoding
-	int offset
-	int format
+	var offset: int
+	var format: int
 	
 	# format 4
-	int[] end_count
-	int[] start_count
-	int[] id_delta
-	int[] id_range_offset
+	var end_count: int[]
+	var start_count: int[]
+	var id_delta: int[]
+	var id_range_offset: int[]
 	
 	# format 6
-	int first_code
-	int[] glyph_id_array
+	var first_code: int
+	var glyph_id_array: int[]
 	
-	int map(int code)
+	func map(code: int) -> int
 		if format == 4
 			for i in 0:end_count.num
 				if code >= start_count[i] and code <= end_count[i]
@@ -94,50 +94,50 @@ class TTFMapTable
 		return -1
 
 class TTFContour
-	string flags
-	complex[] p
+	var flags: string
+	var p: complex[]
 	
 
 class TTFGlyph
 	int xmin, ymin, xmax, ymax
-	TTFContour*[] contours
+	var contours: TTFContour*[]
 
 class TTF
-	TTFTableDirectory td
-	TTFTableDirectoryEntry[] tdentries
+	var td: TTFTableDirectory
+	var tdentries: TTFTableDirectoryEntry[]
 	
-	TTFMapHeader mh
-	TTFMapTable[] map_tables
-	TTFGlyph*[] glyphs
+	var mh: TTFMapHeader
+	var map_tables: TTFMapTable[]
+	var glyphs: TTFGlyph*[]
 	
-	File *f
+	var *f: File
 	
-	int readL()
+	func readL() -> int
 		BELong t
 		_read(f, &t, 4)
 		return t.int()
 
-	int readUS()
+	func readUS() -> int
 		BEUShort t
 		_read(f, &t, 2)
 		return t.int()
 
-	int readSS()
+	func readSS() -> int
 		BESShort t
 		_read(f, &t, 2)
 		return t.int()
 
-	int readUB()
+	func readUB() -> int
 		int t = 0
 		_read(f, &t, 1)
 		return t
 
-	float readF214()
+	func readF214() -> float
 		F214 t
 		_read(f, &t, 2)
 		return t.float()
 
-	bool read_table_directory()
+	func read_table_directory() -> bool
 	
 		_read(f, &td, 12)
 		int n = td.num_tables.int()
@@ -152,7 +152,7 @@ class TTF
 			print(ee.name() + " " + ee.offset.int() + "\n")
 		return true
 	
-	bool read_mapping()
+	func read_mapping() -> bool
 		TTFTableDirectoryEntry *te = get_table("cmap")
 		if !te
 			return false
@@ -237,7 +237,7 @@ class TTF
 		
 		return true
 	
-	bool read_glyph(TTFGlyph *g)
+	func read_glyph(*g: TTFGlyph) -> bool
 		#print "glyph\n"
 		#print i2h(f.getPos())
 		int num_contours = readSS()
@@ -260,7 +260,7 @@ class TTF
 			return read_glyph_compound(g)
 		return read_glyph_simple(g, num_contours)
 	
-	bool read_glyph_compound(TTFGlyph *g)
+	func read_glyph_compound(*g: TTFGlyph) -> bool
 		#print "---compound\n"
 		int n = 0
 		int flags
@@ -305,7 +305,7 @@ class TTF
 			
 		return true
 	
-	bool read_glyph_simple(TTFGlyph *g, int num_contours)
+	func read_glyph_simple(*g: TTFGlyph, num_contours: int) -> bool
 		#print "---simple\n"
 		
 		# endpoints
@@ -384,7 +384,7 @@ class TTF
 			f.read(1)
 		return true
 	
-	string read_contour_flags(int n)
+	func read_contour_flags(n: int) -> string
 		string flags
 		flags.resize(n)
 		
@@ -402,7 +402,7 @@ class TTF
 		
 		return flags
 	
-	float[] read_contour_coords(int n, string flags, int mask_short, int mask_same)
+	func read_contour_coords(n: int, flags: string, mask_short: int, mask_same: int) -> float[]
 		float[] x
 		x.resize(n)
 		float cur = 0
@@ -428,7 +428,7 @@ class TTF
 					
 		return x
 	
-	bool read_glyphs()
+	func read_glyphs() -> bool
 		print("---------------------------glyphs\n")
 		TTFTableDirectoryEntry *te = get_table("glyf")
 		if !te
@@ -457,7 +457,7 @@ class TTF
 		
 		return true
 	
-	bool load(string filename)
+	func load(filename: string) -> bool
 
 		f = FileOpen(filename)
 		if !f
@@ -475,13 +475,13 @@ class TTF
 		delete f
 		return true
 		
-	TTFTableDirectoryEntry* get_table(string tag)
+	func get_table(tag: string) -> TTFTableDirectoryEntry*
 		for ee in tdentries
 			if tag == ee.name()
 				return &ee
 		return nil
 	
-	int map(int code)
+	func map(code: int) -> int
 		for m in map_tables
 			int n = m.map(code)
 			if code >= glyphs.num
@@ -491,7 +491,7 @@ class TTF
 				return code
 		return -1
 	
-	TTFGlyph* get(int code)
+	func get(code: int) -> TTFGlyph*
 		print("get " + code + "\n")
 		int n = map(code)
 		print(n)

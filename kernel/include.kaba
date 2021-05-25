@@ -1,16 +1,16 @@
 use io.io
 
-const int SCREEN_WIDTH = 80
-const int SCREEN_HEIGHT = 25
+const SCREEN_WIDTH = 80
+const SCREEN_HEIGHT = 25
 
 
 class TextMode
 
-	static void* video_memory
-	static char text_color, text_color2
-	static int pos, line
+	var static video_memory: void*
+	var static text_color, text_color2: char
+	var static pos, line: int
 
-	static void clear()
+	func static clear()
 		cstring *d = video_memory
 		for i in 0:SCREEN_WIDTH * SCREEN_HEIGHT
 			d[i * 2] = ' '
@@ -18,13 +18,13 @@ class TextMode
 		line = 0
 		pos = 0
 
-	static void init()
+	func static init()
 		video_memory = _i2p(0x000b8000)
 		
 		clear()
 		text_color = 7
 
-	static void etm_shift()
+	func static etm_shift()
 		cstring *d = video_memory
 		cstring *d2 = &d[SCREEN_WIDTH * 2]
 		for i in 0:SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
@@ -34,7 +34,7 @@ class TextMode
 			d2[i * 2] = ' '
 			d2[i * 2 + 1] = 0
 
-	static void prints_low(cstring *str, int size)
+	func static prints_low(str: cstring*, size: int)
 		cstring *d = video_memory
 		d = &d[2*(SCREEN_WIDTH * line + pos)]
 		for i in 0:size
@@ -72,10 +72,10 @@ class TextMode
 
 
 
-void prints(cstring s)
+func prints(s: cstring)
 	TextMode.prints_low(&s, strlen(s))
 
-int strlen(cstring s)
+func strlen(s: cstring) -> int
 	for i in 0:256
 		if s[i] == 0
 			return i
@@ -83,8 +83,8 @@ int strlen(cstring s)
 
 
 class PointerWrapper
-	void *p
+	var p: void*
 
-void *_i2p(int i)
+func _i2p(i: int) -> void*
 	PointerWrapper *p = &i
 	return p.p

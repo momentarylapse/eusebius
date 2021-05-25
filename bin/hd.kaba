@@ -2,7 +2,7 @@ use lib.std
 use os
 
 
-void hd(int h, int _skip, int _length)
+func hd(h: int, _skip: int, _length: int)
 	int skip = _skip
 	int length = _length
 	string s
@@ -29,7 +29,7 @@ void hd(int h, int _skip, int _length)
 	print("\n")
 
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

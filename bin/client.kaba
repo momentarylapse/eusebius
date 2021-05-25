@@ -3,9 +3,9 @@ use lib.x
 use lib.draw
 
 
-XConnection *xcon
+var xcon: XConnection*
 
-void main()
+func main()
 	init_lib()
 	
 	stdout = open("/dev/tty", O_WRONLY)

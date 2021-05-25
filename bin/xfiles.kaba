@@ -6,16 +6,16 @@ use hui
 use image
 
 class FilesView extends MtkWidget
-	string dir
-	Path[] list
-	void __init__(string dir)
+	var dir: string
+	var list: Path[]
+	func __init__(dir: string)
 		set_dir(dir)
 		snd = MtkSizeNegotiationData(30, 30, true, true)
 	
-	override bool can_grab_input()
+	func override can_grab_input() -> bool
 		return true
 	
-	void set_dir(string _dir)
+	func set_dir(_dir: string)
 		dir = _dir
 		if dir[dir.num-1] == '/'
 			dir.remove(dir.num-1)
@@ -27,7 +27,7 @@ class FilesView extends MtkWidget
 			win.invalidate_all()
 		#p.end()
 	
-	override void draw()
+	func override draw()
 		if win.active
 			p.set_color(col_window_frame)
 		else
@@ -44,8 +44,8 @@ class FilesView extends MtkWidget
 			p.draw_str(30, 10 + i * 20, e)
 		#p.draw_str(200, 10, dir)
 	
-	override void on_mouse_move()
-	override void on_mouse_left_button_down()
+	func override on_mouse_move()
+	func override on_mouse_left_button_down()
 		for e,i in list
 			if mx >= 10 and mx < 200 and my >= 10+i*20 and my < 30+i*20
 				if Filesystem.is_directory(dir + "/" + e)
@@ -53,8 +53,8 @@ class FilesView extends MtkWidget
 					break
 				else
 					mtk_open(dir_append(dir, e))
-	override void on_mouse_left_button_up()
-	override void on_key(int key)
+	func override on_mouse_left_button_up()
+	func override on_key(key: int)
 		if key == KEY_BACKSPACE
 			if dir.num > 2
 				var parts = dir.explode("/")
@@ -63,13 +63,13 @@ class FilesView extends MtkWidget
 					d += "/"
 					d += parts[i]
 				set_dir(d)
-	override void on_resize()
+	func override on_resize()
 		win.set_title(dir)
 		
 
 class FilesWindow extends MtkWindow
-	FilesView* v
-	void __init__(string dir)
+	var v: FilesView*
+	func __init__(dir: string)
 		super.__init__("XFiles", 600, 400)
 		
 		v = new FilesView(dir)
@@ -77,9 +77,9 @@ class FilesWindow extends MtkWindow
 		
 		
 
-Image* icon_dir, icon_file
+var icon_dir, icon_file: Image*
 
-void main()
+func main()
 	mtk_init()
 	string[] arg
 	get_args(arg)

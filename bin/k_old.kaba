@@ -5,19 +5,19 @@ use lib.io
 const int CHAR_NL = 0x0a
 const int CHAR_TAB = 0x09
 
-bool verbose
+var verbose: bool
 
-bool isWhitespace(char c)
+func isWhitespace(c: char) -> bool
 	return (c == ' ') or (c == CHAR_TAB) or (c == CHAR_NL)
 
-bool isNumber(char c)
+func isNumber(c: char) -> bool
 	return (c >= '0') and (c <= '9')
 
-bool isOperator(char c)
+func isOperator(c: char) -> bool
 	return (c == '(') or (c == ')') or (c == '=') or (c == '+') or (c == '-') or (c == '*') or (c == '/') or (c == '%') or (c == '.') or (c == ',') or (c == '[') or (c == ']') or (c == '{') or (c == '}') or (c == '!') or (c == '<') or (c == '>') or (c == ':')
 
 
-string unescape(string s)
+func unescape(s: string) -> string
 	string r
 	for j in 1:len(s)-1
 		if s[j] == '\\' and j < len(s) + 1
@@ -33,21 +33,21 @@ string unescape(string s)
 	return r
 
 class Line
-	int indent
-	int physical_line_no
-	string[] words
-	const void show()
+	var indent: int
+	var physical_line_no: int
+	var words: string[]
+	func const show()
 		print(indent)
 		print(words)
 
 class Lines
-	Line[] lines
-	const void show()
+	var lines: Line[]
+	func const show()
 		for l in lines
 			l.show()
 
 class LiteralParser
-	const string getWord(string source, int i0)
+	func const getWord(source: string, i0: int) -> string
 		string r
 		for j in i0:len(source)
 			if isWhitespace(source[j])
@@ -57,7 +57,7 @@ class LiteralParser
 			r.add(source[j])
 		return r
 
-	const string getNumber(string source, int i0)
+	func const getNumber(source: string, i0: int) -> string
 		string r
 		for j in i0:len(source)
 			if !isNumber(source[j]) and (source[j] != '.')
@@ -65,7 +65,7 @@ class LiteralParser
 			r.add(source[j])
 		return r
 		
-	const string getString(string source, int i0)
+	func const getString(source: string, i0: int) -> string
 		string r
 		r.add(source[i0])
 		for j in i0+1:len(source)

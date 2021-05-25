@@ -2,13 +2,13 @@ use os
 use lib.std
 
 
-string ftype(Path path)
+func ftype(path: Path) -> string
 	if Filesystem.is_directory(path)
 		return "d"
 	else
 		return "f"
 
-int[] table_widths(string[] list, int cols, int space)
+func table_widths(list: string[], cols: int, space: int) -> int[]
 	int[] ww
 	for i in 0:cols
 		int w = 0
@@ -20,7 +20,7 @@ int[] table_widths(string[] list, int cols, int space)
 		ww.add(w)
 	return ww
 
-int[] optimal_table(string[] list, int space, int max_width)
+func optimal_table(list: string[], space: int, max_width: int) -> int[]
 	int cols = len(list)
 	while cols > 0
 		var w = table_widths(list, cols, space)
@@ -29,7 +29,7 @@ int[] optimal_table(string[] list, int space, int max_width)
 		cols --
 	return [10]
 
-void print_table(string[] list)
+func print_table(list: string[])
 	var w = optimal_table(list, 2, 80)
 	string o
 	for s,i in list
@@ -41,7 +41,7 @@ void print_table(string[] list)
 			o.add(' ')
 	print(o)
 
-void ls(Path dirname, bool extended)
+func ls(dirname: Path, extended: bool)
 	var list = Filesystem.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
@@ -54,7 +54,7 @@ void ls(Path dirname, bool extended)
 		print_table([for f in list str(f)])
 		print("\n")
 
-void main()
+func main()
 	init_lib()
 	lib_print_endl = false
 	string[] arg

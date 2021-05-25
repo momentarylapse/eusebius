@@ -7,26 +7,26 @@ use mem.heap
 use mem.paging
 
 
-const int MAX_OPEN_FILES = 128
+const MAX_OPEN_FILES = 128
 
 
 
 class OpenFileData
-	bool used
-	bool reading
-	bool writing
-	bool blocking
-	FileEntry *entry
-	int offset
+	var used: bool
+	var reading: bool
+	var writing: bool
+	var blocking: bool
+	var entry: FileEntry*
+	var offset: int
 	#int block_size
-	char[0]* buffer
-	Pipe* pipe
-	KSocket *socket
-	int ref_count
+	var buffer: char[0]*
+	var pipe: Pipe*
+	var socket: KSocket*
+	var ref_count: int
 	
-	bool buffer_dirty, inode_dirty
+	var buffer_dirty, inode_dirty: bool
 	
-	const int get_flags()
+	func const get_flags() -> int
 		int flags = 0
 		if reading
 			flags += O_RDONLY
@@ -35,14 +35,14 @@ class OpenFileData
 		if !blocking
 			flags += O_NONBLOCK
 		return flags
-	void set_flags(int flags)
+	func set_flags(flags: int)
 		reading = (flags & O_RDONLY) > 0
 		writing = (flags & O_WRONLY) > 0
 		blocking = (flags & O_NONBLOCK) == 0
 		if socket
 			socket.blocking = blocking
 
-	int read(PageDirectory page_dir, int _addr, int _size)
+	func read(page_dir: PageDirectory, _addr: int, _size: int) -> int
 		int r = 0
 		int size = _size
 		int addr = _addr
@@ -89,12 +89,12 @@ class OpenFileData
 		
 		return r
 
-	void truncate()
+	func truncate()
 		entry.size = offset
 		entry.shrink_block_list(ceil_quot(entry.size, entry.mount.block_size))
 		inode_dirty = true
 
-	int write(PageDirectory page_dir, int _addr, int _size)
+	func write(page_dir: PageDirectory, _addr: int, _size: int) -> int
 		int r=0
 		int addr = _addr
 		int size = _size
@@ -150,7 +150,7 @@ class OpenFileData
 		
 		return r
 
-	int getdents(PageDirectory page_dir, int addr, int num)
+	func getdents(page_dir: PageDirectory, addr: int, num: int) -> int
 		if !used
 			return -EBADF
 
@@ -176,7 +176,7 @@ class OpenFileData
 		offset ++
 		return 1
 
-	int seek(int _offset, int mode)
+	func seek(_offset: int, mode: int) -> int
 		int block_size = entry.mount.block_size
 		int old_block_no = offset / block_size
 		int new_offset
@@ -200,7 +200,7 @@ class OpenFileData
 		return offset
 
 
-	void unref()
+	func unref()
 		if !used
 			return
 		ref_count --
@@ -209,7 +209,7 @@ class OpenFileData
 		if ref_count == 0
 			clean_up()
 			
-	void clean_up()
+	func clean_up()
 			
 		if inode_dirty
 			if entry.mount.write_inode(entry) == 0
@@ -233,9 +233,9 @@ class OpenFileData
 		entry = nil
 
 
-OpenFileData[MAX_OPEN_FILES] OpenFiles
+var OpenFiles: OpenFileData[MAX_OPEN_FILES]
 
-OpenFileData *create_handle(int flags)
+func create_handle(flags: int) -> OpenFileData*
 	for o in OpenFiles
 		if !o.used
 			o.used = true
@@ -249,7 +249,7 @@ OpenFileData *create_handle(int flags)
 
 
 
-OpenFileData *kernel_open_entry(FileEntry e, int flags)
+func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 	bool truncating = (flags & O_TRUNC) > 0
 	OpenFileData *of = create_handle(flags)
 	if !of
@@ -288,7 +288,7 @@ OpenFileData *kernel_open_entry(FileEntry e, int flags)
 		of.entry.op.open(of.entry)
 	return of
 
-OpenFileData *kernel_open(cstring filename, int flags, out FileEntry cur_dir)
+func kernel_open(filename: cstring, flags: int, out cur_dir: FileEntry) -> OpenFileData*
 	bool creating = (flags & O_CREATE) > 0
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e and creating
@@ -301,7 +301,7 @@ OpenFileData *kernel_open(cstring filename, int flags, out FileEntry cur_dir)
 		return nil
 	return kernel_open_entry(e, flags)
 
-int kernel_mkdir(cstring filename, out FileEntry cur_dir)
+func kernel_mkdir(filename: cstring, out cur_dir: FileEntry) -> int
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
 	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
@@ -313,7 +313,7 @@ int kernel_mkdir(cstring filename, out FileEntry cur_dir)
 	cur_dir.mount.sync()
 	return 0
 
-int kernel_mknod(cstring filename, int flags, out FileEntry cur_dir)
+func kernel_mknod(filename: cstring, flags: int, out cur_dir: FileEntry) -> int
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
 	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
@@ -323,7 +323,7 @@ int kernel_mknod(cstring filename, int flags, out FileEntry cur_dir)
 		return -3
 	return 0
 
-int kernel_unlink(cstring filename, FileEntry cur_dir)
+func kernel_unlink(filename: cstring, cur_dir: FileEntry) -> int
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
@@ -332,7 +332,7 @@ int kernel_unlink(cstring filename, FileEntry cur_dir)
 	return FileSystem.delete(e)
 	
 
-int kernel_rmdir(cstring filename, FileEntry cur_dir)
+func kernel_rmdir(filename: cstring, cur_dir: FileEntry) -> int
 	FileEntry *e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
@@ -344,14 +344,14 @@ int kernel_rmdir(cstring filename, FileEntry cur_dir)
 
 
 class dirent_struct
-	int struct_size
-	int size
-	int type
-	cstring name
-	void __assign__(dirent_struct o)
+	var struct_size: int
+	var size: int
+	var type: int
+	var name: cstring
+	func __assign__(o: dirent_struct)
 		pass
 
-void InitFileAccessData()
+func InitFileAccessData()
 	for o in OpenFiles
 		o.used = false
 	for p in PipeManager.pipes

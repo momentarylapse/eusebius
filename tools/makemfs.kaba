@@ -1,6 +1,6 @@
 use os
 
-const int ClusterSize = 2048
+const ClusterSize = 2048
 
 func main(arg: string[])
 	if len(arg) < 2

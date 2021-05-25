@@ -7,44 +7,44 @@ use lib.vesa
 use hui
 
 
-const int XCMD_KILL = 666
-const int XCMD_NEW_WINDOW= 1024
-const int XCMD_DEL_WINDOW = 1025
-const int XCMD_WINDOW_MOVE = 1026
-const int XCMD_WINDOW_INVALIDATE = 1027
-const int XCMD_WINDOW_GET_SIZE = 2048
-const int XCMD_WINDOW_GET_POS = 2049
-const int XCMD_WINDOW_DRAG_START = 2050
-const int XCMD_WINDOW_DRAG_STOP = 2051
-const int XCMD_WINDOW_ACTIVATE = 2052
-const int XCMD_POINTER_GET_WINDOW = 3072
-const int XCMD_EXECUTE = 4096
+const XCMD_KILL = 666
+const XCMD_NEW_WINDOW= 1024
+const XCMD_DEL_WINDOW = 1025
+const XCMD_WINDOW_MOVE = 1026
+const XCMD_WINDOW_INVALIDATE = 1027
+const XCMD_WINDOW_GET_SIZE = 2048
+const XCMD_WINDOW_GET_POS = 2049
+const XCMD_WINDOW_DRAG_START = 2050
+const XCMD_WINDOW_DRAG_STOP = 2051
+const XCMD_WINDOW_ACTIVATE = 2052
+const XCMD_POINTER_GET_WINDOW = 3072
+const XCMD_EXECUTE = 4096
 
-const int XCMD_EVENT_MOUSE = 3072
-const int XCMD_EVENT_KEY = 3073
-const int XCMD_EVENT_DRAW = 3074
+const XCMD_EVENT_MOUSE = 3072
+const XCMD_EVENT_KEY = 3073
+const XCMD_EVENT_DRAW = 3074
 
-const int CON_STATUS_CLEAR = 0
-const int CON_STATUS_BUSY = 13
-const int CON_STATUS_SERVER_SEND = 1
-const int CON_STATUS_SERVER_ANSWER = 2
-const int CON_STATUS_CLIENT_SEND = 3
-const int CON_STATUS_CLIENT_ANSWER = 4
+const CON_STATUS_CLEAR = 0
+const CON_STATUS_BUSY = 13
+const CON_STATUS_SERVER_SEND = 1
+const CON_STATUS_SERVER_ANSWER = 2
+const CON_STATUS_CLIENT_SEND = 3
+const CON_STATUS_CLIENT_ANSWER = 4
 
-const int WF_TRANSPARENT = 1024
-const int WF_DONT_INVALIDATE = 2048
+const WF_TRANSPARENT = 1024
+const WF_DONT_INVALIDATE = 2048
 
 class MouseController
-	float xx, yy
-	float scale
-	int x, y, flags
-	XWindow* cursor
-	XWindow* drag_win
+	var xx, yy: float
+	var scale: float
+	var x, y, flags: int
+	var cursor: XWindow*
+	var drag_win: XWindow*
 	
-	int dev
-	bool sending
+	var dev: int
+	var sending: bool
 	
-	void __init__()
+	func __init__()
 		scale = 1.0 #3.5
 	
 		x = screen_width / 2
@@ -57,13 +57,13 @@ class MouseController
 		drag_win = nil
 		sending = false
 	
-	void set(int x, int y)
+	func set(x: int, y: int)
 		self.x = x
 		self.y = y
 		xx = x * scale
 		yy = y * scale
 		
-	void create()
+	func create()
 
 		var im = Image.load("/images/cursor.tga")
 	
@@ -76,7 +76,7 @@ class MouseController
 			cursor = new XWindow(nil, x-16, y-16, 32, 32, WF_TRANSPARENT | 7)
 			cursor.fill(0xffc0c0c0)
 
-	bool poll_single()
+	func poll_single() -> bool
 		int[4] m
 		if read(dev, &m, 4*4) < 16
 			return false
@@ -98,7 +98,7 @@ class MouseController
 	
 		return true
 
-	void poll()
+	func poll()
 		int x0 = x
 		int y0 = y
 		bool need_update = false
@@ -116,21 +116,21 @@ class MouseController
 			if drag_win
 				drag_win.move(drag_win.r.x0 + x - x0, drag_win.r.y0 + y - y0)
 
-MouseController* mouse
+var mouse: MouseController*
 
 class KeyboardController
-	int key
-	int handle
-	bool control, shift, altgr
-	bool escaped
-	void __init__()
+	var key: int
+	var handle: int
+	var control, shift, altgr: bool
+	var escaped: bool
+	func __init__()
 		handle = open("/dev/keyboard", O_RDONLY | O_NONBLOCK)
 #		fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 		control = false
 		shift = false
 		altgr = false
 		escaped = false
-	void digest(int _k)
+	func digest(_k: int)
 		int k = _k
 		if k == 0xe0
 			escaped = true
@@ -166,7 +166,7 @@ class KeyboardController
 			
 		for cc in cmds.clients
 			cc.send_key()
-	int getkey(int k)
+	func getkey(k: int) -> int
 		if k == 0x1c
 			return KEY_RETURN
 		if k == 0x39
@@ -276,39 +276,39 @@ class KeyboardController
 			return KEY_Z
 		return -1
 
-	void poll()
+	func poll()
 		int k = 0
 		int r = read(handle, &k, 1)
 		if r > 0
 			digest(k)
 
-KeyboardController* keyboard
+var keyboard: KeyboardController*
 
-void XExit()
+func XExit()
 	bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
 	exit(0)
 
 class XRect
-	int x0, y0, x1, y1
-	int w()
+	var x0, y0, x1, y1: int
+	func w() -> int
 		return x1 - x0
-	int h()
+	func h() -> int
 		return y1 - y0
-	bool inside(int x, int y)
+	func inside(x: int, y: int) -> bool
 		return x >= x0 and x < x1 and y >= y0 and y < y1
 
 
 class XWindow
-	Client* client
-	int id
-	XRect r
-	int shm_key
-	int shm_id
-	int[0]* buf
-	bool transparent
-	int level
+	var client: Client*
+	var id: int
+	var r: XRect
+	var shm_key: int
+	var shm_id: int
+	var buf: int[0]*
+	var transparent: bool
+	var level: int
 	
-	void __init__(Client* client, int _x, int _y, int w, int h, int flags)
+	func __init__(client: Client*, _x: int, _y: int, w: int, h: int, flags: int)
 		kprint("x: new win\n")
 		self.client = client
 		int x = _x
@@ -337,7 +337,7 @@ class XWindow
 			if (flags & WF_DONT_INVALIDATE) == 0
 				invalidated.add(r)
 		
-	void __delete__()
+	func __delete__()
 		kprint("x: del win\n")
 		if buf
 			invalidated.add(r)
@@ -347,7 +347,7 @@ class XWindow
 				windows_r.remove(len(windows) - n - 1)
 				windows.remove(n)
 	
-	void move(int x, int y)
+	func move(x: int, y: int)
 		XRect r0 = r
 		r.x1 += x - r.x0
 		r.y1 += y - r.y0
@@ -359,11 +359,11 @@ class XWindow
 			client.send(XCMD_WINDOW_MOVE, id, r.x0, r.y0, 0, 0)
 	
 	#void draw_rect(int x, int y, int w, int h, int c)
-	void fill(int c)
+	func fill(c: int)
 		int n = r.w() * r.h()
 		for i in 0:n
 			buf[i] = c
-	void fill_image(int dx, int dy, Image *im)
+	func fill_image(dx: int, dy: int, im: Image*)
 		#int x1 = dx
 #		if x1 < 0
 #			x1 = 0
@@ -376,12 +376,12 @@ class XWindow
 			for x in 0:w
 				buf[x + y*w] = im.data[x + y*w]
 
-int next_window_id
-XWindow*[] windows, windows_r
-XWindow* desktop
-XWindow* active_window
+var next_window_id: int
+var windows, windows_r: XWindow*[]
+var desktop: XWindow*
+var active_window: XWindow*
 
-void sort_windows()
+func sort_windows()
 	for i in 0:len(windows)
 		for j in i+1:len(windows)
 			if windows[i].level > windows[j].level
@@ -392,9 +392,9 @@ void sort_windows()
 	for w, i in windows
 		windows_r[len(windows) - i - 1] = w
 
-XRect[] invalidated
+var invalidated: XRect[]
 
-XWindow* find_top_most_window(int x, int y)
+func find_top_most_window(x: int, y: int) -> XWindow*
 	for w in windows_r
 		if w.level != 2
 			continue
@@ -402,7 +402,7 @@ XWindow* find_top_most_window(int x, int y)
 			return w
 	return nil
 
-void activate_window(XWindow *win)
+func activate_window(win: XWindow*)
 	if active_window == win
 		return
 	if active_window
@@ -411,7 +411,7 @@ void activate_window(XWindow *win)
 	if active_window
 		active_window.client.send(XCMD_WINDOW_ACTIVATE, win.id, 0, 0, 0, 0)
 
-void draw(XRect rr)
+func draw(rr: XRect)
 	XRect r = rr
 	if r.x0 < 0
 		r.x0 = 0
@@ -472,30 +472,30 @@ void draw(XRect rr)
 			xs = xe
 	
 
-void draw_invalidated()
+func draw_invalidated()
 	for r in invalidated
 		draw(r)
 	invalidated.clear()
 
 
 class Client
-	int sock
-	bool kill_me
-	XWindow*[] win
-	int[8] buf
+	var sock: int
+	var kill_me: bool
+	var win: XWindow*[]
+	var buf: int[8]
 	
-	void __init__(int _sock)
+	func __init__(_sock: int)
 		sock = _sock
 		kill_me = false
 		kprint("x: new client sock={{sock}}\n")
 	
-	void __delete__()
+	func __delete__()
 		kprint("x: del client\n")
 		for w in win
 			del w
 		close(sock)
 	
-	void send(int cmd, int p1, int p2, int p3, int p4, int p5)
+	func send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
 		kprint(" x:send ")
 		buf[0] = cmd
 		buf[1] = p1
@@ -508,7 +508,7 @@ class Client
 		#return buf[32]
 		kprint(" x:/send ")
 	
-	void send_mouse()
+	func send_mouse()
 		kprint("x: send mouse\n")
 		XWindow* w = find_top_most_window(mouse.x, mouse.y)
 		int id = -1
@@ -516,11 +516,11 @@ class Client
 			id = w.id
 		send(XCMD_EVENT_MOUSE, mouse.x, mouse.y, mouse.flags, id, 0)
 	
-	void send_key()
+	func send_key()
 		kprint("x: send key\n")
 		send(XCMD_EVENT_KEY, keyboard.key, 0, 0, 0, 0)
 	
-	void poll()
+	func poll()
 		int n = read(sock, &buf[0], 4*8)
 		if n == -ENOTCONN
 			kill_me = true
@@ -593,7 +593,7 @@ class Client
 			int r = pm.run(cmd)
 			send(XCMD_EXECUTE, r, 0, 0, 0, 0)
 	
-	string read_string()
+	func read_string() -> string
 		int num
 		read(sock, &num, 4)
 		string s
@@ -604,11 +604,11 @@ class Client
 		
 
 class CommandController
-	int sock
+	var sock: int
 	#int connection
-	Client*[] clients
+	var clients: Client*[]
 	
-	void __init__()
+	func __init__()
 	
 		sock = socket(0)
 		if !bind(sock, 0x7bcd0123)
@@ -622,7 +622,7 @@ class CommandController
 		#mkfifo("/tmp/x")
 		#connection = open("/tmp/x", O_RDONLY)
 	
-	void update()
+	func update()
 		int ss = accept(sock)
 		if ss >= 0
 			fcntl(ss, F_SETFL, O_RDWR | O_NONBLOCK)
@@ -636,16 +636,16 @@ class CommandController
 				clients.remove(i)
 				i --
 
-CommandController *cmds
+var cmds: CommandController*
 
 class ProcessManager
-	int[] pids
-	int run(string[] cmd)
+	var pids: int[]
+	func run(cmd: string[]) -> int
 		int r = execute(cmd, -1, -1)
 		if r >= 0
 			pids.add(r)
 		return r
-	void update()
+	func update()
 		for p in pids
 			int status
 			if waitpid(p, &status, false) == -2
@@ -656,9 +656,9 @@ class ProcessManager
 				pids.remove(i)
 				i --
 
-ProcessManager *pm
+var pm: ProcessManager*
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	get_args(arg)

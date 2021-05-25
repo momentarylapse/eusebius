@@ -3,7 +3,7 @@ use lib_syscalls
 use lib_array
 
 
-int open(lib__Path filename, int flags)
+func open(filename: lib__Path, flags: int) -> int
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -17,7 +17,7 @@ int open(lib__Path filename, int flags)
 	}
 	return __temp_i__
 
-int create(lib__Path filename)
+func create(filename: lib__Path) -> int
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -30,7 +30,7 @@ int create(lib__Path filename)
 	}
 	return __temp_i__
 
-int fork()
+func fork() -> int
 	asm{
 		mov eax, 0x00000002
 		int 0x80
@@ -41,7 +41,7 @@ int fork()
 		stdout = open(*p, O_RDONLY)
 	return __temp_i__
 
-bool mkdir(lib__Path filename)
+func mkdir(filename: lib__Path) -> bool
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -53,7 +53,7 @@ bool mkdir(lib__Path filename)
 	}
 	return lib_error == 0
 
-bool rmdir(lib__Path filename)
+func rmdir(filename: lib__Path) -> bool
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -66,7 +66,7 @@ bool rmdir(lib__Path filename)
 	return lib_error == 0
 
 
-bool mkfifo(lib__Path filename)
+func mkfifo(filename: lib__Path) -> bool
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -78,7 +78,7 @@ bool mkfifo(lib__Path filename)
 	}
 	return lib_error == 0
 
-bool unlink(lib__Path filename)
+func unlink(filename: lib__Path) -> bool
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -90,7 +90,7 @@ bool unlink(lib__Path filename)
 	}
 	return lib_error == 0
 
-bool chdir(lib__Path dir)
+func chdir(dir: lib__Path) -> bool
 	cstring tt
 	_s2cs(dir.s, tt)
 	__temp_p__ = &tt
@@ -102,7 +102,7 @@ bool chdir(lib__Path dir)
 	}
 	return lib_error == 0
 
-lib__string lib__Filesystem@@current_directory()
+func lib__Filesystem@@current_directory() -> lib__string
 	cstring tt
 	__temp_p__ = &tt
 	asm{
@@ -117,7 +117,7 @@ lib__string lib__Filesystem@@current_directory()
 	return r
 
 
-bool stat(lib__Path filename, StatData buf)
+func stat(filename: lib__Path, buf: StatData) -> bool
 	cstring tt
 	_s2cs(filename.s, tt)
 	__temp_p__ = &tt
@@ -134,26 +134,26 @@ bool stat(lib__Path filename, StatData buf)
 
 
 class lib__Path
-	lib__string s
-	void __init__()
-	void __init__(lib__string p)
+	var s: lib__string
+	func __init__()
+	func __init__(p: lib__string)
 		s = p
-	void __delete__()
-	const lib__string __str__()
+	func __delete__()
+	func const __str__() -> lib__string
 		return s
-	const bool is_empty()
+	func const is_empty() -> bool
 		return len(s) == 0
-	const bool is_absolute()
+	func const is_absolute() -> bool
 		if len(s) == 0
 			return false
 		return s.data[0] == '/'
-	const bool is_relative()
+	func const is_relative() -> bool
 		return not is_absolute()
-	const bool has_dir_ending()
+	func const has_dir_ending() -> bool
 		if len(s) == 0
 			return false
 		return s.data[len(s)-1] == '/'
-	const lib__string __lshift__(lib__Path p)
+	func const __lshift__(p: lib__Path) -> lib__string
 		if is_empty()
 			return p.s
 		if has_dir_ending()
@@ -161,9 +161,9 @@ class lib__Path
 		lib__string r = s
 		r.add('/')
 		return r + p.s
-	static lib__Path @from_str(lib__string p)
+	func static @from_str(p: lib__string) -> lib__Path
 		return lib__Path(p)
-	void __assign__(lib__Path p)
+	func __assign__(p: lib__Path)
 		s = p.s
 
 
@@ -171,14 +171,14 @@ class lib__Path
 # not working because this does not export new functions...
 
 class lib__Path@list
-	lib__string@list l
-	void add(lib__Path p)
+	var l: lib__string@list
+	func add(p: lib__Path)
 		l.add(p.s)
-	lib__string@list __add__(lib__Path@list o)
+	func __add__(o: lib__Path@list) -> lib__string@list
 		return l + o.l
-	void __iadd__(lib__Path@list o)
+	func __iadd__(o: lib__Path@list)
 		l + o.l
-	void __assign__(lib__Path@list o)
+	func __assign__(o: lib__Path@list)
 		l = o.l
 		
 
@@ -186,16 +186,16 @@ class lib__Path@list
 # dir entry
 
 class dirent_struct
-	int struct_size
-	int size
-	int type
-	cstring name
-	void __assign__(dirent_struct o)
+	var struct_size: int
+	var size: int
+	var type: int
+	var name: cstring
+	func __assign__(o: dirent_struct)
 		pass
 
 
 
-lib__string@list lib__Filesystem@@search(lib__Path dirname, string filter, string options)
+func lib__Filesystem@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
 	lib__string@list list_dirs, list_files
 	lib__print("") # ?!?!?!? FIXME
 	int h = open(dirname, O_RDONLY)
@@ -234,35 +234,35 @@ lib__string@list lib__Filesystem@@search(lib__Path dirname, string filter, strin
 	return list_dirs + list_files
 
 class lib__File
-	int h
-	int buf_pos
-	int pos
+	var h: int
+	var buf_pos: int
+	var pos: int
 	
-	void __init__()
+	func __init__()
 		h = -1
 	
-	void __delete__()
+	func __delete__()
 		close()
 	
-	bool open(lib__Path filename)
+	func open(filename: lib__Path) -> bool
 		h = xxx_open(filename, O_RDONLY)
 		pos = 0
 		return h >= 0
 	
-	bool create(lib__Path filename)
+	func create(filename: lib__Path) -> bool
 		h = xxx_create(filename)
 		pos = 0
 		return h >= 0
 	
-	void close()
+	func close()
 		if h < 0
 			return
 		xxx_close(h)
 		h = -1
 	
-	void setBinaryMode(bool b)
+	func setBinaryMode(b: bool)
 	
-	lib__string read(int size)
+	func read(size: int) -> lib__string
 		lib__string s
 		s.resize(size)
 		int r = xxx_read(h, s.data, size)
@@ -273,42 +273,42 @@ class lib__File
 		pos += r
 		return s
 	
-	int write(lib__string s)
+	func write(s: lib__string) -> int
 		int r = xxx_write(h, s.data, s.num)
 		if r > 0
 			pos += r
 		return r
 	
-	int getPos()
+	func getPos() -> int
 		return pos
 		#return xxx_seek(h, 0, SEEK_CUR)
 	
-	void seek(int _pos, bool absolute)
+	func seek(_pos: int, absolute: bool)
 		if absolute
 			pos = _pos
 			xxx_seek(h, pos, SEEK_SET)
 		else
 			xxx_seek(h, pos, SEEK_CUR)
 
-bool xxx_close(int h)
+func xxx_close(h: int) -> bool
 	return close(h)
 
-int xxx_open(lib__Path filename, int flags)
+func xxx_open(filename: lib__Path, flags: int) -> int
 	return open(filename, flags)
 
-int xxx_create(lib__Path filename)
+func xxx_create(filename: lib__Path) -> int
 	return create(filename)
 
-int xxx_read(int h, void* buf, int size)
+func xxx_read(h: int, buf: void*, size: int) -> int
 	return read(h, buf, size)
 
-int xxx_write(int h, void* buf, int size)
+func xxx_write(h: int, buf: void*, size: int) -> int
 	return write(h, buf, size)
 
-int xxx_seek(int h, int pos, int mode)
+func xxx_seek(h: int, pos: int, mode: int) -> int
 	seek(h, pos, mode)
 
-lib__File* lib__Filesystem@@open(lib__Path filename)
+func lib__Filesystem@@open(filename: lib__Path) -> lib__File*
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.open(filename)
@@ -316,7 +316,7 @@ lib__File* lib__Filesystem@@open(lib__Path filename)
 		return nil
 	return f
 
-lib__File* lib__Filesystem@@create(lib__Path filename)
+func lib__Filesystem@@create(filename: lib__Path) -> lib__File*
 	lib__File* f = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.create(filename)
@@ -324,7 +324,7 @@ lib__File* lib__Filesystem@@create(lib__Path filename)
 		return nil
 	return f
 
-lib__string lib__Filesystem@@read(lib__Path filename)
+func lib__Filesystem@@read(filename: lib__Path) -> lib__string
 	lib__string content
 	int h = open(filename, O_RDONLY)
 	if h < 0
@@ -346,26 +346,26 @@ lib__string lib__Filesystem@@read(lib__Path filename)
 	return content
 
 class StatData
-	cstring name
-	int type
-	int size
-	int inode
-	int mp_inode
-	int time
-	void __assign__(StatData o)
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
+	func __assign__(o: StatData)
 		pass
 
 
-bool lib__Filesystem@@is_directory(lib__Path filename)
+func lib__Filesystem@@is_directory(filename: lib__Path) -> bool
 	StatData d
 	if stat(filename, &d)
 		return d.type == 1
 	return false
 
-int64 lib__Filesystem@@size(lib__Path filename)
+func lib__Filesystem@@size(filename: lib__Path) -> int64
 	pass
 
-int Filesystem_size32(lib__Path filename)
+func Filesystem_size32(filename: lib__Path) -> int
 	StatData d
 	if stat(filename, &d)
 		return d.size

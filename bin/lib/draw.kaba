@@ -3,21 +3,21 @@ use lib.std
 use lib.x
 use lib.ttfx
 
-int col2i(color c)
+func col2i(c: color) -> int
 	int ir = c.r * 255.0
 	int ig = c.g * 255.0
 	int ib = c.b * 255.0
 	int ia = c.a * 255.0
 	return ib + (ig << 8) + (ir << 16) + (ia << 24)
 
-void i2col(out color c, int i)
+func i2col(out c: color, i: int)
 	int ir = (i >> 16) & 255
 	int ig = (i >> 8) & 255
 	int ib = i & 255
 	int ia = i >> 24
 	c = color(float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0, float(ia) / 255.0)
 
-int add_blend(int i1, int i2, float t)
+func add_blend(i1: int, i2: int, t: float) -> int
 	float s = 1 - t
 	color c1, c2
 	i2col(c1, i1)
@@ -25,33 +25,33 @@ int add_blend(int i1, int i2, float t)
 	return col2i(color(s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b, 1))
 
 class XCircle
-	complex m
-	float r
+	var m: complex
+	var r: float
 
 class XLine
-	complex a, b
+	var a, b: complex
 
 class XPainter
-	int[0]* buf
-	int width, height
-	int buf_width
-	int buf_x, buf_y
-	rect all
-	bool error
+	var buf: int[0]*
+	var width, height: int
+	var buf_width: int
+	var buf_x, buf_y: int
+	var all: rect
+	var error: bool
 	
-	int cur_color
-	complex pos
+	var cur_color: int
+	var pos: complex
 	
-	rect[] rects
-	XCircle[] circles
-	XLine[] path
-	int last_path_start
+	var rects: rect[]
+	var circles: XCircle[]
+	var path: XLine[]
+	var last_path_start: int
 	
-	float line_width
-	XWindow* win
-	FontDescriptor* font
+	var line_width: float
+	var win: XWindow*
+	var font: FontDescriptor*
 	
-	void __init__(XWindow *_win)
+	func __init__(_win: XWindow*)
 		win = _win
 		error = true
 		buf = win.buf
@@ -73,7 +73,7 @@ class XPainter
 		line_width = 1.0
 		last_path_start = 0
 	
-	void set_as_ref(XPainter* p, int x, int y, int w, int h)
+	func set_as_ref(p: XPainter*, x: int, y: int, w: int, h: int)
 		buf_width = p.buf_width
 		buf_x = x
 		buf_y = y
@@ -84,13 +84,13 @@ class XPainter
 		#font = p.font
 		#line_width = p.line_width
 	
-	void set_color(color c)
+	func set_color(c: color)
 		cur_color = col2i(c)
 	
-	void rectangle(rect r)
+	func rectangle(r: rect)
 		rects.add(r)
 	
-	void draw_pixel(int x, int y)
+	func draw_pixel(x: int, y: int)
 		if x < 0 or x >= width
 			return
 		if y < 0 or y >= height
@@ -98,7 +98,7 @@ class XPainter
 		int index = x + y * buf_width
 		buf[index] = cur_color
 	
-	void draw_rect(rect r)
+	func draw_rect(r: rect)
 		int x0 = max(r.x1, 0)
 		int y0 = max(r.y1, 0)
 		int x1 = min(r.x2, width)
@@ -109,7 +109,7 @@ class XPainter
 				buf[index] = cur_color
 				index ++
 	
-	void draw_circle(float mx, float my, float _r)
+	func draw_circle(mx: float, my: float, _r: float)
 		float r = _r + 0.5
 		int x0 = max(mx - r, 0)
 		int y0 = max(my - r, 0)
@@ -130,7 +130,7 @@ class XPainter
 				dx += 1.0
 				index ++
 	
-	void draw_line(complex a, complex b)
+	func draw_line(a: complex, b: complex)
 		float r = line_width * 1.5
 		int x0 = max(min(a.x, b.x)-r, 0)
 		int y0 = max(min(a.y, b.y)-r, 0)
@@ -158,7 +158,7 @@ class XPainter
 				dx += 1.0
 				index ++
 	
-	void draw_spline(complex a, complex b, complex c)
+	func draw_spline(a: complex, b: complex, c: complex)
 		int n = 12
 		complex z1 = a
 		complex z2
@@ -170,7 +170,7 @@ class XPainter
 			z1 = z2
 		draw_line(z2, c)
 	
-	void fill_polygon()
+	func fill_polygon()
 		int[][] hit
 		hit.resize(height)
 		
@@ -206,7 +206,7 @@ class XPainter
 					buf[index] = cur_color
 					index ++
 	
-	void fill()
+	func fill()
 		for r in rects
 			draw_rect(r)
 		for c in circles
@@ -214,31 +214,31 @@ class XPainter
 		fill_polygon()
 		clear_data()
 	
-	void move_to(float x, float y)
+	func move_to(x: float, y: float)
 		pos = complex(x, y)
 		last_path_start = path.num
 	
-	void line_to(float x, float y)
+	func line_to(x: float, y: float)
 		XLine l
 		l.a = pos
 		l.b = complex(x, y)
 		path.add(l)
 		pos = l.b
 	
-	void path_close()
+	func path_close()
 		if path.num > last_path_start
 			complex z = path[last_path_start].a
 			line_to(z.x, z.y)
 			last_path_start = path.num
 			pos = z
 	
-	void clear_data()
+	func clear_data()
 		rects.clear()
 		path.clear()
 		circles.clear()
 		last_path_start = 0
 	
-	void strike()
+	func strike()
 		for r in rects
 			float d = line_width / 2
 			draw_line(complex(r.x1, r.y1 - d), complex(r.x1, r.y2 + d))
@@ -249,7 +249,7 @@ class XPainter
 			draw_line(l.a, l.b)
 		clear_data()
 	
-	void draw_glyph(float x, float _y, TTFGlyph *g, float scale)
+	func draw_glyph(x: float, _y: float, g: TTFGlyph*, scale: float)
 		if !font
 			return
 	
@@ -263,7 +263,7 @@ class XPainter
 		strike()
 		#fill()
 	
-	void draw_str(float _x, float y, string text)
+	func draw_str(_x: float, y: float, text: string)
 		float scale = font.size
 		float x = _x
 		for c,i in text
@@ -278,7 +278,7 @@ class XPainter
 				draw_glyph(x, y, g, scale)
 			x += scale * g.width
 	
-	void draw_image(int _x, int _y, Image *im)
+	func draw_image(_x: int, _y: int, im: Image*)
 		int x0 = max(_x, 0)
 		int y0 = max(_y, 0)
 		int x1 = min(_x+im.width, width)
@@ -291,7 +291,7 @@ class XPainter
 				index ++
 				_index ++
 		
-	void end()
+	func end()
 		#win.invalidate_all()
 		win.invalidate(buf_x, buf_y, buf_x + width, buf_y + height)
 		

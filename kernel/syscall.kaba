@@ -12,19 +12,19 @@ use time.timevalue
 use time.timer
 use irq.irq
 
-const int SYSCALL_STACK_SIZE = 65536
+const SYSCALL_STACK_SIZE = 65536
 
 class SysInfo
-	int uptime
-	int[3] loads
-	int totalram, freeram, sharedram, bufferram
-	int totalswap, freeswap
-	int procs
-	int totalhigh, freehigh
-	int mem_unit
-	int[2] pad
-	int totalheap, freeheap
-	void get()
+	var uptime: int
+	var loads: int[3]
+	var totalram, freeram, sharedram, bufferram: int
+	var totalswap, freeswap: int
+	var procs: int
+	var totalhigh, freehigh: int
+	var mem_unit: int
+	var pad: int[2]
+	var totalheap, freeheap: int
+	func get()
 		KernelTimer.update()
 		uptime = KernelTimer.tv.sec
 		for l in loads
@@ -45,18 +45,18 @@ class SysInfo
 		totalheap = MEM_HEAP_SIZE / mem_unit
 		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
 
-SysInfo _sys_info
+var _sys_info: SysInfo
 
 class UTSName
-	cstring sysname
-	cstring nodename
-	cstring release
-	cstring version
-	cstring machine
-	cstring domainname
-	void __assign__(UTSName o)
+	var sysname: cstring
+	var nodename: cstring
+	var release: cstring
+	var version: cstring
+	var machine: cstring
+	var domainname: cstring
+	func __assign__(o: UTSName)
 		pass
-	void get()
+	func get()
 		strcpy(sysname, KERNEL_NAME)
 		strcpy(nodename, "???")
 		strcpy(release, KERNEL_VERSION)
@@ -64,17 +64,17 @@ class UTSName
 		strcpy(machine, MACHINE_TYPE)
 		strcpy(domainname, "-no domain-")
 
-UTSName _uts_name
+var _uts_name: UTSName
 
 class TaskInfo
-	cstring name
-	int pid, ppid, mode, status
-	int mem
-	int cpu
-	TimeValue life
-	void __assign__(TaskInfo o)
+	var name: cstring
+	var pid, ppid, mode, status: int
+	var mem: int
+	var cpu: int
+	var life: TimeValue
+	func __assign__(o: TaskInfo)
 		pass
-	int get(int _pid)
+	func get(_pid: int) -> int
 		var t = TaskManager.get_task(_pid)
 		if !t
 			return -1
@@ -92,14 +92,14 @@ class TaskInfo
 		life = t.time_all
 		return 0
 
-TaskInfo _task_info
+var _task_info: TaskInfo
 
 class MountInfo
-	int major, minor
-	cstring dir
-	void __assign__(MountInfo o)
+	var major, minor: int
+	var dir: cstring
+	func __assign__(o: MountInfo)
 		pass
-	int get(int _index)
+	func get(_index: int) -> int
 		var m = &FileSystem.mounts[_index]
 		if !m.dev
 			return -1
@@ -108,19 +108,19 @@ class MountInfo
 		m.dest.get_path(dir)
 		return 0
 
-MountInfo _mount_info
+var _mount_info: MountInfo
 
 
 class StatData
-	cstring name
-	int type
-	int size
-	int inode
-	int mp_inode
-	int time
-	void __assign__(StatData o)
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
+	func __assign__(o: StatData)
 		pass
-	int get(cstring filename, FileEntry cur_dir)
+	func get(filename: cstring, cur_dir: FileEntry) -> int
 		var e = FileSystem.get(filename, cur_dir)
 		if !e
 			#panic(filename)
@@ -131,9 +131,9 @@ class StatData
 		inode = e.inode
 		return 0
 
-StatData _stat_data
+var _stat_data: StatData
 
-void int_syscall()
+func int_syscall()
 	while true
 		#show_pvl()
 		int r = 0
@@ -302,8 +302,8 @@ void int_syscall()
 		}
 		#prints("<")
 	
-Task* sys_call_task
+var sys_call_task: Task*
 
-void InitSysCall()
+func InitSysCall()
 	sys_call_task = TaskManager.add_task_kernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, kernel_task)
 	irq.set_task(0x80, sys_call_task)

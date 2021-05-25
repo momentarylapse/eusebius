@@ -5,18 +5,18 @@ use task.task
 use kaba
 
 
-const int HARDWARE_IRQ_SHIFT = 32
-const int MAX_HW_IRQS = 16
+const HARDWARE_IRQ_SHIFT = 32
+const MAX_HW_IRQS = 16
 
 
 class InterruptDescriptor
-	int a, b
+	var a, b: int
 	
-	void clear()
+	func clear()
 		a = 0
 		b = 0
 
-	void set(Function F)
+	func set(F: Function)
 		int addr = _p2i(&F)
 		# Interrupt Gate
 		a = 0x00080000 + (addr & 0xffff) # desc[1],addr[15..0]
@@ -24,7 +24,7 @@ class InterruptDescriptor
 
 
 	# interrupt tasks don't need the cli/sti... we use the IF bit
-	void set_task(out Task t)
+	func set_task(out t: Task)
 		t.tss.eflags = 0x000 # Iterrupt Flag = 0
 		t.status = TASK_STATUS_INTERRUPT
 		
@@ -34,17 +34,17 @@ class InterruptDescriptor
 
 class InterruptToSignalMap
 #	int irq # hardware IRQ  (!= shifted version...)
-	int pid, puid
-	int signal
-	Task *ktask
-	Task *utask
+	var pid, puid: int
+	var signal: int
+	var ktask: Task*
+	var utask: Task*
 
 class irq
-	static InterruptDescriptor[256] idt
-	static InterruptToSignalMap[MAX_HW_IRQS] task_maps
-	static int inside_hw_irq
+	var static idt: InterruptDescriptor[256]
+	var static task_maps: InterruptToSignalMap[MAX_HW_IRQS]
+	var static inside_hw_irq: int
 	
-	static void deny_user_map(int hw_irq)
+	func static deny_user_map(hw_irq: int)
 		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
 			return
 		#prints(" DENY ")
@@ -52,18 +52,18 @@ class irq
 		task_maps[hw_irq].pid = 0x66666666
 		
 	
-	static void set_func(int soft_irq, Function F)
+	func static set_func(soft_irq: int, F: Function)
 		idt[soft_irq].set(F)
 		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
 	
-	static void set_task(int soft_irq, out Task t)
+	func static set_task(soft_irq: int, out t: Task)
 		idt[soft_irq].set_task(t)
 		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
 	
-	static int hw2soft(int hw_irq)
+	func static hw2soft(hw_irq: int) -> int
 		return hw_irq + HARDWARE_IRQ_SHIFT
 
-	static void init()
+	func static init()
 		prints("loading interrupt table...")
 
 		for i in idt
@@ -96,7 +96,7 @@ class irq
 		enable()
 		prints("   ok\n")
 	
-	static void load_idt()
+	func static load_idt()
 		__temp_p__ = &idt
 
 		asm {
@@ -113,15 +113,15 @@ class irq
 			#sti
 		}
 	
-	static void enable()
+	func static enable()
 		asm {
 			sti
 		}
-	static void disable()
+	func static disable()
 		asm {
 			cli
 		}
-	static void end_of_interrupt(int hw_irq)
+	func static end_of_interrupt(hw_irq: int)
 		#if hw_irq > 0
 		#	prints(" END")
 		#	printi(hw_irq)
@@ -129,7 +129,7 @@ class irq
 			outportb(0xa0, 0x20)
 		outportb(0x20, 0x20)
 	
-	static int sys_map_irq(int hw_irq, Task t, int signal)
+	func static sys_map_irq(hw_irq: int, t: Task, signal: int) -> int
 		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
 			return -EINVAL
 		if signal < 0 or signal >= MAX_SIGNALS
@@ -155,7 +155,7 @@ class irq
 		return 0
 
 
-	static void int_task_irq()
+	func static int_task_irq()
 		asm {
 			mov __temp_i__, esi
 		}
@@ -184,11 +184,11 @@ class irq
 				iret
 			}
 
-	static void int_ignore()
+	func static int_ignore()
 		while true
 			#prints("[ignore irq]")
 			asm {
 				iret
 			}
-	static Task* ignore_task
+	var static ignore_task: Task*
 

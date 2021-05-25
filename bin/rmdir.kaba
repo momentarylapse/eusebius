@@ -1,7 +1,7 @@
 use lib.std
 
 
-void _rmdir(string filename)
+func _rmdir(filename: string)
 	if !rmdir(filename)
 		return
 	if lib_error == -ENOENT
@@ -15,7 +15,7 @@ void _rmdir(string filename)
 	exit(lib_error)
 
 
-void main()
+func main()
 	init_lib()
 	string[] arg
 	get_args(arg)

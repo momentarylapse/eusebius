@@ -4,16 +4,16 @@ use ata
 
 
 class BlockDevice
-	int major, minor
-	int disk_no
-	int offset, size
-	int block_size
-	char type
-	bool active
-	cstring name
-	void *p_read_block # (self, buf, minor, index)
+	var major, minor: int
+	var disk_no: int
+	var offset, size: int
+	var block_size: int
+	var type: char
+	var active: bool
+	var name: cstring
+	var p_read_block: void*
 	
-	void __assign__(BlockDevice o)
+	func __assign__(o: BlockDevice)
 	
 #	int read_block(int index, void *buf)
 #		if !p_read_block
@@ -22,30 +22,30 @@ class BlockDevice
 
 class BlockDevManager	
 
-	static BlockDevice[8] devs
-	static int num_devs
+	var static devs: BlockDevice[8]
+	var static num_devs: int
 	
-	static void init()
+	func static init()
 		num_devs = 0
 		AtaController.init()
 		read_partitions_from_disk(0)
 		show()
 	
-	static BlockDevice* add_dev(int major, int minor)
+	func static add_dev(major: int, minor: int) -> BlockDevice*
 		var p = &devs[num_devs]
 		p.major = major
 		p.minor = minor
 		num_devs ++
 		return p
 	
-	static BlockDevice* get(int major, int minor)
+	func static get(major: int, minor: int) -> BlockDevice*
 		for d in devs
 			if d.major == major and d.minor == minor
 				return &d
 		return nil
 		
 
-	static void read_partitions_from_disk(int disk_no)
+	func static read_partitions_from_disk(disk_no: int)
 		var p = add_dev(0, 0)
 		p.block_size = 512
 		p.disk_no = disk_no
@@ -78,7 +78,7 @@ class BlockDevManager
 		#for n, 0, 512
 	#		DrawHex(n*3,2,&AtaBuffer[n],1)
 			
-	static void show()
+	func static show()
 		#printi(num_devs)
 		prints("primary partitions:       offset   size\n")
 		for n in 0:num_devs
