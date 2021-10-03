@@ -445,7 +445,7 @@ class StdCharDevs
 		#printh(&k, 3)
 		return -1
 
-	static void ps2_read_key(int _k)
+	func static ps2_read_key(_k: int)
 		int k = _k
 			
 		# add to low level device buffer

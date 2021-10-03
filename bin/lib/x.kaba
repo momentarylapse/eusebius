@@ -199,7 +199,7 @@ class XConnection
 #				return w
 #		return nil
 	
-	int execute(string[] cmd)
+	func execute(cmd: string[]) -> int
 		just_send(XCMD_EXECUTE, cmd.num, 0, 0, 0, 0)
 		for c in cmd
 			send_string(c)
@@ -207,7 +207,7 @@ class XConnection
 		wait_recv(XCMD_EXECUTE)
 		return buf[1]
 	
-	bool poll()
+	func poll() -> bool
 		int n = read(sock, &buf, 4*8)
 		if n < 32
 			return false
@@ -282,7 +282,7 @@ class XConnection
 		#kprint("  c:/poll  ")
 		return true
 	
-	void run()
+	func run()
 		while true
 			poll()
 			usleep(5000)

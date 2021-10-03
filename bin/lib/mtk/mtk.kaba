@@ -131,7 +131,7 @@ class MtkSizeNegotiationData
 	var expand_x: bool
 	var expand_y: bool
 	
-	void __init__(int min_w, int min_h, bool exp_x, bool exp_y)
+	func __init__(min_w: int, min_h: int, exp_x: bool, exp_y: bool)
 		min_width = min_w
 		min_height = min_h
 		expand_x = exp_x
@@ -145,7 +145,7 @@ class MtkWidget
 	var snd: MtkSizeNegotiationData
 	var font: FontDescriptor*
 	
-	void __init__()
+	func __init__()
 		win = nil
 		p = nil
 		mx = 0
@@ -153,24 +153,24 @@ class MtkWidget
 		snd = MtkSizeNegotiationData(10, 10, true, true)
 		font = default_font
 	
-	virtual void __delete__()
+	func virtual __delete__()
 		if p
 			del p
 	
-	virtual bool can_grab_input()
+	func virtual can_grab_input() -> bool
 		return false
 	
-	bool has_input()
+	func has_input() -> bool
 		return win.active and (&self == win.input_widget)
 	
-	void set_win(out MtkWindow* win, int x, int y, int w, int h)
+	func set_win(out win: MtkWindow*, x: int, y: int, w: int, h: int)
 		self.win = win
 		win.widgets.add(&self)
 		p = new XPainter(win)
 		p.font = font
 		resize(x, y, w, h)
 	
-	void resize(int x, int y, int w, int h)
+	func resize(x: int, y: int, w: int, h: int)
 		p.set_as_ref(win.p, x, y, w, h)
 		r.x0 = x
 		r.y0 = y
@@ -179,24 +179,24 @@ class MtkWidget
 	
 		on_resize()
 		
-	void set_font(FontDescriptor* f)
+	func set_font(f: FontDescriptor*)
 		font = f
 		if p
 			p.font = f
 	
-	virtual void on_resize()
-	virtual void draw()
-	virtual void on_mouse_move()
-	virtual void on_mouse_left_button_down()
-	virtual void on_mouse_left_button_up()
-	virtual void on_key(int key)
+	func virtual on_resize()
+	func virtual draw()
+	func virtual on_mouse_move()
+	func virtual on_mouse_left_button_down()
+	func virtual on_mouse_left_button_up()
+	func virtual on_key(key: int)
 
 class MtkLabel extends MtkWidget
 	var text: string
-	void __init__(string text)
+	func __init__(text: string)
 		self.text = text
 		snd = MtkSizeNegotiationData(default_font.get_str_width(text)+10, 25, false, false)
-	void set_text(string text)
+	func set_text(text: string)
 		if self.text == text
 			return
 		self.text = text
@@ -204,7 +204,7 @@ class MtkLabel extends MtkWidget
 			draw()
 			p.end()
 		snd.min_width = default_font.get_str_width(text)+10
-	override void draw()
+	func override draw()
 		p.set_color(col_background)
 		p.rectangle(p.all)
 		p.fill()
@@ -217,7 +217,7 @@ class MtkGrid extends MtkWidget
 	var child_exp_x, child_exp_y: bool[]
 	var child_min_w, child_min_h: int[]
 	var child_w, child_h: int[]
-	void __init__(int _nx, int _ny)
+	func __init__(_nx: int, _ny: int)
 		nx = _nx
 		ny = _ny
 		children.resize(nx * ny)
@@ -242,14 +242,14 @@ class MtkGrid extends MtkWidget
 		for b in child_exp_y
 			b = false
 		snd = MtkSizeNegotiationData((nx-1) * GRID_MARGIN, (ny-1) * GRID_MARGIN, false, false)
-	override void draw()
+	func override draw()
 		p.set_color(col_background)
 		p.rectangle(p.all)
 		p.fill()
 		for c in children
 			if c
 				c.draw()
-	void put(int x, int y, out MtkWidget *c)
+	func put(x: int, y: int, out c: MtkWidget*)
 		# update snd
 		if c.snd.expand_x
 			child_exp_x[x] = true
@@ -273,7 +273,7 @@ class MtkGrid extends MtkWidget
 		int dy = (hh + GRID_MARGIN) * y
 		c.set_win(win, r.x0 + dx, r.y0 + dy, ww, hh)
 		
-	override void on_resize()
+	func override on_resize()
 		# plan child sizes...
 		
 		# min
@@ -332,15 +332,15 @@ enum
 class MtkButton extends MtkWidget
 	var text: string
 	var state: int
-	void __init__(string text)
+	func __init__(text: string)
 		self.text = text
 		state = BUTTON_STATE_DEFAULT
 		snd = MtkSizeNegotiationData(default_font.get_str_width(text)+30, 30, true, false)
 	
-	override bool can_grab_input()
+	func override can_grab_input() -> bool
 		return true
 		
-	void set_text(string text)
+	func set_text(text: string)
 		if self.text == text
 			return
 		self.text = text
@@ -349,7 +349,7 @@ class MtkButton extends MtkWidget
 			p.end()
 		snd.min_width = default_font.get_str_width(text)+30
 			
-	override void draw()
+	func override draw()
 		p.set_color(col_button)
 		if state == BUTTON_STATE_HOVER
 			p.set_color(col_button_hover)
@@ -373,7 +373,7 @@ class MtkButton extends MtkWidget
 		float w = p.font.get_str_width(text)
 		p.draw_str((r.w() - w) / 2, (r.h() - FONT_SIZE) / 2, text)
 		
-	void set_state(int _state)
+	func set_state(_state: int)
 		if _state == state
 			return
 		state = _state
@@ -382,7 +382,7 @@ class MtkButton extends MtkWidget
 		if state == BUTTON_STATE_CLICK
 			on_click()
 	
-	override void on_mouse_move()
+	func override on_mouse_move()
 		bool inside = r.inside(win.mx, win.my)
 		if inside
 			if win.lbut
@@ -393,38 +393,38 @@ class MtkButton extends MtkWidget
 			set_state(BUTTON_STATE_DEFAULT)
 		# not the best way :P
 		
-	virtual void on_click()
+	func virtual on_click()
 
 class MtkTextView extends MtkWidget
 	var text: string
 	var cursor_pos: int
 	var multi_line: bool
 	
-	override void __init__()
+	func override __init__()
 		cursor_pos = 0
 		multi_line = true
 		snd = MtkSizeNegotiationData(30, 30, true, true)
 	
-	override bool can_grab_input()
+	func override can_grab_input() -> bool
 		return true
 		
-	void set_text(string text)
+	func set_text(text: string)
 		self.text = text
 		cursor_pos = text.num
 		if p
 			draw()
 			p.end()
 	
-	void to_screen(int pos, out int* x, out int* y)
-		string[] lines = text.head(pos).explode("\n")
+	func to_screen(pos: int, out x: int*, out y: int*)
+		var lines = text.head(pos).explode("\n")
 		*y = 5
 		*x = 5
 		if lines.num > 0
 			*y = 5 + 20*(lines.num - 1)
 			*x = 5 + p.font.get_str_width(lines[lines.num - 1])
 	
-	int to_text(int x, int y)
-		string[] lines = text.explode("\n")
+	func to_text(x: int, y: int) -> int
+		var lines = text.explode("\n")
 		int n = (y - 5) / 20
 		int pos = 0
 		for l,i in lines
@@ -436,7 +436,7 @@ class MtkTextView extends MtkWidget
 			pos = text.num
 		return pos
 			
-	override void draw()
+	func override draw()
 		if win.active
 			p.set_color(col_window_frame)
 		else
@@ -466,12 +466,12 @@ class MtkTextView extends MtkWidget
 			p.line_to(cx, cy + 20)
 			p.strike()
 	
-	override void on_mouse_left_button_down()
+	func override on_mouse_left_button_down()
 		cursor_pos = to_text(mx, my)
 		draw()
 		p.end()
 		
-	override void on_key(int key)
+	func override on_key(key: int)
 		if key == KEY_RETURN and multi_line
 			insert("\n")
 		else if key == KEY_BACKSPACE
@@ -496,23 +496,23 @@ class MtkTextView extends MtkWidget
 			if s.num > 0
 				insert(s)
 	
-	void insert(string s)
+	func insert(s: string)
 		text = text.head(cursor_pos) + s + text.tail(text.num - cursor_pos)
 		#text.insert(cursor_pos, key)
 		cursor_pos ++
 		notify_change()
 			
-	void notify_change()
+	func notify_change()
 		if p
 			draw()
 			p.end()
-		onEdit()
+		on_edit()
 		
-	virtual void onEdit()
+	func virtual on_edit()
 	
 
 class MtkEdit extends MtkTextView
-	override void __init__()
+	func override __init__()
 		multi_line = false
 		snd = MtkSizeNegotiationData(30, 30, true, false)
 
@@ -528,7 +528,7 @@ class MtkWindow extends XWindow
 	var killed = false
 	var button_close_hover = false
 	
-	void __init__(string title, int w, int h)
+	func __init__(title: string, w: int, h: int)
 		super.__init__(xcon, -1, -1, w + FRAME_WIDTH * 2, h + FRAME_WIDTH + FRAME_BAR)
 		mtk_windows.add(&self)
 		
@@ -550,46 +550,46 @@ class MtkWindow extends XWindow
 #		p = new XPainter(self)
 #		p.font = LoadTTF("/home/x.font")
 	
-	override void __delete__()
+	func override __delete__()
 		if !killed
 			close()
 		if widget
 			del widget
 		del p
 	
-	void show()
+	func show()
 		shown = true
 		if widget
 			widget.resize(FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
 		draw()
 		p.end()
 	
-	override void close()
+	func override close()
 		super.close()
 		killed = true
 	
-	void draw()
+	func draw()
 		shown = true
 		if frame
 			draw_frame()
 		if widget
 			widget.draw()
 	
-	void set_title(string _title)
+	func set_title(_title: string)
 		if title == _title
 			return
 		title = _title
 		if shown
 			show()
 	
-	void put(out MtkWidget* widget)
+	func put(out widget: MtkWidget*)
 		self.widget = widget
 		widget.set_win(&self, FRAME_WIDTH, FRAME_BAR, w - FRAME_WIDTH*2, h - FRAME_WIDTH - FRAME_BAR)
 		
 		if shown
 			widget.draw()
 	
-	void draw_frame()
+	func draw_frame()
 		if active
 			p.set_color(col_window_frame)
 		else
@@ -602,7 +602,7 @@ class MtkWindow extends XWindow
 			p.set_color([1,0,0, 1]) #color.RED)
 			p.draw_str(w - 20, 4, "X")
 		
-	override void on_mouse_move()
+	func override on_mouse_move()
 		for w in widgets
 			w.mx = mx - w.r.x0
 			w.my = my - w.r.y0
@@ -613,7 +613,7 @@ class MtkWindow extends XWindow
 			draw()
 			invalidate(w - 30, 0, w, FRAME_BAR)
 			
-	override void on_mouse_left_button_down()
+	func override on_mouse_left_button_down()
 		#XWindow* ww = xcon.get_at_cursor()
 		if &self == xcon.cursor_win
 			activate()
@@ -638,31 +638,31 @@ class MtkWindow extends XWindow
 								p.end()
 						w.on_mouse_left_button_down()
 					
-	override void on_mouse_left_button_up()
+	func override on_mouse_left_button_up()
 		if dragging
 			drag_stop()
 			dragging = false
 		for w in widgets
 			w.on_mouse_left_button_up()
 			
-	override void on_key(int key)
+	func override on_key(key: int)
 		if input_widget
 			input_widget.on_key(key)
 	
-	virtual bool on_close_request()
+	func virtual on_close_request() -> bool
 		return true
 	
-	override void handle_activate()
+	func override handle_activate()
 		show()
 
 class MtkErrorBoxOkButton extends MtkButton
-	void __init__()
+	func __init__()
 		super.__init__("Ok")
-	override void on_click()
+	func override on_click()
 		win.close()
 
 class MtkErrorBox extends MtkWindow
-	void __init__(string message)
+	func __init__(message: string)
 		super.__init__("Error", 300, 100)
 		MtkGrid* g = new MtkGrid(1, 2)
 		put(g)
@@ -675,14 +675,14 @@ class MtkErrorBox extends MtkWindow
 		g.put(0, 1, b)
 			
 
-void mtk_error_box(string message)
+func mtk_error_box(message: string)
 	MtkWindow *win = new MtkErrorBox(message)
 	win.show()
 
 
 class MtkIdle
-	virtual void do()
-		nil
+	func virtual do()
+		pass
 
 var xcon: XConnection*
 var idles: MtkIdle*[]
@@ -691,7 +691,7 @@ var title_font: FontDescriptor*
 var font_db: FontDB*
 var mtk_windows: MtkWindow*[]
 
-void mtk_init()
+func mtk_init()
 	init_lib()
 	stdout = open("/dev/tty", O_WRONLY)
 	idles.__init__()
@@ -718,10 +718,10 @@ void mtk_init()
 	font_db = new FontDB()
 	default_font = font_db.get(FONT_NAME, FONT_SIZE)
 
-void mtk_add_idle(MtkIdle *i)
+func mtk_add_idle(i: MtkIdle*)
 	idles.add(i)
 
-void mtk_open(string filename)
+func mtk_open(filename: string)
 	string[] cmd
 	if filename.tail(4) == ".tga"
 		cmd.add("/bin/ximage")
@@ -731,7 +731,7 @@ void mtk_open(string filename)
 	if xcon.execute(cmd) < 0
 		mtk_error_box("execute... {{lib_error}}")
 
-void mtk_run()
+func mtk_run()
 	while true
 		xcon.poll()
 		usleep(5000)

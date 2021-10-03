@@ -246,7 +246,7 @@ func parse_var_name(cmd: string, pos: int) -> string
 		name.add(cmd[i])
 	return name
 
-string parse_single(string cmd, out int *pos)
+func parse_single(cmd: string, out pos: int*) -> string
 	string t
 	bool in_string = false
 	for j in *pos:len(cmd)

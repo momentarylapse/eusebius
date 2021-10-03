@@ -158,22 +158,22 @@ class PCIController
  			for function in 0:8
 				check_device(bus, slot, function)
 	
-	void check_function(int bus, int slot, int function)
+	func check_function(bus: int, slot: int, function: int)
 		var d = getx(bus, slot, function)
 		if (d._class == 0x06) and (d.subclass == 0x04)
 			check_bus(d.get_secondary_bus())
 	
-	void show()
+	func show()
 		for d in devices
 			print(str(d))
 
-	PCIDevice* getx(int bus, int slot, int function)
+	func getx(bus: int, slot: int, function: int) -> PCIDevice*
 		for d in devices
 			if (d.bus == bus) and (d.slot == slot) and (d.function == function)
 				return d
 		return nil
 
-	PCIDevice* get(int vendor, int device)
+	func get(vendor: int, device: int) -> PCIDevice*
 		for d in devices
 			if (d.vendor == vendor) and (d.device == device)
 				return d

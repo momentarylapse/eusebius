@@ -8,7 +8,7 @@
 #\*----------------------------------------------------------------------------
 
 
-void main()
+func main()
 	asm{
 		# wir befinden uns noch im 16bit RealMode
 		bits_16
