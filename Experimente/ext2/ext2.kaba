@@ -1,124 +1,124 @@
 use os
 
 class BinaryFile extends File
-	int xread(void* p, int size)
+	func xread(p: void*, size: int) -> int
 		cstring *pp = p
 		string r = read(size)
-		for i in 0:r.num
+		for i in 0:len(r)
 			pp[i] = r[i]
-		return r.num
+		return len(r)
 
 class Word
-	char[2] c
-	int int()
+	c: char[2]
+	func __int__() -> int
 		int a = c[0]
 		int b = c[1]
 		return a + b * 256
 
 class Inode
-	Word rights
-	Word user
-	int size
-	int atime, ctime, mtime, dtime
-	Word group
-	Word hard_links
-	int blocks
-	int flags
-	int version
-	int[15] iblock
-	int file_version
-	int acl
-	int size_high
-	int dummy
-	int[3] xx_high
-	bool isDir()
-		return (rights.int() & 0xf000) == 0x4000
-	bool isFile()
-		return (rights.int() & 0xf000) == 0x8000
+	rights: Word
+	user: Word
+	size: int
+	atime, ctime, mtime, dtime: int
+	group: Word
+	hard_links: Word
+	blocks: int
+	flags: int
+	version: int
+	iblock: int[15]
+	file_version: int
+	acl: int
+	size_high: int
+	dummy: int
+	xx_high: int[3]
+	func isDir() -> bool
+		return (int(rights) & 0xf000) == 0x4000
+	func isFile() -> bool
+		return (int(rights) & 0xf000) == 0x8000
 
 class DirEntryHeader
-	int inode
-	Word rec_len
-	char name_len
-	char file_type
+	inode: int
+	rec_len: Word
+	name_len: char
+	file_type: char
 
 class SuperBlock
-	int inodes_count
-	int blocks_count
-	int reserved_blocks_count
-	int free_blocks_count
-	int free_inodes_count
-	int first_data_block
-	int log_block_size
-	int log_cluster_size
-	int blocks_per_group
-	int obso_frags_per_group
-	int inodes_per_group
-	int mtime, wtime
-	Word mnt_count, max_mnt_count
-	Word magic
-	Word state
-	Word errors
-	Word minor_rev_level
-	int lastcheck, checkinterval
-	int creator_os
-	int rev_level
-	Word def_resuid, def_resgid
-	int first_ino
-	Word inode_size
-	Word block_group_nr
-	int feature_compat, feature_incompat, feature_ro_compat
-	char[16] uuid
-	char[16] volume_name
-	char[64] last_mounted
-	char[1024-200] _filler_
+	inodes_count: int
+	blocks_count: int
+	reserved_blocks_count: int
+	free_blocks_count: int
+	free_inodes_count: int
+	first_data_block: int
+	log_block_size: int
+	log_cluster_size: int
+	blocks_per_group: int
+	obso_frags_per_group: int
+	inodes_per_group: int
+	mtime, wtime: int
+	mnt_count, max_mnt_count: Word
+	magic: Word
+	state: Word
+	errors: Word
+	minor_rev_level: Word
+	lastcheck, checkinterval: int
+	creator_os: int
+	rev_level: int
+	def_resuid, def_resgid: Word
+	first_ino: int
+	inode_size: Word
+	block_group_nr: Word
+	feature_compat, feature_incompat, feature_ro_compat: int
+	uuid: int[16]
+	volume_name: int[16]
+	last_mounted: int[64]
+	_filler_: int[1024-200]
 
 class BlockGroupDescriptor
-	int block_bitmap
-	int inode_bitmap
-	int inode_table
-	Word free_blocks_count, free_inodes_count
-	Word used_dirs_count
-	Word flags
-	int exclude_bitmap
-	Word block_bitmap_csum, inode_bitmap_csum
-	Word itable_unused
-	Word checksum
+	block_bitmap: int
+	inode_bitmap: int
+	inode_table: int
+	free_blocks_count, free_inodes_count: Word
+	used_dirs_count: Word
+	flags: Word
+	exclude_bitmap: int
+	block_bitmap_csum, inode_bitmap_csum: Word
+	itable_unused: Word
+	checksum: Word
 
 
 class Ext2Reader
-	BinaryFile *f
-	int block_size
-	int block_offset
-	int inodes_per_block
-	SuperBlock sb
-	BlockGroupDescriptor bg
-	bool readable, writable
+	f: BinaryFile*
+	block_size: int
+	block_offset: int
+	inodes_per_block: int
+	sb: SuperBlock
+	bg: BlockGroupDescriptor
+	readable, writable: bool
 	
-	string[] filter
-	bool show_details
+	filter: string[]
+	show_details: bool
 	
-	void testCompatibility()
+	func testCompatibility()
 		readable = false
 		writable = false
 		if (sb.feature_incompat & 0xfffffffd) > 0
-			print("---- nicht lesbar ----")
+			print("---- not readable ----")
 			print(sb.feature_incompat)
 			return
 		readable = true
 		if (sb.feature_ro_compat & 0xfffffffe) > 0
-			print("---- nicht schreibbar ----")
+			print("---- read only ----")
 			print(sb.feature_ro_compat)
 			return
 		writable = true
 	
-	void read(string filename)
+	func read(filename: string)
 		f = Filesystem.open(filename)
 		if !f
 			return
-		f.setBinaryMode(true)
 	
-		f.seek(1024, true)
+		# super block
+		f.seek(1024)
 		f.xread(&sb, sizeof(SuperBlock))
 		block_size = 1 << (sb.log_block_size + 10)
 		inodes_per_block = block_size / sizeof(Inode) #128
@@ -126,55 +126,65 @@ class Ext2Reader
 		if block_size == 1024
 			block_offset = 0
 	
-		f.seek(1024 + block_size, true)
+		# block group descriptor
+		f.set_pos(1024 + block_size)
 		f.xread(&bg, sizeof(BlockGroupDescriptor))
 		
-		#showMetaData()
+		if show_details
+			showMetaData()
 		testCompatibility()
 		if readable
 			if filter.num == 0
 				print("Root:")
 			showInodeRecursive(2, 0)
 		
-		delete f
+		del f
 	
-	string readBlock(int index)
-		f.seek(block_offset + block_size * index, true)
+	func block_to_offset(index: int) -> int
+		return block_offset + block_size * (index - 1)
+	
+	func read_block(index: int) -> string
+		print("read block {{index}}    off={{block_offset}}")
+		f.set_pos(block_offset + block_size * index) ## (index - 1) ????
 		return f.read(block_size)
 	
-	void readInode(int index, Inode inode)
+	func read_inode(index: int, inode: Inode)
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = (index - 1) % sb.inodes_per_group
+		print(group_no)
 		# group_no!!!!!!!!!!!!!!
 		int pos = block_offset
 		pos += group_no * sb.blocks_per_group * block_size
 		pos += bg.inode_table * block_size
 		pos += offset * sizeof(Inode)
+		print("inode={{index}}  pos=0x{{pos|x}}")
 		
-		f.seek(pos, true)
+		#print("0x{{block_to_offset(bg.inode_table) + (index - 1) * sizeof(Inode)|x}}")
+		
+		f.set_pos(pos)
 		f.xread(&inode, sizeof(Inode))
 	
-	string readInodeContents(int index)
+	func readInodeContents(index: int) -> string
 		Inode inode
-		readInode(index, inode)
+		read_inode(index, inode)
 		string r
 		int num_blocks = (inode.size-1) / block_size + 1
 		int size = num_blocks * block_size
 		int num_direct = min(num_blocks, 12)
 		for i in 0:num_direct
-			r += readBlock(inode.iblock[i])
+			r += read_block(inode.iblock[i])
 		# indirect...
 		
 		r.resize(inode.size)
 		return r
 	
-	void showInodeRecursive(int index, int level)
+	func showInodeRecursive(index: int, level: int)
 		Inode inode
-		readInode(index, inode)
+		read_inode(index, inode)
 		string indent
 		for i in 0:level*2+1
 			indent += "  "
-		string info = "s=" + inode.size
+		string info = "s={{inode.size}}"
 		#print inode.mtime
 		if inode.isDir()
 			info += "  dir"
@@ -182,21 +192,21 @@ class Ext2Reader
 			info += "  file"
 		else
 			info += "  ???"
-		info += "  i=" + index
+		info += "  i={{index}}"
 		print(indent + info)
 		if show_details
-			print(indent + inode.iblock[0])
+			print(indent + str(inode.iblock[0]))
 		if inode.isDir()
 			string cont = readInodeContents(index)
 			int p = 0
 			while p < cont.num
 				DirEntryHeader *d = &cont[p]
-				if d.rec_len.int() == 0
+				if int(d.rec_len) == 0
 					break
-				string name = cont.substr(p + 8, d.name_len)
+				string name = cont[p + 8: p + 8 + d.name_len]
 				info = "  " + name
 				#print "--"+name
-				info += "  i=" + d.inode
+				info += "  i={{d.inode}}"
 				int ft = d.file_type
 				if ft == 2
 					info += "  dir"
@@ -204,7 +214,7 @@ class Ext2Reader
 					info += "  file"
 				else
 					info += "  ???"
-				p += d.rec_len.int()
+				p += int(d.rec_len)
 				if name.num == 0 or d.inode == 0
 					continue
 				if filter.num > 0
@@ -218,28 +228,30 @@ class Ext2Reader
 			
 			#print(cont.substr(0, 32).hex(false))
 	
-	void showMetaData()
-		print(block_size)
+	func showMetaData()
+		print("block size: {{block_size}}")
+		print("inodes per block: {{block_size/sizeof(Inode)}}")
 		print("--------")
-		print(sb.inodes_count)
-		print(sb.blocks_count)
-		print(sb.log_block_size)
-		print(sb.first_data_block)
-		print(sb.blocks_per_group)
-		print(sb.inodes_per_group)
+		print("inode count: {{sb.inodes_count}}")
+		print("block count: {{sb.blocks_count}}")
+		print("log block size: {{sb.log_block_size}}")
+		print("first data block: {{sb.first_data_block}}")
+		print("blocks per group: {{sb.blocks_per_group}}")
+		print("inodes per group: {{sb.inodes_per_group}}")
+		print("first ino: {{sb.first_ino}}")
 		print("--------")
-		print(bg.block_bitmap)
-		print(bg.inode_bitmap)
-		print(bg.inode_table)
+		print("block bmp: {{bg.block_bitmap}}")
+		print("inode bmp: {{bg.inode_bitmap}}")
+		print("inode table: {{bg.inode_table}}")
 
-void main(string[] arg)
+func main(arg: string[])
 	string filename
 	Ext2Reader r
 	r.show_details = false
 	for i in 0:arg.num
-		if arg[i] == "details"
+		if arg[i] == "-v"
 			r.show_details = true
-		else if arg[i] == "filter"
+		else if arg[i] == "--filter"
 			i ++
 			r.filter = arg[i].explode("/")
 		else
