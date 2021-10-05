@@ -117,7 +117,7 @@ class Ext2Reader
 		if !f
 			return
 	
-		# super block
+		# super block (always at offset 1024!)
 		f.seek(1024)
 		f.xread(&sb, sizeof(SuperBlock))
 		block_size = 1 << (sb.log_block_size + 10)
@@ -125,9 +125,14 @@ class Ext2Reader
 		block_offset = 1024
 		if block_size == 1024
 			block_offset = 0
+		block_offset = 0 # ?????
+		
+		# block bmp (1k: #18 -> 0x4800)  (2k: #5 -> 0x2800)
+		# inode bmp (1k: #19 -> 0x4c00)  (2k: #6 -> 0x3000)
 	
-		# block group descriptor
-		f.set_pos(1024 + block_size)
+		# block group descriptor (block #2)
+		#f.set_pos(1024 + block_size)
+		f.set_pos(1024 + 1024)
 		f.xread(&bg, sizeof(BlockGroupDescriptor))
 		
 		if show_details
@@ -144,9 +149,7 @@ class Ext2Reader
 		return block_offset + block_size * (index)
 	
 	func read_block(index: int) -> string
-		print("read block {{index}}    off={{block_offset}}   ->  0x{{block_offset + block_size * index|x}}")
 		f.set_pos(block_offset + block_size * index) ## (index - 1) ????
-		#return ""
 		return f.read(block_size)
 	
 	func read_inode(_index: int, inode: Inode)
@@ -171,7 +174,6 @@ class Ext2Reader
 		int size = num_blocks * block_size
 		int num_direct = min(num_blocks, 12)
 		for i in 0:num_direct
-		#	print("direct:  {{inode.iblock[i]}}")
 			r += read_block(inode.iblock[i])
 		# indirect...
 		
@@ -184,7 +186,7 @@ class Ext2Reader
 		string indent
 		for i in 0:level*2+1
 			indent += "  "
-		string info = "s={{inode.size}}"
+		string info = "s={{inode.size|-5}}"
 		#print inode.mtime
 		if inode.isDir()
 			info += "  dir"
@@ -193,9 +195,9 @@ class Ext2Reader
 		else
 			info += "  ???(0x{{int(inode.rights)|04x}})"
 		info += "  i={{index}}"
-		print(indent + info)
 		if show_details
-			print(indent + str(inode.iblock[0]))
+			info += "  b[0]={{inode.iblock[0]}}"
+		print(indent + info)
 		
 		if inode.isDir()
 			string cont = readInodeContents(inode)
@@ -205,9 +207,9 @@ class Ext2Reader
 				if int(d.rec_len) == 0
 					break
 				string name = cont[p + 8: p + 8 + int(d.name_len)]
-				info = "  {{name|12}}"
+				info = "  {{name|-12}}"
 				#print "--"+name
-				info += "  i={{d.inode}}"
+				info += "  i={{d.inode|-4}}"
 				int ft = d.file_type
 				if ft == 2
 					info += "  dir"
@@ -224,7 +226,7 @@ class Ext2Reader
 				print(indent + info)
 				
 				
-				if name != "." and name != ".."
+				if not (name in [".", ".."])
 				#	if ft == 2 or ft == 1
 						showInodeRecursive(d.inode, level+1)
 			
