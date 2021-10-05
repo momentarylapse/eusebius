@@ -207,6 +207,7 @@ img.ext2: $(BINS) img.mfs
 	# block-size 1k, 256 inodes, size 4M
 	#genext2fs -b 4096 -N 256 -d img-src img.ext2
 	mkfs.ext2 -b 1024 -N 256 -Fq -d img-src img.ext2 4M
+	#mkfs.ext2 -b 2048 -N 256 -Fq -d img-src img.ext2 8M
 
 bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160

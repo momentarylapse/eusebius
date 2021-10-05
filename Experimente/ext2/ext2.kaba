@@ -89,7 +89,6 @@ class BlockGroupDescriptor
 class Ext2Reader
 	f: BinaryFile*
 	block_size: int
-	block_offset: int
 	inodes_per_block: int
 	sb: SuperBlock
 	bg: BlockGroupDescriptor
@@ -121,57 +120,63 @@ class Ext2Reader
 		f.seek(1024)
 		f.xread(&sb, sizeof(SuperBlock))
 		block_size = 1 << (sb.log_block_size + 10)
-		inodes_per_block = block_size / sizeof(Inode) #128
-		block_offset = 1024
-		if block_size == 1024
-			block_offset = 0
-		block_offset = 0 # ?????
+		inodes_per_block = block_size / int(sb.inode_size) #128
 		
-		# block bmp (1k: #18 -> 0x4800)  (2k: #5 -> 0x2800)
-		# inode bmp (1k: #19 -> 0x4c00)  (2k: #6 -> 0x3000)
+		# block grp (1k:        0x0800)  (2k:       0x0800)  (4k:       0x1000)
+		# block bmp (1k: #18 -> 0x4800)  (2k: #5 -> 0x2800)  (4k: #2 -> 0x2000)
+		# inode bmp (1k: #19 -> 0x4c00)  (2k: #6 -> 0x3000)  (4k: #3 -> 0x3000)
+		# inode tab (1k: #20 -> 0x5000)  (2k: #7 -> 0x3800)  (4k: #4 -> 0x4000)
+		
+		# inode /      (1k: #2   0x5100)
+		# block /      (1k: #84  0x15000)
+		# inode /bin/  (1k: #12  0x5600???)   hmmm, no??? ...0x5b00 instead???
+		# block /bin/  (1k: #98? 0x18800)
+		# inode /bin/abcd (1k: #13) # 0x5c00
+		# block /bin/abcd (1k: #99? 0x18c00)
+		
 	
 		# block group descriptor (block #2)
 		#f.set_pos(1024 + block_size)
-		f.set_pos(1024 + 1024)
+		f.set_pos(max(block_size, 2048))
 		f.xread(&bg, sizeof(BlockGroupDescriptor))
 		
 		if show_details
 			showMetaData()
 		testCompatibility()
 		if readable
-			if filter.num == 0
+			if len(filter) == 0
 				print("Root:")
-			showInodeRecursive(2, 0)
+			show_inode_recursive(2, 0)
 		
 		del f
 	
 	func block_to_offset(index: int) -> int
-		return block_offset + block_size * (index)
+		return block_size * (index)
 	
 	func read_block(index: int) -> string
-		f.set_pos(block_offset + block_size * index) ## (index - 1) ????
+		#print("R block={{index}}  pos=0x{{block_size*index|x}}")
+		f.set_pos(block_size * index) ## (index - 1) ????
 		return f.read(block_size)
 	
-	func read_inode(_index: int, inode: Inode)
-		int index = _index + 1
-		int group_no = (index - 1) / sb.inodes_per_group # 0...
-		int offset = (index - 1) % sb.inodes_per_group
+	func read_inode(index: int, inode: Inode)
+		# index-1  ???
+		int group_no = (index-1) / sb.inodes_per_group # 0...
+		int offset = (index-1) % sb.inodes_per_group
 		# group_no!!!!!!!!!!!!!!
-		int pos = block_offset
-		pos += group_no * sb.blocks_per_group * block_size
+		int pos = 0 #group_no * sb.blocks_per_group * block_size
+		# get correct group...
 		pos += bg.inode_table * block_size
-		pos += offset * sizeof(Inode)
-		#print("inode={{index}}  pos=0x{{pos|x}}")
+		pos += offset * int(sb.inode_size)#sizeof(Inode)
 		
 		#print("0x{{block_to_offset(bg.inode_table) + (index - 1) * sizeof(Inode)|x}}")
 		
 		f.set_pos(pos)
 		f.xread(&inode, sizeof(Inode))
+		#print("R inode={{index}}  pos=0x{{pos|x}}  ->  size={{inode.size}}")
 	
-	func readInodeContents(inode: Inode) -> string
+	func read_inode_contents(inode: Inode) -> string
 		string r
 		int num_blocks = (inode.size-1) / block_size + 1
-		int size = num_blocks * block_size
 		int num_direct = min(num_blocks, 12)
 		for i in 0:num_direct
 			r += read_block(inode.iblock[i])
@@ -180,12 +185,10 @@ class Ext2Reader
 		r.resize(inode.size)
 		return r
 	
-	func showInodeRecursive(index: int, level: int)
+	func show_inode_recursive(index: int, level: int)
 		Inode inode
 		read_inode(index, inode)
-		string indent
-		for i in 0:level*2+1
-			indent += "  "
+		string indent = "  ".repeat(level*2+1)
 		string info = "s={{inode.size|-5}}"
 		#print inode.mtime
 		if inode.isDir()
@@ -200,9 +203,9 @@ class Ext2Reader
 		print(indent + info)
 		
 		if inode.isDir()
-			string cont = readInodeContents(inode)
+			string cont = read_inode_contents(inode)
 			int p = 0
-			while p < cont.num
+			while p < len(cont)
 				DirEntryHeader *d = &cont[p]
 				if int(d.rec_len) == 0
 					break
@@ -218,9 +221,9 @@ class Ext2Reader
 				else
 					info += "  ???({{ft}})"
 				p += int(d.rec_len)
-				if name.num == 0 or d.inode == 0
+				if len(name) == 0 or d.inode == 0
 					continue
-				if filter.num > 0
+				if len(filter) > 0
 					if filter[level] != name
 						continue
 				print(indent + info)
@@ -228,13 +231,13 @@ class Ext2Reader
 				
 				if not (name in [".", ".."])
 				#	if ft == 2 or ft == 1
-						showInodeRecursive(d.inode, level+1)
+						show_inode_recursive(d.inode, level+1)
 			
 			#print(cont.substr(0, 32).hex(false))
 	
 	func showMetaData()
 		print("block size: {{block_size}}")
-		print("inodes per block: {{block_size/sizeof(Inode)}}")
+		print("inodes per block: {{block_size/int(sb.inode_size)}}")
 		print("--------")
 		print("inode count: {{sb.inodes_count}}")
 		print("block count: {{sb.blocks_count}}")
@@ -243,6 +246,7 @@ class Ext2Reader
 		print("blocks per group: {{sb.blocks_per_group}}")
 		print("inodes per group: {{sb.inodes_per_group}}")
 		print("first ino: {{sb.first_ino}}")
+		print("inode size: {{int(sb.inode_size)}}")
 		print("--------")
 		print("block bmp: {{bg.block_bitmap}}")
 		print("inode bmp: {{bg.inode_bitmap}}")
@@ -252,7 +256,7 @@ func main(arg: string[])
 	string filename
 	Ext2Reader r
 	r.show_details = false
-	for i in 0:arg.num
+	for i in 0:len(arg)
 		if arg[i] == "-v"
 			r.show_details = true
 		else if arg[i] == "--filter"

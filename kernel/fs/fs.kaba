@@ -188,6 +188,7 @@ class MountPoint
 	var dest: FileEntry*
 	var block_offset: int
 	var block_size: int
+	var inode_size: int
 	
 	var dev_blocks_per_block: int
 	var dev_block_offset: int
@@ -403,25 +404,26 @@ class MountPointMichiFS extends MountPoint
 class MountPointExt2 extends MountPoint
 	
 	func override mount() -> int
-		#prints("EXT2.mount")
+		prints("EXT2.mount\n")
 		buf = Heap.malloc(4096)
-		update_sizes(1024, 0) # temp
 		
+		# super block (always at 1024)
+		update_sizes(1024, 0) # temp
 		read_block(1, buf)
 		memcpy(&sb, buf, sizeof(Ext2SuperBlock))
 		
+		inode_size = sb.inode_size._int()
 		block_size = 1 << (sb.log_block_size + 10)
-		inodes_per_block = block_size / sizeof(Ext2Inode) #128
-		block_offset = 1024
-		if block_size == 1024
-			block_offset = 0
+		inodes_per_block = block_size / inode_size
+		block_offset = 0
 		
 		inode_bitmap = Heap.malloc(block_size)
 		block_bitmap = Heap.malloc(block_size)
 	
-		#f.seek(1024 + block_size, true)
-		#f.xread(&bg, sizeof(BlockGroupDescriptor))
-		read_block(1 + block_size / 1024, buf)
+		if block_size == 1024
+			read_block(2, buf)
+		else
+			read_block(1, buf)
 		memcpy(&bg, buf, sizeof(Ext2BlockGroupDescriptor))
 		
 		update_sizes(block_size, block_offset)
@@ -434,6 +436,7 @@ class MountPointExt2 extends MountPoint
 		#showMetaData()
 		test_compatibility()
 		if readable
+			prints("READABLE\n")
 			read_inode_recursive(2, dest)
 		return 0
 	
@@ -455,7 +458,7 @@ class MountPointExt2 extends MountPoint
 	func write_inode_simple(e: FileEntry) -> int
 		int index = e.mp_inode
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
-		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
+		int offset = ((index - 1) % sb.inodes_per_group) * inode_size
 		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		Ext2Inode *inode = &buf[offset % block_size]
@@ -486,8 +489,9 @@ class MountPointExt2 extends MountPoint
 	
 	func read_inode(index: int, inode: Ext2Inode, out e: FileEntry)
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
-		int offset = ((index - 1) % sb.inodes_per_group) * sizeof(Ext2Inode)
+		int offset = ((index - 1) % sb.inodes_per_group) * inode_size
 		# group_no!!!!!!!!!!!!!!
+		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
 		
@@ -523,10 +527,12 @@ class MountPointExt2 extends MountPoint
 #			write_block(e.blocks[i], &buf[i * block_size])
 	
 	func read_inode_recursive(index: int, out dir: FileEntry)
+		#prints("R")
 		Ext2Inode inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()
 			return
+		#prints("D")
 		cstring *cont = read_inode_contents(dir)
 		int p = 0
 		while p < dir.size
