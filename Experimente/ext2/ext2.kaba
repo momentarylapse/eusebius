@@ -141,37 +141,37 @@ class Ext2Reader
 		del f
 	
 	func block_to_offset(index: int) -> int
-		return block_offset + block_size * (index - 1)
+		return block_offset + block_size * (index)
 	
 	func read_block(index: int) -> string
-		print("read block {{index}}    off={{block_offset}}")
+		print("read block {{index}}    off={{block_offset}}   ->  0x{{block_offset + block_size * index|x}}")
 		f.set_pos(block_offset + block_size * index) ## (index - 1) ????
+		#return ""
 		return f.read(block_size)
 	
-	func read_inode(index: int, inode: Inode)
+	func read_inode(_index: int, inode: Inode)
+		int index = _index + 1
 		int group_no = (index - 1) / sb.inodes_per_group # 0...
 		int offset = (index - 1) % sb.inodes_per_group
-		print(group_no)
 		# group_no!!!!!!!!!!!!!!
 		int pos = block_offset
 		pos += group_no * sb.blocks_per_group * block_size
 		pos += bg.inode_table * block_size
 		pos += offset * sizeof(Inode)
-		print("inode={{index}}  pos=0x{{pos|x}}")
+		#print("inode={{index}}  pos=0x{{pos|x}}")
 		
 		#print("0x{{block_to_offset(bg.inode_table) + (index - 1) * sizeof(Inode)|x}}")
 		
 		f.set_pos(pos)
 		f.xread(&inode, sizeof(Inode))
 	
-	func readInodeContents(index: int) -> string
-		Inode inode
-		read_inode(index, inode)
+	func readInodeContents(inode: Inode) -> string
 		string r
 		int num_blocks = (inode.size-1) / block_size + 1
 		int size = num_blocks * block_size
 		int num_direct = min(num_blocks, 12)
 		for i in 0:num_direct
+		#	print("direct:  {{inode.iblock[i]}}")
 			r += read_block(inode.iblock[i])
 		# indirect...
 		
@@ -191,20 +191,21 @@ class Ext2Reader
 		else if inode.isFile()
 			info += "  file"
 		else
-			info += "  ???"
+			info += "  ???(0x{{int(inode.rights)|04x}})"
 		info += "  i={{index}}"
 		print(indent + info)
 		if show_details
 			print(indent + str(inode.iblock[0]))
+		
 		if inode.isDir()
-			string cont = readInodeContents(index)
+			string cont = readInodeContents(inode)
 			int p = 0
 			while p < cont.num
 				DirEntryHeader *d = &cont[p]
 				if int(d.rec_len) == 0
 					break
-				string name = cont[p + 8: p + 8 + d.name_len]
-				info = "  " + name
+				string name = cont[p + 8: p + 8 + int(d.name_len)]
+				info = "  {{name|12}}"
 				#print "--"+name
 				info += "  i={{d.inode}}"
 				int ft = d.file_type
@@ -213,7 +214,7 @@ class Ext2Reader
 				else if ft == 1
 					info += "  file"
 				else
-					info += "  ???"
+					info += "  ???({{ft}})"
 				p += int(d.rec_len)
 				if name.num == 0 or d.inode == 0
 					continue
@@ -221,6 +222,7 @@ class Ext2Reader
 					if filter[level] != name
 						continue
 				print(indent + info)
+				
 				
 				if name != "." and name != ".."
 				#	if ft == 2 or ft == 1
