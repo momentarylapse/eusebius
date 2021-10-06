@@ -128,7 +128,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		int 0x13
 		or ah, ah
 		#jnz _reset_drive
-		jnz _death
+		jnz _death_16
 		
 		# Debug
 		mov al, '2'
@@ -147,7 +147,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		
 		or ah, ah
 		#jnz _reset_drive
-		jnz _death
+		jnz _death_16
 		
 		# Debug
 		mov al, '3'
@@ -198,6 +198,8 @@ func main()	#-------------------------------------------------------------	# Rea
 # activate 32bit protected mode
 
 		cli
+		
+		# enable paging
 		mov eax, cr0
 		or al, 0x01
 		mov cr0, eax
@@ -221,8 +223,9 @@ func main()	#-------------------------------------------------------------	# Rea
 		db 0x66 # weil im 16:32 Format...
 		jmp_far [_pmode_ptr] # 0x0008:_pmode
 
-	#-------------------------------------------------------------
-	# ProtectedMode!!!
+#-------------------------------------------------------------
+# protected mode!!!
+
 		_pmode:
 		bits_32
 		
@@ -246,21 +249,169 @@ func main()	#-------------------------------------------------------------	# Rea
 		shl eax, 0x06
 		mov [0x00005100], eax
 		xor eax, eax
+		
+#-------------------------------------------------------------
+# prepare long mode
+		
+		# extended cpuid functions?
+		mov eax, 0x80000000
+		cpuid
+		cmp eax, 0x80000001
+		jb _death_32
+		
+		# long mode available?
+		mov eax, 0x80000001
+		cpuid
+		test edx, 0x20000000 # 1 << 29
+		jz _death_32
+		
+		# disable paging
+		mov eax, cr0
+		and eax, 0x7fffffff # clear bit 31
+		mov cr0, eax
+		
+		
+		
+		
+		
+		# clear tables
+		mov edi, 0x00001000
+		mov cr3, edi
+		xor eax, eax
+	#	mov ecx, 0x00001000
+	_clear_table_entry:
+		mov [edi], eax
+		add edi, 0x00000004
+		cmp edi, 0x00002000
+		jnz _clear_table_entry
+		#rep
+		#stosd
+		mov edi, cr3
+		
+		
+		# PML4T[0] -> PDPT
+		mov [edi], 0x00002003
+		add edi, 0x00001000
+		# PDPT[0] -> PDT
+		mov [edi], 0x00003003
+		add edi, 0x00001000
+		# PDT[0] -> PT
+		mov [edi], 0x00004003
+		add edi, 0x00001000
+		
+		# identity map first 2mb
+		mov ebx, 0x00000003
+		mov ecx, 0x00000200 #512
+	_set_table_entry:
+		mov [edi], ebx
+		add ebx, 0x00001000
+		add edi, 0x00000008
+	#	loop _set_table_entry
+		dec ecx
+		cmp ecx, 0x00000000
+		jnz _set_table_entry
+		
+		# enable PAE paging
+		mov eax, cr4
+		or eax, 0x00000020
+		mov cr4, eax
+		
+		
+		
+		# activate 64 bit mode
+		mov ecx, 0xc0000080 # EFER MSR
+		rdmsr
+		or eax, 0x00000100 # LM bit
+		wrmsr
+		
+		# enable paging
+		mov eax, cr0
+		or eax, 0x80000000 # PG bit
+		mov cr0, eax
+		
+		
+#-------------------------------------------------------------
+# enter long mode
+
+		# prepare GDT
+		mov eax, _GDT64_POINTER
+		add eax, 0x00000004
+		mov [eax], _GDT64
+		
+		lgdt [_GDT64_POINTER]
+		jmp _long_mode
+		
+	_long_mode:
+		
+		
+		#mov rax, 0x00000001000b8004
+		xor rax, rax
+		mov eax, 0x000b8004
+		mov [eax], 'L'
+		add eax, 0x00000001
+		mov [eax], 0x20
+		#int 0x10
+		
+		jmp $
+		
+		
+#-------------------------------------------------------------
+# start kernel...
+		
 
 		# -> Kernel starten
 		mov eax, 0x00010000
 		jmp eax
 
 
-	_death:
+	_death_16:
 		mov al, 'X'
 		mov ah, 0x0e
 		mov bx, 0x0000
 		int 0x10
-		
-
-		# zur Sicherheit....
 		jmp $
+
+	_death_32:
+		mov eax, 0x000b8000
+		mov [eax], 'X'
+		add eax, 0x00000001
+		mov [eax], 0x20
+		jmp $
+		
+		
+		
+		
+		
+		
+	_GDT64:
+		# null descriptor
+		dd 0x00000000
+		dw 0xffff
+		dw 0x0000
+		db 0x00
+		db 0x00
+		db 0x01
+		db 0x00
+		# code
+		dd 0x00000000
+		dw 0x0000
+		db 0x00
+		db 0x9a # exec+read
+		db 0xaf # 64 bit, limit 19:16
+		db 0x00
+		# data
+		dd 0x00000000
+		dw 0x0000
+		dw 0x0000
+		db 0x00
+		db 0x9a
+		db 0x00
+		db 0x00
+	_GDT64_POINTER:
+		dw 0x0023 # 12*3-1
+		dd 0x00000000
+		dd 0x00000000
+	#	dq 0x0000000000000000 #_GDT64
 
 
 #--------------------------------------------------------------
