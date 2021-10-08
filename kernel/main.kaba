@@ -2,9 +2,23 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
 
-use kernel
+#use kernel
 #use "test-base.kaba"
 #use "test-virtual.kaba"
 #use "test-func-pointer.kaba"
 #use "test-sound.kaba"
+
+func main()
+	var p: void*
+	p = p
+	asm {
+		
+		mov eax, 0x000b8008
+		mov [eax], 'K'
+		add eax, 0x00000001
+		mov [eax], 0x20
+		#int 0x10
+		
+		jmp $
+	}
 

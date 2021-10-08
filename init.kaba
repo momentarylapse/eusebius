@@ -275,14 +275,14 @@ func main()	#-------------------------------------------------------------	# Rea
 		
 		
 		# clear tables
-		mov edi, 0x00001000
+		mov edi, 0x01001000
 		mov cr3, edi
 		xor eax, eax
 	#	mov ecx, 0x00001000
 	_clear_table_entry:
 		mov [edi], eax
 		add edi, 0x00000004
-		cmp edi, 0x00002000
+		cmp edi, 0x01002000
 		jnz _clear_table_entry
 		#rep
 		#stosd
@@ -290,13 +290,13 @@ func main()	#-------------------------------------------------------------	# Rea
 		
 		
 		# PML4T[0] -> PDPT
-		mov [edi], 0x00002003
+		mov [edi], 0x01002003
 		add edi, 0x00001000
 		# PDPT[0] -> PDT
-		mov [edi], 0x00003003
+		mov [edi], 0x01003003
 		add edi, 0x00001000
 		# PDT[0] -> PT
-		mov [edi], 0x00004003
+		mov [edi], 0x01004003
 		add edi, 0x00001000
 		
 		# identity map first 2mb
@@ -339,17 +339,25 @@ func main()	#-------------------------------------------------------------	# Rea
 		mov [eax], _GDT64
 		
 		lgdt [_GDT64_POINTER]
-		jmp _long_mode
+		#jmp _long_mode
+		
+		jmp $
+		jmp_far [_lmode_ptr] # 0x0008:_long_mode
 		
 	_long_mode:
+		jmp $
 		
 		
-		#mov rax, 0x00000001000b8004
-		xor rax, rax
+		mov ecx, 0x20412042
+		db 0x4f
+		shl ecx, 0x10
+		db 0x4f
+		shr ecx, 0x10
+		#xor rax, rax
 		mov eax, 0x000b8004
-		mov [eax], 'L'
-		add eax, 0x00000001
-		mov [eax], 0x20
+		mov [eax], ecx #'L'
+	#	add eax, 0x00000001
+	#	mov [eax], 0x20
 		#int 0x10
 		
 		jmp $
@@ -385,7 +393,6 @@ func main()	#-------------------------------------------------------------	# Rea
 		
 	_GDT64:
 		# null descriptor
-		dd 0x00000000
 		dw 0xffff
 		dw 0x0000
 		db 0x00
@@ -393,14 +400,13 @@ func main()	#-------------------------------------------------------------	# Rea
 		db 0x01
 		db 0x00
 		# code
-		dd 0x00000000
+		dw 0x0000
 		dw 0x0000
 		db 0x00
 		db 0x9a # exec+read
 		db 0xaf # 64 bit, limit 19:16
 		db 0x00
 		# data
-		dd 0x00000000
 		dw 0x0000
 		dw 0x0000
 		db 0x00
@@ -408,7 +414,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		db 0x00
 		db 0x00
 	_GDT64_POINTER:
-		dw 0x0023 # 12*3-1
+		dw 0x0017 # 8*3-1
 		dd 0x00000000
 		dd 0x00000000
 	#	dq 0x0000000000000000 #_GDT64
@@ -439,5 +445,9 @@ func main()	#-------------------------------------------------------------	# Rea
 		_pmode_ptr:
 		dd _pmode
 		dw 0x0008 # Descriptor[1] : ...
+		
+		_lmode_ptr:
+		dd _long_mode
+		dw 0x0008
 	}
 
