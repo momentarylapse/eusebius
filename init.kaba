@@ -93,93 +93,93 @@ func main()	#-------------------------------------------------------------	# Rea
 #--------------------------------------------------------------
 # load kernel image
 
-#		_reset_drive:
-			mov dl, 0x00
-			mov ah, 0x00
-			int 0x13
-			or ah, ah
-		#jnz _reset_drive
-		xor ax, ax
-		mov es, ax
-		
-		# target address
-		mov ax, 0x1000
-		mov es, ax
-		mov bx, 0x0000 # 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
-		mov ah, 0x02 # "ReadSector"
-		mov al, 0x80 # 128 sectors * 512 bytes = 64k
-		mov cx, 0x001d # sector 0x1d, cylinder 0
-		mov dx, 0x0080 # head 0, disc 0
-		int 0x13
-		
-		# Debug
-		mov al, '1'
-		mov ah, 0x0e
-		mov bx, 0x0000
-		int 0x10
-		
-		mov ax, 0x2000
-		mov es, ax
-		mov bx, 0x0000 # 0x20000
-		mov ah, 0x02 # "ReadSector"
-		mov al, 0x80 # 128 sectors * 512 bytes = 64k
-		mov cx, 0x001f # sector 0x1f, cylinder 0
-		mov dx, 0x0280 # head 2, disc 0
-		int 0x13
-		or ah, ah
-		#jnz _reset_drive
-		jnz _death_16
-		
-		# Debug
-		mov al, '2'
-		mov ah, 0x0e
-		mov bx, 0x0000
-		int 0x10
-		
-		mov ax, 0x3000
-		mov es, ax
-		mov bx, 0x0000 # 0x30000
-		mov ah, 0x02 # "ReadSector"
-		mov al, 0x80 # 128 sectors * 512 bytes = 64k
-		mov cx, 0x0021 # sector 0x21, cylinder 0
-		mov dx, 0x0480 # head 4, disc 0
-		int 0x13
-		
-		or ah, ah
-		#jnz _reset_drive
-		jnz _death_16
-		
-		# Debug
-		mov al, '3'
-		mov ah, 0x0e
-		mov bx, 0x0000
-		int 0x10
-		
-#		mov ax, 0x4000
+##		_reset_drive:
+#			mov dl, 0x00
+#			mov ah, 0x00
+#			int 0x13
+#			or ah, ah
+#		#jnz _reset_drive
+#		xor ax, ax
 #		mov es, ax
-#		mov bx, 0x0000 # 0x40000
+#		
+#		# target address
+#		mov ax, 0x1000
+#		mov es, ax
+#		mov bx, 0x0000 # 0x1000:0x0000 = 0x10000 real mode segmentation is ugly
 #		mov ah, 0x02 # "ReadSector"
 #		mov al, 0x80 # 128 sectors * 512 bytes = 64k
-#		mov cx, 0x0023 # sector 0x23, cylinder 0
-#		mov dx, 0x0680 # head 6, disc 0
+#		mov cx, 0x001d # sector 0x1d, cylinder 0
+#		mov dx, 0x0080 # head 0, disc 0
 #		int 0x13
-		
-#		or ah, ah
-#		#jnz _reset_drive
-#		jnz _death
-		
+#		
 #		# Debug
-#		mov al, '4'
+#		mov al, '1'
 #		mov ah, 0x0e
 #		mov bx, 0x0000
 #		int 0x10
-		
-		
-		# Debug
-		mov al, 'c'
-		mov ah, 0x0e
-		mov bx, 0x0000
-		int 0x10
+#		
+#		mov ax, 0x2000
+#		mov es, ax
+#		mov bx, 0x0000 # 0x20000
+#		mov ah, 0x02 # "ReadSector"
+#		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+#		mov cx, 0x001f # sector 0x1f, cylinder 0
+#		mov dx, 0x0280 # head 2, disc 0
+#		int 0x13
+#		or ah, ah
+#		#jnz _reset_drive
+#		jnz _death_16
+#		
+#		# Debug
+#		mov al, '2'
+#		mov ah, 0x0e
+#		mov bx, 0x0000
+#		int 0x10
+#		
+#		mov ax, 0x3000
+#		mov es, ax
+#		mov bx, 0x0000 # 0x30000
+#		mov ah, 0x02 # "ReadSector"
+#		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+#		mov cx, 0x0021 # sector 0x21, cylinder 0
+#		mov dx, 0x0480 # head 4, disc 0
+#		int 0x13
+#		
+#		or ah, ah
+#		#jnz _reset_drive
+#		jnz _death_16
+#		
+#		# Debug
+#		mov al, '3'
+#		mov ah, 0x0e
+#		mov bx, 0x0000
+#		int 0x10
+#		
+##		mov ax, 0x4000
+##		mov es, ax
+##		mov bx, 0x0000 # 0x40000
+##		mov ah, 0x02 # "ReadSector"
+##		mov al, 0x80 # 128 sectors * 512 bytes = 64k
+##		mov cx, 0x0023 # sector 0x23, cylinder 0
+##		mov dx, 0x0680 # head 6, disc 0
+##		int 0x13
+#		
+##		or ah, ah
+##		#jnz _reset_drive
+##		jnz _death
+#		
+##		# Debug
+##		mov al, '4'
+##		mov ah, 0x0e
+##		mov bx, 0x0000
+##		int 0x10
+#		
+#		
+#		# Debug
+#		mov al, 'c'
+#		mov ah, 0x0e
+#		mov bx, 0x0000
+#		int 0x10
 
 
 
@@ -249,9 +249,10 @@ func main()	#-------------------------------------------------------------	# Rea
 		shl eax, 0x06
 		mov [0x00005100], eax
 		xor eax, eax
-		
+
+
 #-------------------------------------------------------------
-# prepare long mode
+# prepare long mode (check cpuid)
 		
 		# extended cpuid functions?
 		mov eax, 0x80000000
@@ -265,14 +266,18 @@ func main()	#-------------------------------------------------------------	# Rea
 		test edx, 0x20000000 # 1 << 29
 		jz _death_32
 		
+		
+		
+		
+#-------------------------------------------------------------
+# prepare long mode (paging)
+
+
 		# disable paging
 		mov eax, cr0
 		and eax, 0x7fffffff # clear bit 31
 		mov cr0, eax
-		
-		
-		
-		
+
 		
 		# clear tables
 		mov edi, 0x01001000
@@ -282,7 +287,7 @@ func main()	#-------------------------------------------------------------	# Rea
 	_clear_table_entry:
 		mov [edi], eax
 		add edi, 0x00000004
-		cmp edi, 0x01002000
+		cmp edi, 0x01005000
 		jnz _clear_table_entry
 		#rep
 		#stosd
@@ -316,9 +321,11 @@ func main()	#-------------------------------------------------------------	# Rea
 		or eax, 0x00000020
 		mov cr4, eax
 		
+
+#-------------------------------------------------------------
+# enter long mode
 		
-		
-		# activate 64 bit mode
+		# activate long mode
 		mov ecx, 0xc0000080 # EFER MSR
 		rdmsr
 		or eax, 0x00000100 # LM bit
@@ -328,21 +335,40 @@ func main()	#-------------------------------------------------------------	# Rea
 		mov eax, cr0
 		or eax, 0x80000000 # PG bit
 		mov cr0, eax
+		# EFER.LMA=1 from now on!
+		
+		jmp _XXX_FLUSH
+	_XXX_FLUSH:
 		
 		
 #-------------------------------------------------------------
-# enter long mode
+# enter 64 bit mode
 
 		# prepare GDT
 		mov eax, _GDT64_POINTER
 		add eax, 0x00000004
 		mov [eax], _GDT64
 		
-		lgdt [_GDT64_POINTER]
-		#jmp _long_mode
+		mov eax, _GDT64_POINTER
+		lgdt [eax] #[_GDT64_POINTER]
 		
+		
+		
+		# check... we seem to be fine...
+		mov ecx, 0xc0000080 # EFER MSR
+		rdmsr
+		mov ecx, eax
+		and ecx, 0x00000400 # LMA bit!
+		shr ecx, 0x08
+		add ecx, 0x002030
+		mov eax, 0x000b8004
+		mov [eax], ecx #'L'
+		
+		
+		mov eax, _lmode_ptr
 		jmp $
-		jmp_far [_lmode_ptr] # 0x0008:_long_mode
+		#db 0x48
+		jmp_far [eax] #[_lmode_ptr] # 0x0008:_long_mode
 		
 	_long_mode:
 		jmp $
@@ -448,6 +474,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		
 		_lmode_ptr:
 		dd _long_mode
+	#	dd 0x00000000
 		dw 0x0008
 	}
 

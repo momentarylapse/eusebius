@@ -34,7 +34,7 @@ func main()
 		# Ziel des Images
 		mov ebx, 0x00007e00
 		mov ah, 0x02 # "ReadSector"
-		mov al, 0x02
+		mov al, 0x04
 		mov cx, 0x0019
 		mov dx, 0x0080
 		#mov al, 0x04 # 4 Sektoren = 2kb
