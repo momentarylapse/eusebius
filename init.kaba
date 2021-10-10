@@ -344,12 +344,13 @@ func main()	#-------------------------------------------------------------	# Rea
 # enter 64 bit mode
 
 		# prepare GDT
-		mov eax, _GDT64_POINTER
-		add eax, 0x00000004
-		mov [eax], _GDT64
+	#	mov eax, _GDT64_POINTER
+	#	add eax, 0x00000004
+	#	mov [eax], _GDT64
 		
-		mov eax, _GDT64_POINTER
-		lgdt [eax] #[_GDT64_POINTER]
+	#	mov eax, _GDT64_POINTER
+	#	lgdt [eax] #[_GDT64_POINTER]
+		lgdt [_GDT64_POINTER]
 		
 		
 		
@@ -364,7 +365,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		mov [eax], ecx #'L'
 		
 		mov eax, _lmode_ptr
-		jmp $
+#		jmp $
 		#db 0x48
 	#	db 0xff
 	#	db 0x28
@@ -372,14 +373,14 @@ func main()	#-------------------------------------------------------------	# Rea
 	#	jmp_far s48 [_lmode_ptr] # 0x0008:_long_mode    direct (immediate) not allowed!
 		
 	_64bit_mode:
-		jmp $
+	#	jmp $
 		
 		
 		mov ecx, 0x20412042
-		db 0x4f
-		shl ecx, 0x10
-		db 0x4f
-		shr ecx, 0x10
+		db 0x48
+		shl ecx, 0x20
+		db 0x48
+		shr ecx, 0x20
 		#xor rax, rax
 		mov eax, 0x000b8004
 		mov [eax], ecx #'L'
@@ -442,7 +443,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		db 0x00
 	_GDT64_POINTER:
 		dw 0x0017 # 8*3-1
-		dd 0x00000000
+		dd _GDT64 #0x00000000
 		dd 0x00000000
 	#	dq 0x0000000000000000 #_GDT64
 
