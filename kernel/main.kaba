@@ -16,7 +16,7 @@ func main()
 		mov eax, 0x000b8008
 		mov [eax], 'K'
 		add eax, 0x00000001
-		mov [eax], 0x20
+		mov [eax], 0x05
 		#int 0x10
 		
 		jmp $
