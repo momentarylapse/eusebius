@@ -220,8 +220,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		mov esp, 0x0027fff8
 
 		# in den 32bit ProtectedMode springen
-		db 0x66 # weil im 16:32 Format...
-		jmp_far [_pmode_ptr] # 0x0008:_pmode
+		jmp_far s48 [_pmode_ptr] # 0x0008:_pmode
 
 #-------------------------------------------------------------
 # protected mode!!!
@@ -364,13 +363,15 @@ func main()	#-------------------------------------------------------------	# Rea
 		mov eax, 0x000b8004
 		mov [eax], ecx #'L'
 		
-		
 		mov eax, _lmode_ptr
 		jmp $
 		#db 0x48
-		jmp_far [eax] #[_lmode_ptr] # 0x0008:_long_mode
+	#	db 0xff
+	#	db 0x28
+		jmp_far s48 [eax]
+	#	jmp_far s48 [_lmode_ptr] # 0x0008:_long_mode    direct (immediate) not allowed!
 		
-	_long_mode:
+	_64bit_mode:
 		jmp $
 		
 		
@@ -473,7 +474,7 @@ func main()	#-------------------------------------------------------------	# Rea
 		dw 0x0008 # Descriptor[1] : ...
 		
 		_lmode_ptr:
-		dd _long_mode
+		dd _64bit_mode
 	#	dd 0x00000000
 		dw 0x0008
 	}
