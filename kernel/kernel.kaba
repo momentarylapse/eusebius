@@ -8,7 +8,7 @@ use io.text
 ##use fs.fs
 ##use fs.access
 ##use fs.pipe
-##use mem.heap
+use mem.heap
 ##use mem.paging
 ##use mem.shared
 ##use net.socket
@@ -53,8 +53,9 @@ func main()
 	printi(MemorySize / 1024)
 	prints("k\n")
 	
-	while true
-		pass
+	int* p = _i2p(0x00220000)
+	*p = 3
+
 	
 	#asm{
 #		mov eax, 0x8000000
@@ -106,8 +107,8 @@ func main()
 ##	Scheduler.start()
 ##	panic("test")
 ##	prints("aa2")
-##	while true
-##		pass
+	while true
+		pass
 ##	
 ##	panic("no tasks")
 ##

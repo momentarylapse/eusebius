@@ -292,21 +292,36 @@ func main()
 		#rep
 		#stosd
 		mov edi, cr3
-		
-		
+
+# PML4T @ 0x01001000
+# PDPT  @ 0x01002000
+# PDT   @ 0x01003000
+# PT0   @ 0x01004000
+# PT1   @ 0x01005000
+
+
 		# PML4T[0] -> PDPT
 		mov [edi], 0x01002003
-		add edi, 0x00001000
 		# PDPT[0] -> PDT
+		add edi, 0x00001000
 		mov [edi], 0x01003003
+		# PDT[0] -> PT0
 		add edi, 0x00001000
-		# PDT[0] -> PT
 		mov [edi], 0x01004003
-		add edi, 0x00001000
+		# PDT[1] -> PT1
+		add edi, 0x00000008
+		mov [edi], 0x01005003
+		# PDT[2] -> PT2
+		add edi, 0x00000008
+		mov [edi], 0x01006003
+		# PDT[3] -> PT3
+		add edi, 0x00000008
+		mov [edi], 0x01007003
 		
-		# identity map first 2mb
+		# identity map first 16mb
+		mov edi, 0x01004000
 		mov ebx, 0x00000003
-		mov ecx, 0x00000200 #512
+		mov ecx, 0x00001000 #512*8
 	_set_table_entry:
 		mov [edi], ebx
 		add ebx, 0x00001000
