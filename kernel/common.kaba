@@ -60,7 +60,7 @@ const IPC_EXCL = 1<<13
 var MemorySize: int
 
 const KERNEL_NAME = "Eusebius"
-const KERNEL_VERSION = "0.2.2.1"
+const KERNEL_VERSION = "0.2.9.0"
 const MACHINE_TYPE = "x86"
 
 class BiosMemoryMapEntry
@@ -76,14 +76,15 @@ var bios_mem_map: BiosMemoryMapEntry[64]
 
 
 func read_data_from_init()
-	asm{
-		mov eax, [0x00005100]
-		shl eax, 0x0a
+	asm {
+		mov rax, [0x00005100]
+		shl rax, 0x0a
 		mov MemorySize, eax
 		
-		mov eax, [0x00005104]
+		mov rax, [0x00005104]
 		mov __temp_i__, eax
 	}
+
 	int bmmn = __temp_i__ & 0x0000ffff
 	memcpy(&bios_mem_map, _i2p(0x00006000), 64*24)#sizeof(bio_mem_map))
 	for m,i in bios_mem_map
@@ -151,15 +152,22 @@ func ceil_quot(n: int, m: int) -> int
 	return (n + m - 1) / m
 
 var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int
+var __temp_l__: int64
 var __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__: void*
 func _p2i(p: void*) -> int
 	int* i = &p
+	return *i
+func _p2i64(p: void*) -> int64
+	int64* i = &p
 	return *i
 
 class PointerWrapper
 	var p: void*
 
 func _i2p(i: int) -> void*
+	return _i642p(i)
+
+func _i642p(i: int64) -> void*
 	PointerWrapper *p = &i
 	return p.p
 
@@ -178,79 +186,79 @@ class Word
 		
 
 
-func _call_ppii(f: Function*, a: void*, b: void*, c: int, d: int) -> int
-	__temp_p__ = f
-	__temp_p2__ = a
-	__temp_p3__ = b
-	__temp_i__ = c
-	__temp_i2__ = d
-	asm{
-		mov eax, __temp_p__
-		push __temp_i2__
-		push __temp_i__
-		push __temp_p3__
-		push __temp_p2__
-		call eax
-		mov __temp_i__, eax
-		sub esp, 0x10
-	}
-	return __temp_i__
-
-
-func _call_ppi(f: Function*, a: void*, b: void*, c: int) -> int
-	__temp_p__ = f
-	__temp_p2__ = a
-	__temp_p3__ = b
-	__temp_i__ = c
-	asm{
-		mov eax, __temp_p__
-		push __temp_i__
-		push __temp_p3__
-		push __temp_p2__
-		call eax
-		mov __temp_i__, eax
-		sub esp, 0x0c
-	}
-	return __temp_i__
-
-
-func _call_pi(f: Function*, a: void*, b: int) -> int
-	__temp_p__ = f
-	__temp_p2__ = a
-	__temp_i__ = b
-	asm{
-		mov eax, __temp_p__
-		push __temp_i__
-		push __temp_p2__
-		call eax
-		mov __temp_i__, eax
-		sub esp, 0x08
-	}
-	return __temp_i__
-
-
-func _call_pp(f: Function*, a: void*, b: void*) -> int
-	__temp_p__ = f
-	__temp_p2__ = a
-	__temp_p3__ = b
-	asm{
-		mov eax, __temp_p__
-		push __temp_p3__
-		push __temp_p2__
-		call eax
-		mov __temp_i__, eax
-		sub esp, 0x08
-	}
-	return __temp_i__
-
-func call_p(f: Function*, a: void*) -> int
-	__temp_p__ = f
-	__temp_p2__ = a
-	asm{
-		mov eax, __temp_p__
-		push __temp_p2__
-		call eax
-		mov __temp_i__, eax
-		sub esp, 0x04
-	}
-	return __temp_i__
+#func _call_ppii(f: Function*, a: void*, b: void*, c: int, d: int) -> int
+#	__temp_p__ = f
+#	__temp_p2__ = a
+#	__temp_p3__ = b
+#	__temp_i__ = c
+#	__temp_i2__ = d
+#	asm{
+#		mov eax, __temp_p__
+#		push __temp_i2__
+#		push __temp_i__
+#		push __temp_p3__
+#		push __temp_p2__
+#		call eax
+#		mov __temp_i__, eax
+#		sub esp, 0x10
+#	}
+#	return __temp_i__
+#
+#
+#func _call_ppi(f: Function*, a: void*, b: void*, c: int) -> int
+#	__temp_p__ = f
+#	__temp_p2__ = a
+#	__temp_p3__ = b
+#	__temp_i__ = c
+#	asm{
+#		mov eax, __temp_p__
+#		push __temp_i__
+#		push __temp_p3__
+#		push __temp_p2__
+#		call eax
+#		mov __temp_i__, eax
+#		sub esp, 0x0c
+#	}
+#	return __temp_i__
+#
+#
+#func _call_pi(f: Function*, a: void*, b: int) -> int
+#	__temp_p__ = f
+#	__temp_p2__ = a
+#	__temp_i__ = b
+#	asm{
+#		mov eax, __temp_p__
+#		push __temp_i__
+#		push __temp_p2__
+#		call eax
+#		mov __temp_i__, eax
+#		sub esp, 0x08
+#	}
+#	return __temp_i__
+#
+#
+#func _call_pp(f: Function*, a: void*, b: void*) -> int
+#	__temp_p__ = f
+#	__temp_p2__ = a
+#	__temp_p3__ = b
+#	asm{
+#		mov eax, __temp_p__
+#		push __temp_p3__
+#		push __temp_p2__
+#		call eax
+#		mov __temp_i__, eax
+#		sub esp, 0x08
+#	}
+#	return __temp_i__
+#
+#func call_p(f: Function*, a: void*) -> int
+#	__temp_p__ = f
+#	__temp_p2__ = a
+#	asm{
+#		mov eax, __temp_p__
+#		push __temp_p2__
+#		call eax
+#		mov __temp_i__, eax
+#		sub esp, 0x04
+#	}
+#	return __temp_i__

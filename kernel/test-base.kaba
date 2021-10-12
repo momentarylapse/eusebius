@@ -8,7 +8,8 @@ func main()
 	TextMode.init()
 	TextMode.clear()
 	
-	prints("hello")
+	prints("hello..  ")
+	printi(100)
 
 
 	while true
