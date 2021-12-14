@@ -9,7 +9,7 @@ use io.text
 ##use fs.access
 ##use fs.pipe
 use mem.heap
-##use mem.paging
+use mem.paging
 ##use mem.shared
 ##use net.socket
 ##use task.task
@@ -71,8 +71,8 @@ func main()
 #	printh(&__temp_i3__, 4)
 #	prints("\n")
 	
-##	Heap.init()
-##	Paging.init()
+	Heap.init()
+	Paging.init()
 ##	SharedMemory.init()
 ##	
 ##	BlockDevManager.init()

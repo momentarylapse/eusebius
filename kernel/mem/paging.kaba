@@ -3,14 +3,14 @@ use io.text
 use mem.heap
 
 const PAGE_SIZE = 4096
-const PAGE_TABLE_ENTRIES = 1024
+const PAGE_TABLE_ENTRIES = 512
 const MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 # 1 mask = 32 pages = 128k
 
 #const int KERNEL_PAGE_DIRECTORY = 0x00200000
 
 class Page
-	var e: int[PAGE_TABLE_ENTRIES]
+	var e: int64[PAGE_TABLE_ENTRIES]
 	
 	func clear()
 		for i in 0:PAGE_TABLE_ENTRIES
@@ -24,8 +24,9 @@ class PageTable extends Page
 				num_entries ++
 		return num_entries
 
-func page_params(addr: int, out dir_no: int*, out page_no: int*, out offset: int*)
-	*dir_no = addr >> 22
+func page_params(addr: int64, out x_no: int*, out dir_no: int*, out page_no: int*, out offset: int*)
+	*x_no = addr >> 30
+	*dir_no = (addr >> 21) & 0x000001ff # 512 dirs
 	*page_no = (addr >> 12) & 0x000003ff
 	*offset = addr & 0x00000fff
 
@@ -34,11 +35,11 @@ class PageDirectory extends PageTable
 	# source = task-space
 	# dest = kernel-space
 	# (does not allocate pages)
-	func map_lin(_source: int, _dest: int, size: int, writable: bool)
-		int source = _source & 0xfffff000
-		int dest = _dest & 0xfffff000
-		int dir_no, page_no, offset
-		page_params(source, &dir_no, &page_no, &offset)
+	func map_lin(_source: int64, _dest: int64, size: int, writable: bool)
+		int64 source = _source & 0xfffffffffffff000
+		int64 dest = _dest & 0xfffffffffffff000
+		int x_no, dir_no, page_no, offset
+		page_params(source, &x_no, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		int flags = 5
 		if writable
