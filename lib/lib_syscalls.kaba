@@ -191,7 +191,7 @@ func shmget(key: int, size: int, flags: int) -> int
 	return __temp_i3__
 
 func shmat(id: int, flags: int) -> void*
-	void *p
+	var p: void*
 	__temp_i__ = id
 	__temp_p__ = &p
 	__temp_i2__ = flags

@@ -97,8 +97,8 @@ func read_data_from_init()
 
 
 func memcpy(out _dest: void*, _source: void*, size: int)
-	cstring* dest = _dest
-	cstring* source = _source
+	var dest: cstring* = _dest
+	let source: cstring* = _source
 	for n in 0:size
 		dest[n] = source[n]
 #	if size > 0
@@ -155,10 +155,10 @@ var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int
 var __temp_l__: int64
 var __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__: void*
 func _p2i(p: void*) -> int
-	int* i = &p
+	var i: int* = &p
 	return *i
 func _p2i64(p: void*) -> int64
-	int64* i = &p
+	var i: int64* = &p
 	return *i
 
 class PointerWrapper
@@ -168,20 +168,20 @@ func _i2p(i: int) -> void*
 	return _i642p(i)
 
 func _i642p(i: int64) -> void*
-	PointerWrapper *p = &i
+	var p: PointerWrapper* = &i
 	return p.p
 
 
 class Word
 	var c: char[2]
-	func const _int() -> int
+	func _int() -> int
 		int a = c[0]
 		int b = c[1]
 		return a + b * 256
-	func set(i: int)
+	func mut set(i: int)
 		c[0] = i
 		c[1] = i >> 8
-	func __iadd__(d: int)
+	func mut __iadd__(d: int)
 		set(_int() + d)
 		
 

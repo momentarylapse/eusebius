@@ -12,12 +12,12 @@ const MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 class Page
 	var e: int64[PAGE_TABLE_ENTRIES]
 	
-	func clear()
+	func mut clear()
 		for i in 0:PAGE_TABLE_ENTRIES
 			e[i] = 0
 
 class PageTable extends Page
-	func const count_entries() -> int
+	func count_entries() -> int
 		int num_entries = 0
 		for ee in e
 			if ee != 0
@@ -35,7 +35,7 @@ class PageDirectory extends PageTable
 	# source = task-space
 	# dest = kernel-space
 	# (does not allocate pages)
-	func map_lin(_source: int64, _dest: int64, size: int, writable: bool)
+	func mut map_lin(_source: int64, _dest: int64, size: int, writable: bool)
 		int64 source = _source & 0xfffffffffffff000
 		int64 dest = _dest & 0xfffffffffffff000
 		int x_no, dir_no, page_no, offset
@@ -45,7 +45,7 @@ class PageDirectory extends PageTable
 		if writable
 			flags = 7
 		while npages > 0
-			PageTable *pt
+			var pt: PageTable*
 			if e[dir_no] == 0
 				int pos = Paging.alloc_page()
 				pt = _i2p(pos)
@@ -67,16 +67,17 @@ class PageDirectory extends PageTable
 			page_no = 0
 
 	# start = task-space
-	func map_by_alloc(_start: int, size: int, writable: bool) -> bool
+	func mut map_by_alloc(_start: int, size: int, writable: bool) -> bool
 		int start = _start & 0xfffff000
-		int dir_no, page_no, offset
-		page_params(start, &dir_no, &page_no, &offset)
+		int x_no, dir_no, page_no, offset
+		
+		page_params(start, &x_no, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		int flags = 5
 		if writable
 			flags = 7
 		while npages > 0
-			PageTable *pt
+			var pt: PageTable*
 			if e[dir_no] == 0
 				int pos = Paging.alloc_page()
 				pt = _i2p(pos)
@@ -99,14 +100,14 @@ class PageDirectory extends PageTable
 			page_no = 0
 		return true
 	
-	func unmap(_start: int, size: int, dealloc: bool)
+	func mut unmap(_start: int, size: int, dealloc: bool)
 		int start = _start & 0xfffff000
-		int dir_no, page_no, offset
-		page_params(start, &dir_no, &page_no, &offset)
+		int x_no, dir_no, page_no, offset
+		page_params(start, &x_no, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		while npages > 0
 			int pt_pos = e[dir_no] & 0xfffff000
-			PageTable *pt = _i2p(pt_pos)
+			var pt: PageTable* = _i2p(pt_pos)
 			int i0 = page_no
 			int i1 = page_no + npages
 			if i1 > PAGE_TABLE_ENTRIES
@@ -122,16 +123,16 @@ class PageDirectory extends PageTable
 			dir_no ++
 			page_no = 0
 	
-	func const find_free_space(_start: int, size: int) -> int
+	func find_free_space(_start: int, size: int) -> int
 		int start = (_start & 0xfffff000)
-		int dir_no, page_no, offset
-		page_params(start, &dir_no, &page_no, &offset)
+		int x_no, dir_no, page_no, offset
+		page_params(start, &x_no, &dir_no, &page_no, &offset)
 		int npages = ceil_quot(size, PAGE_SIZE)
 		int still_need = npages
 		int pos = start
 		while page_no < PAGE_TABLE_ENTRIES
 			int pt_pos = e[dir_no] & 0xfffff000
-			PageTable *pt = _i2p(pt_pos)
+			var pt: PageTable* = _i2p(pt_pos)
 			int i0 = page_no
 			if pt
 				for i in i0:PAGE_TABLE_ENTRIES
@@ -154,19 +155,19 @@ class PageDirectory extends PageTable
 			page_no = 0
 		return -1
 
-	func const addr2kernel(addr: int, out offset: int*) -> int
-		int dir_no, page_no
-		page_params(addr, &dir_no, &page_no, offset)
+	func addr2kernel(addr: int, out offset: int*) -> int
+		int x_no, dir_no, page_no
+		page_params(addr, &x_no, &dir_no, &page_no, offset)
 		if e[dir_no] == 0
 			return 0
-		PageTable *pt = _i2p(e[dir_no] & 0xfffff000)
+		var pt: PageTable* = _i2p(e[dir_no] & 0xfffff000)
 		if pt.e[page_no] == 0
 			return 0
 		int n = pt.e[page_no] & 0xfffff000
 		return n + *offset
 
 	func const memcpy2kernel(_o: void*, _addr: int, _size: int) -> bool
-		cstring *o = _o
+		var o: cstring* = _o
 		int addr = _addr
 		int size = _size
 		while size > 0
@@ -174,7 +175,7 @@ class PageDirectory extends PageTable
 			int kaddr = addr2kernel(addr, &offset)
 			if kaddr == 0
 				return false
-			cstring *pp = _i2p(kaddr)
+			var pp: cstring* = _i2p(kaddr)
 			int num = PAGE_SIZE - offset
 			if num > size
 				num = size
@@ -188,13 +189,13 @@ class PageDirectory extends PageTable
 	func const memcpy2task(_addr: int, _p: void*, _size: int) -> bool
 		int addr = _addr
 		int size = _size
-		cstring *p = _p
+		var p: cstring* = _p
 		while size > 0
 			int offset
 			int kaddr = addr2kernel(addr, &offset)
 			if kaddr == 0
 				return false
-			cstring *pp = _i2p(kaddr)
+			var pp: cstring* = _i2p(kaddr)
 			int num = PAGE_SIZE - offset
 			if num > size
 				num = size
@@ -206,14 +207,14 @@ class PageDirectory extends PageTable
 		return true
 	
 	func copy_pages_to(out dest: PageDirectory*, start1: int, start2: int, size: int)
-		int dir_no1, page_no1, offset1
-		page_params(start1, &dir_no1, &page_no1, &offset1)
-		int dir_no2, page_no2, offset2
-		page_params(start2, &dir_no2, &page_no2, &offset2)
+		int x_no1, dir_no1, page_no1, offset1
+		page_params(start1, &x_no1, &dir_no1, &page_no1, &offset1)
+		int x_no2, dir_no2, page_no2, offset2
+		page_params(start2, &x_no2, &dir_no2, &page_no2, &offset2)
 		int npages = ceil_quot(size, PAGE_SIZE)
-		PageTable *pt1 = _i2p(e[dir_no1] & 0xfffff000)
+		var pt1: PageTable* = _i2p(e[dir_no1] & 0xfffff000)
 		#int n = pt.e[page_no] & 0xfffff000
-		PageTable *pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
+		var pt2: PageTable* = _i2p(dest.e[dir_no2] & 0xfffff000)
 		#int n = pt.e[page_no] & 0xfffff000
 		while npages > 0
 			var pout = _i2p(pt2.e[page_no2] & 0xfffff000)
@@ -234,7 +235,7 @@ class PageDirectory extends PageTable
 		printh(&self, 64)
 		prints("...\n")
 		for i in 0:4
-			PageTable *pt = _i2p(e[i] & 0xfffff000)
+			var pt: PageTable* = _i2p(e[i] & 0xfffff000)
 			printh(pt, 64)
 			prints("...\n")
 
@@ -266,7 +267,7 @@ class Paging
 		kernel_page_dir.map_lin(0, 0, MemorySize, true)
 	
 		asm{
-			mov eax, Paging.kernel_page_dir
+			mov rax, Paging.kernel_page_dir
 			mov cr3, eax
 			mov eax, cr0
 			or eax, 0x80000000
@@ -444,7 +445,7 @@ class Paging
 		if pos == -1
 			panic("can not create page directory")
 			return nil
-		PageDirectory *pd = _i2p(pos)
+		var pd: PageDirectory* = _i2p(pos)
 		pd.clear()
 		return pd
 

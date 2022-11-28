@@ -35,7 +35,7 @@ class lib__Image
 		if r < 0
 			close(h)
 			return nil
-		lib__Image* im = lib__@malloc(sizeof(Image))
+		var im: lib__Image* = lib__@malloc(sizeof(Image))
 		int offset = temp.data[0]
 		int ww = temp.data[13]
 		int width = temp.data[12]

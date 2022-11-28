@@ -53,7 +53,7 @@ func main()
 	printi(MemorySize / 1024)
 	prints("k\n")
 	
-	int* p = _i2p(0x00220000)
+	var p: int* = _i2p(0x00220000)
 	*p = 3
 
 	

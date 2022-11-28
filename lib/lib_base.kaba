@@ -31,7 +31,7 @@ var __temp_f__: float
 var __temp_p__, __temp_p2__: void*
 
 func _p2i(p: void*) -> int
-	int* i = &p
+	var i: int* = &p
 	return *i
 
 #class PointerWrapper

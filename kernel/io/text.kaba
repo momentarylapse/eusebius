@@ -11,7 +11,7 @@ class TextMode
 	var static pos, line: int
 
 	func static clear()
-		cstring *d = video_memory
+		var d: cstring* = video_memory
 		for i in 0:SCREEN_WIDTH * SCREEN_HEIGHT
 			d[i * 2] = ' '
 			d[1 * 2 + 1] = 0
@@ -25,8 +25,8 @@ class TextMode
 		text_color = 7
 
 	func static etm_shift()
-		cstring *d = video_memory
-		cstring *d2 = &d[SCREEN_WIDTH * 2]
+		var d: cstring* = video_memory
+		var d2: cstring* = &d[SCREEN_WIDTH * 2]
 		for i in 0:SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
 			d[i] = d2[i]
 		d2 = &d[SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2]
@@ -35,7 +35,7 @@ class TextMode
 			d2[i * 2 + 1] = 0
 
 	func static prints_low(str: cstring*, size: int)
-		cstring *d = video_memory
+		var d: cstring* = video_memory
 		d = &d[2*(SCREEN_WIDTH * line + pos)]
 		for i in 0:size
 			if str[i] == 0x7f or str[i] == 0x08 # BACKSPACE
@@ -98,8 +98,8 @@ func printi(i: int)
 	prints(s)
 
 func printh(_data: void*, size: int)
-	cstring* data = _data
-	cstring ttt
+	var data: cstring* = _data
+	var ttt: cstring
 	for i in 0:size
 		int d = data[i]
 		int d1 = (d>>4) & 0xf

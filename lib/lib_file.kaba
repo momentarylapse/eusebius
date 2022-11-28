@@ -37,7 +37,7 @@ func fork() -> int
 		mov __temp_i__, eax
 	}
 	if __temp_i__ == 0
-		lib__Path* p = &"/dev/tty"
+		var p: lib__Path* = &"/dev/tty"
 		stdout = open(*p, O_RDONLY)
 	return __temp_i__
 
@@ -172,13 +172,13 @@ class lib__Path
 
 class lib__Path@list
 	var l: lib__string@list
-	func add(p: lib__Path)
+	func mut add(p: lib__Path)
 		l.add(p.s)
 	func __add__(o: lib__Path@list) -> lib__string@list
 		return l + o.l
-	func __iadd__(o: lib__Path@list)
+	func mut __iadd__(o: lib__Path@list)
 		l + o.l
-	func __assign__(o: lib__Path@list)
+	func mut __assign__(o: lib__Path@list)
 		l = o.l
 		
 
@@ -244,25 +244,25 @@ class lib__File
 	func __delete__()
 		close()
 	
-	func open(filename: lib__Path) -> bool
+	func mut open(filename: lib__Path) -> bool
 		h = xxx_open(filename, O_RDONLY)
 		pos = 0
 		return h >= 0
 	
-	func create(filename: lib__Path) -> bool
+	func mut create(filename: lib__Path) -> bool
 		h = xxx_create(filename)
 		pos = 0
 		return h >= 0
 	
-	func close()
+	func mut close()
 		if h < 0
 			return
 		xxx_close(h)
 		h = -1
 	
-	func setBinaryMode(b: bool)
+	func mut setBinaryMode(b: bool)
 	
-	func read(size: int) -> lib__string
+	func mut read(size: int) -> lib__string
 		lib__string s
 		s.resize(size)
 		int r = xxx_read(h, s.data, size)
@@ -273,7 +273,7 @@ class lib__File
 		pos += r
 		return s
 	
-	func write(s: lib__string) -> int
+	func mut write(s: lib__string) -> int
 		int r = xxx_write(h, s.data, s.num)
 		if r > 0
 			pos += r
@@ -283,7 +283,7 @@ class lib__File
 		return pos
 		#return xxx_seek(h, 0, SEEK_CUR)
 	
-	func seek(_pos: int, absolute: bool)
+	func mut seek(_pos: int, absolute: bool)
 		if absolute
 			pos = _pos
 			xxx_seek(h, pos, SEEK_SET)
@@ -309,7 +309,7 @@ func xxx_seek(h: int, pos: int, mode: int) -> int
 	seek(h, pos, mode)
 
 func lib__Filesystem@@open(filename: lib__Path) -> lib__File*
-	lib__File* f = lib__@malloc(sizeof(lib__File))
+	var f: lib__File* = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.open(filename)
 		lib__@free(f)
@@ -317,7 +317,7 @@ func lib__Filesystem@@open(filename: lib__Path) -> lib__File*
 	return f
 
 func lib__Filesystem@@create(filename: lib__Path) -> lib__File*
-	lib__File* f = lib__@malloc(sizeof(lib__File))
+	var f: lib__File* = lib__@malloc(sizeof(lib__File))
 	f.__init__()
 	if !f.create(filename)
 		lib__@free(f)

@@ -18,10 +18,10 @@ class Heap
 		var next: MallocHeader*
 		var prev: MallocHeader*
 		func const after() -> void*
-			char[0]* pp = &self
+			var pp: char[0]* = &self
 			return &pp[size]
 		func const payload() -> void*
-			char[0]* pp = &self
+			var pp: char[0]* = &self
 			return &pp[sizeof(MallocHeader)]
 	var static first_free: MallocHeader*
 	var static end_marker: MallocHeader*
@@ -41,7 +41,7 @@ class Heap
 		size += sizeof(MallocHeader)
 		
 		# find a free block big enough
-		MallocHeader *cur = first_free
+		var cur: MallocHeader* = first_free
 		while cur.next
 			if size <= cur.size - sizeof(MallocHeader)
 			
@@ -49,7 +49,7 @@ class Heap
 				cur.size -= size
 				
 				# create allocated block at (former) end of free block
-				MallocHeader *hh = cur.after()
+				var hh: MallocHeader* = cur.after()
 				hh.size = size
 				hh.next = nil
 				hh.prev = nil
@@ -64,7 +64,8 @@ class Heap
 		panic("malloc: fail")
 		return nil
 
-	func static _cleanup(out h: MallocHeader*)
+	func static _cleanup(_h: MallocHeader*)
+		var h = _h
 		if h.after() == h.next
 			allocated -= sizeof(MallocHeader)
 			#prints(" merge after ")
@@ -81,17 +82,17 @@ class Heap
 	func static free(p: void*)
 		if !p
 			return
-		int ip = _p2i(p)
+		let ip = _p2i(p)
 		#prints "---free"
 		#prints("<-")
 		#printi(ip)
 		
-		MallocHeader *hh = _i2p(ip - sizeof(MallocHeader))
+		var hh: MallocHeader* = _i2p(ip - sizeof(MallocHeader))
 		#prints(" ")
 		#printi(hh.size)
 		
 		# find last free window before p
-		MallocHeader *cur = first_free
+		var cur: MallocHeader* = first_free
 		while cur.next
 			if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
 				prints("\n")
@@ -122,7 +123,7 @@ class Heap
 
 
 	func static memcheck()
-		MallocHeader *h = first_free
+		var h: MallocHeader* = first_free
 		while h.next
 			if _p2i(h.next) < _p2i(h) + h.size
 				panic("memcheck: h.next<h+size")
@@ -131,7 +132,7 @@ class Heap
 			h = h.next
 
 	func static realloc(po: void*, old_size: int, new_size: int) -> void*
-		void *pn = malloc(new_size)
+		var pn: void* = malloc(new_size)
 		int n = old_size
 		if new_size < n
 			n = new_size
