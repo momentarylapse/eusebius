@@ -27,13 +27,13 @@ var col_frame_active: color
 
 
 func dir_append(dir: string, e: string) -> string
-	string r = dir
+	var r: string = dir
 	if r.tail(1) != "/"
 		r += "/"
 	return r + e
 
 func key_to_str(_key: int) -> string
-	int key = _key
+	var key = _key
 	if key == KEY_RETURN
 		return "\n"
 	if key == KEY_SPACE
@@ -61,17 +61,17 @@ func key_to_str(_key: int) -> string
 	if key == KEY_SZ
 		return "ß"
 	if key >= KEY_A and key <= KEY_Z
-		string s
+		var s: string
 		s.add('a' + key - KEY_A)
 		return s
 	if key >= KEY_0 and key <= KEY_9
-		string s
+		var s: string
 		s.add('0' + key - KEY_0)
 		return s
 	if (key & KEY_SHIFT) > 0
 		key -= KEY_SHIFT
 		if key >= KEY_A and key <= KEY_Z
-			string s
+			var s: string
 			s.add('A' + key - KEY_A)
 			return s
 		if key == KEY_0
@@ -267,43 +267,43 @@ class MtkGrid extends MtkWidget
 			snd.min_height += child_min_h[j]
 	
 		children[x + y * nx] = c
-		int ww = (r.w() - (nx - 1) * GRID_MARGIN) / nx
-		int hh = (r.h() - (ny - 1) * GRID_MARGIN) / ny
-		int dx = (ww + GRID_MARGIN) * x
-		int dy = (hh + GRID_MARGIN) * y
+		var ww = (r.w() - (nx - 1) * GRID_MARGIN) / nx
+		var hh = (r.h() - (ny - 1) * GRID_MARGIN) / ny
+		var dx = (ww + GRID_MARGIN) * x
+		var dy = (hh + GRID_MARGIN) * y
 		c.set_win(win, r.x0 + dx, r.y0 + dy, ww, hh)
 		
 	func override on_resize()
 		# plan child sizes...
 		
 		# min
-		int sum_min_w = 0
+		var sum_min_w = 0
 		for w in child_min_w
 			sum_min_w += w
-		int sum_min_h = 0
+		var sum_min_h = 0
 		for h in child_min_h
 			sum_min_h += h
 			
 		# expansion
-		int n_exp_x = 0
-		int n_exp_y = 0
+		var n_exp_x = 0
+		var n_exp_y = 0
 		for b in child_exp_x
 			if b
 				n_exp_x ++
 		for b in child_exp_y
 			if b
 				n_exp_y ++
-		int exp_x = 0
+		var exp_x = 0
 		if n_exp_x > 0
 			exp_x = (r.w() - (nx-1)*GRID_MARGIN - sum_min_w) / n_exp_x
-		int exp_y = 0
+		var exp_y = 0
 		if n_exp_y > 0
 			exp_y = (r.h() - (ny-1)*GRID_MARGIN - sum_min_h) / n_exp_y
 	
 		# actual sizes
-		int[] child_x, child_y
-		int x0 = r.x0
-		int y0 = r.y0
+		var child_x, child_y: int[]
+		var x0 = r.x0
+		var y0 = r.y0
 		for w,i in child_w
 			child_x.add(x0)
 			w = child_min_w[i]
@@ -320,8 +320,8 @@ class MtkGrid extends MtkWidget
 		# apply
 		for c,ci in children
 			if c
-				int i = ci % nx
-				int j = ci / nx
+				var i = ci % nx
+				var j = ci / nx
 				c.resize(child_x[i], child_y[j], child_w[i], child_h[j])
 
 enum
@@ -363,14 +363,14 @@ class MtkButton extends MtkWidget
 			p.set_color(col_button_hover_frame)
 		if state == BUTTON_STATE_CLICK
 			p.set_color(col_button_click_frame)
-		float fr = WIDGET_FRAME_WIDTH / 2.0
+		var fr = WIDGET_FRAME_WIDTH / 2.0
 		p.line_width = fr
 		p.rectangle(rect(fr, r.w()-fr, fr, r.h()-fr))
 		p.strike()
 		p.line_width = 1
 		
 		p.set_color(col_text)
-		float w = p.font.get_str_width(text)
+		var w = p.font.get_str_width(text)
 		p.draw_str((r.w() - w) / 2, (r.h() - FONT_SIZE) / 2, text)
 		
 	func set_state(_state: int)
@@ -383,7 +383,7 @@ class MtkButton extends MtkWidget
 			on_click()
 	
 	func override on_mouse_move()
-		bool inside = r.inside(win.mx, win.my)
+		var inside = r.inside(win.mx, win.my)
 		if inside
 			if win.lbut
 				set_state(BUTTON_STATE_CLICK)
@@ -425,8 +425,8 @@ class MtkTextView extends MtkWidget
 	
 	func to_text(x: int, y: int) -> int
 		var lines = text.explode("\n")
-		int n = (y - 5) / 20
-		int pos = 0
+		var n = (y - 5) / 20
+		var pos = 0
 		for l,i in lines
 			if i >= n
 				pos += (x - 5) / 16
@@ -448,19 +448,19 @@ class MtkTextView extends MtkWidget
 			p.set_color(col_frame_active)
 		else
 			p.set_color(col_frame)
-		float fr = WIDGET_FRAME_WIDTH / 2.0
+		var fr = WIDGET_FRAME_WIDTH / 2.0
 		p.line_width = fr
 		p.rectangle(rect(fr, r.w()-fr, fr, r.h()-fr))
 		p.strike()
 		p.line_width = 1
 		
 		p.set_color(col_text)
-		string[] lines = text.explode("\n")
+		var lines = text.explode("\n")
 		for l,i in lines
 			p.draw_str(5, 5 + i * 20, l)
 		
 		if has_input()
-			int cx, cy
+			var cx, cy: int
 			to_screen(cursor_pos, &cx, &cy)
 			p.move_to(cx, cy)
 			p.line_to(cx, cy + 20)
@@ -492,7 +492,7 @@ class MtkTextView extends MtkWidget
 				cursor_pos ++
 				notify_change()
 		else
-			string s = key_to_str(key)
+			var s = key_to_str(key)
 			if s.num > 0
 				insert(s)
 	
@@ -607,7 +607,7 @@ class MtkWindow extends XWindow
 			w.mx = mx - w.r.x0
 			w.my = my - w.r.y0
 			w.on_mouse_move()
-		bool new_button_close_hover = frame and (my < FRAME_BAR) and (mx > w - FONT_SIZE_BAR - FRAME_WIDTH)
+		var new_button_close_hover = frame and (my < FRAME_BAR) and (mx > w - FONT_SIZE_BAR - FRAME_WIDTH)
 		if new_button_close_hover != button_close_hover
 			button_close_hover = new_button_close_hover
 			draw()
@@ -722,7 +722,7 @@ func mtk_add_idle(i: MtkIdle*)
 	idles.add(i)
 
 func mtk_open(filename: string)
-	string[] cmd
+	var cmd: string[]
 	if filename.tail(4) == ".tga"
 		cmd.add("/bin/ximage")
 	else

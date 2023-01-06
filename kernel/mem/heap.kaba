@@ -33,7 +33,7 @@ class Heap
 
 
 	func static malloc(_size: int) -> void*
-		int size = ceil_quot(_size, 8) << 3
+		var size = ceil_quot(_size, 8) << 3
 		#prints "<+"
 		#printi size
 		
@@ -133,7 +133,7 @@ class Heap
 
 	func static realloc(po: void*, old_size: int, new_size: int) -> void*
 		var pn: void* = malloc(new_size)
-		int n = old_size
+		var n = old_size
 		if new_size < n
 			n = new_size
 		memcpy(pn, po, n)

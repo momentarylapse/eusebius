@@ -10,12 +10,12 @@ func lib__clamp(i: int, min: int, max: int) -> int
 	return i
 
 func lib__loop(i: int, min: int, max: int) -> int
-	int d = max - min + 1
+	var d = max - min + 1
 	if i < min
-		int n = ( (min-i-1) / d ) + 1
+		var n = ( (min-i-1) / d ) + 1
 		return i + d * n
 	if i > max
-		int n = ( (i-max-1) / d ) + 1
+		var n = ( (i-max-1) / d ) + 1
 		return i - d * n
 	return i
 
@@ -44,7 +44,7 @@ class lib__int
 	func static __str__(i: int) -> lib__string
 		return i2s(i)
 	func static hex(i: int, n: int) -> lib__string
-		lib__string r
+		var r: lib__string
 		r.resize(n)
 		for k in 0:n
 			r.data[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
@@ -52,8 +52,8 @@ class lib__int
 	func static format(i: int, f: lib__string) -> lib__string
 		if f.data[f.num - 1] == 'x'
 			return hex(i, f.data[0] - '0')
-		int n = int(f)
-		char space = ' '
+		var n = int(f)
+		var space = ' '
 		if f.data[0] == '0'
 			space = '0'
 		return str_fill(i2s(i), n, space)
@@ -108,12 +108,12 @@ func lib__clamp(i: int, min: int, max: int) -> int
 func lib_loop(i: int, min: int, max: int) -> int
 	if max <= min
 		return min
-	int d = max - min + 1
+	var d = max - min + 1
 	if i < min
-		int n= ( (min-i-1) / d ) + 1
+		var n = ( (min-i-1) / d ) + 1
 		return i + d * n
 	if i > max
-		int n= ( (i-max-1) / d ) + 1
+		var n = ( (i-max-1) / d ) + 1
 		return i - d * n
 	return i
 
@@ -149,12 +149,12 @@ func lib__clamp(f: float, min: float, max: float) -> float
 	return f
 
 func lib__loop(f: float, min: float, max: float) -> float
-	float d = max - min
+	var d = max - min
 	if f < min
-		int n = int( (min-f) / d ) + 1
+		var n = int( (min-f) / d ) + 1
 		return f + d * float(n)
 	if f >= max
-		int n= int( (f-max) / d ) + 1
+		var n = int( (f-max) / d ) + 1
 		return f - d * float(n)
 	return f
 
@@ -167,7 +167,7 @@ class lib__complex
 		return _complex2s(self)
 
 func _complex2s(c: lib__complex) -> lib__string
-	lib__string r
+	var r: lib__string
 	r.add('(')
 	r += f2s(c.x, 6)
 	r.add(',')
@@ -205,7 +205,7 @@ class lib__complex@list extends lib__@DynamicArray
 
 
 func lib__p2s(p: void*) -> lib__string
-	lib__string r
+	var r: lib__string
 	var i: int* = &p
 	r.add('0')
 	r.add('x')

@@ -16,13 +16,13 @@ func _cs2s(cs: cstring, out s: lib__string)
 		s.add(cs[i])
 
 func cs2s(cs: cstring) -> lib__string
-	lib__string s
+	var s: lib__string
 	_cs2s(cs, s)
 	return s
 
 # ["aa", "bb"] -> "aa\0bb\0\0"
 func sa2cs(a: string[], out cs: cstring)
-	int n = 0
+	var n = 0
 	for k in 0:a.num
 		for i in 0:a[k].num
 			cs[n] = a[k][i]
@@ -77,7 +77,7 @@ func lib__@malloc(_size: int) -> void*
 		if ppp
 			return ppp
 
-	int size = _align8_(_size)
+	var size = _align8_(_size)
 	if lib_mem_debug
 		kprint(" [+")
 		kprinti(size)
@@ -123,7 +123,7 @@ func lib__@malloc(_size: int) -> void*
 		kprint(" - ")
 		kprinti(new_break_value)
 		kprint("  ")
-	int r = brk(new_break_value)
+	let r = brk(new_break_value)
 	if r < 0
 		__lib_fatal__("malloc/brk()")
 	cur_break_value = r
@@ -172,11 +172,11 @@ func _cleanup(out h: MallocHeader*)
 func lib__@free(p: void*)
 	if !p
 		return
-	int index = small_malloc_no(p)
+	let index = small_malloc_no(p)
 	if index >= 0
 		small_free(index)
 		return
-	int ip = _p2i(p)
+	let ip = _p2i(p)
 	if lib_mem_debug
 		kprint(" free ")
 		kprinti(ip)
@@ -261,8 +261,8 @@ func __lib_free_error__()
 func lib__@realloc(p: void*, size: int) -> void*
 	var hp: MallocHeader[0]* = p
 	var h: MallocHeader* = &hp[-1]
-	int old_size
-	int sm_index = small_malloc_no(p)
+	var old_size: int
+	let sm_index = small_malloc_no(p)
 	if sm_index >= 0
 		old_size = MALLOC_SMALL_SIZE
 	else
@@ -295,11 +295,11 @@ class MallocSmallBlock
 			if mask[i] == 0xffffffff
 				continue
 			for j in 0:32
-				int m = 1 << j
+				let m = 1 << j
 				if (mask[i] & m) == 0
 					full_below = i
 					mask[i] = mask[i] | m
-					int n = i * 32 + j
+					let n = i * 32 + j
 					#kprinti(n)
 					#kprint(" : ")
 					var p: void* = &buf[n * MALLOC_SMALL_SIZE]
@@ -309,7 +309,7 @@ class MallocSmallBlock
 		return nil
 	
 	func to_index(p: void*) -> int
-		int ip = _p2i(p)
+		let ip = _p2i(p)
 		#kprint(" - ")
 #		kprinti(ip)
 #		kprint(" : ")
@@ -318,8 +318,8 @@ class MallocSmallBlock
 	
 	func mut free(index: int)
 		#kprint " -sm "
-		int _mask = 1 << (index & 31)
-		int mn = index >> 5
+		let _mask = 1 << (index & 31)
+		let mn = index >> 5
 		if (mask[mn] & _mask) != 0
 			mask[mn] -= _mask
 		if mn < full_below
@@ -334,7 +334,7 @@ func small_free(n: int)
 	malloc_small_block.free(n)
 
 func small_malloc_no(p: void*) -> int
-	int index = malloc_small_block.to_index(p)
+	let index = malloc_small_block.to_index(p)
 	if index < 0 or index >= MALLOC_SMALL_NUM
 		return -1
 	return index
@@ -413,19 +413,19 @@ class lib__string extends lib__@DynamicArray
 		__mem_resize__(o.num)
 		memcpy(data, o.data, num)
 	func mut __iadd__(o: lib__string)
-		int n0 = num
+		let n0 = num
 		__mem_resize__(num + o.num)
 		memcpy(&data[n0], o.data, o.num)
 	func __add__(o: lib__string) -> lib__string
-		lib__string r
+		var r: lib__string
 		r = self
 		r += o
 		return r
 			
 	func substr(_start: int, _length: int) -> lib__string
-		lib__string r
-		int start = _start
-		int length = _length
+		var r: lib__string
+		var start = _start
+		var length = _length
 		if start >= num
 			return r
 		if start < 0
@@ -450,7 +450,7 @@ class lib__string extends lib__@DynamicArray
 
 	func find(s: lib__string, start: int) -> int
 		for i in start : num - s.num
-			bool ok = true
+			var ok = true
 			for j in 0:s.num
 				if data[i + j] != s.data[j]
 					ok = false
@@ -460,12 +460,12 @@ class lib__string extends lib__@DynamicArray
 		return -1
 		
 	func compare(s: lib__string) -> int
-		int n = num
+		var n = num
 		if s.num < num
 			n = s.num
 		for i in 0:n
-			int a = data[i]
-			int b = s.data[i]
+			let a = data[i]
+			let b = s.data[i]
 			if a != b
 				return a - b
 		return num - s.num
@@ -534,7 +534,7 @@ class lib__string extends lib__@DynamicArray
 #}
 
 	func reverse() -> lib__string
-		lib__string r
+		var r: lib__string
 		r.resize(num)
 		for i in 0:num
 			r.data[num - i - 1] = data[i]
@@ -543,11 +543,11 @@ class lib__string extends lib__@DynamicArray
 	func mut replace0(start: int, length: int, str: lib__string)
 		if start + length > num
 			return
-		int d = str.num - length
+		let d = str.num - length
 		if d > 0
 			resize(num + d)
 			#for (int i=num-1;i>=start+length;i--)
-			int j = num-1
+			var j = num-1
 			while j >= start+length
 				data[j] = data[j - d]
 				j --
@@ -558,22 +558,22 @@ class lib__string extends lib__@DynamicArray
 			resize(num + d)
 
 	func const replace(sub: lib__string, by: lib__string) -> lib__string
-		lib__string r = self
-		int i = r.find(sub, 0)
+		var r: lib__string = self
+		var i = r.find(sub, 0)
 		while i >= 0
 			r.replace0(i, sub.num, by)
 			i = r.find(sub, i + by.num)
 		return r
 
 	func const lower() -> lib__string
-		lib__string r = self
+		var r: lib__string = self
 		for i in 0:num
 			if (data[i] >= 'A') and (data[i] <= 'Z')
 				r.data[i] += 'a' - 'A'
 		return r
 
 	func const upper() -> lib__string
-		lib__string r = self
+		var r: lib__string = self
 		for i in 0:num
 			if (data[i] >= 'a') and (data[i] <= 'z')
 				r.data[i] += 'A' - 'a'
@@ -581,11 +581,11 @@ class lib__string extends lib__@DynamicArray
 		
 
 	func const explode(s: lib__string) -> lib__string@list
-		lib__string@list r
+		var r: lib__string@list
 
-		int pos = 0
+		var pos = 0
 		while true
-			int pos2 = find(s, pos)
+			let pos2 = find(s, pos)
 			if pos2 < 0
 				break
 
@@ -597,12 +597,12 @@ class lib__string extends lib__@DynamicArray
 		return r
 		
 	func const hex() -> lib__string
-		lib__string ttt
+		var ttt: lib__string
 		for i in 0:num
-			int j = i
-			int d = data[j]
-			int d1 = (d>>4)
-			int d2 = (d&15)
+			let j = i
+			let d = data[j]
+			let d1 = (d>>4)
+			let d2 = (d&15)
 			if d1 < 10
 				ttt.add(d1+48)
 			else
@@ -620,13 +620,13 @@ class lib__string extends lib__@DynamicArray
 	func const __int__() -> int
 		if num == 0
 			return 0
-		bool sign = (data[0] != '-')
-		int r = 0
-		int i0 = 0
+		let sign = (data[0] != '-')
+		var r = 0
+		var i0 = 0
 		if !sign
 			i0 = 1
 		for i in i0:num
-			int c = data[i]
+			let c: int = data[i]
 			if c >= 48 and c < 58
 				r = r * 10 + (c - 48)
 		if !sign
@@ -636,38 +636,38 @@ class lib__string extends lib__@DynamicArray
 	func const __float__() -> float
 		if num == 0
 			return 0.0
-		bool sign = (data[0] != '-')
-		float r = 0.0
-		int i0 = 0
+		let sign = (data[0] != '-')
+		var r = 0.0
+		var i0 = 0
 		if !sign
 			i0 = 1
 		for i in i0:num
-			int c = data[i]
+			let c: int = data[i]
 			if c == '.'
 				i0 = i + 1
 				break
 			r = r * 10.0 + (c - 48)
-		float factor = 0.1
+		var factor = 0.1
 		for i in i0:num
-			int c = data[i]
+			let c: int = data[i]
 			r += (c - 48) * factor
 			factor /= 10.0
 		if !sign
 			return -r
 		return r
 	func const format(f: lib__string) -> lib__string
-		int n = int(f)
+		let n = int(f)
 		return str_fill(self, n, ' ')
 
 func binary(p: void*, num: int) -> lib__string
-	lib__string s
+	var s: lib__string
 	s.num = num
 	s.data = p
 	return s
 
 func str_fill(s: lib__string, n: int, space: char) -> lib__string
-	lib__string ttt = s
-	lib__string filler
+	var ttt: lib__string = s
+	var filler: lib__string
 	if n < 0
 		while len(ttt) < -n
 			ttt.add(space)
@@ -714,7 +714,7 @@ class lib__string@list extends lib__@DynamicArray
 		#__mem_remove__(index)
 
 	func join(glue: lib__string) -> lib__string
-		lib__string r
+		var r: lib__string
 		for i in 0:num
 			if i > 0
 				r += glue
@@ -727,7 +727,7 @@ class lib__string@list extends lib__@DynamicArray
 		data[i] = data[j]
 		data[j] = t
 	func mut __add__(o: lib__string@list) -> lib__string@list
-		lib__string@list r = self
+		var r: lib__string@list = self
 		r += o
 		return r
 	func mut __iadd__(o: lib__string@list)
@@ -735,7 +735,7 @@ class lib__string@list extends lib__@DynamicArray
 			add(o.data[i])
 
 func lib__@sa2s(a: lib__string@list) -> lib__string
-	lib__string r
+	var r: lib__string
 	r.add('[')
 	for i in 0:a.num
 		if i > 0
@@ -777,11 +777,11 @@ class lib__int@list extends lib__@DynamicArray
 		for i in 0:num
 			for j in i:num
 				if data[i]>data[j]
-					int t = data[i]
+					let t = data[i]
 					data[i] = data[j]
 					data[j] = t
 	func sum() -> int
-		int s = 0
+		var s = 0
 		for i in 0:num
 			s += data[i]
 		return s
@@ -815,7 +815,7 @@ class lib__float@list extends lib__@DynamicArray
 		for i in 0:num
 			for j in i:num
 				if data[i]>data[j]
-					int t = data[i]
+					let t = data[i]
 					data[i] = data[j]
 					data[j] = t
 
@@ -847,11 +847,11 @@ class lib__bool@list extends lib__@DynamicArray
 
 
 func i2s(_i: int) -> lib__string
-	int i = _i
-	bool sign = i >= 0
+	var i = _i
+	let sign = i >= 0
 	if !sign
 		i = -i
-	lib__string s
+	var s: lib__string
 	while true
 		s.add((i % 10) + 0x30)
 		i /= 10
@@ -863,8 +863,8 @@ func i2s(_i: int) -> lib__string
 
 
 func f2s(_f: float, n: int) -> lib__string
-	float f = _f
-	lib__string s
+	var f = _f
+	var s: lib__string
 	
 	if f < 0.0
 		s.add('-')
@@ -872,19 +872,19 @@ func f2s(_f: float, n: int) -> lib__string
 	s += i2s(f)
 	if n > 0
 		s.add('.')
-		int e = 1
-		float fe = 1.0
+		var e = 1
+		var fe = 1.0
 		for i in 0:n
 			e = e *10
 			fe *= 10.0
-		int after = int(f*fe) % e
+		let after = int(f*fe) % e
 		for i in 0:n
 			e /= 10
 			s.add(((after / e) % 10) + 0x30)
 	return s
 
 func b2s(b: bool) -> lib__string
-	lib__string r
+	var r: lib__string
 	if b
 		r.add('1')
 	else
@@ -896,7 +896,7 @@ class lib__bool
 		return b2s(b)
 
 func lib__@ia2s(a: lib__int@list) -> lib__string
-	lib__string r
+	var r: lib__string
 	r.add('[')
 	for i in 0:a.num
 		if i > 0
@@ -907,7 +907,7 @@ func lib__@ia2s(a: lib__int@list) -> lib__string
 	return r
 
 func lib__@fa2s(a: lib__float@list) -> lib__string
-	lib__string r
+	var r: lib__string
 	r.add('[')
 	for i in 0:a.num
 		if i > 0

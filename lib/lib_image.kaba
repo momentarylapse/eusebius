@@ -7,7 +7,7 @@ use image
 class lib__color
 	var a, r, g, b: float
 	func __str__() -> lib__string
-		lib__string s
+		var s: lib__string
 		return s
 
 class lib__Image
@@ -21,30 +21,30 @@ class lib__Image
 		height = h
 		error = false
 		data.resize(w * h)
-		int ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
+		var ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
 		for i in 0:len(data)
 			data.data[i] = ic
 
 	func static load(filename: lib__Path) -> lib__Image*
-		lib__string temp
-		int h = open(filename, O_RDONLY)
+		var temp: lib__string
+		var h = open(filename, O_RDONLY)
 		if h < 0
 			return nil
 		temp.resize(32)
-		int r = read(h, &temp.data[0], 18)
+		var r = read(h, &temp.data[0], 18)
 		if r < 0
 			close(h)
 			return nil
 		var im: lib__Image* = lib__@malloc(sizeof(Image))
-		int offset = temp.data[0]
-		int ww = temp.data[13]
-		int width = temp.data[12]
+		var offset: int = temp.data[0]
+		var ww: int = temp.data[13]
+		var width: int = temp.data[12]
 		width += (ww*256)
-		int hh = temp.data[15]
-		int height = temp.data[14]
+		var hh: int = temp.data[15]
+		var height: int = temp.data[14]
 		height += (hh*256)
 	
-		color c
+		var c: color
 		c.r = 1
 		c.g = 0
 		c.b = 0

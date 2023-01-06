@@ -184,13 +184,15 @@ lib/kalib: lib/kalib.kaba lib/lib_*.kaba
 	
 kalib_symbols : lib/kalib lib/kalib.kaba
 
-img.mfs: init kernel/kernel $(BINS)
+#img.mfs: init kernel/kernel $(BINS)
+img.mfs: init kernel/kernel
 	mkdir -p mfs
 	cp init mfs/000-init
 	cp kernel/kernel mfs/kernel
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
-img.ext2: $(BINS) img.mfs
+#img.ext2: $(BINS) img.mfs
+img.ext2: img.mfs
 	mkdir -p img-src
 	mkdir -p img-src/dev
 	mkdir -p img-src/bin
@@ -201,8 +203,8 @@ img.ext2: $(BINS) img.mfs
 	mkdir -p img-src/images
 	mkdir -p img-src/tmp
 	cp -r home/* img-src/home
-	cp -r $(BINS) img-src/bin
-	cp -r $(LIBS) img-src/lib
+#	cp -r $(BINS) img-src/bin
+#	cp -r $(LIBS) img-src/lib
 	cp -r kernel/*.kaba img-src/src
 	cp data/images/cursor.tga img-src/images
 	# block-size 1k, 256 inodes, size 4M

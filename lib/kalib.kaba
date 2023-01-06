@@ -8,7 +8,7 @@ use lib_image
 
 
 func execute(arg: string[], fd_in: int, fd_out: int) -> int
-	cstring tt_arg
+	var tt_arg: cstring
 	sa2cs(arg, tt_arg)
 	__temp_p__ = &tt_arg
 	__temp_i__ = fd_in
@@ -25,16 +25,16 @@ func execute(arg: string[], fd_in: int, fd_out: int) -> int
 
 
 func get_args(out arg: lib__string@list)
-	cstring cs
+	var cs: cstring
 	__temp_p__ = &cs
 	asm{
 		mov eax, 0x00002001
 		mov ebx, __temp_p__
 		int 0x80
 	}
-	lib__string s
+	var s: lib__string
 	
-	int p = 0
+	var p = 0
 	for i in 0:250
 		if cs[i] == 0
 			if s.num == 0
@@ -80,9 +80,9 @@ func _init_memory()
 	__free_error__ = false
 	lib_mem_debug = false
 	
-	int malloc_begin = 0x00b00000
+	var malloc_begin = 0x00b00000
 	cur_break_value = brk(-1)
-	int malloc_size_all = cur_break_value - malloc_begin # 0x00200000
+	var malloc_size_all = cur_break_value - malloc_begin # 0x00200000
 	
 	# intentionally leave a 8b gap to prevent merging
 	malloc_first_free = _i2p(malloc_begin)

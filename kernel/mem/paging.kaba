@@ -18,7 +18,7 @@ class Page
 
 class PageTable extends Page
 	func count_entries() -> int
-		int num_entries = 0
+		var num_entries = 0
 		for ee in e
 			if ee != 0
 				num_entries ++
@@ -36,25 +36,25 @@ class PageDirectory extends PageTable
 	# dest = kernel-space
 	# (does not allocate pages)
 	func mut map_lin(_source: int64, _dest: int64, size: int, writable: bool)
-		int64 source = _source & 0xfffffffffffff000
-		int64 dest = _dest & 0xfffffffffffff000
-		int x_no, dir_no, page_no, offset
+		let source = _source & 0xfffffffffffff000
+		var dest = _dest & 0xfffffffffffff000
+		var x_no, dir_no, page_no, offset: int
 		page_params(source, &x_no, &dir_no, &page_no, &offset)
-		int npages = ceil_quot(size, PAGE_SIZE)
-		int flags = 5
+		var npages = ceil_quot(size, PAGE_SIZE)
+		var flags = 5
 		if writable
 			flags = 7
 		while npages > 0
 			var pt: PageTable*
 			if e[dir_no] == 0
-				int pos = Paging.alloc_page()
+				let pos = Paging.alloc_page()
 				pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
 			else
 				pt = _i2p(e[dir_no] & 0xfffff000)
-			int i0 = page_no
-			int i1 = page_no + npages
+			var i0 = page_no
+			var i1 = page_no + npages
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
@@ -68,29 +68,29 @@ class PageDirectory extends PageTable
 
 	# start = task-space
 	func mut map_by_alloc(_start: int, size: int, writable: bool) -> bool
-		int start = _start & 0xfffff000
-		int x_no, dir_no, page_no, offset
+		var start = _start & 0xfffff000
+		var x_no, dir_no, page_no, offset: int
 		
 		page_params(start, &x_no, &dir_no, &page_no, &offset)
-		int npages = ceil_quot(size, PAGE_SIZE)
-		int flags = 5
+		var npages = ceil_quot(size, PAGE_SIZE)
+		var flags = 5
 		if writable
 			flags = 7
 		while npages > 0
 			var pt: PageTable*
 			if e[dir_no] == 0
-				int pos = Paging.alloc_page()
+				let pos = Paging.alloc_page()
 				pt = _i2p(pos)
 				pt.clear()
 				e[dir_no] = pos + flags
 			else
 				pt = _i2p(e[dir_no] & 0xfffff000)
-			int i0 = page_no
-			int i1 = page_no + npages
+			var i0 = page_no
+			var i1 = page_no + npages
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
-				int dest = Paging.alloc_page()
+				let dest = Paging.alloc_page()
 				if dest == -1
 					unmap(start, size, true)
 					return false
@@ -101,15 +101,15 @@ class PageDirectory extends PageTable
 		return true
 	
 	func mut unmap(_start: int, size: int, dealloc: bool)
-		int start = _start & 0xfffff000
-		int x_no, dir_no, page_no, offset
+		var start = _start & 0xfffff000
+		var x_no, dir_no, page_no, offset: int
 		page_params(start, &x_no, &dir_no, &page_no, &offset)
-		int npages = ceil_quot(size, PAGE_SIZE)
+		var npages = ceil_quot(size, PAGE_SIZE)
 		while npages > 0
-			int pt_pos = e[dir_no] & 0xfffff000
+			let pt_pos = e[dir_no] & 0xfffff000
 			var pt: PageTable* = _i2p(pt_pos)
-			int i0 = page_no
-			int i1 = page_no + npages
+			let i0 = page_no
+			var i1 = page_no + npages
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
@@ -124,16 +124,16 @@ class PageDirectory extends PageTable
 			page_no = 0
 	
 	func find_free_space(_start: int, size: int) -> int
-		int start = (_start & 0xfffff000)
-		int x_no, dir_no, page_no, offset
+		var start = (_start & 0xfffff000)
+		var x_no, dir_no, page_no, offset: int
 		page_params(start, &x_no, &dir_no, &page_no, &offset)
-		int npages = ceil_quot(size, PAGE_SIZE)
-		int still_need = npages
-		int pos = start
+		let npages = ceil_quot(size, PAGE_SIZE)
+		var still_need = npages
+		var pos = start
 		while page_no < PAGE_TABLE_ENTRIES
-			int pt_pos = e[dir_no] & 0xfffff000
+			let pt_pos = e[dir_no] & 0xfffff000
 			var pt: PageTable* = _i2p(pt_pos)
-			int i0 = page_no
+			let i0 = page_no
 			if pt
 				for i in i0:PAGE_TABLE_ENTRIES
 					if pt.e[i] == 0
@@ -146,7 +146,7 @@ class PageDirectory extends PageTable
 						start = pos + PAGE_SIZE
 					pos += PAGE_SIZE
 			else
-				int n = PAGE_TABLE_ENTRIES - i0
+				let n = PAGE_TABLE_ENTRIES - i0
 				still_need -= n
 				pos += n * PAGE_SIZE
 				if still_need <= 0
@@ -156,27 +156,27 @@ class PageDirectory extends PageTable
 		return -1
 
 	func addr2kernel(addr: int, out offset: int*) -> int
-		int x_no, dir_no, page_no
+		var x_no, dir_no, page_no: int
 		page_params(addr, &x_no, &dir_no, &page_no, offset)
 		if e[dir_no] == 0
 			return 0
 		var pt: PageTable* = _i2p(e[dir_no] & 0xfffff000)
 		if pt.e[page_no] == 0
 			return 0
-		int n = pt.e[page_no] & 0xfffff000
+		let n = pt.e[page_no] & 0xfffff000
 		return n + *offset
 
 	func const memcpy2kernel(_o: void*, _addr: int, _size: int) -> bool
 		var o: cstring* = _o
-		int addr = _addr
-		int size = _size
+		var addr = _addr
+		var size = _size
 		while size > 0
-			int offset
-			int kaddr = addr2kernel(addr, &offset)
+			var offset: int
+			let kaddr = addr2kernel(addr, &offset)
 			if kaddr == 0
 				return false
 			var pp: cstring* = _i2p(kaddr)
-			int num = PAGE_SIZE - offset
+			var num = PAGE_SIZE - offset
 			if num > size
 				num = size
 			for i in 0:num
@@ -187,16 +187,16 @@ class PageDirectory extends PageTable
 		return true
 
 	func const memcpy2task(_addr: int, _p: void*, _size: int) -> bool
-		int addr = _addr
-		int size = _size
+		var addr = _addr
+		var size = _size
 		var p: cstring* = _p
 		while size > 0
-			int offset
-			int kaddr = addr2kernel(addr, &offset)
+			var offset: int
+			let kaddr = addr2kernel(addr, &offset)
 			if kaddr == 0
 				return false
 			var pp: cstring* = _i2p(kaddr)
-			int num = PAGE_SIZE - offset
+			var num = PAGE_SIZE - offset
 			if num > size
 				num = size
 			for i in 0:num
@@ -207,11 +207,11 @@ class PageDirectory extends PageTable
 		return true
 	
 	func copy_pages_to(out dest: PageDirectory*, start1: int, start2: int, size: int)
-		int x_no1, dir_no1, page_no1, offset1
+		var x_no1, dir_no1, page_no1, offset1: int
 		page_params(start1, &x_no1, &dir_no1, &page_no1, &offset1)
-		int x_no2, dir_no2, page_no2, offset2
+		var x_no2, dir_no2, page_no2, offset2: int
 		page_params(start2, &x_no2, &dir_no2, &page_no2, &offset2)
-		int npages = ceil_quot(size, PAGE_SIZE)
+		var npages = ceil_quot(size, PAGE_SIZE)
 		var pt1: PageTable* = _i2p(e[dir_no1] & 0xfffff000)
 		#int n = pt.e[page_no] & 0xfffff000
 		var pt2: PageTable* = _i2p(dest.e[dir_no2] & 0xfffff000)
@@ -262,7 +262,7 @@ class Paging
 		pages_usable = 0
 			
 		# kernel: flat paging
-		int nmax = MemorySize / PAGE_SIZE / 1024
+		let nmax = MemorySize / PAGE_SIZE / 1024
 		kernel_page_dir = create_page_directory()
 		kernel_page_dir.map_lin(0, 0, MemorySize, true)
 	
@@ -281,38 +281,38 @@ class Paging
 		
 	
 	func static mark_by_bios()
-		for m,i in bios_mem_map
+		for i=>m in bios_mem_map
 			if m.type < 0
 				break
 			if m.type == 1
 				continue
 			
-			int p0 = m.offset / PAGE_SIZE
-			int p1 = ceil_quot(m.offset + m.size, PAGE_SIZE)
+			let p0 = m.offset / PAGE_SIZE
+			let p1 = ceil_quot(m.offset + m.size, PAGE_SIZE)
 			alloc_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
 	# does not clear
 	func static alloc_page() -> int
-		bool ok = true
+		var ok = true
 		for i in 0:num_masks
 			if mask[i] == 0xffffffff
 				continue
 			for j in 0:32
-				int m = 1 << j
+				let m = 1 << j
 				if (mask[i] & m) == 0
 					mask[i] = mask[i] | m
 					pages_allocated ++
-					int pos = (i * 32 + j) * PAGE_SIZE
+					let pos = (i * 32 + j) * PAGE_SIZE
 					return pos
 		return -1
 	
 	func static free_page(pos: int)
-		int page_no = pos / PAGE_SIZE
-		int mask_no = page_no / 32
+		let page_no = pos / PAGE_SIZE
+		let mask_no = page_no / 32
 		if mask_no > num_masks or mask_no < 0
 			return
-		int offset = page_no & 0x0000001f # % 32
-		int m = 1 << offset
+		let offset = page_no & 0x0000001f # % 32
+		let m = 1 << offset
 		if (mask[mask_no] & m) != 0
 			pages_allocated ++
 			mask[mask_no] -= m
@@ -330,10 +330,10 @@ class Paging
 			panic("invalid free page")
 			
 	func static find_and_alloc_chunk(size: int) -> int
-		int num_pages_req = ceil_quot(size, PAGE_SIZE)
-		int num_masks_req = ceil_quot(num_pages_req, 32)
+		let num_pages_req = ceil_quot(size, PAGE_SIZE)
+		let num_masks_req = ceil_quot(num_pages_req, 32)
 		for i in 0:num_masks-num_masks_req
-			bool ok = true
+			var ok = true
 			for j in 0:num_masks_req
 				if mask[i+j] != 0
 					ok = false
@@ -349,20 +349,20 @@ class Paging
 			return false
 		if size == 0
 			return true
-		int npages = ceil_quot(size, PAGE_SIZE)
+		let npages = ceil_quot(size, PAGE_SIZE)
 		
 		# which pages/masks?
-		int p0 = pos >> 12
-		int p1 = p0 + npages - 1 # inclusive
+		var p0 = pos >> 12
+		var p1 = p0 + npages - 1 # inclusive
 		
-		int m0 = p0 >> 5
-		int m1 = p1 >> 5
+		let m0 = p0 >> 5
+		let m1 = p1 >> 5
 		p0 = p0 & 0x0000001f
 		p1 = p1 & 0x0000001f
 		
 		# boundary masks
-		int mask0 = 0xffffffff << p0
-		int mask1 = 0xffffffff >> (32 - p1 - 1)
+		var mask0 = 0xffffffff << p0
+		let mask1 = 0xffffffff >> (32 - p1 - 1)
 		
 		# special case
 		if m0 == m1
@@ -398,19 +398,19 @@ class Paging
 			return false
 		if size == 0
 			return true
-		int npages = ceil_quot(size, PAGE_SIZE)
+		let npages = ceil_quot(size, PAGE_SIZE)
 		
 		# which pages/masks?
-		int p0 = pos >> 12
-		int p1 = p0 + npages
-		int m0 = p0 >> 5
-		int m1 = p1 >> 5
+		var p0 = pos >> 12
+		var p1 = p0 + npages
+		let m0 = p0 >> 5
+		let m1 = p1 >> 5
 		p0 = p0 & 0x0000001f
 		p1 = p1 & 0x0000001f
 		
 		# boundary masks
-		int mask0 = 0xffffffff >> (32 - p0)
-		int mask1 = 0xffffffff << p1
+		let mask0 = 0xffffffff >> (32 - p0)
+		let mask1 = 0xffffffff << p1
 		
 		# special case
 		if m0 == m1
@@ -427,7 +427,7 @@ class Paging
 		return true
 
 	func static get_used() -> int
-		int n = 0
+		var n = 0
 		for i in 0:num_masks
 			if mask[i] == 0
 				continue
@@ -435,13 +435,13 @@ class Paging
 				n += 32
 			else
 				for j in 0:32
-					int m = 1 << j
+					let m = 1 << j
 					if (mask[i] & m) > 0
 						n ++
 		return n * PAGE_SIZE
 	
 	func static create_page_directory() -> PageDirectory*
-		int pos = alloc_page()
+		let pos = alloc_page()
 		if pos == -1
 			panic("can not create page directory")
 			return nil
@@ -452,7 +452,7 @@ class Paging
 
 
 func show_mem_map()
-	for m,i in bios_mem_map
+	for i=>m in bios_mem_map
 		if m.type < 0
 			break
 		printh(&m.offset, 4)

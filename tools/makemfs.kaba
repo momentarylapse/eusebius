@@ -7,39 +7,46 @@ func main(arg: string[])
 		print("usage: kaba makemfs.kaba <out-file> <in-dir>")
 		return
 	var dir = Path(arg[1])
-	var list = Filesystem.search(dir, "*", "f")
+	var list = fs.search(dir, "*", "f")
 	print(str(list))
-	var f = Filesystem.create(arg[0])
-	f.seek(ClusterSize)
+	var h = fs.open(arg[0], "wb")
+	var f = new BinaryFormatter(h)
+	#f.stream.seek(ClusterSize)
+	#h.seek(ClusterSize)
+	var dummy: string
+	dummy.resize(ClusterSize)
+	h.write(dummy)
 
 	# root directory
-	int cluster = 2
+	var cluster = 2
 	f << list.num
-	int offset = 4
+	var offset = 4
 	for e in list
 		f << str(e)
-		if Filesystem.is_directory(dir << e)
+		if fs.is_directory(dir << e)
 			f << 1 # flags
 		else
 			f << 0
-		int size = Filesystem.size(dir << e)
+		var size: int = fs.size(dir << e)
 		f << size
 		f << 1 # number of file parts
 		f << cluster
-		int num_clusters = (size - 1) / ClusterSize + 1
+		var num_clusters = (size - 1) / ClusterSize + 1
 		f << num_clusters
 		cluster += num_clusters
 		offset += len(str(e)) + 22
-	f.seek(ClusterSize * cluster)
+	#h.seek(ClusterSize * cluster)
+	dummy.resize(ClusterSize * cluster)
+	h.write(dummy)
 	del f
 
 	# files
 	cluster = 2
 	for e in list
-		string s = "dd if='{{dir << e}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
+		var s = "dd if='{{dir << e}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
 		shell_execute(s)
-		int size = Filesystem.size(dir << e)
-		int num_clusters = (size - 1) / ClusterSize + 1
+		var size = fs.size(dir << e)
+		var num_clusters = (size - 1) / ClusterSize + 1
 		cluster += num_clusters
 		#string t = FileRead(arg[1] + e.name)
 #		t += "        "

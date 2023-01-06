@@ -9,7 +9,12 @@ func main()
 	TextMode.clear()
 	
 	prints("hello..  ")
-	printi(100)
+	let a = 0x0000000100000000
+	let b = 0x0000000200000000
+	let c = a + b
+	let d = int(c >> 32)
+	
+	printi(d)
 
 
 	while true

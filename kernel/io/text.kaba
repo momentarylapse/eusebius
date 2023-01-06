@@ -62,7 +62,7 @@ class TextMode
 					line --
 				d = video_memory
 				d = &d[2*(SCREEN_WIDTH * line)]
-		int position = (line * SCREEN_WIDTH) + pos
+		let position = (line * SCREEN_WIDTH) + pos
 		# cursor LOW port to vga INDEX register
 		outportb(0x3d4, 0x0f)
 		outportb(0x3d5, position)
@@ -74,26 +74,26 @@ func prints(s: cstring)
 	TextMode.prints_low(&s, strlen(s))
 
 func _i2s(_i: int, out s: cstring)
-	bool sign = (_i >= 0)
-	int i = _i
-	if !sign
+	let sign = (_i >= 0)
+	var i = _i
+	if not sign
 		i = -i
-	char[16] ttt
+	var ttt: char[16]
 	ttt[15] = 0
-	int offset = 14
+	var offset = 14
 	while true
 		ttt[offset] = (i % 10) + 0x30
 		i /= 10
 		offset --
 		if i == 0
 			break
-	if !sign
+	if not sign
 		ttt[offset] = '-'
 		offset --
 	memcpy(&s, &ttt[offset + 1], 16-offset)
 
 func printi(i: int)
-	cstring s
+	var s: cstring
 	_i2s(i, s)
 	prints(s)
 
@@ -101,9 +101,9 @@ func printh(_data: void*, size: int)
 	var data: cstring* = _data
 	var ttt: cstring
 	for i in 0:size
-		int d = data[i]
-		int d1 = (d>>4) & 0xf
-		int d2 = (d & 0xf)
+		let d: int = data[i]
+		let d1 = (d>>4) & 0xf
+		let d2 = (d & 0xf)
 		if d1 < 10
 			ttt[0] = '0'+d1
 		else

@@ -334,13 +334,13 @@ func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
 	return lib_error == 0
 
 func sleep(sec: int) -> bool
-	TimeValue tv, tv0
+	var tv, tv0: TimeValue
 	tv.sec = sec
 	tv.nanosec = 0
 	return nanosleep(tv, tv0)
 
 func usleep(usec: int) -> bool
-	TimeValue tv, tv0
+	var tv, tv0: TimeValue
 	tv.sec = usec / 1000000
 	tv.nanosec = (usec % 1000000) * 1000
 	return nanosleep(tv, tv0)
@@ -429,15 +429,15 @@ func prints(s: cstring)
 
 
 func lib__print(s: string)
-	int done = 0
+	var done = 0
 	while done < s.num
-		int r = write(stdout, &s[done], s.num - done)
+		let r = write(stdout, &s[done], s.num - done)
 		if r == -EWOULDBLOCK
 			continue
 		if r > 0
 			done += r
 	if lib_print_endl
-		int r = write(stdout, &0x0000000a, 1)
+		let r = write(stdout, &0x0000000a, 1)
 
 
 	
