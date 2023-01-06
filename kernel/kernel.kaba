@@ -39,10 +39,13 @@ const KALIB_LOCATION = 0x00050000
 ##	printi(size)
 ##	prints("b  ok\n")
 
+func ffff(p: void*)
+	printh(&p, 8)
 
 func main()
 	read_data_from_init()
 	TextMode.init()
+	TextMode.clear()
 	
 	prints("Welcome to ")
 	prints(KERNEL_NAME)
@@ -72,7 +75,7 @@ func main()
 #	prints("\n")
 	
 	Heap.init()
-	Paging.init()
+#	Paging.init()
 ##	SharedMemory.init()
 ##	
 ##	BlockDevManager.init()

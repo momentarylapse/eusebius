@@ -60,8 +60,8 @@ const IPC_EXCL = 1<<13
 var MemorySize: int
 
 const KERNEL_NAME = "Eusebius"
-const KERNEL_VERSION = "0.2.9.0"
-const MACHINE_TYPE = "x86"
+const KERNEL_VERSION = "0.2.99.0"
+const MACHINE_TYPE = "x64"
 
 class BiosMemoryMapEntry
 	var offset, offset_hi: int
@@ -96,7 +96,7 @@ func read_data_from_init()
 			break
 
 
-func memcpy(out _dest: void*, _source: void*, size: int)
+func memcpy(_dest: void*, _source: void*, size: int)
 	var dest: cstring* = _dest
 	let source: cstring* = _source
 	for n in 0:size
