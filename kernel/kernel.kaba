@@ -39,9 +39,6 @@ const KALIB_LOCATION = 0x00050000
 ##	printi(size)
 ##	prints("b  ok\n")
 
-func ffff(p: void*)
-	printh(&p, 8)
-
 func main()
 	read_data_from_init()
 	TextMode.init()
@@ -53,11 +50,8 @@ func main()
 	prints(KERNEL_VERSION)
 	prints("   (c) by MichiSoft TM 2023\n")
 	prints("memory: ")
-	printi(MemorySize / 1024)
-	prints("k\n")
-	
-	var p: int* = _i2p(0x00220000)
-	*p = 3
+	printi(MemorySize / 1024 / 1024)
+	prints("m\n")
 
 	
 	#asm{
@@ -75,7 +69,13 @@ func main()
 #	prints("\n")
 	
 	Heap.init()
-#	Paging.init()
+	Paging.init()
+	
+	#for i in 0x01000000:0x02000000
+	#	var p: int* = _i2p(i)
+	#	*p = 3
+	
+	
 ##	SharedMemory.init()
 ##	
 ##	BlockDevManager.init()
@@ -109,7 +109,7 @@ func main()
 ##	
 ##	Scheduler.start()
 ##	panic("test")
-##	prints("aa2")
+	prints("  \\(^_^)/")
 	while true
 		pass
 ##	

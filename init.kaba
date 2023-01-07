@@ -305,8 +305,11 @@ func main()
 		# PDPT[0] -> PDT
 		add edi, 0x00001000
 		mov [edi], 0x01003003
-		# PDT[0] -> PT0
+		
 		add edi, 0x00001000
+#		mov ecx, 0x00000008 # link 8 PTs in PDT
+#	_link_pts_into_pdt:
+		# PDT[0] -> PT0
 		mov [edi], 0x01004003
 		# PDT[1] -> PT1
 		add edi, 0x00000008
@@ -317,11 +320,27 @@ func main()
 		# PDT[3] -> PT3
 		add edi, 0x00000008
 		mov [edi], 0x01007003
+		# PDT[4] -> PT4
+		add edi, 0x00000008
+		mov [edi], 0x01008003
+		# PDT[5] -> PT5
+		add edi, 0x00000008
+		mov [edi], 0x01009003
+		# PDT[6] -> PT6
+		add edi, 0x00000008
+		mov [edi], 0x0100a003
+		# PDT[7] -> PT7
+		add edi, 0x00000008
+		mov [edi], 0x0100b003
 		
-		# identity map first 16mb
+#		dec ecx
+#		cmp ecx, 0x00000000
+#		jnz _link_pts_into_pdt
+		
+		# identity map first 16mb (=4096 pages)
 		mov edi, 0x01004000
 		mov ebx, 0x00000003
-		mov ecx, 0x00001000 #512*8
+		mov ecx, 0x00001000 #512*8=4096 pages via 8 PTs
 	_set_table_entry:
 		mov [edi], ebx
 		add ebx, 0x00001000
