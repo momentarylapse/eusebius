@@ -5,12 +5,13 @@ use dev.block
 use io.text
 use kaba
 
-const FILE_TYPE_FILE = 0
-const FILE_TYPE_DIR = 1
-const FILE_TYPE_PIPE = 2
-const FILE_TYPE_SOCKET = 4
-const FILE_TYPE_CHAR = 8
-const FILE_TYPE_BLOCK = 16
+enum FileType
+	FILE = 0
+	DIR = 1
+	PIPE = 2
+	SOCKET = 4
+	CHAR = 8
+	BLOCK = 16
 
 const MAX_MOUNT_POINTS = 32
 
@@ -28,7 +29,7 @@ class FileOperations
 
 class FileEntry
 	var name: cstring
-	var type: int
+	var type: FileType
 	var size: int
 	var num_blocks: int
 	var blocks: int[0]*
@@ -44,7 +45,7 @@ class FileEntry
 		pass
 	
 	
-	func mut create_child(_name: cstring, _type: int, _mount: MountPoint*) -> FileEntry*
+	func mut create_child(_name: cstring, _type: FileType, _mount: MountPoint*) -> FileEntry*
 		var e = create_file_entry(_name, _type, _mount)
 		add_child(e)
 		return e
@@ -95,7 +96,7 @@ class FileEntry
 
 
 	
-func create_file_entry(name: cstring, type: int, mount: MountPoint*) -> FileEntry*
+func create_file_entry(name: cstring, type: FileType, mount: MountPoint*) -> FileEntry*
 	var e: FileEntry* = Heap.malloc(sizeof(FileEntry))
 	e.inode = 0
 	e.mp_inode = 0
@@ -257,7 +258,7 @@ class FileSystem
 	func static init()
 		for m in mounts
 			m.dev = nil
-		root = create_file_entry("-root-", FILE_TYPE_DIR, nil)
+		root = create_file_entry("-root-", FileType.DIR, nil)
 	
 	func static delete(out e: FileEntry*) -> int
 		#prints("[del]")
@@ -389,7 +390,7 @@ class MountPointMichiFS extends MountPoint
 		for n in 0:num_files
 			var name: cstring
 			read_str(name)
-			var e = dest.create_child(name, FILE_TYPE_FILE, &self)
+			var e = dest.create_child(name, FileType.FILE, &self)
 			#e.type =
 			read_int()
 			e.size = read_int()
@@ -463,9 +464,9 @@ class MountPointExt2 extends MountPoint
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		var inode = &buf[offset % block_size] as Ext2Inode*
 		
-		if e.type == FILE_TYPE_DIR
+		if e.type == FileType.DIR
 			inode.rights.set(0x4000)
-		else if e.type == FILE_TYPE_FILE
+		else if e.type == FileType.FILE
 			inode.rights.set(0x8000)
 		else
 			inode.rights.set(0)
@@ -495,9 +496,9 @@ class MountPointExt2 extends MountPoint
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
 		
-		e.type = FILE_TYPE_FILE
+		e.type = FileType.FILE
 		if inode.isDir()
-			e.type = FILE_TYPE_DIR
+			e.type = FileType.DIR
 		
 		e.size = inode.size
 		let f_num_blocks = (inode.size-1) / block_size + 1
@@ -549,16 +550,16 @@ class MountPointExt2 extends MountPoint
 				
 		
 			if strcmp(name, ".") != 0 and strcmp(name, "..") != 0
-				var type = FILE_TYPE_FILE
+				var type = FileType.FILE
 				if d.file_type == 2
-					type = FILE_TYPE_DIR
+					type = FileType.DIR
 				var e = dir.create_child(name, type, &self)
 				e.mp_inode = d.inode
 				read_inode_recursive(d.inode, e)
 		Heap.free(cont)
 		
 	func override write_inode(out e: FileEntry) -> int
-		if e.type == FILE_TYPE_DIR
+		if e.type == FileType.DIR
 			return write_inode_dir(e)
 		return write_inode_simple(e)
 	
@@ -580,7 +581,7 @@ class MountPointExt2 extends MountPoint
 				b[pos + i] = 0
 			d.inode = e.mp_inode
 			d.file_type = 0
-			if e.type == FILE_TYPE_DIR
+			if e.type == FileType.DIR
 				d.file_type = 2
 			let _len = strlen(e.name)
 			d.name_len = _len

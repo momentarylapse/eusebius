@@ -86,7 +86,7 @@ class KSocket
 			if !rs
 				return -1
 			# "return socket"
-			var e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+			var e = create_file_entry(":sock:", FileType.SOCKET, nil)
 			if !e
 				self.set_state(SocketState.LISTENING)
 				return -ENFILE

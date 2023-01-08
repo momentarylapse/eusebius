@@ -50,11 +50,11 @@ class OpenFileData
 		if !reading
 			return -3
 		
-		if entry.type == FILE_TYPE_CHAR
+		if entry.type == FileType.CHAR
 			return entry.op.read(entry, &page_dir, addr, size)
-		else if entry.type == FILE_TYPE_PIPE
+		else if entry.type == FileType.PIPE
 			return pipe.read(page_dir, addr, size)
-		else if entry.type == FILE_TYPE_SOCKET
+		else if entry.type == FileType.SOCKET
 			return socket.read(page_dir, addr, size)
 		
 		let block_size = entry.mount.block_size
@@ -105,11 +105,11 @@ class OpenFileData
 		if !writing
 			return -2
 		
-		if entry.type == FILE_TYPE_CHAR
+		if entry.type == FileType.CHAR
 			return entry.op.write(entry, &page_dir, addr, size)
-		else if entry.type == FILE_TYPE_PIPE
+		else if entry.type == FileType.PIPE
 			return pipe.write(page_dir, addr, size)
-		else if entry.type == FILE_TYPE_SOCKET
+		else if entry.type == FileType.SOCKET
 			return socket.write(page_dir, addr, size)
 		
 		let block_size = entry.mount.block_size
@@ -154,7 +154,7 @@ class OpenFileData
 		if !used
 			return -EBADF
 
-		if entry.type != FILE_TYPE_DIR
+		if entry.type != FileType.DIR
 			return -ENOTDIR
 		
 		if !reading
@@ -222,11 +222,11 @@ class OpenFileData
 			
 		if buffer
 			Heap.free(buffer)
-		if entry.type == FILE_TYPE_CHAR
+		if entry.type == FileType.CHAR
 			entry.op.close(entry)
-		if entry.type == FILE_TYPE_PIPE
+		if entry.type == FileType.PIPE
 			pipe.unref(writing)
-		else if entry.type == FILE_TYPE_SOCKET
+		else if entry.type == FileType.SOCKET
 			socket.unref()
 		
 		used = false
@@ -256,7 +256,7 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 		return nil
 	of.entry = &e
 	of.offset = 0
-	if of.entry.type == FILE_TYPE_FILE
+	if of.entry.type == FileType.FILE
 		of.buffer = Heap.malloc(of.entry.mount.block_size)
 		if of.entry.num_blocks > 0
 			of.entry.mount.read_block(of.entry.blocks[0], of.buffer)
@@ -266,7 +266,7 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 			else
 				of.offset = e.size
 				of.entry.mount.read_block(of.entry.blocks[of.entry.num_blocks - 1], of.buffer)
-	else if of.entry.type == FILE_TYPE_PIPE
+	else if of.entry.type == FileType.PIPE
 		if of.reading == of.writing
 			of.used = false
 			return nil
@@ -278,13 +278,13 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 			of.pipe.read_ref_count ++
 		else
 			of.pipe.write_ref_count ++
-	else if of.entry.type == FILE_TYPE_SOCKET
+	else if of.entry.type == FileType.SOCKET
 		of.socket = SocketManager.get(of.entry)
 		if !of.socket
 			of.used = false
 			return nil
 		of.socket.ref_count ++
-	else if of.entry.type == FILE_TYPE_CHAR
+	else if of.entry.type == FileType.CHAR
 		of.entry.op.open(of.entry)
 	return of
 
@@ -293,7 +293,7 @@ func kernel_open(filename: cstring, flags: int, out cur_dir: FileEntry) -> OpenF
 	var e = FileSystem.get(filename, cur_dir)
 	if !e and creating
 		#prints("kernel Warnung: neue Datei...\n")
-		e = cur_dir.create_child(filename, FILE_TYPE_FILE, cur_dir.mount)
+		e = cur_dir.create_child(filename, FileType.FILE, cur_dir.mount)
 		e.add_block(cur_dir.mount.alloc_block())
 		e.mp_inode = cur_dir.mount.alloc_inode()
 		cur_dir.mount.write_inode(cur_dir)
@@ -304,7 +304,7 @@ func kernel_open(filename: cstring, flags: int, out cur_dir: FileEntry) -> OpenF
 func kernel_mkdir(filename: cstring, out cur_dir: FileEntry) -> int
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	var e = cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
+	var e = cur_dir.create_child(filename, FileType.DIR, cur_dir.mount)
 	if !e
 		return -2
 	e.mp_inode = cur_dir.mount.alloc_inode()
@@ -316,7 +316,7 @@ func kernel_mkdir(filename: cstring, out cur_dir: FileEntry) -> int
 func kernel_mknod(filename: cstring, flags: int, out cur_dir: FileEntry) -> int
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	var e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
+	var e = cur_dir.create_child(filename, FileType.PIPE, cur_dir.mount)
 	if !e
 		return -2
 	if !PipeManager.create(e)
@@ -327,7 +327,7 @@ func kernel_unlink(filename: cstring, cur_dir: FileEntry) -> int
 	var e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
-	if e.type == FILE_TYPE_DIR
+	if e.type == FileType.DIR
 		return -EISDIR
 	return FileSystem.delete(e)
 	
@@ -336,7 +336,7 @@ func kernel_rmdir(filename: cstring, cur_dir: FileEntry) -> int
 	var e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
-	if e.type != FILE_TYPE_DIR
+	if e.type != FileType.DIR
 		return -ENOTDIR
 	if e.first_sub
 		return -ENOTEMPTY
@@ -346,7 +346,7 @@ func kernel_rmdir(filename: cstring, cur_dir: FileEntry) -> int
 class dirent_struct
 	var struct_size: int
 	var size: int
-	var type: int
+	var type: FileType
 	var name: cstring
 	func __assign__(o: dirent_struct)
 		pass
