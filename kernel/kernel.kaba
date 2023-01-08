@@ -10,7 +10,7 @@ use io.text
 ##use fs.pipe
 use mem.heap
 use mem.paging
-##use mem.shared
+use mem.shared
 ##use net.socket
 ##use task.task
 ##use task.scheduler
@@ -71,13 +71,13 @@ func main()
 	Heap.init()
 	Paging.init()
 	
-	#for i in 0x01000000:0x02000000
-	#	var p: int* = _i2p(i)
-	#	*p = 3
+#	for i in 0x01000000:0x02000000
+#		var p: int* = _i2p(i)
+#		*p = 3
 	
 	
-##	SharedMemory.init()
-##	
+	SharedMemory.init()
+	
 ##	BlockDevManager.init()
 ##	
 ##	InitFileAccessData()

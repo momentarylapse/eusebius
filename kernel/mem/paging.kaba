@@ -7,7 +7,7 @@ const PAGE_TABLE_ENTRIES = PAGE_SIZE / 8 #512
 const MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 # 1 mask = 32 pages = 128k
 
-# pointer: 9bit in PDPT + 9bit in PDT + 9bit in PT + 12bit offset in page
+# pointer: 48bit = 9bit in L4 + 9bit in PDPT + 9bit in PDT + 9bit in PT + 12bit offset in page
 # 1 L4 => ...
 # 1 page directory pointer table => 512G
 # 1 page directory table => 1G
@@ -46,13 +46,13 @@ class PageTable extends Page
 		else
 			return _i2p(e[index] & 0xfffff000)
 
-func page_params(addr: int64, out x_no: int*, out dir_no: int*, out page_no: int*, out offset: int*)
+func page_params__(addr: int64, out x_no: int*, out dir_no: int*, out page_no: int*, out offset: int*)
 	*x_no = addr >> 30
 	*dir_no = (addr >> 21) & 0x000001ff # 512 dirs
 	*page_no = (addr >> 12) & 0x000003ff
 	*offset = addr & 0x00000fff
 
-func page_params_x(addr: int64) -> (int,int,int,int)
+func page_params(addr: int64) -> (int,int,int,int)
 	let dirp_no = int(addr >> 30)
 	let dir_no = int(addr >> 21) & 0x000001ff # 512 dirs
 	let page_no = int (addr >> 12) & 0x000001ff
@@ -67,7 +67,7 @@ class PageRootTable extends PageTable
 	func mut map_lin(_source: int64, _dest: int64, size: int, writable: bool)
 		let source = _source & 0xfffffffffffff000
 		var dest = _dest & 0xfffffffffffff000
-		var (dirp_no, dir_no, page_no, offset) = page_params_x(source)
+		var (dirp_no, dir_no, page_no, offset) = page_params(source)
 		var npages = ceil_quot(size, PAGE_SIZE)
 		var flags = 5
 		if writable
@@ -96,7 +96,7 @@ class PageRootTable extends PageTable
 	# start = task-space
 	func mut map_by_alloc(_start: int, size: int, writable: bool) -> bool
 		var start = _start & 0xfffff000
-		var (dirp_no, dir_no, page_no, offset) = page_params_x(start)
+		var (dirp_no, dir_no, page_no, offset) = page_params(start)
 		var npages = ceil_quot(size, PAGE_SIZE)
 		var flags = 5
 		if writable
@@ -125,8 +125,9 @@ class PageRootTable extends PageTable
 		return true
 	
 	func mut unmap(_start: int, size: int, dealloc: bool)
+		panic("TODO: Paging.unmap()")
 		var start = _start & 0xfffff000
-		var (dirp_no, dir_no, page_no, offset) = page_params_x(start)
+		var (dirp_no, dir_no, page_no, offset) = page_params(start)
 		var npages = ceil_quot(size, PAGE_SIZE)
 
 		var pdpt = get_sub(0)
@@ -159,8 +160,9 @@ class PageRootTable extends PageTable
 			page_no = 0
 	
 	func find_free_space(_start: int, size: int) -> int
+		panic("TODO: Paging.find_free_space()")
 		var start = (_start & 0xfffff000)
-		var (dirp_no, dir_no, page_no, offset) = page_params_x(start)
+		var (dirp_no, dir_no, page_no, offset) = page_params(start)
 		let npages = ceil_quot(size, PAGE_SIZE)
 		var still_need = npages
 		var pos = start
@@ -189,34 +191,33 @@ class PageRootTable extends PageTable
 			page_no = 0
 		return -1
 
-	func addr2kernel(addr: int, out _offset: int*) -> int
-		var (dirp_no, dir_no, page_no, offset) = page_params_x(addr)
-		*_offset = offset
+	func addr2kernel(addr: int) -> int
+		var (dirp_no, dir_no, page_no, offset) = page_params(addr)
 		var pdpt = get_sub(0)
 		if not pdpt
-			0
+			return 0
 		var pdt = pdpt.get_sub(0)
 		if not pdt
-			0
-		
-		if pdt.e[dir_no] == 0
 			return 0
-		var pt: PageTable* = _i2p(pdt.e[dir_no] & 0xfffff000)
-		if pt.e[page_no] == 0
+		var pt = pdt.get_sub(dir_no)
+		if not pt
 			return 0
 		let n = pt.e[page_no] & 0xfffff000
+		if n == 0
+			return 0
 		return n + offset
 
 	func memcpy2kernel(_o: void*, _addr: int, _size: int) -> bool
+		panic("TODO: memcpy2kernel()")
 		var o: cstring* = _o
 		var addr = _addr
 		var size = _size
 		while size > 0
-			var offset: int
-			let kaddr = addr2kernel(addr, &offset)
+			let kaddr = addr2kernel(addr)
 			if kaddr == 0
 				return false
 			var pp: cstring* = _i2p(kaddr)
+			var offset = addr & 0xfffff000
 			var num = PAGE_SIZE - offset
 			if num > size
 				num = size
@@ -228,15 +229,16 @@ class PageRootTable extends PageTable
 		return true
 
 	func memcpy2task(_addr: int, _p: void*, _size: int) -> bool
+		panic("TODO: memcpy2task()")
 		var addr = _addr
 		var size = _size
 		var p: cstring* = _p
 		while size > 0
-			var offset: int
-			let kaddr = addr2kernel(addr, &offset)
+			let kaddr = addr2kernel(addr)
 			if kaddr == 0
 				return false
 			var pp: cstring* = _i2p(kaddr)
+			var offset = addr & 0xfffff000
 			var num = PAGE_SIZE - offset
 			if num > size
 				num = size
@@ -248,10 +250,9 @@ class PageRootTable extends PageTable
 		return true
 	
 	func copy_pages_to(out dest: PageRootTable*, start1: int, start2: int, size: int)
-		var x_no1, dir_no1, page_no1, offset1: int
-		page_params(start1, &x_no1, &dir_no1, &page_no1, &offset1)
-		var x_no2, dir_no2, page_no2, offset2: int
-		page_params(start2, &x_no2, &dir_no2, &page_no2, &offset2)
+		panic("TODO: copy_pages_to()")
+		var (dirp_no1, dir_no1, page_no1, offset1) = page_params(start1)
+		var (dirp_no2, dir_no2, page_no2, offset2) = page_params(start2)
 		var npages = ceil_quot(size, PAGE_SIZE)
 		var pt1: PageTable* = _i2p(e[dir_no1] & 0xfffff000)
 		#int n = pt.e[page_no] & 0xfffff000
