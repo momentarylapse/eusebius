@@ -44,15 +44,15 @@ class FileEntry
 		pass
 	
 	
-	func create_child(_name: cstring, _type: int, _mount: MountPoint*) -> FileEntry*
-		FileEntry *e = create_file_entry(_name, _type, _mount)
+	func mut create_child(_name: cstring, _type: int, _mount: MountPoint*) -> FileEntry*
+		var e = create_file_entry(_name, _type, _mount)
 		add_child(e)
 		return e
 	
-	func add_child(out e: FileEntry)
+	func mut add_child(out e: FileEntry)
 		e.parent = &self
 		if first_sub
-			FileEntry *i = first_sub
+			var i = first_sub
 			while i.next
 				i = i.next
 			i.next = &e
@@ -64,7 +64,7 @@ class FileEntry
 			return parent
 		if strcmp(sname, ".") == 0
 			return &self
-		FileEntry *e = first_sub
+		var e = first_sub
 		while e
 			if strcmp(sname, e.name) == 0
 				return e
@@ -72,7 +72,7 @@ class FileEntry
 		return nil
 		
 	
-	func const get_path(out path: cstring)
+	func get_path(out path: cstring)
 		if parent
 			parent.get_path(path)
 			if parent.parent
@@ -82,13 +82,13 @@ class FileEntry
 			strcpy(path, "/")
 	
 	# allocate list int blocks of int[16]
-	func add_block(b: int)
+	func mut add_block(b: int)
 		if (num_blocks & 0x0f) == 0
 			blocks = Heap.realloc(blocks, num_blocks * 4, (num_blocks + 16) * 4)
 		blocks[num_blocks] = b
 		num_blocks ++
 	
-	func shrink_block_list(n: int)
+	func mut shrink_block_list(n: int)
 		while num_blocks > n
 			mount.free_block(blocks[num_blocks - 1])
 			num_blocks --
@@ -96,7 +96,7 @@ class FileEntry
 
 	
 func create_file_entry(name: cstring, type: int, mount: MountPoint*) -> FileEntry*
-	FileEntry *e = Heap.malloc(sizeof(FileEntry))
+	var e: FileEntry* = Heap.malloc(sizeof(FileEntry))
 	e.inode = 0
 	e.mp_inode = 0
 	e.num_blocks = 0
@@ -211,41 +211,41 @@ class MountPoint
 	func __assign__(o: MountPoint)
 		pass
 		
-	func virtual mount() -> int
+	func virtual mut mount() -> int
 		return -1
 	
-	func update_sizes(_bs: int, _bo: int)
+	func mut update_sizes(_bs: int, _bo: int)
 		block_size = _bs
 		dev_blocks_per_block = _bs / dev.block_size
 		block_offset = _bo
 		dev_block_offset = _bo / dev.block_size
 	
-	func read_block(block_no: int, _buf: void*)
-		cstring *buf = _buf
+	func mut read_block(block_no: int, _buf: void*)
+		var but: cstring* = _buf
 		for i in 0:dev_blocks_per_block
 			AtaController.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 
-	func write_block(block_no: int, _buf: void*)
-		cstring *buf = _buf
+	func mut mut write_block(block_no: int, _buf: void*)
+		var but: cstring* = _buf
 		for i in 0:dev_blocks_per_block
 			AtaController.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
 	
-	func virtual alloc_block() -> int
+	func virtual mut alloc_block() -> int
 		return -1
 	
-	func virtual free_block(index: int) -> int
+	func virtual mut free_block(index: int) -> int
 		return -1
 	
-	func virtual free_inode(index: int) -> int
+	func virtual mut free_inode(index: int) -> int
 		return -1
 	
-	func virtual alloc_inode() -> int
+	func virtual mut alloc_inode() -> int
 		return -1
 	
-	func virtual write_inode(e: FileEntry) -> int
+	func virtual mut write_inode(e: FileEntry) -> int
 		return -1
 	
-	func virtual sync() -> int
+	func virtual mut sync() -> int
 		return -1
 
 
@@ -268,13 +268,13 @@ class FileSystem
 			clean_up(e)
 			return 0
 		
-		FileEntry *p = e.parent
+		var p = e.parent
 		if p.first_sub == e
 			# first in dir...
 			p.first_sub = e.next
 		else
 			# find previous in dir
-			FileEntry *c = p.first_sub
+			var c = p.first_sub
 			while c
 				if c.next == e
 					c.next = e.next
@@ -284,7 +284,7 @@ class FileSystem
 		return 0
 	
 	func static clean_up(out e: FileEntry*)
-		FileEntry *p = e.parent
+		var p = e.parent
 		e.shrink_block_list(0)
 		if e.mount
 			e.mount.free_inode(e.mp_inode)
@@ -294,8 +294,8 @@ class FileSystem
 			p.mount.sync()
 	
 	func static get(path: cstring, cur_dir: FileEntry) -> FileEntry*
-		int ppos = 0
-		FileEntry *e = &cur_dir
+		var ppos = 0
+		var e = &cur_dir
 		if path[0] == '/'
 			ppos = 1
 			e = root
@@ -303,12 +303,12 @@ class FileSystem
 				return root
 		else if !e
 			return nil
-		cstring sub
-		bool has_more = true
+		var sub: cstring
+		var has_more = true
 		while has_more
-			cstring* pp = &path[ppos]
+			var pp: cstring* = &path[ppos]
 			strcpy(sub, pp)
-			cstring name
+			var name: cstring
 			for i in 0:256
 				if (sub[i] == '/') or (sub[i] == 0)
 					has_more = (sub[i] == '/')
@@ -331,7 +331,7 @@ class FileSystem
 		prints(" ")
 		prints(dev.name)
 		prints(" ")
-		cstring dirname
+		var dirname: cstring
 		dir.get_path(dirname)
 		prints(dirname)
 		var mp = add_mount_point()
@@ -340,10 +340,10 @@ class FileSystem
 
 		# hahaha, we are evil :D
 		if strcmp(fs_name, "michifs") == 0
-			MountPointMichiFS *mp_michi = mp
+			var mp_michi = mp as MountPointMichiFS*
 			mp_michi.__init__()
 		else if strcmp(fs_name, "ext2") == 0
-			MountPointExt2 *mp_ext2 = mp
+			var mp_ext2 = mp as MountPointExt2*
 			mp_ext2.__init__()
 		# better to register a list of (stateless) fs drivers?
 			
@@ -369,12 +369,12 @@ class FileSystem
 
 class MountPointMichiFS extends MountPoint
 	
-	func read_int() -> int
-		int *p = &buf[buf_used]
+	func mut read_int() -> int
+		var p = &buf[buf_used] as int*
 		buf_used += 4
 		return *p
-	func read_str(out s: cstring)
-		int l = buf[buf_used] + buf[buf_used+1]*256
+	func mut read_str(out s: cstring)
+		let l = buf[buf_used] + buf[buf_used+1]*256
 		buf_used += 2
 		for i in 0:l
 			s[i] = buf[buf_used + i]
@@ -385,17 +385,17 @@ class MountPointMichiFS extends MountPoint
 		update_sizes(2048, 0)
 		read_block(1, buf)
 		buf_used = 0
-		int NumFiles = read_int()
-		for n in 0:NumFiles
-			cstring name
+		let num_files = read_int()
+		for n in 0:num_files
+			var name: cstring
 			read_str(name)
-			FileEntry *e = dest.create_child(name, FILE_TYPE_FILE, &self)
+			var e = dest.create_child(name, FILE_TYPE_FILE, &self)
 			#e.type =
 			read_int()
 			e.size = read_int()
 			read_int() # NumParts = 1
-			int first_block = read_int()
-			int num_blocks = read_int()
+			let first_block = read_int()
+			let num_blocks = read_int()
 			for i in 0:num_blocks
 				e.add_block(first_block + i)
 		return 0
@@ -440,12 +440,12 @@ class MountPointExt2 extends MountPoint
 			read_inode_recursive(2, dest)
 		return 0
 	
-	func write_meta_data()
+	func mut write_meta_data()
 		AtaController.write_sector(dev.disk_no, dev.offset + 2    , 1, &sb)
 		write_block(1 + block_size / 1024, &bg)
 			
 	
-	func test_compatibility()
+	func mut test_compatibility()
 		readable = false
 		writable = false
 		if (sb.feature_incompat & 0xfffffffd) > 0
@@ -455,13 +455,13 @@ class MountPointExt2 extends MountPoint
 			return
 		writable = true
 	
-	func write_inode_simple(e: FileEntry) -> int
-		int index = e.mp_inode
-		int group_no = (index - 1) / sb.inodes_per_group # 0...
-		int offset = ((index - 1) % sb.inodes_per_group) * inode_size
+	func mut write_inode_simple(e: FileEntry) -> int
+		let index = e.mp_inode
+		let group_no = (index - 1) / sb.inodes_per_group # 0...
+		let offset = ((index - 1) % sb.inodes_per_group) * inode_size
 		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
-		Ext2Inode *inode = &buf[offset % block_size]
+		var inode = &buf[offset % block_size] as Ext2Inode*
 		
 		if e.type == FILE_TYPE_DIR
 			inode.rights.set(0x4000)
@@ -472,7 +472,7 @@ class MountPointExt2 extends MountPoint
 		
 		inode.size = e.size
 		inode.blocks = e.num_blocks
-		int num_direct = e.num_blocks
+		var num_direct = e.num_blocks
 		if num_direct > 12
 			num_direct = 12
 		for i in 1:num_direct
@@ -487,9 +487,9 @@ class MountPointExt2 extends MountPoint
 		
 		return 0
 	
-	func read_inode(index: int, inode: Ext2Inode, out e: FileEntry)
-		int group_no = (index - 1) / sb.inodes_per_group # 0...
-		int offset = ((index - 1) % sb.inodes_per_group) * inode_size
+	func mut read_inode(index: int, inode: Ext2Inode, out e: FileEntry)
+		let group_no = (index - 1) / sb.inodes_per_group # 0...
+		let offset = ((index - 1) % sb.inodes_per_group) * inode_size
 		# group_no!!!!!!!!!!!!!!
 		
 		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
@@ -500,8 +500,8 @@ class MountPointExt2 extends MountPoint
 			e.type = FILE_TYPE_DIR
 		
 		e.size = inode.size
-		int f_num_blocks = (inode.size-1) / block_size + 1
-		int f_num_direct = f_num_blocks
+		let f_num_blocks = (inode.size-1) / block_size + 1
+		var f_num_direct = f_num_blocks
 		if f_num_direct > 12
 			f_num_direct = 12
 	
@@ -509,13 +509,13 @@ class MountPointExt2 extends MountPoint
 			e.add_block(inode.iblock[i])
 		if f_num_blocks > 12
 			read_block(inode.iblock[12], buf)
-			int[0]* p = buf
+			var p = buf as int[0]*
 			for i in 12:f_num_blocks
 				e.add_block(p[i - 12])
 	
 	
-	func read_inode_contents(e: FileEntry) -> cstring*
-		cstring *buf = Heap.malloc(e.num_blocks * block_size)
+	func mut read_inode_contents(e: FileEntry) -> cstring*
+		var buf = Heap.malloc(e.num_blocks * block_size) as cstring*
 		for i in 0:e.num_blocks
 			read_block(e.blocks[i], &buf[i * block_size])
 		
@@ -526,33 +526,33 @@ class MountPointExt2 extends MountPoint
 #		for i in 0:e.num_blocks
 #			write_block(e.blocks[i], &buf[i * block_size])
 	
-	func read_inode_recursive(index: int, out dir: FileEntry)
+	func mut read_inode_recursive(index: int, out dir: FileEntry)
 		#prints("R")
-		Ext2Inode inode
+		var inode: Ext2Inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()
 			return
 		#prints("D")
-		cstring *cont = read_inode_contents(dir)
-		int p = 0
+		var cont = read_inode_contents(dir) as cstring*
+		var p = 0
 		while p < dir.size
-			Ext2DirEntryHeader *d = &cont[p]
+			var d = &cont[p] as Ext2DirEntryHeader*
 			if d.rec_len._int() == 0
 				break
-			cstring name
-			int len = d.name_len
-			memcpy(&name, &cont[p + 8], len)
-			name[len] = 0
+			var name: cstring
+			let _len = int(d.name_len)
+			memcpy(&name, &cont[p + 8], _len)
+			name[_len] = 0
 			p += d.rec_len._int()
 			if d.name_len == 0 or d.inode == 0
 				continue
 				
 		
 			if strcmp(name, ".") != 0 and strcmp(name, "..") != 0
-				int type = FILE_TYPE_FILE
+				var type = FILE_TYPE_FILE
 				if d.file_type == 2
 					type = FILE_TYPE_DIR
-				FileEntry *e = dir.create_child(name, type, &self)
+				var e = dir.create_child(name, type, &self)
 				e.mp_inode = d.inode
 				read_inode_recursive(d.inode, e)
 		Heap.free(cont)
@@ -562,31 +562,31 @@ class MountPointExt2 extends MountPoint
 			return write_inode_dir(e)
 		return write_inode_simple(e)
 	
-	func write_inode_dir(out dir: FileEntry) -> int
-		cstring fn
+	func mut write_inode_dir(out dir: FileEntry) -> int
+		var fn: cstring
 		dir.get_path(fn)
-		cstring *b = Heap.malloc(4096*8)
-		int pos = 0
+		var b = Heap.malloc(4096*8) as cstring*
+		var pos = 0
 	
 		dir.size = 0
 		dir.shrink_block_list(0)
 		
 		# iterate over files and fill buffer
-		FileEntry *e = dir.first_sub
-		int n = 0
+		var e = dir.first_sub
+		var n = 0
 		while e
-			Ext2DirEntryHeader *d = &b[pos]
+			var d = &b[pos] as Ext2DirEntryHeader*
 			for i in 0:8
 				b[pos + i] = 0
 			d.inode = e.mp_inode
 			d.file_type = 0
 			if e.type == FILE_TYPE_DIR
 				d.file_type = 2
-			int len = strlen(e.name)
-			d.name_len = len
-			d.rec_len.set(8 + len)
-			memcpy(&b[pos + 8], &e.name, len)
-			pos += 8 + len
+			let _len = strlen(e.name)
+			d.name_len = _len
+			d.rec_len.set(8 + _len)
+			memcpy(&b[pos + 8], &e.name, _len)
+			pos += 8 + _len
 		
 			e = e.next
 			n ++
@@ -594,7 +594,7 @@ class MountPointExt2 extends MountPoint
 			pos = block_size
 		
 		# create blocks for buffer
-		int num_blocks = ceil_quot(pos, block_size)
+		let num_blocks = ceil_quot(pos, block_size)
 		dir.size = num_blocks * block_size
 		for i in pos:dir.size
 			b[i] = 0
@@ -609,13 +609,13 @@ class MountPointExt2 extends MountPoint
 		return 0
 	
 	func override alloc_inode() -> int
-		int n = sb.inodes_per_group / 32
+		let n = sb.inodes_per_group / 32
 		for i in 0:n
-			int b = inode_bitmap[i]
+			let b = inode_bitmap[i]
 			if b == 0xffffffff
 				continue
 			for j in 0:32
-				int m = 1 << j
+				let m = 1 << j
 				if (b & m) == 0
 					inode_bitmap[i] += m
 					sb.free_inodes_count --
@@ -626,13 +626,13 @@ class MountPointExt2 extends MountPoint
 	
 	func override alloc_block() -> int
 		#prints(" AB ")
-		int n = sb.blocks_per_group / 32
+		let n = sb.blocks_per_group / 32
 		for i in 0:n
-			int b = block_bitmap[i]
+			let b = block_bitmap[i]
 			if b == 0xffffffff
 				continue
 			for j in 0:32
-				int m = 1 << j
+				let m = 1 << j
 				if (b & m) == 0
 					block_bitmap[i] += m
 					sb.free_blocks_count --
@@ -645,9 +645,9 @@ class MountPointExt2 extends MountPoint
 	func override free_block(index: int) -> int
 		#prints(" FB ")
 		#printi(index)
-		int bmi = index >> 5 # index/32
-		int bit = index & 0x1f # index%32
-		int mask = 1 << bit
+		let bmi = index >> 5 # index/32
+		let bit = index & 0x1f # index%32
+		var mask = 1 << bit
 		if (block_bitmap[bmi] & mask) == 0
 			prints("  ---EFB--- ")
 			return -1
@@ -660,9 +660,9 @@ class MountPointExt2 extends MountPoint
 		return 0
 	
 	func override free_inode(index: int) -> int
-		int bmi = index >> 5 # index/32
-		int bit = index & 0x1f # index%32
-		int mask = 1 << bit
+		let bmi = index >> 5 # index/32
+		let bit = index & 0x1f # index%32
+		var mask = 1 << bit
 		if (inode_bitmap[bmi] & mask) == 0
 			prints("  ---EFI--- ")
 			return -1

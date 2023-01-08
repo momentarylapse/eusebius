@@ -26,8 +26,8 @@ class OpenFileData
 	
 	var buffer_dirty, inode_dirty: bool
 	
-	func const get_flags() -> int
-		int flags = 0
+	func get_flags() -> int
+		var flags = 0
 		if reading
 			flags += O_RDONLY
 		if writing
@@ -35,17 +35,17 @@ class OpenFileData
 		if !blocking
 			flags += O_NONBLOCK
 		return flags
-	func set_flags(flags: int)
+	func mut set_flags(flags: int)
 		reading = (flags & O_RDONLY) > 0
 		writing = (flags & O_WRONLY) > 0
 		blocking = (flags & O_NONBLOCK) == 0
 		if socket
 			socket.blocking = blocking
 
-	func read(page_dir: PageDirectory, _addr: int, _size: int) -> int
-		int r = 0
-		int size = _size
-		int addr = _addr
+	func mut read(page_dir: PageRootTable, _addr: int, _size: int) -> int
+		var r = 0
+		var size = _size
+		var addr = _addr
 		
 		if !reading
 			return -3
@@ -57,18 +57,18 @@ class OpenFileData
 		else if entry.type == FILE_TYPE_SOCKET
 			return socket.read(page_dir, addr, size)
 		
-		int block_size = entry.mount.block_size
-		int pos_in_block = offset % block_size
-		int block_no = offset / block_size
+		let block_size = entry.mount.block_size
+		var pos_in_block = offset % block_size
+		var block_no = offset / block_size
 		
-		int size_max = entry.size - offset
+		let size_max = entry.size - offset
 		if size > size_max
 			size = size_max
 		
 		while size > 0
 	
 			# wieviel kann aus dem Puffer gelesen werden?
-			int cur_size = size
+			var cur_size = size
 			if cur_size > block_size - pos_in_block
 				cur_size = block_size - pos_in_block
 
@@ -84,20 +84,20 @@ class OpenFileData
 				# read next block
 				pos_in_block = 0
 				block_no ++
-				int cl = entry.blocks[block_no]
+				var cl = entry.blocks[block_no]
 				entry.mount.read_block(cl, buffer)
 		
 		return r
 
-	func truncate()
+	func mut truncate()
 		entry.size = offset
 		entry.shrink_block_list(ceil_quot(entry.size, entry.mount.block_size))
 		inode_dirty = true
 
-	func write(page_dir: PageDirectory, _addr: int, _size: int) -> int
-		int r=0
-		int addr = _addr
-		int size = _size
+	func mut write(page_dir: PageRootTable, _addr: int, _size: int) -> int
+		var r=0
+		var addr = _addr
+		var size = _size
 
 		if !used
 			return -1
@@ -112,14 +112,14 @@ class OpenFileData
 		else if entry.type == FILE_TYPE_SOCKET
 			return socket.write(page_dir, addr, size)
 		
-		int block_size = entry.mount.block_size
-		int pos_in_block = offset % block_size
-		int block_no = offset / block_size
+		let block_size = entry.mount.block_size
+		var pos_in_block = offset % block_size
+		var block_no = offset / block_size
 		
 		while size > 0
 	
 			# wieviel kann in den Puffer geschrieben werden?
-			int cur_size = size
+			var cur_size = size
 			if cur_size > block_size - pos_in_block
 				cur_size = block_size - pos_in_block
 
@@ -140,7 +140,7 @@ class OpenFileData
 			
 			# buffer full? -> write cur block
 			if pos_in_block >= block_size
-				int cl = entry.blocks[block_no]
+				let cl = entry.blocks[block_no]
 				entry.mount.write_block(cl, buffer)
 				buffer_dirty = false
 				
@@ -150,7 +150,7 @@ class OpenFileData
 		
 		return r
 
-	func getdents(page_dir: PageDirectory, addr: int, num: int) -> int
+	func getdents(page_dir: PageRootTable, addr: int, num: int) -> int
 		if !used
 			return -EBADF
 
@@ -160,14 +160,14 @@ class OpenFileData
 		if !reading
 			return -3
 	
-		FileEntry *e = entry.first_sub
+		var e = entry.first_sub
 		for i in 0:offset
 			e = e.next
 			if !e
 				return 0
 		if !e
 			return 0
-		dirent_struct r
+		var r: dirent_struct
 		r.struct_size = strlen(e.name) + 13
 		r.size = e.size
 		r.type = e.type
@@ -176,10 +176,10 @@ class OpenFileData
 		offset ++
 		return 1
 
-	func seek(_offset: int, mode: int) -> int
-		int block_size = entry.mount.block_size
-		int old_block_no = offset / block_size
-		int new_offset
+	func mut seek(_offset: int, mode: int) -> int
+		let block_size = entry.mount.block_size
+		let old_block_no = offset / block_size
+		var new_offset: int
 		if mode == SEEK_SET
 			new_offset = _offset
 		else if mode == SEEK_CUR
@@ -193,14 +193,14 @@ class OpenFileData
 			return -EINVAL
 		
 		offset = new_offset
-		int block_no = offset / block_size
+		let block_no = offset / block_size
 		if block_no != old_block_no
-			int cl = entry.blocks[block_no]
+			let cl = entry.blocks[block_no]
 			entry.mount.read_block(cl, buffer)
 		return offset
 
 
-	func unref()
+	func mut unref()
 		if !used
 			return
 		ref_count --
@@ -209,13 +209,13 @@ class OpenFileData
 		if ref_count == 0
 			clean_up()
 			
-	func clean_up()
+	func mut clean_up()
 			
 		if inode_dirty
 			if entry.mount.write_inode(entry) == 0
 				inode_dirty = false
 		if buffer_dirty
-			int cl = entry.blocks[offset / entry.mount.block_size]
+			let cl = entry.blocks[offset / entry.mount.block_size]
 			entry.mount.write_block(cl, buffer)
 			buffer_dirty = false
 		FileSystem.sync()
@@ -250,8 +250,8 @@ func create_handle(flags: int) -> OpenFileData*
 
 
 func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
-	bool truncating = (flags & O_TRUNC) > 0
-	OpenFileData *of = create_handle(flags)
+	let truncating = (flags & O_TRUNC) > 0
+	var of = create_handle(flags)
 	if !of
 		return nil
 	of.entry = &e
@@ -289,8 +289,8 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 	return of
 
 func kernel_open(filename: cstring, flags: int, out cur_dir: FileEntry) -> OpenFileData*
-	bool creating = (flags & O_CREATE) > 0
-	FileEntry *e = FileSystem.get(filename, cur_dir)
+	let creating = (flags & O_CREATE) > 0
+	var e = FileSystem.get(filename, cur_dir)
 	if !e and creating
 		#prints("kernel Warnung: neue Datei...\n")
 		e = cur_dir.create_child(filename, FILE_TYPE_FILE, cur_dir.mount)
@@ -304,7 +304,7 @@ func kernel_open(filename: cstring, flags: int, out cur_dir: FileEntry) -> OpenF
 func kernel_mkdir(filename: cstring, out cur_dir: FileEntry) -> int
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
+	var e = cur_dir.create_child(filename, FILE_TYPE_DIR, cur_dir.mount)
 	if !e
 		return -2
 	e.mp_inode = cur_dir.mount.alloc_inode()
@@ -316,7 +316,7 @@ func kernel_mkdir(filename: cstring, out cur_dir: FileEntry) -> int
 func kernel_mknod(filename: cstring, flags: int, out cur_dir: FileEntry) -> int
 	if FileSystem.get(filename, cur_dir)
 		return -EEXIST
-	FileEntry *e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
+	var e = cur_dir.create_child(filename, FILE_TYPE_PIPE, cur_dir.mount)
 	if !e
 		return -2
 	if !PipeManager.create(e)
@@ -324,7 +324,7 @@ func kernel_mknod(filename: cstring, flags: int, out cur_dir: FileEntry) -> int
 	return 0
 
 func kernel_unlink(filename: cstring, cur_dir: FileEntry) -> int
-	FileEntry *e = FileSystem.get(filename, cur_dir)
+	var e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
 	if e.type == FILE_TYPE_DIR
@@ -333,7 +333,7 @@ func kernel_unlink(filename: cstring, cur_dir: FileEntry) -> int
 	
 
 func kernel_rmdir(filename: cstring, cur_dir: FileEntry) -> int
-	FileEntry *e = FileSystem.get(filename, cur_dir)
+	var e = FileSystem.get(filename, cur_dir)
 	if !e
 		return -ENOENT
 	if e.type != FILE_TYPE_DIR

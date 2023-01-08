@@ -5,9 +5,9 @@ use io.text
 use dev.ata
 use dev.block
 ##use dev.std_char_devs
-##use fs.fs
-##use fs.access
-##use fs.pipe
+use fs.fs
+use fs.access
+use fs.pipe
 use mem.heap
 use mem.paging
 use mem.shared
@@ -80,7 +80,7 @@ func main()
 	
 	BlockDevManager.init()
 	
-##	InitFileAccessData()
+	InitFileAccessData()
 ##	PipeManager.init()
 ##	SocketManager.init()
 ##	

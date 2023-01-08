@@ -18,14 +18,14 @@ class Pipe
 	var write_ref_count: int
 	var buffer: char[0]*
 	var buffer_used: int
-	func write(page_dir: PageDirectory, addr: int, size: int) -> int
+	func mut write(page_root: PageRootTable, addr: int, size: int) -> int
 		if buffer_used + size > PIPE_BUFFER_SIZE
 			return -EWOULDBLOCK
-		page_dir.memcpy2kernel(&buffer[buffer_used], addr, size)
+		page_root.memcpy2kernel(&buffer[buffer_used], addr, size)
 		buffer_used += size
 		return size
-	func read(page_dir: PageDirectory, addr: int, _size: int) -> int
-		int size = _size
+	func mut read(page_root: PageRootTable, addr: int, _size: int) -> int
+		var size = _size
 		if buffer_used == 0
 			# no data... block if we have a writer
 			if write_ref_count > 0
@@ -34,7 +34,7 @@ class Pipe
 			return 0
 		if size > buffer_used
 			size = buffer_used
-		page_dir.memcpy2task(addr, buffer, size)
+		page_root.memcpy2task(addr, buffer, size)
 		buffer_used -= size
 		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]
@@ -47,7 +47,7 @@ class Pipe
 #		prints(":")
 #		printi write_ref_count
 #		prints("  ")
-	func unref(writing: bool)
+	func mut unref(writing: bool)
 		if writing
 			write_ref_count --
 		else
@@ -62,7 +62,7 @@ class Pipe
 			# only auto-delete if anonymous
 			clean_up()
 	
-	func clean_up()
+	func mut clean_up()
 		if !e.parent
 			# anonymous pipe
 			FileSystem.delete(e)

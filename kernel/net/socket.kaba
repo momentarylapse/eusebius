@@ -10,12 +10,12 @@ const MAX_SOCKETS = 64
 const SOCKET_BUFFER_SIZE = 1024
 
 
-enum
-	SOCK_STATE_NONE
-	SOCK_STATE_LISTENING
-	SOCK_STATE_CONNECTING
-	SOCK_STATE_WAIT_ACCEPT
-	SOCK_STATE_RECV
+enum SocketState
+	NONE
+	LISTENING
+	CONNECTING
+	WAIT_ACCEPT
+	RECV
 
 
 class KSocket
@@ -25,7 +25,7 @@ class KSocket
 	var type: int
 	var port: int
 	var peer_port: int
-	var state: int
+	var state: SocketState
 	var blocking: bool
 	var ref_count: int
 	var buffer: char[0]*
@@ -33,10 +33,10 @@ class KSocket
 	
 	var _accept_wait_port: int
 	
-	func write(page_dir: PageDirectory, addr: int, size: int) -> int
+	func mut write(page_dir: PageRootTable, addr: int, size: int) -> int
 		if peer_port < 0
 			return -ENOTCONN
-		KSocket *s = SocketManager.get_by_port(peer_port)
+		var s = SocketManager.get_by_port(peer_port)
 		if !s
 			return -ENOTCONN
 		if s.buffer_used + size > SOCKET_BUFFER_SIZE
@@ -45,8 +45,8 @@ class KSocket
 		s.buffer_used += size
 		return size
 	
-	func read(page_dir: PageDirectory, addr: int, _size: int) -> int
-		int size = _size
+	func mut read(page_dir: PageRootTable, addr: int, _size: int) -> int
+		var size = _size
 		if buffer_used == 0
 			if peer_port < 0
 				return -ENOTCONN
@@ -60,67 +60,67 @@ class KSocket
 			buffer[i] = buffer[i + size]
 		return size
 	
-	func set_state(_state: int)
+	func mut set_state(_state: SocketState)
 		state = _state
 		
-	func bind(_port: int) -> int
+	func mut bind(_port: int) -> int
 		if SocketManager.get_by_port(_port)
 			return -EADDRINUSE
 		port = _port
 		return 0
 		
-	func link(out s: KSocket*)
+	func mut link(out s: KSocket*)
 		s.peer_port = port
 		peer_port = s.port
 		
-	func listen() -> int
+	func mut listen() -> int
 		if port < 0
 			return -EINVAL
-		set_state(SOCK_STATE_LISTENING)
+		set_state(SocketState.LISTENING)
 		return 0
 		
-	func accept() -> int
-		if state == SOCK_STATE_WAIT_ACCEPT
+	func mut accept() -> int
+		if state == SocketState.WAIT_ACCEPT
 			# "remote socket"
-			KSocket *rs = SocketManager.get_by_port(_accept_wait_port)
+			var rs = SocketManager.get_by_port(_accept_wait_port)
 			if !rs
 				return -1
 			# "return socket"
-			FileEntry *e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
+			var e = create_file_entry(":sock:", FILE_TYPE_SOCKET, nil)
 			if !e
-				self.set_state(SOCK_STATE_LISTENING)
+				self.set_state(SocketState.LISTENING)
 				return -ENFILE
-			KSocket* s = SocketManager.create(e, type)
+			var s = SocketManager.create(e, type)
 			s.assign_available_port()
 			s.link(rs)
-			self.set_state(SOCK_STATE_LISTENING)
-			rs.set_state(SOCK_STATE_NONE)
+			self.set_state(SocketState.LISTENING)
+			rs.set_state(SocketState.NONE)
 			return s.port
-		if state != SOCK_STATE_LISTENING
+		if state != SocketState.LISTENING
 			return -ECONNREFUSED
 		return -EWOULDBLOCK
 		
-	func connect(_port: int) -> int
-		KSocket *rs = SocketManager.get_by_port(_port)
+	func mut connect(_port: int) -> int
+		var rs = SocketManager.get_by_port(_port)
 		if !rs
 			return -ECONNREFUSED
-		if rs.state != SOCK_STATE_LISTENING
+		if rs.state != SocketState.LISTENING
 			return -ECONNREFUSED
 		
 		self.assign_available_port()
-		rs.set_state(SOCK_STATE_WAIT_ACCEPT)
+		rs.set_state(SocketState.WAIT_ACCEPT)
 		rs._accept_wait_port = port
-		self.set_state(SOCK_STATE_CONNECTING)
+		self.set_state(SocketState.CONNECTING)
 		
 		return -EWOULDBLOCK
 		
-	func assign_available_port()
+	func mut assign_available_port()
 		for p in 10000:20000
 			if !SocketManager.get_by_port(p)
 				bind(p)
 				return
 		
-	func unref()
+	func mut unref()
 		ref_count --
 			
 		if ref_count < 0
@@ -129,10 +129,10 @@ class KSocket
 		if ref_count == 0
 			clean_up()
 	
-	func clean_up()
+	func mut clean_up()
 		if peer_port >= 0
 			# "unconnect"
-			KSocket *s = SocketManager.get_by_port(peer_port)
+			var s = SocketManager.get_by_port(peer_port)
 			if s
 				s.peer_port = -1
 		FileSystem.delete(e)
@@ -144,14 +144,13 @@ class SocketManager
 	var static sockets: KSocket[MAX_SOCKETS]
 
 
-
 	func static create(e: FileEntry, type: int) -> KSocket*
 		for s in sockets
 			if !s.used
 				s.used = true
 				s.e = &e
 				s.type = type
-				s.state = SOCK_STATE_NONE
+				s.state = SocketState.NONE
 				s.blocking = true
 				s.port = -1
 				s.peer_port = -1
@@ -176,6 +175,6 @@ class SocketManager
 
 
 	func static init()
-		for s,i in sockets
+		for i=>s in sockets
 			s._index = i
 			s.used = false
