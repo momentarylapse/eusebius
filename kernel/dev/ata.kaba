@@ -19,6 +19,11 @@ class AtaDiskInfo
 	var name: cstring
 	func __assign__(i: AtaDiskInfo)
 
+
+# FIXME: some compiler bug.... &global does not work....
+func __fff(b: char[512]) -> int*
+	return &b[0] as int*
+
 class AtaController
 
 	var static nAta: int
@@ -39,8 +44,8 @@ class AtaController
 			inportb(IOBase + 7)
 
 	func static wait_status(mask: char, value: char) -> bool
-		char AtaStatusChar = inportb(IOBase + 7)
-		int n = 1000000000
+		var AtaStatusChar = inportb(IOBase + 7)
+		var n = 1000000000
 		while ((AtaStatusChar & mask)!=value) and (n >= 0)
 			AtaStatusChar = inportb(IOCtrl)#+7)
 			n--
@@ -77,8 +82,8 @@ class AtaController
 		outportb(IOBase + 3, 0x55)
 		outportb(IOBase + 2, 0x55)
 		outportb(IOBase + 3, 0xaa)
-		char sc = inportb(IOBase + 2)
-		char sn = inportb(IOBase + 3)
+		var sc = inportb(IOBase + 2)
+		var sn = inportb(IOBase + 3)
 		if (sc != 0x55) or (sn != 0xaa)
 			prints("---\n")
 			return false
@@ -102,13 +107,13 @@ class AtaController
 		# is it ATA or ATAPI?
 		sc = inportb(IOBase + 2)
 		sn = inportb(IOBase + 3)
-		bool fail = true
+		var fail = true
 		if (sc == 0x01) and (sn == 0x01)
 			disk_info[disk_no].isAtapi = false
 			fail = false
-			char cl = inportb(IOBase + 4)
-			char ch = inportb(IOBase + 5)
-			char st = inportb(IOBase + 7)
+			let cl = inportb(IOBase + 4)
+			let ch = inportb(IOBase + 5)
+			let st = inportb(IOBase + 7)
 			if ( cl == 0x14 ) and (ch == 0xeb)
 				prints("ATAPI (CD-Rom)")
 				disk_info[disk_no].isAtapi = true
@@ -139,7 +144,7 @@ class AtaController
  		outportb(IOBase+3, 0) # S0
  		outportb(IOBase+4, 0) # C0
 		outportb(IOBase+5, 0)
-		char ata_lba3 = MSMask | 0x60 # ...+LBA
+		let ata_lba3 = MSMask | 0x60 # ...+LBA
 		outportb(IOBase+6, ata_lba3) # H0
 		if disk_info[disk_no].isAtapi
 			outportb(IOBase+7, 0xa1) # IdentifyDrive (ATAPI)
@@ -150,11 +155,12 @@ class AtaController
 		wait_status(0x88, ATA_MASK_DATA)
 		wait_400_ns()
 
-		BufferDW = &buffer
+		#BufferDW
+		#let xx = &buffer
+		BufferDW = __fff(buffer)
 		for n in 0:128
 			BufferDW[n] = inportd(IOBase)
 		# die Bytes des Namens korregieren
-		#for n, 0, 40, 2
 		for n in 0:40:2
 			disk_info[disk_no].name[n  ] = buffer[55+n]
 			disk_info[disk_no].name[n+1] = buffer[54+n]
@@ -181,7 +187,7 @@ class AtaController
 		prints("AtaReset ")
 		set_disk_add(disk_no)
 	
-		char status
+		var status: char
 		status = inportb(IOBase+7)
 		printh(&status,1)
 		status = inportb(IOBase+1)
@@ -219,7 +225,7 @@ class AtaController
 		# num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
 	
-		char status
+		var status: char
 
 
 		
@@ -266,7 +272,7 @@ class AtaController
 		# num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
 	
-		char status
+		var status: char
 
 
 		

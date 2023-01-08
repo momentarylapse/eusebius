@@ -60,9 +60,9 @@ class BlockDevManager
 		AtaController.read_sector(disk_no, 0, 1, &AtaController.buffer)
 		#MountPartition=false
 		for n in 0:4
-			int *offset = &AtaController.buffer[454+n*16]
-			int *size = &AtaController.buffer[458+n*16]
-			int type = AtaController.buffer[450+n*16]
+			let offset: int* = &AtaController.buffer[454+n*16]
+			let size: int* = &AtaController.buffer[458+n*16]
+			let type = int(AtaController.buffer[450+n*16])
 			if (type == 0) or (*size == 0)
 				continue
 			p = add_dev(0, n+1)

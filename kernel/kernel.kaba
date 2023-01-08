@@ -2,8 +2,8 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use common
 use io.text
-##use dev.ata
-##use dev.block
+use dev.ata
+use dev.block
 ##use dev.std_char_devs
 ##use fs.fs
 ##use fs.access
@@ -78,8 +78,8 @@ func main()
 	
 	SharedMemory.init()
 	
-##	BlockDevManager.init()
-##	
+	BlockDevManager.init()
+	
 ##	InitFileAccessData()
 ##	PipeManager.init()
 ##	SocketManager.init()
