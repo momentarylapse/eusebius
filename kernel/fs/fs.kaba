@@ -403,7 +403,7 @@ class MountPointMichiFS extends MountPoint
 
 
 class MountPointExt2 extends MountPoint
-	
+
 	func override mount() -> int
 		prints("EXT2.mount\n")
 		buf = Heap.malloc(4096)
@@ -528,7 +528,7 @@ class MountPointExt2 extends MountPoint
 #			write_block(e.blocks[i], &buf[i * block_size])
 	
 	func mut read_inode_recursive(index: int, out dir: FileEntry)
-		#prints("R")
+		prints("R")
 		var inode: Ext2Inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()

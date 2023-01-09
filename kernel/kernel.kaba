@@ -84,11 +84,12 @@ func main()
 	PipeManager.init()
 	SocketManager.init()
 
-##	FileSystem.init()
-##	
-##	# assume a default disk layout...
-##	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
-##	var boot = FileSystem.get("/boot", FileSystem.root)
+	FileSystem.init()
+
+	# assume a default disk layout...
+	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
+	var boot = FileSystem.get("/boot", FileSystem.root)
+	printh(&boot, 4)
 ##	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 ##	
 ##	TaskManager.init()

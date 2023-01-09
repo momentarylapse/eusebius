@@ -7,7 +7,8 @@ use io.text
 class Base
 	func __init__()
 		prints("Base.init\n")
-	#virtual void __delete__()
+	func __delete__()
+		prints("Base.delete\n")
 	#void __assign__(Base b)
 	func virtual f()
 		prints("Base.f()\n")
@@ -15,8 +16,9 @@ class Base
 class Derived extends Base
 	func override __init__()
 		prints("Derived.init\n")
-	#virtual void __delete__()
-	func __assign__(d: Derived)
+	func override __delete__()
+		prints("Derived.delete\n")
+	#func __assign__(d: Derived)
 	func override f()
 		prints("Derived.f()\n")
 
@@ -28,14 +30,26 @@ func main()
 	prints("test...\n")
 	
 	if true
-		Derived d
-		Base* b = &d
-#		Base b
+		var d: Derived
+		var b: Base* = &d
 	
-		prints("a\n")
+		#prints("a\n")
+		d.f()
 		b.f()
-		prints("b\n")
+		#prints("b\n")
+		
+#		var p: void** = &d
+#		printh(&p, 8)
+#		prints(" p\n")
+#		var vt: void*[0]* = *p
+#		printh(&vt, 8)
+#		prints(" vt\n")
+#		for i in 0:4
+#			var pp: void* = vt[i]
+#			printh(&pp, 8)
+#			prints("\n")
 	
+	prints("done\n")
 	while true
 		pass
 
