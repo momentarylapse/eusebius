@@ -194,9 +194,6 @@ class MountPoint
 	var dev_blocks_per_block: int
 	var dev_block_offset: int
 	
-	var buf: char[0]*
-	var buf_used: int
-	
 	var inodes_per_block: int
 	var sb: Ext2SuperBlock
 	var bg: Ext2BlockGroupDescriptor
@@ -222,14 +219,25 @@ class MountPoint
 		dev_block_offset = _bo / dev.block_size
 	
 	func mut read_block(block_no: int, _buf: void*)
-		var but: cstring* = _buf
+		#prints("RB")
+		#printh(&block_no, 4)
+		var buf = _buf as cstring*
 		for i in 0:dev_blocks_per_block
-			AtaController.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
+			AtaController.read_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i, 1, &buf[dev.block_size * i])
+		
+#		if block_no <= 1
+#			prints("\n")
+#			return
+		#prints(" >>  ")
+		#printh(&buf[0], 100)
+		#prints("\n")
+		#while true
+		#	pass
 
 	func mut mut write_block(block_no: int, _buf: void*)
 		var but: cstring* = _buf
 		for i in 0:dev_blocks_per_block
-			AtaController.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &buf[dev.block_size * i])
+			AtaController.write_sector(dev.disk_no, dev.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &but[dev.block_size * i])
 	
 	func virtual mut alloc_block() -> int
 		return -1
@@ -370,6 +378,9 @@ class FileSystem
 
 class MountPointMichiFS extends MountPoint
 	
+	var buf: char[0]*
+	var buf_used: int
+	
 	func mut read_int() -> int
 		var p = &buf[buf_used] as int*
 		buf_used += 4
@@ -403,6 +414,7 @@ class MountPointMichiFS extends MountPoint
 
 
 class MountPointExt2 extends MountPoint
+	var buf: char[0]*
 
 	func override mount() -> int
 		prints("EXT2.mount\n")
@@ -493,8 +505,19 @@ class MountPointExt2 extends MountPoint
 		let offset = ((index - 1) % sb.inodes_per_group) * inode_size
 		# group_no!!!!!!!!!!!!!!
 		
-		read_block(group_no * sb.blocks_per_group + bg.inode_table + offset/block_size, buf)
+		#prints("I")
+		#printi(index)
+		#prints(" block=")
+		let block_no = group_no * sb.blocks_per_group + bg.inode_table + offset/block_size
+		#printi(block_no)
+		#prints(" bs=")
+		#printi(block_size)
+		#prints(" off=")
+		#printi(offset % block_size)
+		#prints(" ")
+		read_block(block_no, buf)
 		memcpy(&inode, &buf[offset % block_size], sizeof(Ext2Inode))
+		#raise(new Exception("x"))
 		
 		e.type = FileType.FILE
 		if inode.isDir()
@@ -517,8 +540,14 @@ class MountPointExt2 extends MountPoint
 	
 	func mut read_inode_contents(e: FileEntry) -> cstring*
 		var buf = Heap.malloc(e.num_blocks * block_size) as cstring*
+		#prints("IC cs=")
+		#printi(e.num_blocks)
+		#prints(" ")
 		for i in 0:e.num_blocks
 			read_block(e.blocks[i], &buf[i * block_size])
+		#prints("\n")
+		#printh(buf, 24)
+		#prints("\n")
 		
 		return buf
 		
@@ -528,12 +557,10 @@ class MountPointExt2 extends MountPoint
 #			write_block(e.blocks[i], &buf[i * block_size])
 	
 	func mut read_inode_recursive(index: int, out dir: FileEntry)
-		prints("R")
 		var inode: Ext2Inode
 		read_inode(index, inode, dir)
 		if !inode.isDir()
 			return
-		#prints("D")
 		var cont = read_inode_contents(dir) as cstring*
 		var p = 0
 		while p < dir.size

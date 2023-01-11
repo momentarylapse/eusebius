@@ -217,6 +217,7 @@ bochs/c.img: img.mfs img.ext2 loader_fake
 	dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc
 	dd if=loader_fake of=bochs/c.img conv=notrunc
 	dd if=img.mfs of=bochs/c.img bs=1024 seek=8 conv=notrunc
+	# ext2 @ 0x9d8000
 	dd if=img.ext2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc
 
 clean:

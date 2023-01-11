@@ -1,18 +1,25 @@
 use os
 
-class BinaryFile extends File
-	func xread(p: void*, size: int) -> int
-		cstring *pp = p
-		string r = read(size)
-		for i in 0:len(r)
-			pp[i] = r[i]
-		return len(r)
+#class BinaryFile extends File
+#	func xread(p: void*, size: int) -> int
+#		var pp = p as cstring*
+#		var r: string = read(size)
+#		for i in 0:len(r)
+#			pp[i] = r[i]
+#		return len(r)
+
+func xread(out f: os.FileStream, p: void*, size: int) -> int
+	var pp = p as cstring*
+	var r = f.read(size)
+	for i in 0:len(r)
+		pp[i] = r[i]
+	return len(r)
 
 class Word
 	c: char[2]
 	func __int__() -> int
-		int a = c[0]
-		int b = c[1]
+		let a = int(c[0])
+		let b = int(c[1])
 		return a + b * 256
 
 class Inode
@@ -87,7 +94,7 @@ class BlockGroupDescriptor
 
 
 class Ext2Reader
-	f: BinaryFile*
+	f: FileStream*
 	block_size: int
 	inodes_per_block: int
 	sb: SuperBlock
@@ -97,7 +104,7 @@ class Ext2Reader
 	filter: string[]
 	show_details: bool
 	
-	func testCompatibility()
+	func mut testCompatibility()
 		readable = false
 		writable = false
 		if (sb.feature_incompat & 0xfffffffd) > 0
@@ -111,14 +118,15 @@ class Ext2Reader
 			return
 		writable = true
 	
-	func read(filename: string)
-		f = Filesystem.open(filename)
+	func mut read(filename: string)
+		f = fs.open(filename, "rb")
 		if !f
 			return
 	
 		# super block (always at offset 1024!)
 		f.seek(1024)
-		f.xread(&sb, sizeof(SuperBlock))
+		xread(f, &sb, sizeof(SuperBlock))
+		print(as_binary(&sb, 16).hex())
 		block_size = 1 << (sb.log_block_size + 10)
 		inodes_per_block = block_size / int(sb.inode_size) #128
 		
@@ -138,7 +146,8 @@ class Ext2Reader
 		# block group descriptor (block #2)
 		#f.set_pos(1024 + block_size)
 		f.set_pos(max(block_size, 2048))
-		f.xread(&bg, sizeof(BlockGroupDescriptor))
+		xread(f, &bg, sizeof(BlockGroupDescriptor))
+		print(as_binary(&bg, 16).hex())
 		
 		if show_details
 			showMetaData()
@@ -153,31 +162,33 @@ class Ext2Reader
 	func block_to_offset(index: int) -> int
 		return block_size * (index)
 	
-	func read_block(index: int) -> string
+	func mut read_block(index: int) -> string
 		#print("R block={{index}}  pos=0x{{block_size*index|x}}")
 		f.set_pos(block_size * index) ## (index - 1) ????
 		return f.read(block_size)
 	
-	func read_inode(index: int, inode: Inode)
+	func mut read_inode(index: int, inode: Inode)
 		# index-1  ???
-		int group_no = (index-1) / sb.inodes_per_group # 0...
-		int offset = (index-1) % sb.inodes_per_group
+		#print("inode={{index}}")
+		let group_no = (index-1) / sb.inodes_per_group # 0...
+		let offset = ((index-1) % sb.inodes_per_group) * int(sb.inode_size)#sizeof(Inode)
 		# group_no!!!!!!!!!!!!!!
-		int pos = 0 #group_no * sb.blocks_per_group * block_size
+		var pos = 0 #group_no * sb.blocks_per_group * block_size
 		# get correct group...
 		pos += bg.inode_table * block_size
-		pos += offset * int(sb.inode_size)#sizeof(Inode)
+		pos += offset
+		#print(" pos={{pos}}")
 		
 		#print("0x{{block_to_offset(bg.inode_table) + (index - 1) * sizeof(Inode)|x}}")
 		
 		f.set_pos(pos)
-		f.xread(&inode, sizeof(Inode))
+		xread(f, &inode, sizeof(Inode))
 		#print("R inode={{index}}  pos=0x{{pos|x}}  ->  size={{inode.size}}")
 	
-	func read_inode_contents(inode: Inode) -> string
-		string r
-		int num_blocks = (inode.size-1) / block_size + 1
-		int num_direct = min(num_blocks, 12)
+	func mut read_inode_contents(inode: Inode) -> string
+		var r: string
+		let num_blocks = (inode.size-1) / block_size + 1
+		let num_direct = min(num_blocks, 12)
 		for i in 0:num_direct
 			r += read_block(inode.iblock[i])
 		# indirect...
@@ -185,11 +196,12 @@ class Ext2Reader
 		r.resize(inode.size)
 		return r
 	
-	func show_inode_recursive(index: int, level: int)
-		Inode inode
+	func mut show_inode_recursive(index: int, level: int)
+		var inode: Inode
 		read_inode(index, inode)
-		string indent = "  ".repeat(level*2+1)
-		string info = "s={{inode.size|-5}}"
+		#print(as_binary(&inode, 16).hex())
+		let indent = "  ".repeat(level*2+1)
+		var info = "s={{inode.size|-5}}"
 		#print inode.mtime
 		if inode.isDir()
 			info += "  dir"
@@ -203,17 +215,18 @@ class Ext2Reader
 		print(indent + info)
 		
 		if inode.isDir()
-			string cont = read_inode_contents(inode)
-			int p = 0
+			let cont = read_inode_contents(inode)
+			#print(cont[:24].hex())
+			var p = 0
 			while p < len(cont)
-				DirEntryHeader *d = &cont[p]
+				var d = &cont[p] as DirEntryHeader*
 				if int(d.rec_len) == 0
 					break
-				string name = cont[p + 8: p + 8 + int(d.name_len)]
+				let name = cont[p + 8: p + 8 + int(d.name_len)]
 				info = "  {{name|-12}}"
 				#print "--"+name
 				info += "  i={{d.inode|-4}}"
-				int ft = d.file_type
+				let ft = d.file_type
 				if ft == 2
 					info += "  dir"
 				else if ft == 1
@@ -253,8 +266,8 @@ class Ext2Reader
 		print("inode table: {{bg.inode_table}}")
 
 func main(arg: string[])
-	string filename
-	Ext2Reader r
+	var filename: string
+	var r: Ext2Reader
 	r.show_details = false
 	for i in 0:len(arg)
 		if arg[i] == "-v"

@@ -34,14 +34,14 @@ class Heap
 
 	func static malloc(_size: int) -> void*
 		var size = ceil_quot(_size, 8) << 3
-		#prints "<+"
-		#printi size
+		#prints("<+")
+		#printi(size)
 		
 		# account for the allocation header
 		size += sizeof(MallocHeader)
 		
 		# find a free block big enough
-		var cur: MallocHeader* = first_free
+		var cur = first_free as MallocHeader*
 		while cur.next
 			if size <= cur.size - sizeof(MallocHeader)
 			
@@ -49,16 +49,17 @@ class Heap
 				cur.size -= size
 				
 				# create allocated block at (former) end of free block
-				var hh: MallocHeader* = cur.after()
+				var hh = cur.after() as MallocHeader*
 				hh.size = size
 				hh.next = nil
 				hh.prev = nil
 				
 				allocated += size
-				#prints " "
-				#printi(_p2i(hh.payload()))
 				memcheck()
-				#prints ">"
+				#prints(" ")
+				#let xx = hh.payload()
+				#printh(&xx, 4)
+				#prints("> ")
 				return hh.payload()
 			cur = cur.next
 		panic("malloc: fail")
@@ -87,12 +88,12 @@ class Heap
 		#prints("<-")
 		#printi(ip)
 		
-		var hh: MallocHeader* = _i2p(ip - sizeof(MallocHeader))
+		var hh = _i2p(ip - sizeof(MallocHeader)) as MallocHeader*
 		#prints(" ")
 		#printi(hh.size)
 		
 		# find last free window before p
-		var cur: MallocHeader* = first_free
+		var cur = first_free as MallocHeader*
 		while cur.next
 			if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
 				prints("\n")
@@ -123,7 +124,7 @@ class Heap
 
 
 	func static memcheck()
-		var h: MallocHeader* = first_free
+		var h = first_free as MallocHeader*
 		while h.next
 			if _p2i(h.next) < _p2i(h) + h.size
 				panic("memcheck: h.next<h+size")
@@ -132,7 +133,7 @@ class Heap
 			h = h.next
 
 	func static realloc(po: void*, old_size: int, new_size: int) -> void*
-		var pn: void* = malloc(new_size)
+		var pn = malloc(new_size)
 		var n = old_size
 		if new_size < n
 			n = new_size
