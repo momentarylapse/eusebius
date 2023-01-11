@@ -417,7 +417,7 @@ class MountPointExt2 extends MountPoint
 	var buf: char[0]*
 
 	func override mount() -> int
-		prints("EXT2.mount\n")
+		#prints("EXT2.mount\n")
 		buf = Heap.malloc(4096)
 		
 		# super block (always at 1024)
@@ -449,7 +449,7 @@ class MountPointExt2 extends MountPoint
 		#showMetaData()
 		test_compatibility()
 		if readable
-			prints("READABLE\n")
+			#prints("READABLE\n")
 			read_inode_recursive(2, dest)
 		return 0
 	

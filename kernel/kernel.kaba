@@ -89,9 +89,11 @@ func main()
 	# assume a default disk layout...
 	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
 	var boot = FileSystem.get("/boot", FileSystem.root)
-	printh(&boot, 4)
-##	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
-##	
+	if !boot
+		panic("/boot not found")
+#	printh(&boot, 4)
+	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
+	
 ##	TaskManager.init()
 ##	
 ##	irq.init()
