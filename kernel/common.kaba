@@ -63,7 +63,7 @@ const KERNEL_NAME = "Eusebius"
 const KERNEL_VERSION = "0.2.99.0"
 const MACHINE_TYPE = "x64"
 
-class BiosMemoryMapEntry
+class BiosMemoryMapEntry as @noauto
 	var offset, offset_hi: int
 	var size, size_hi: int
 	var type, dummy: int # type < 0 -> end
@@ -161,7 +161,7 @@ func _p2i64(p: void*) -> int64
 	var i: int64* = &p
 	return *i
 
-class PointerWrapper
+class PointerWrapper as @noauto
 	var p: void*
 
 func _i2p(i: int) -> void*
@@ -174,7 +174,7 @@ func _i642p(i: int64) -> void*
 
 class Word
 	var c: char[2]
-	func _int() -> int
+	func __int__() -> int
 		let a: int = c[0]
 		let b: int = c[1]
 		return a + b * 256
@@ -182,7 +182,7 @@ class Word
 		c[0] = i
 		c[1] = i >> 8
 	func mut __iadd__(d: int)
-		set(_int() + d)
+		set(int(self) + d)
 		
 
 

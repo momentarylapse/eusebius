@@ -11,7 +11,7 @@ const MAX_OPEN_FILES = 128
 
 
 
-class OpenFileData
+class OpenFileData as @noauto
 	var used: bool
 	var reading: bool
 	var writing: bool
@@ -343,13 +343,11 @@ func kernel_rmdir(filename: cstring, cur_dir: FileEntry) -> int
 	return FileSystem.delete(e)
 
 
-class dirent_struct
+class dirent_struct as @noauto
 	var struct_size: int
 	var size: int
 	var type: FileType
 	var name: cstring
-	func __assign__(o: dirent_struct)
-		pass
 
 func InitFileAccessData()
 	for o in OpenFiles

@@ -5,7 +5,7 @@ use dev.block
 use io.text
 use kaba
 
-enum FileType
+enum FileType as @noauto
 	FILE = 0
 	DIR = 1
 	PIPE = 2
@@ -13,11 +13,11 @@ enum FileType
 	CHAR = 8
 	BLOCK = 16
 
-const MAX_MOUNT_POINTS = 32
+let MAX_MOUNT_POINTS = 32
 
 
 
-class FileOperations
+class FileOperations as @noauto
 	func virtual open(e: FileEntry) -> int
 		return 0
 	func virtual close(e: FileEntry) -> int
@@ -27,7 +27,7 @@ class FileOperations
 	func virtual write(e: FileEntry, page_dir: void*, addr: int, size: int) -> int
 		return 0
 
-class FileEntry
+class FileEntry as @noauto
 	var name: cstring
 	var type: FileType
 	var size: int
@@ -40,10 +40,6 @@ class FileEntry
 	var next: FileEntry*
 	var first_sub: FileEntry*
 	var op: FileOperations*
-	
-	func __assign__(o: FileEntry)
-		pass
-	
 	
 	func mut create_child(_name: cstring, _type: FileType, _mount: MountPoint*) -> FileEntry*
 		var e = create_file_entry(_name, _type, _mount)
@@ -112,7 +108,7 @@ func create_file_entry(name: cstring, type: FileType, mount: MountPoint*) -> Fil
 	return e
 
 
-class Ext2Inode
+class Ext2Inode as @noauto
 	var rights: Word
 	var user: Word
 	var size: int
@@ -128,12 +124,12 @@ class Ext2Inode
 	var size_high: int
 	var dummy: int
 	var xx_high: int[3]
-	func const isDir() -> bool
-		return (rights._int() & 0xf000) == 0x4000
-	func const isFile() -> bool
-		return (rights._int() & 0xf000) == 0x8000
+	func is_dir() -> bool
+		return (int(rights) & 0xf000) == 0x4000
+	func is_file() -> bool
+		return (int(rights) & 0xf000) == 0x8000
 
-class Ext2SuperBlock
+class Ext2SuperBlock as @noauto
 	var inodes_count: int
 	var blocks_count: int
 	var reserved_blocks_count: int
@@ -164,7 +160,7 @@ class Ext2SuperBlock
 	var last_mounted: char[64]
 	var _filler_: char[1024-200]
 
-class Ext2BlockGroupDescriptor
+class Ext2BlockGroupDescriptor as @noauto
 	var block_bitmap: int
 	var inode_bitmap: int
 	var inode_table: int
@@ -176,14 +172,14 @@ class Ext2BlockGroupDescriptor
 	var itable_unused: Word
 	var checksum: Word
 
-class Ext2DirEntryHeader
+class Ext2DirEntryHeader as @noauto
 	var inode: int
 	var rec_len: Word
 	var name_len: char
 	var file_type: char
 
 
-class MountPoint
+class MountPoint as @noauto
 	var type: cstring
 	var dev: BlockDevice*
 	var dest: FileEntry*
@@ -206,9 +202,7 @@ class MountPoint
 	
 	func __init__()
 		pass
-	func __assign__(o: MountPoint)
-		pass
-		
+
 	func virtual mut mount() -> int
 		return -1
 	
@@ -259,7 +253,7 @@ class MountPoint
 
 
 
-class FileSystem
+class FileSystem as @noauto
 	var static mounts: MountPoint[MAX_MOUNT_POINTS]
 	var static root: FileEntry*
 	
@@ -425,7 +419,7 @@ class MountPointExt2 extends MountPoint
 		read_block(1, buf)
 		memcpy(&sb, buf, sizeof(Ext2SuperBlock))
 		
-		inode_size = sb.inode_size._int()
+		inode_size = int(sb.inode_size)
 		block_size = 1 << (sb.log_block_size + 10)
 		inodes_per_block = block_size / inode_size
 		block_offset = 0
@@ -520,7 +514,7 @@ class MountPointExt2 extends MountPoint
 		#raise(new Exception("x"))
 		
 		e.type = FileType.FILE
-		if inode.isDir()
+		if inode.is_dir()
 			e.type = FileType.DIR
 		
 		e.size = inode.size
@@ -559,19 +553,19 @@ class MountPointExt2 extends MountPoint
 	func mut read_inode_recursive(index: int, out dir: FileEntry)
 		var inode: Ext2Inode
 		read_inode(index, inode, dir)
-		if !inode.isDir()
+		if !inode.is_dir()
 			return
 		var cont = read_inode_contents(dir) as cstring*
 		var p = 0
 		while p < dir.size
 			var d = &cont[p] as Ext2DirEntryHeader*
-			if d.rec_len._int() == 0
+			if int(d.rec_len) == 0
 				break
 			var name: cstring
 			let _len = int(d.name_len)
 			memcpy(&name, &cont[p + 8], _len)
 			name[_len] = 0
-			p += d.rec_len._int()
+			p += int(d.rec_len)
 			if d.name_len == 0 or d.inode == 0
 				continue
 				

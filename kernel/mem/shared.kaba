@@ -8,7 +8,7 @@ const MAX_SHARED_MEMORY_BLOCKS = 256
 
 class SharedMemory
 
-	class Block
+	class Block as @noauto
 		var id: int
 		var key: int
 		var pid: int

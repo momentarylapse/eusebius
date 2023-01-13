@@ -4,7 +4,7 @@ use io
 const SCREEN_WIDTH = 80
 const SCREEN_HEIGHT = 25
 
-class TextMode
+class TextMode as @noauto
 
 	var static video_memory: void*
 	var static text_color, text_color2: char

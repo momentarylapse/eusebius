@@ -39,7 +39,7 @@ const INITIAL_TASK_MEM = 0x00800000 # 8m
 
 const TASK_MAX_MESSAGES = 16
 
-enum TaskStatus
+enum TaskStatus as @noauto
 	UNUSED
 	SLEEPING
 	RUNNING
@@ -48,7 +48,7 @@ enum TaskStatus
 	INTERRUPT
 	#DEAD
 
-class TaskStateSegment
+class TaskStateSegment as @noauto
 	var prev: int
 	var esp0: void*
 	var ss0: int
@@ -102,7 +102,7 @@ class TaskStateSegment
 
 var TaskCallData: int[2]
 
-enum WaitingMode
+enum WaitingMode as @noauto
 	TASK_EXIT
 	FILE_READ
 	FILE_WRITE
@@ -111,13 +111,13 @@ enum WaitingMode
 	SOCKET_ACCEPT
 	SOCKET_CONNECT
 
-class TaskSharedMemoryRef
+class TaskSharedMemoryRef as @noauto
 	var s: SharedMemory.Block*
 	var dest: int
 
 
 
-class Task
+class Task as @noauto
 	var tss: TaskStateSegment
 	var stack: int[0]*
 	var stack_size: int
@@ -183,9 +183,6 @@ class Task
 		time_all.clear()
 		cpu_load = 0
 		time_temp.clear()
-	
-	func __assign__(o: Task)
-		pass
 	
 	func mut activate()
 		if sleep_and_wait
@@ -764,7 +761,7 @@ class GlobalDescriptorData
 var kernel_task: Task*
 
 
-class TaskManager
+class TaskManager as @noauto
 	func static get_task(pid: int) -> Task*
 		if pid < 0 or pid >= MAX_TASKS
 			return nil

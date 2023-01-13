@@ -91,7 +91,7 @@ func main()
 	var boot = FileSystem.get("/boot", FileSystem.root)
 	if !boot
 		panic("/boot not found")
-#	printh(&boot, 4)
+	#printh(&boot, 4)
 	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 ##	TaskManager.init()

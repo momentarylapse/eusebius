@@ -12,19 +12,18 @@ const ATA_MASK_BUSY = 0x80
 const ATA_MASK_READY = 0x40
 const ATA_MASK_DATA = 0x08
 
-class AtaDiskInfo
+class AtaDiskInfo as @noauto
 	var isAvailable: bool
 	var isAtapi: bool
 	var size: int
 	var name: cstring
-	func __assign__(i: AtaDiskInfo)
 
 
 # FIXME: some compiler bug.... &global does not work....
 func __fff(b: char[512]) -> int*
 	return &b[0] as int*
 
-class AtaController
+class AtaController as @noauto
 
 	var static nAta: int
 	var static Status: int

@@ -9,7 +9,7 @@ const HARDWARE_IRQ_SHIFT = 32
 const MAX_HW_IRQS = 16
 
 
-class InterruptDescriptor
+class InterruptDescriptor as @noauto
 	var a, b: int
 	
 	func clear()
@@ -32,14 +32,14 @@ class InterruptDescriptor
 		a = 0x00080000*t.desc # desc,0[15..0]
 		b = 0x00008500 # 0[31..16],typ
 
-class InterruptToSignalMap
+class InterruptToSignalMap as @noauto
 #	int irq # hardware IRQ  (!= shifted version...)
 	var pid, puid: int
 	var signal: int
 	var ktask: Task*
 	var utask: Task*
 
-class irq
+class irq as @noauto
 	var static idt: InterruptDescriptor[256]
 	var static task_maps: InterruptToSignalMap[MAX_HW_IRQS]
 	var static inside_hw_irq: int

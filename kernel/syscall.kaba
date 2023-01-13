@@ -14,7 +14,7 @@ use irq.irq
 
 const SYSCALL_STACK_SIZE = 65536
 
-class SysInfo
+class SysInfo as @noauto
 	var uptime: int
 	var loads: int[3]
 	var totalram, freeram, sharedram, bufferram: int
@@ -47,15 +47,13 @@ class SysInfo
 
 var _sys_info: SysInfo
 
-class UTSName
+class UTSName as @noauto
 	var sysname: cstring
 	var nodename: cstring
 	var release: cstring
 	var version: cstring
 	var machine: cstring
 	var domainname: cstring
-	func __assign__(o: UTSName)
-		pass
 	func get()
 		strcpy(sysname, KERNEL_NAME)
 		strcpy(nodename, "???")
@@ -66,14 +64,12 @@ class UTSName
 
 var _uts_name: UTSName
 
-class TaskInfo
+class TaskInfo as @noauto
 	var name: cstring
 	var pid, ppid, mode, status: int
 	var mem: int
 	var cpu: int
 	var life: TimeValue
-	func __assign__(o: TaskInfo)
-		pass
 	func get(_pid: int) -> int
 		var t = TaskManager.get_task(_pid)
 		if !t
@@ -94,11 +90,9 @@ class TaskInfo
 
 var _task_info: TaskInfo
 
-class MountInfo
+class MountInfo as @noauto
 	var major, minor: int
 	var dir: cstring
-	func __assign__(o: MountInfo)
-		pass
 	func get(_index: int) -> int
 		var m = &FileSystem.mounts[_index]
 		if !m.dev
@@ -111,15 +105,13 @@ class MountInfo
 var _mount_info: MountInfo
 
 
-class StatData
+class StatData as @noauto
 	var name: cstring
 	var type: int
 	var size: int
 	var inode: int
 	var mp_inode: int
 	var time: int
-	func __assign__(o: StatData)
-		pass
 	func get(filename: cstring, cur_dir: FileEntry) -> int
 		var e = FileSystem.get(filename, cur_dir)
 		if !e

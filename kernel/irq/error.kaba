@@ -8,7 +8,7 @@ use kaba
 const ERROR_STACK_SIZE = 4096
 
 
-class Error
+class Error as @noauto
 
 	func static handle_task_error(out t: Task, out e: Task, i: int)
 		int pid = t.pid

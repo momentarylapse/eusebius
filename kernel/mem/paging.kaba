@@ -18,7 +18,7 @@ const MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 
 # PageRoot(L4) -> PageDirectoryPointerTable -> PageDirectoryTable -> PageTable -> Page
 
-class Page
+class Page as @noauto
 	var e: int64[PAGE_TABLE_ENTRIES]
 	
 	func mut clear()
@@ -281,7 +281,7 @@ class PageRootTable extends PageTable
 #			printh(pt, 64)
 #			prints("...\n")
 
-class Paging
+class Paging as @noauto
 	var static mask: int[MAX_PAGE_MASKS]
 	var static num_masks: int
 	var static pages_allocated: int

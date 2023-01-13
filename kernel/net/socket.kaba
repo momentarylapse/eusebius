@@ -10,7 +10,7 @@ const MAX_SOCKETS = 64
 const SOCKET_BUFFER_SIZE = 1024
 
 
-enum SocketState
+enum SocketState as @noauto
 	NONE
 	LISTENING
 	CONNECTING
@@ -18,7 +18,7 @@ enum SocketState
 	RECV
 
 
-class KSocket
+class KSocket as @noauto
 	var _index: int
 	var used: bool
 	var e: FileEntry*
@@ -140,7 +140,7 @@ class KSocket
 		used = false
 
 
-class SocketManager
+class SocketManager as @noauto
 	var static sockets: KSocket[MAX_SOCKETS]
 
 

@@ -3,7 +3,7 @@ use io.text
 use ata
 
 
-class BlockDevice
+class BlockDevice as @noauto
 	var major, minor: int
 	var disk_no: int
 	var offset, size: int
@@ -13,14 +13,12 @@ class BlockDevice
 	var name: cstring
 	var p_read_block: void*
 	
-	func __assign__(o: BlockDevice)
-	
 #	int read_block(int index, void *buf)
 #		if !p_read_block
 #			return -1
 #		return call_ppii(p_read_block, &self, buf, minor, index)
 
-class BlockDevManager	
+class BlockDevManager as @noauto
 
 	var static devs: BlockDevice[8]
 	var static num_devs: int

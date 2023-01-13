@@ -8,19 +8,19 @@ use io.text
 const MEM_HEAP_OFFSET = 0x00280000
 const MEM_HEAP_SIZE   = 0x00580000 # 5.5mb
 
-class Heap
+class Heap as @noauto
 
 	var static allocated: int # includes overhead of all headers
 
 
-	class MallocHeader
+	class MallocHeader as @noauto
 		var size: int
 		var next: MallocHeader*
 		var prev: MallocHeader*
-		func const after() -> void*
+		func after() -> void*
 			var pp: char[0]* = &self
 			return &pp[size]
-		func const payload() -> void*
+		func payload() -> void*
 			var pp: char[0]* = &self
 			return &pp[sizeof(MallocHeader)]
 	var static first_free: MallocHeader*
