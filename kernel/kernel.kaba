@@ -14,7 +14,7 @@ use mem.shared
 use net.socket
 ##use task.task
 ##use task.scheduler
-##use irq.irq
+use irq.irq
 ##use irq.error
 ##use syscall
 
@@ -67,7 +67,7 @@ func main()
 #	printh(&__temp_i2__, 4)
 #	printh(&__temp_i3__, 4)
 #	prints("\n")
-
+	
 	Heap.init()
 	Paging.init()
 
@@ -96,7 +96,7 @@ func main()
 	
 ##	TaskManager.init()
 ##	
-##	irq.init()
+	irq.init()
 ##	Error.init()
 ##	InitSysCall()
 ##	
@@ -112,6 +112,13 @@ func main()
 ##	
 ##	Scheduler.start()
 ##	panic("test")
+
+	#for i in 0:300000000
+	#	pass
+	
+	#var p:int* = _i2p(0xf0000000)
+	#*p = 3
+
 	prints("  \\(^_^)/")
 	while true
 		pass

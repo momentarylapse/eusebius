@@ -1,118 +1,163 @@
 use common
 use io.text
 use io.io
-use task.task
+#use task.task
 use kaba
 
 
-const HARDWARE_IRQ_SHIFT = 32
-const MAX_HW_IRQS = 16
+let HARDWARE_IRQ_SHIFT = 32
+let MAX_HW_IRQS = 16
+
+let PIC1_COMMAND = 0x20
+let PIC1_DATA = 0x21
+let PIC2_COMMAND = 0xa0
+let PIC2_DATA = 0xa1
 
 
 class InterruptDescriptor as @noauto
-	var a, b: int
+	var a, b, c, d: int
 	
-	func clear()
+	func mut clear()
 		a = 0
 		b = 0
+		c = 0
 
-	func set(F: Function)
-		int addr = _p2i(&F)
+	# function pointer
+	func mut set(F: void*)
+		let addr = _p2i(F)
 		# Interrupt Gate
-		a = 0x00080000 + (addr & 0xffff) # desc[1],addr[15..0]
-		b = (addr & 0xffff0000) + 0x00008e00 # addr[31..16],typ
+		a = 0x00080000 + (addr & 0xffff)
+		# [31..16] = descriptor[1]
+		# [15..0] = addr[15..0]
+		
+		b = (addr & 0xffff0000) + 0x00008e00
+		# [31..16] = addr[31..16]
+		# [15] = Present
+		# [14..13] = DPL
+		# [12] = 0
+		# [11..8] = typ 0xe
+		# [7..3] = reserved
+		# [2..0] = IST stack
+		
+		c = 0 # addr[63..32]
+		#printh(&self, sizeof(self))
+		#prints("\n")
 
 
 	# interrupt tasks don't need the cli/sti... we use the IF bit
-	func set_task(out t: Task)
-		t.tss.eflags = 0x000 # Iterrupt Flag = 0
-		t.status = TASK_STATUS_INTERRUPT
-		
-		# Interrupt Task Gate
-		a = 0x00080000*t.desc # desc,0[15..0]
-		b = 0x00008500 # 0[31..16],typ
+#	func set_task(out t: Task)
+#		t.tss.eflags = 0x000 # Iterrupt Flag = 0
+#		t.status = TASK_STATUS_INTERRUPT
+#		
+#		# Interrupt Task Gate
+#		a = 0x00080000*t.desc # desc,0[15..0]
+#		b = 0x00008500 # 0[31..16],typ
+#
+#class InterruptToSignalMap as @noauto
+##	int irq # hardware IRQ  (!= shifted version...)
+#	var pid, puid: int
+#	var signal: int
+#	#var ktask: Task*
+#	#var utask: Task*
+#
 
-class InterruptToSignalMap as @noauto
-#	int irq # hardware IRQ  (!= shifted version...)
-	var pid, puid: int
-	var signal: int
-	var ktask: Task*
-	var utask: Task*
+func __ref_idt(idt: InterruptDescriptor[256]) -> void*
+	return &idt
 
 class irq as @noauto
+	var static _dummy: int64
 	var static idt: InterruptDescriptor[256]
-	var static task_maps: InterruptToSignalMap[MAX_HW_IRQS]
+#	var static task_maps: InterruptToSignalMap[MAX_HW_IRQS]
 	var static inside_hw_irq: int
-	
-	func static deny_user_map(hw_irq: int)
-		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
-			return
-		#prints(" DENY ")
-		#printi(hw_irq)
-		task_maps[hw_irq].pid = 0x66666666
-		
-	
-	func static set_func(soft_irq: int, F: Function)
+#	
+#	func static deny_user_map(hw_irq: int)
+#		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
+#			return
+#		#prints(" DENY ")
+#		#printi(hw_irq)
+#		task_maps[hw_irq].pid = 0x66666666
+#		
+#	
+	func static set_func(soft_irq: int, F: void*)#Function)
 		idt[soft_irq].set(F)
-		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
-	
-	func static set_task(soft_irq: int, out t: Task)
-		idt[soft_irq].set_task(t)
-		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
-	
+#		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
+#	
+##	func static set_task(soft_irq: int, out t: Task)
+##		idt[soft_irq].set_task(t)
+##		deny_user_map(soft_irq - HARDWARE_IRQ_SHIFT)
+#	
 	func static hw2soft(hw_irq: int) -> int
 		return hw_irq + HARDWARE_IRQ_SHIFT
 
 	func static init()
 		prints("loading interrupt table...")
-
+		
+		
 		for i in idt
 			i.clear()
-		for m in task_maps
-			m.pid = -1
-			m.ktask = nil
-			m.utask = nil
+			#i.set(raw_function_pointer(int_ignore))
+		idt[33].set(raw_function_pointer(int_ignore))
+#		for m in task_maps
+#			m.pid = -1
+##			m.ktask = nil
+##			m.utask = nil
 		inside_hw_irq = -1
-		
-	
-		# ignore the timer for now
-		ignore_task = TaskManager.add_task_kernel("irq-ignore", int_ignore, 128, kernel_task)
-		set_task(hw2soft(0), ignore_task) # IRQ 0
+#		
+#	
+#		# ignore the timer for now
+##		ignore_task = TaskManager.add_task_kernel("irq-ignore", int_ignore, 128, kernel_task)
+##		set_task(hw2soft(0), ignore_task) # IRQ 0
 
-		# move IRQs to higher interrupts
-		outportb(0x20, 0x11) # init
-		outportb(0xa0, 0x11)
-		outportb(0x21, HARDWARE_IRQ_SHIFT) # offset
-		outportb(0xa1, 0x28)
-		outportb(0x21, 0x04) # master/slave identity stuff?
-		outportb(0xa1, 0x02)
-		outportb(0x21, 0x01) # 8086
-		outportb(0xa1, 0x01)
-		outportb(0x21, 0x00) # masks
-		outportb(0xa1, 0x00)
 		disable()
-		
+
 		load_idt()
+		init_pic()
+
 		enable()
 		prints("   ok\n")
 	
+	func static init_pic()
+		# move IRQs to higher interrupts
+		
+		# init
+		outportb(PIC1_COMMAND, 0x11)
+		outportb(PIC2_COMMAND, 0x11)
+		# offset
+		outportb(PIC1_DATA, HARDWARE_IRQ_SHIFT)
+		outportb(PIC2_DATA, HARDWARE_IRQ_SHIFT + 8)
+		# master/slave identity stuff?
+		outportb(PIC1_DATA, 0x04)
+		outportb(PIC2_DATA, 0x02)
+		outportb(PIC1_DATA, 0x01) # 8086
+		outportb(PIC2_DATA, 0x01)
+		# masks -> enable all
+		#outportb(PIC1_DATA, 0x00)
+		#outportb(PIC2_DATA, 0x00)
+		# masks -> disable all except keyboard
+		outportb(PIC1_DATA, 0xfd)
+		outportb(PIC2_DATA, 0xff)
+
+	
 	func static load_idt()
-		__temp_p__ = &idt
+		__temp_p__ = __ref_idt(idt)
+		printh(&__temp_p__, 8)
+		prints("\n")
 
 		asm {
 			jmp _after_idt_data
 		_idtr:
-			dw 0x07ff
+			dw 0x0fff
 		_idtr_base:
 			dd 0x00000000
+			dd 0x00000000
 		_after_idt_data:
-			mov eax, __temp_p__
-			mov [_idtr_base], eax
+			mov rax, __temp_p__
+			mov [_idtr_base], rax
 			#cli
 			lidt [_idtr]
 			#sti
 		}
-	
+
 	func static enable()
 		asm {
 			sti
@@ -121,74 +166,78 @@ class irq as @noauto
 		asm {
 			cli
 		}
-	func static end_of_interrupt(hw_irq: int)
-		#if hw_irq > 0
-		#	prints(" END")
-		#	printi(hw_irq)
-		if hw_irq >= 8
-			outportb(0xa0, 0x20)
-		outportb(0x20, 0x20)
-	
-	func static sys_map_irq(hw_irq: int, t: Task, signal: int) -> int
-		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
-			return -EINVAL
-		if signal < 0 or signal >= MAX_SIGNALS
-			return -EINVAL
-
-		var m = &task_maps[hw_irq]
-		if m.pid >= 0
-			if TaskManager.tasks[m.pid].status != TASK_STATUS_UNUSED
-				return -EEXIST
-			else
-				prints("  REUSE  ")
-		if !m.ktask
-			m.ktask = TaskManager.add_task_kernel("irq-task", int_task_irq, 4096, kernel_task)
-			set_task(hw2soft(hw_irq), m.ktask)
-			
-			# task function will see this as a parameter
-			m.ktask.tss.esi = hw_irq
-		m.pid = t.pid
-		m.puid = t.puid
-		m.signal = signal
-		m.utask = &t
-		#load_idt()
-		return 0
-
-
-	func static int_task_irq()
-		asm {
-			mov __temp_i__, esi
-		}
-		int hw_irq = __temp_i__
-		var m = &irq.task_maps[hw_irq]
-		while true
-			inside_hw_irq= hw_irq
-			#prints("<IRQ ")
-			#printi(hw_irq)
-			#prints(">")
-			var t = m.utask
-			#printi(t.status)
-			#if t.status == TASK_STATUS_UNUSED
-		
-			if t.puid == m.puid
-				# link the task return into the handler...
-				t.in_hw_irq = hw_irq
-				if t.handle_signal_link_iret(m.signal) != 0
-					prints("err")
-			else
-				# task dead?
-				#prints(" no handler ")
-				end_of_interrupt(hw_irq)
-			#prints(" <IRET> ")
-			asm {
-				iret
-			}
-
+#	func static end_of_interrupt(hw_irq: int)
+#		#if hw_irq > 0
+#		#	prints(" END")
+#		#	printi(hw_irq)
+#		if hw_irq >= 8
+#			outportb(0xa0, 0x20)
+#		outportb(0x20, 0x20)
+#	
+##	func static sys_map_irq(hw_irq: int, t: Task, signal: int) -> int
+##		if hw_irq < 0 or hw_irq >= MAX_HW_IRQS
+##			return -EINVAL
+##		if signal < 0 or signal >= MAX_SIGNALS
+##			return -EINVAL
+##
+##		var m = &task_maps[hw_irq]
+##		if m.pid >= 0
+##			if TaskManager.tasks[m.pid].status != TASK_STATUS_UNUSED
+##				return -EEXIST
+##			else
+##				prints("  REUSE  ")
+##		if !m.ktask
+##			m.ktask = TaskManager.add_task_kernel("irq-task", int_task_irq, 4096, kernel_task)
+##			set_task(hw2soft(hw_irq), m.ktask)
+##			
+##			# task function will see this as a parameter
+##			m.ktask.tss.esi = hw_irq
+##		m.pid = t.pid
+##		m.puid = t.puid
+##		m.signal = signal
+##		m.utask = &t
+##		#load_idt()
+##		return 0
+##
+#
+##	func static int_task_irq()
+##		asm {
+##			mov __temp_i__, esi
+##		}
+##		var hw_irq = __temp_i__
+##		var m = &irq.task_maps[hw_irq]
+##		while true
+##			inside_hw_irq= hw_irq
+##			#prints("<IRQ ")
+##			#printi(hw_irq)
+##			#prints(">")
+##			var t = m.utask
+##			#printi(t.status)
+##			#if t.status == TASK_STATUS_UNUSED
+##		
+##			if t.puid == m.puid
+##				# link the task return into the handler...
+##				t.in_hw_irq = hw_irq
+##				if t.handle_signal_link_iret(m.signal) != 0
+##					prints("err")
+##			else
+##				# task dead?
+##				#prints(" no handler ")
+##				end_of_interrupt(hw_irq)
+##			#prints(" <IRET> ")
+##			asm {
+##				iret
+##			}
+##
 	func static int_ignore()
 		while true
-			#prints("[ignore irq]")
+			prints("[ignore irq]")
+			while true
+				pass
 			asm {
 				iret
 			}
-	var static ignore_task: Task*
 
+#	#var static ignore_task: Task*
+#
+#
