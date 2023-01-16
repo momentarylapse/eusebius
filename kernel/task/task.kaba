@@ -755,6 +755,8 @@ class GlobalDescriptorTable as @noauto
 		let addr = _p2i(&tss)
 		x[6] = (addr << 16) + 0x67
 		x[7] = (addr & 0xff000000) | ((addr >> 16) & 0xff) | 0x00008900
+		x[8] = 0
+		x[9] = 0
 	
 	func load()
 		# load GDT
@@ -815,6 +817,8 @@ func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
 class TaskManager as @noauto
 	var static gdt: GlobalDescriptorTable
 	var static tss: TaskStateSegment
+	var static ist1: void*
+	
 #	func static get_task(pid: int) -> Task*
 #		if pid < 0 or pid >= MAX_TASKS
 #			return nil
@@ -931,6 +935,8 @@ class TaskManager as @noauto
 		}
 		# not sure if this is neccessary
 		tss.rsp0 = __temp_p__
+		ist1 = Heap.malloc(1024)
+		tss.ist1 = _i2p(_p2i(ist1) + 1000)
 		prints("ltr...")
 		asm{
 			mov ax, 0x0018
