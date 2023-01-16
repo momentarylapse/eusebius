@@ -78,6 +78,14 @@ func main()
 
 	SharedMemory.init()
 
+
+	TaskManager.init()
+	
+	irq.init()
+##	Error.init()
+
+
+
 	BlockDevManager.init()
 
 	InitFileAccessData()
@@ -94,10 +102,6 @@ func main()
 	#printh(&boot, 4)
 	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
-	TaskManager.init()
-	
-	irq.init()
-##	Error.init()
 ##	InitSysCall()
 ##	
 ##	StdCharDevs.init()

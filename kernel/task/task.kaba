@@ -49,57 +49,21 @@ enum TaskStatus as @noauto
 	#DEAD
 
 class TaskStateSegment as @noauto
-	var prev: int
-	var esp0: void*
-	var ss0: int
-	var esp1: void*
-	var ss1: int
-	var esp2: void*
-	var ss2: int
-	var cr3: PageRootTable*
-	var eip: void*
-	var eflags: int
-	var eax: int
-	var ecx: int
-	var edx: int
-	var ebx: int
-	var esp: void*
-	var ebp: void*
-	var esi: int
-	var edi: int
-	var es, cs, ss, ds, fs, gs: int
-	var x, y: int
-	
-	
-#	func mut set(stack_pointer: void*, _cs: int, _ds: int, pvl: int, page_dir: PageRootTable*, task: void*)
-#		var _ss = _ds
-#		prev = 0 # previous TSS (dynamisch)
-#		esp0 = stack_pointer
-#		ss0 = _ss * 8
-#		esp1 = stack_pointer
-#		ss1 = _ss * 8
-#		esp2 = stack_pointer
-#		ss2 = _ss * 8
-#		cr3 = &page_dir
-#		eip = task
-#		eflags = 0x200 + pvl * 0x1000 # IterruptFlag + PVL
-#		eax = 0
-#		ecx = 0
-#		edx = 0
-#		ebx = 0
-#		esp = stack_pointer
-#		ebp = stack_pointer
-#		esi = 0
-#		edi = 0
-#		es = _ds * 8
-#		cs = _cs * 8
-#		ss = _ss * 8
-#		ds = _ds * 8
-#		fs = _ds * 8
-#		gs = _ds * 8
-#		x = 0
-#		y = 0
-#
+	var _prev: int
+	var rsp0: void*
+	var rsp1: void*
+	var rsp2: void*
+	var _a, _b: int
+	var ist1: void*
+	var ist2: void*
+	var ist3: void*
+	var ist4: void*
+	var ist5: void*
+	var ist6: void*
+	var ist7: void*
+	var _c, _d: int
+	var iomap: int
+
 var TaskCallData: int[2]
 
 enum WaitingMode as @noauto
@@ -755,7 +719,7 @@ class GlobalDescriptorTable as @noauto
 	
 	#var descriptors: Descriptor[NUM_PRE_GDT_ENTRIES + 1]
 	
-	var x: int[6]
+	var x: int[10]
 	
 	func mut init()
 		#for d in descriptors
@@ -781,10 +745,20 @@ class GlobalDescriptorTable as @noauto
 		# data
 		x[4] = 0
 		x[5] = 0x00009200
+		# tss
+		#x[6] = 0x00000067 # size
+		#x[7] = 0x00008900
+		#x[8] = 0
+		#x[9] = 0
+	
+	func mut set_tss(tss: TaskStateSegment)
+		let addr = _p2i(&tss)
+		x[6] = (addr << 16) + 0x67
+		x[7] = (addr & 0xff000000) | ((addr >> 16) & 0xff) | 0x00008900
 	
 	func load()
 		# load GDT
-		__temp_i__ = 0x17 #sizeof(self) - 1
+		__temp_i__ = sizeof(self) - 1
 		__temp_p__ = &self # __ref_gdt(gdt)#&gdt
 		asm{
 			jmp _after_gdt_data
@@ -803,6 +777,8 @@ class GlobalDescriptorTable as @noauto
 			mov eax, 0x00000010
 			mov ds, ax
 			mov ss, ax
+			
+			# cs might require ret_far trick
 		}
 		prints("lgdt...")
 		
@@ -838,6 +814,7 @@ func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
 
 class TaskManager as @noauto
 	var static gdt: GlobalDescriptorTable
+	var static tss: TaskStateSegment
 #	func static get_task(pid: int) -> Task*
 #		if pid < 0 or pid >= MAX_TASKS
 #			return nil
@@ -946,10 +923,35 @@ class TaskManager as @noauto
 #		}
 #		while true
 #			nil
-#
+
+	func static setup_hardware_task()
+		asm{
+			mov rax, _start_as_task
+			mov __temp_p__, rax
+		}
+		# not sure if this is neccessary
+		tss.rsp0 = __temp_p__
+		prints("ltr...")
+		asm{
+			mov ax, 0x0018
+			ltr ax
+			_start_as_task:
+			
+			
+			mov eax, 0x00000008
+			push rax
+			mov eax, _start_as_task2
+			push rax
+			db 0x48
+			ret_far
+			_start_as_task2:
+		}
+		# markiert das aktuelle TSS als "busy"!
+
 	func static init()
 		prints("init tasks...")
 		gdt.init()
+		gdt.set_tss(tss)
 		
 		ack_hw_irq = -1
 	
@@ -981,16 +983,7 @@ class TaskManager as @noauto
 #		idle_task = add_task_kernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
 	
 		gdt.load()
-		prints("no\n")
-		return
-
-		#prints("\n  setze Kernel-Task-Register")
-#		__temp_i__ = kernel_task.desc * 8
-		asm{
-			mov eax, __temp_i__ # Descriptor[n]
-			ltr ax
-		}
-		# markiert das aktuelle TSS als "busy"!
+		setup_hardware_task()
 	
 		# enable sse
 		asm{
