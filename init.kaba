@@ -399,6 +399,9 @@ func main()
 	_64bit_mode:
 		bits_64
 		
+		mov ax, 0x0010
+		mov ds, ax
+		mov ss, ax
 		
 		mov ecx, 0x20412042
 		db 0x48
@@ -447,24 +450,24 @@ func main()
 		
 	_GDT64:
 		# null descriptor
-		dw 0xffff
+		dw 0x0000
 		dw 0x0000
 		db 0x00
 		db 0x00
-		db 0x01
+		db 0x00
 		db 0x00
 		# code
 		dw 0x0000
 		dw 0x0000
 		db 0x00
-		db 0x9a # exec+read
-		db 0xaf # 64 bit, limit 19:16
+		db 0x98 #0x9a # present+exec
+		db 0x20 # 64 bit
 		db 0x00
 		# data
 		dw 0x0000
 		dw 0x0000
 		db 0x00
-		db 0x9a
+		db 0x92 #0x9a
 		db 0x00
 		db 0x00
 	_GDT64_POINTER:

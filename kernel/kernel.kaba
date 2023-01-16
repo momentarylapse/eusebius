@@ -12,7 +12,7 @@ use mem.heap
 use mem.paging
 use mem.shared
 use net.socket
-##use task.task
+use task.task
 ##use task.scheduler
 use irq.irq
 ##use irq.error
@@ -94,8 +94,8 @@ func main()
 	#printh(&boot, 4)
 	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
-##	TaskManager.init()
-##	
+	TaskManager.init()
+	
 	irq.init()
 ##	Error.init()
 ##	InitSysCall()
@@ -113,11 +113,10 @@ func main()
 ##	Scheduler.start()
 ##	panic("test")
 
-	#for i in 0:300000000
-	#	pass
-	
-	#var p:int* = _i2p(0xf0000000)
-	#*p = 3
+#	for i in 0:300000000
+#		pass
+#	var p:int* = _i2p(0xf0000000)
+#	*p = 3
 
 	prints("  \\(^_^)/")
 	while true

@@ -65,7 +65,7 @@ func __ref_idt(idt: InterruptDescriptor[256]) -> void*
 	return &idt
 
 class irq as @noauto
-	var static _dummy: int64
+	#var static _dummy: int64
 	var static idt: InterruptDescriptor[256]
 #	var static task_maps: InterruptToSignalMap[MAX_HW_IRQS]
 	var static inside_hw_irq: int
@@ -92,11 +92,19 @@ class irq as @noauto
 	func static init()
 		prints("loading interrupt table...")
 		
-		
+		asm{
+			mov rax, _int_keyboard
+			mov __temp_p__, rax
+		}
+		let ppp = __temp_p__
+
 		for i in idt
 			i.clear()
 			#i.set(raw_function_pointer(int_ignore))
-		idt[33].set(raw_function_pointer(int_ignore))
+		for i in 0:16
+			idt[i].set(raw_function_pointer(int_error))
+		#idt[33].set(raw_function_pointer(int_ignore))
+		idt[33].set(ppp)
 #		for m in task_maps
 #			m.pid = -1
 ##			m.ktask = nil
@@ -115,6 +123,24 @@ class irq as @noauto
 
 		enable()
 		prints("   ok\n")
+		return
+		
+		asm{
+		_int_keyboard:
+			cli
+		#	pusha
+	#		mov eax, 0x000b8000
+	#		mov [eax], 0x30
+	#		inc eax
+	#		mov [eax], 0x04
+	#		jmp $
+		#	popa
+			
+			mov al, 0x20 # data: PIC_EOI
+			mov edx, 0x00000020 # port: PIC1_COMMAND
+			out dx, al
+			iret
+		}
 	
 	func static init_pic()
 		# move IRQs to higher interrupts
@@ -232,11 +258,13 @@ class irq as @noauto
 	func static int_ignore()
 		while true
 			prints("[ignore irq]")
-			while true
-				pass
+			#while true
+			#	pass
 			asm {
 				iret
 			}
+	func static int_error()
+		panic("IRQ ERROR")
 
 #	#var static ignore_task: Task*
 #

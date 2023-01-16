@@ -71,35 +71,35 @@ class TaskStateSegment as @noauto
 	var x, y: int
 	
 	
-	func mut set(stack_pointer: void*, _cs: int, _ds: int, pvl: int, page_dir: PageRootTable*, task: void*)
-		var _ss = _ds
-		prev = 0 # previous TSS (dynamisch)
-		esp0 = stack_pointer
-		ss0 = _ss * 8
-		esp1 = stack_pointer
-		ss1 = _ss * 8
-		esp2 = stack_pointer
-		ss2 = _ss * 8
-		cr3 = &page_dir
-		eip = task
-		eflags = 0x200 + pvl * 0x1000 # IterruptFlag + PVL
-		eax = 0
-		ecx = 0
-		edx = 0
-		ebx = 0
-		esp = stack_pointer
-		ebp = stack_pointer
-		esi = 0
-		edi = 0
-		es = _ds * 8
-		cs = _cs * 8
-		ss = _ss * 8
-		ds = _ds * 8
-		fs = _ds * 8
-		gs = _ds * 8
-		x = 0
-		y = 0
-
+#	func mut set(stack_pointer: void*, _cs: int, _ds: int, pvl: int, page_dir: PageRootTable*, task: void*)
+#		var _ss = _ds
+#		prev = 0 # previous TSS (dynamisch)
+#		esp0 = stack_pointer
+#		ss0 = _ss * 8
+#		esp1 = stack_pointer
+#		ss1 = _ss * 8
+#		esp2 = stack_pointer
+#		ss2 = _ss * 8
+#		cr3 = &page_dir
+#		eip = task
+#		eflags = 0x200 + pvl * 0x1000 # IterruptFlag + PVL
+#		eax = 0
+#		ecx = 0
+#		edx = 0
+#		ebx = 0
+#		esp = stack_pointer
+#		ebp = stack_pointer
+#		esi = 0
+#		edi = 0
+#		es = _ds * 8
+#		cs = _cs * 8
+#		ss = _ss * 8
+#		ds = _ds * 8
+#		fs = _ds * 8
+#		gs = _ds * 8
+#		x = 0
+#		y = 0
+#
 var TaskCallData: int[2]
 
 enum WaitingMode as @noauto
@@ -117,661 +117,737 @@ class TaskSharedMemoryRef as @noauto
 
 
 
-class Task as @noauto
-	var tss: TaskStateSegment
-	var stack: int[0]*
-	var stack_size: int
-	var desc: int
-	var pid, puid: int
-	var status: TaskStatus
-	var return_status: int
-	var waiting_mode: WaitingMode
-	var waiting_param_i1, waiting_param_i2, waiting_param_i3: int
-	var sleep_and_wait: bool
-	var parent: Task*
-	var name: cstring
-	var arg: cstring
-	var cur_dir: FileEntry*
-	var page_dir: PageRootTable*
-	var mem_bottom, mem_size: int
-	
-	var time_all, time_temp: TimeValue
-	var cpu_load: int
-	
-	var kernel_mode: bool
-	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
-	var shmem: TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK]
-	
-	var signal_handlers: int[MAX_SIGNALS]
-	var signal_reg_buf: TaskStateSegment
-	var in_signal: bool
-	var in_hw_irq: int
-	
-	func mut init(_pid: int, _name: cstring, _parent: Task*)
-		for s in signal_handlers
-			s = 0
-		sleep_and_wait = false
-			
-		pid = _pid
-		puid = TaskManager.next_puid_to_assign
-		TaskManager.next_puid_to_assign ++
-
-		strcpy(name, _name)
-		desc = NUM_PRE_GDT_ENTRIES + pid
-		status = TaskStatus.SLEEPING
-		parent = _parent
-		if parent
-			cur_dir = parent.cur_dir
-		else
-			cur_dir = FileSystem.root
-		kernel_mode = false
-		
-		in_signal = false
-		in_hw_irq = -1
-	
-		#t.stack_size = TASK_STACK_SIZE
-#	t.stack = _i2p(TASK_STACK_POS)
-#	t.mem_bottom = KERNEL_MEM
-#	t.mem_size = INITIAL_TASK_MEM
-#	t.page_dir = paging.create_page_directory()
-#	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
-#	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-#		panic("incomplete page dir") # ...
-#	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
-#	GlobalDescriptorTable[t.desc].set_task(t)
-	
-		time_all.clear()
-		cpu_load = 0
-		time_temp.clear()
-	
-	func mut activate()
-		if sleep_and_wait
-			status = TaskStatus.SLEEPING
-			sleep_and_wait = false
-		else
-			status = TaskStatus.RUNNING
-	
-	# nur um einmalig den Scheduler zu starten
-	func mut run_forced()
-		#prints("springe in ")
-#		printi(t.pid)
-#		prints(t.name)
-		# "Task Gate Descriptor" ---- falsch, kein gate!
-		TaskCallData[0] = 0
-		TaskCallData[1] = 8 * desc
-		#printi(t.desc)
-		#prints(":\n")
-		__temp_p__ = &TaskCallData[0]
-
-		# in Task springen
-		#t.status = TASK_STATUS_RUNNING
-		asm{
-			mov eax, __temp_p__
-			#db 0xff
-			#db 0x28
-			#jmp_far [eax]
-			db 0xff
-			db 0x18
-			#call_far [eax]
-			#jmp_far 0x004000000000 #0x0040:0x00000000
-		}
-	func addr2kernel(addr: int) -> int
-		return page_dir.addr2kernel(addr)
-	
-	func mut set_cur_dir(dir: cstring) -> int
-		var e = get_file(dir)
-		if !e
-			return -1
-		if e.type != FileType.DIR
-			return -2
-		cur_dir = e
-		return 0
-		
-	func get_file(path: cstring) -> FileEntry*
-		return FileSystem.get(path, cur_dir)
-		
-	func mut add_handle(oh: OpenFileData) -> int
-		for i=>h in handles
-			if !h
-				h = &oh
-				oh.ref_count ++
-				return i
-		return -1
-
-	func mut clean_up_resources()
-		for h in handles
-			if h
-				h.unref()
-				h = nil
-		
-		for s in shmem
-			if s.s
-				page_dir.unmap(s.dest, s.s.size, false)
-				s.s.unref()
-				s.s = nil
-				
-		if !kernel_mode
-			if page_dir
-				page_dir.unmap(0, KERNEL_MEM, false)
-				page_dir.unmap(mem_bottom, mem_size, true)
-				Paging.free_page(_p2i(page_dir))
-				page_dir = nil
-
-	func mut clean_up_deep()
-		clean_up_resources()
-		status = TaskStatus.UNUSED
-		puid = -1
-		#if in_hw_irq >= 0
-		#	TaskManager.ack_hw_irq = in_hw_irq
-		
-	
-	func mut send_death_message()
-		for t in TaskManager.tasks
-			if t.status == TaskStatus.WAITING
-				if t.waiting_mode == WaitingMode.TASK_EXIT and t.waiting_param_i1 == pid
-					t.tss.eax = 0# # return waitpid()
-					t.page_dir.memcpy2task(t.waiting_param_i2, &return_status, 4)
-					clean_up_deep()
-					t.activate()
-		
-	func get_initial_stack_pos() -> void*
-		return _i2p(_p2i(stack) + stack_size)
-	
-	func mut set_wait(mode: WaitingMode, param_i1: int, param_i2: int, param_i3: int)
-		status = TaskStatus.WAITING
-		waiting_mode = mode
-		waiting_param_i1 = param_i1
-		waiting_param_i2 = param_i2
-		waiting_param_i3 = param_i3
-	
-	func pages_alloced() -> int
-		var n = mem_size / PAGE_SIZE
-		n += page_dir.count_entries() # all page tables
-		n ++ # page_dir itself
-		return n
-	
-	
-	func mut die(r: int)
-		return_status = r
-		clean_up_resources()
-		status = TaskStatus.ZOMBIE
-		send_death_message()
-		
-	func get_prev_pid() -> int
-		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-		
-	func mut handle_signal_link_iret(signal: int) -> int
-		if signal < 0 or signal >= MAX_SIGNALS
-			return -EINVAL
-		#prints(" handle/link:")
-		
-		#printi(signal)
-		#prints(" ")
-		#printi(signal_handlers[signal])
-		if in_signal
-			prints(" in sig...die")
-			if in_hw_irq >= 0
-				TaskManager.ack_hw_irq = in_hw_irq
-				in_hw_irq = -1
-			die(0) # we're very friendly :-P
-
-		else if signal_handlers[signal] != 0
-			#prints("...user > link iret ")
-			in_signal = true
-			# save registers
-			memcpy(&signal_reg_buf, &tss, sizeof(TaskStateSegment))
-			
-			tss.edx = signal_handlers[signal]
-			# allocate some extra space on the stack
-			tss.esp = _i2p(_p2i(tss.esp) - 2048)
-			tss.ebp = tss.esp
-			# run the handler "loader stage" (in kernel memory)
-			tss.eip = TaskManager.task_signal_handler
-		else
-			# default actions
-			if signal == SIGSTOP
-				if status == TaskStatus.RUNNING
-					status = TaskStatus.SLEEPING
-				else if status == TaskStatus.WAITING
-					sleep_and_wait = true
-			else if signal == SIGCONT
-				if status == TaskStatus.SLEEPING
-					status = TaskStatus.RUNNING
-				else if status == TaskStatus.WAITING
-					sleep_and_wait = false
-			else
-				die(0)
-		return 0
-
-#--------------------------------------------------------------
-# file access
-	
-	func get_handle(handle: int) -> OpenFileData*
-		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-			return nil
-		return handles[handle]
-
-	func mut open(filename: cstring, flags: int) -> int
-		var of = kernel_open(filename, flags, cur_dir)
-		if !of
-			return -ENOENT
-		let index = add_handle(of)
-		if index < 0
-			of.unref()
-		return index
-
-	func mut sys_open(faddr: int, flags: int) -> int
-		var filename: cstring
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
-		return open(filename, flags)
-
-
-	func mut sys_read(handle: int, addr: int, size: int) -> int
-		var of = get_handle(handle)
-		if !of
-			return -EBADF
-		let r = of.read(page_dir, addr, size)
-		if r == -EWOULDBLOCK and of.blocking
-			set_wait(WaitingMode.FILE_READ, handle, addr, size)
-		return r
-
-
-	func mut sys_write(handle: int, addr: int, size: int) -> int
-		var of = get_handle(handle)
-		if !of
-			return -EBADF
-		let r = of.write(page_dir, addr, size)
-		if r == -EWOULDBLOCK and of.blocking
-			set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
-		return r
-
-	func mut sys_getdents(handle: int, addr: int, num: int) -> int
-		var of = get_handle(handle)
-		if !of
-			return -EBADF
-		return of.getdents(page_dir, addr, num)
-
-
-	func mut sys_seek(handle: int, offset: int, mode: int) -> int
-		var of = get_handle(handle)
-		if !of
-			return -EBADF
-		return of.seek(offset, mode)
-
-	func mut sys_close(handle: int) -> int
-		var of = get_handle(handle)
-		if !of
-			return -EBADF
-		of.unref()
-		handles[handle] = nil
-		return 0
-	
-	func mut sys_dup(fd: int) -> int
-		var of = get_handle(fd)
-		if !of
-			return -EBADF
-		let index = add_handle(of)
-		return index
-	
-	func mut sys_pipe(addr: int) -> int
-		var e = create_file_entry(":pipe:", FileType.PIPE, nil)
-		if !e
-			return -ENFILE
-		if !PipeManager.create(e)
-			return -3
-		var of_in = kernel_open_entry(e, O_RDONLY)
-		var of_out = kernel_open_entry(e, O_WRONLY)
-		var fd: int[2]
-		fd[0] = add_handle(of_in)
-		fd[1] = add_handle(of_out)
-		if fd[0] < 0 or fd[1] < 0
-			return -2
-		if !page_dir.memcpy2task(addr, &fd, 8)
-			return -EFAULT
-		return 0
-	
-	func mut sys_set_cur_dir(faddr: int) -> int
-		var filename: cstring
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
-		return set_cur_dir(filename)
-		
-	func mut sys_mkdir(faddr: int) -> int
-		var filename: cstring
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
-		return kernel_mkdir(filename, cur_dir)
-
-	func mut sys_mknod(faddr: int, flags: int) -> int
-		var filename: cstring
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
-		return kernel_mknod(filename, flags, cur_dir)
-		
-	func mut sys_unlink(faddr: int) -> int
-		var filename: cstring
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
-		return kernel_unlink(filename, cur_dir)
-		
-	func mut sys_rmdir(faddr: int) -> int
-		var filename: cstring
-		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-			return -EFAULT
-		return kernel_rmdir(filename, cur_dir)
-	
-	func mut sys_execute(faddr: int, fd_in: int, fd_out: int) -> int
-		let h = sys_open(faddr, O_RDONLY)
-		if h < 0
-			return -ENOENT
-		var of = handles[h]
-		var filename: cstring
-		of.entry.get_path(filename)
-		var addr = TASK_IMAGE_POS # task space...
-		var t = TaskManager.add_task_user(filename, _i2p(addr), &self)
-		if !t
-			sys_close(h)
-			return -ENOMEM
-		if !page_dir.memcpy2kernel(&t.arg, faddr, sizeof(cstring))
-			return -EFAULT
-		while true
-			#int r = sys_read(caller, h, addr, 1024)
-			let r = of.read(t.page_dir, addr, 1024)
-			if r <= 0
-				break
-			addr += r
-		sys_close(h)
-		
-		var of_in = get_handle(fd_in)
-		var of_out = get_handle(fd_out)
-		t.add_handle(of_in)
-		t.add_handle(of_out)
-	
-		t.activate()
-		return t.pid
-
-	func mut sys_exit(r: int)
-		die(r)
-
-	func mut sys_waitpid(_pid: int, status_addr: int, options: int) -> int
-		var t = TaskManager.get_task(_pid)
-		if !t
-			return -ECHILD
-		if t.status == TaskStatus.ZOMBIE
-			page_dir.memcpy2task(status_addr, &t.return_status, 4)
-			t.clean_up_deep()
-			activate()
-			return 0
-		if (options & 1) > 0
-			return -2
-		set_wait(WaitingMode.TASK_EXIT, _pid, status_addr, 0)
-		return 0
-
-	func sys_kill(_pid: int, signal: int) -> int
-		var t = TaskManager.get_task(_pid)
-		if !t
-			return -ESRCH
-		return t.handle_signal_link_iret(signal)
-	
-	func mut sys_nanosleep(p1: int, p2: int) -> int
-		var tv: TimeValue
-		if !page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
-			return -EFAULT
-		set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
-		return 0
-
-	func mut sys_brk(_new_top: int) -> int
-		let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
-		let cur_top = mem_bottom + mem_size
-		if new_top <= cur_top
-			return cur_top
-		if !page_dir.map_by_alloc(cur_top, new_top - cur_top, true)
-			return -ENOMEM
-		mem_size = new_top - mem_bottom
-		return new_top
-	
-	func mut sys_fcntl(fd: int, op: int, param: int) -> int
-		var of = get_handle(fd)
-		if !of
-			return -EBADF
-		if op == F_GETFL
-			return of.get_flags()
-		if op == F_SETFL
-			of.set_flags(param)
-			return 0
-		return -EINVAL
-	
-	func mut sys_fork() -> int
-		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
-		if !t
-			return -ENOMEM
-		
-		# copy "normal" memory
-		t.sys_brk(mem_bottom + mem_size)
-		page_dir.copy_pages_to(t.page_dir, mem_bottom, mem_bottom, mem_size)
-		
-		# link shared memory
-		for i=>r in shmem
-			if !r.s
-				t.shmem[i].s = r.s
-				t.shmem[i].dest = r.dest
-				r.s.refcount ++
-				t.page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
-		
-		# open files...
-		# TODO
-		
-		# data
-		memcpy(&t.arg, &arg, sizeof(cstring))
-		strcpy(t.name, name)
-		t.cur_dir = cur_dir
-		t.parent = &self
-		t.tss = tss
-		t.tss.cr3 = t.page_dir
-		t.tss.eax = 0 # fork() return for child
-	
-		t.activate()
-		return t.pid
-	
-	func mut sys_ipc(cmd: int, p1: int, p2: int, p3: int) -> int
-		if cmd == SHMGET
-			return SharedMemory.shm_get(p1, p2, p3, pid)
-		else if cmd == SHMAT
-			for r in shmem
-				if !r.s
-					r.s = SharedMemory.get(p1)
-					if !r.s
-						return -ENOENT
-					r.dest = page_dir.find_free_space(0xe0000000, r.s.size) #0xa0000000
-					if r.dest == -1
-						return -ENOMEM
-					r.s.refcount ++
-					page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
-					if !page_dir.memcpy2task(p2, &r.dest, 4)
-						return -EFAULT
-					return 0
-			return -1
-		else if cmd == SHMDT
-			for r in shmem
-				if r.s and r.dest == p1
-					page_dir.unmap(r.dest, r.s.size, false)
-					r.s.unref()
-					r.s = nil
-					return 0
-			return -1
-		else if cmd == 1001 # wait-for-message
-			set_wait(WaitingMode.MESSAGE, 0, 0, 0)
-			return 0
-		else if cmd == 1002 # yield / wake-up
-			var t = TaskManager.get_task(p1)
-			if t
-				t.activate()
-			set_wait(WaitingMode.TIME, 0, 0, 0)
-			return 0
-		return -EINVAL
-	
-	func mut sys_socket(cmd: int, p1: int, p2: int) -> int
-		if cmd == SYS_SOCKET
-			var e = create_file_entry(":sock:", FileType.SOCKET, nil)
-			if !e
-				return -ENFILE
-			if !SocketManager.create(e, p1)
-				return -3
-			var of = kernel_open_entry(e, O_RDWR)
-			return add_handle(of)
-		else if cmd == SYS_BIND
-			var of = get_handle(p1)
-			if !of
-				return -EBADF
-			if of.entry.type != FileType.SOCKET
-				return -ENOTSOCK
-			return of.socket.bind(p2)
-		else if cmd == SYS_CONNECT
-			var of = get_handle(p1)
-			if !of
-				return -EBADF
-			if of.entry.type != FileType.SOCKET
-				return -ENOTSOCK
-			let e = of.socket.connect(p2)
-			if e != -EWOULDBLOCK
-				return e
-			set_wait(WaitingMode.SOCKET_CONNECT, of.socket.port, 0, 0)
-			return 0
-		else if cmd == SYS_LISTEN
-			var of = get_handle(p1)
-			if !of
-				return -EBADF
-			if of.entry.type != FileType.SOCKET
-				return -ENOTSOCK
-			return of.socket.listen()
-		else if cmd == SYS_ACCEPT
-			var of = get_handle(p1)
-			if !of
-				return -EBADF
-			if of.entry.type != FileType.SOCKET
-				return -ENOTSOCK
-			let e = of.socket.accept()
-			if e == -EWOULDBLOCK
-				if of.socket.blocking
-					set_wait(WaitingMode.SOCKET_ACCEPT, of.socket.port, 0, 0)
-					return 0
-				else
-					return e
-			if e < 0
-				return e
-			# port
-			var s = SocketManager.get_by_port(e)
-			if !s
-				return -1
-			of = kernel_open_entry(s.e, O_RDWR)
-			return add_handle(of)
-		return -EINVAL
-	
-	func mut sys_sigaction(sig: int, addr: int) -> int
-		if sig < 0 or sig >= MAX_SIGNALS or sig == SIGSTOP or sig == SIGKILL
-			return -EINVAL
-		#prints(" SIGAC ")
-		#printh(&addr, 4)
-		signal_handlers[sig] = addr # task address space!
-		return 0
-		
-	func mut sys_exit_signal() -> int
-		if !in_signal
-			return -1
-		
-		#prints(" EXSIG ")
-		in_signal = false
-		if in_hw_irq >= 0
-			TaskManager.ack_hw_irq = in_hw_irq
-			in_hw_irq = -1
-		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
-		return 0
-	
-	func mut do_wait_update()
-		if waiting_mode == WaitingMode.FILE_READ
-			let r = sys_read(waiting_param_i1, waiting_param_i2, waiting_param_i3)
-			if r >= 0
-				tss.eax = r # return r
-				activate()
-		else if waiting_mode == WaitingMode.FILE_WRITE
-			let r = sys_write(waiting_param_i1, waiting_param_i2, waiting_param_i3)
-			if r >= 0
-				tss.eax = r # return r
-				activate()
-		#else if waiting_mode == WaitingMode.TIME
-#			TimeValue *rem = &waiting_param_i1
-#			rem.dec_nanosec(kernel_timer.dt_nanosec)
-#			if rem.sec < 0
+#class Task as @noauto
+#	var tss: TaskStateSegment
+#	var stack: int[0]*
+#	var stack_size: int
+#	var desc: int
+#	var pid, puid: int
+#	var status: TaskStatus
+#	var return_status: int
+#	var waiting_mode: WaitingMode
+#	var waiting_param_i1, waiting_param_i2, waiting_param_i3: int
+#	var sleep_and_wait: bool
+#	var parent: Task*
+#	var name: cstring
+#	var arg: cstring
+#	var cur_dir: FileEntry*
+#	var page_dir: PageRootTable*
+#	var mem_bottom, mem_size: int
+#	
+#	var time_all, time_temp: TimeValue
+#	var cpu_load: int
+#	
+#	var kernel_mode: bool
+#	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
+#	var shmem: TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK]
+#	
+#	var signal_handlers: int[MAX_SIGNALS]
+#	var signal_reg_buf: TaskStateSegment
+#	var in_signal: bool
+#	var in_hw_irq: int
+#	
+#	func mut init(_pid: int, _name: cstring, _parent: Task*)
+#		for s in signal_handlers
+#			s = 0
+#		sleep_and_wait = false
+#			
+#		pid = _pid
+#		puid = TaskManager.next_puid_to_assign
+#		TaskManager.next_puid_to_assign ++
+#
+#		strcpy(name, _name)
+#		desc = NUM_PRE_GDT_ENTRIES + pid
+#		status = TaskStatus.SLEEPING
+#		parent = _parent
+#		if parent
+#			cur_dir = parent.cur_dir
+#		else
+#			cur_dir = FileSystem.root
+#		kernel_mode = false
+#		
+#		in_signal = false
+#		in_hw_irq = -1
+#	
+#		#t.stack_size = TASK_STACK_SIZE
+##	t.stack = _i2p(TASK_STACK_POS)
+##	t.mem_bottom = KERNEL_MEM
+##	t.mem_size = INITIAL_TASK_MEM
+##	t.page_dir = paging.create_page_directory()
+##	t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
+##	if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+##		panic("incomplete page dir") # ...
+##	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
+##	GlobalDescriptorTable[t.desc].set_task(t)
+#	
+#		time_all.clear()
+#		cpu_load = 0
+#		time_temp.clear()
+#	
+#	func mut activate()
+#		if sleep_and_wait
+#			status = TaskStatus.SLEEPING
+#			sleep_and_wait = false
+#		else
+#			status = TaskStatus.RUNNING
+#	
+#	# nur um einmalig den Scheduler zu starten
+#	func mut run_forced()
+#		#prints("springe in ")
+##		printi(t.pid)
+##		prints(t.name)
+#		# "Task Gate Descriptor" ---- falsch, kein gate!
+#		TaskCallData[0] = 0
+#		TaskCallData[1] = 8 * desc
+#		#printi(t.desc)
+#		#prints(":\n")
+#		__temp_p__ = &TaskCallData[0]
+#
+#		# in Task springen
+#		#t.status = TASK_STATUS_RUNNING
+#		asm{
+#			mov eax, __temp_p__
+#			#db 0xff
+#			#db 0x28
+#			#jmp_far [eax]
+#			db 0xff
+#			db 0x18
+#			#call_far [eax]
+#			#jmp_far 0x004000000000 #0x0040:0x00000000
+#		}
+#	func addr2kernel(addr: int) -> int
+#		return page_dir.addr2kernel(addr)
+#	
+#	func mut set_cur_dir(dir: cstring) -> int
+#		var e = get_file(dir)
+#		if !e
+#			return -1
+#		if e.type != FileType.DIR
+#			return -2
+#		cur_dir = e
+#		return 0
+#		
+#	func get_file(path: cstring) -> FileEntry*
+#		return FileSystem.get(path, cur_dir)
+#		
+#	func mut add_handle(oh: OpenFileData) -> int
+#		for i=>h in handles
+#			if !h
+#				h = &oh
+#				oh.ref_count ++
+#				return i
+#		return -1
+#
+#	func mut clean_up_resources()
+#		for h in handles
+#			if h
+#				h.unref()
+#				h = nil
+#		
+#		for s in shmem
+#			if s.s
+#				page_dir.unmap(s.dest, s.s.size, false)
+#				s.s.unref()
+#				s.s = nil
+#				
+#		if !kernel_mode
+#			if page_dir
+#				page_dir.unmap(0, KERNEL_MEM, false)
+#				page_dir.unmap(mem_bottom, mem_size, true)
+#				Paging.free_page(_p2i(page_dir))
+#				page_dir = nil
+#
+#	func mut clean_up_deep()
+#		clean_up_resources()
+#		status = TaskStatus.UNUSED
+#		puid = -1
+#		#if in_hw_irq >= 0
+#		#	TaskManager.ack_hw_irq = in_hw_irq
+#		
+#	
+#	func mut send_death_message()
+#		for t in TaskManager.tasks
+#			if t.status == TaskStatus.WAITING
+#				if t.waiting_mode == WaitingMode.TASK_EXIT and t.waiting_param_i1 == pid
+#					t.tss.eax = 0# # return waitpid()
+#					t.page_dir.memcpy2task(t.waiting_param_i2, &return_status, 4)
+#					clean_up_deep()
+#					t.activate()
+#		
+#	func get_initial_stack_pos() -> void*
+#		return _i2p(_p2i(stack) + stack_size)
+#	
+#	func mut set_wait(mode: WaitingMode, param_i1: int, param_i2: int, param_i3: int)
+#		status = TaskStatus.WAITING
+#		waiting_mode = mode
+#		waiting_param_i1 = param_i1
+#		waiting_param_i2 = param_i2
+#		waiting_param_i3 = param_i3
+#	
+#	func pages_alloced() -> int
+#		var n = mem_size / PAGE_SIZE
+#		n += page_dir.count_entries() # all page tables
+#		n ++ # page_dir itself
+#		return n
+#	
+#	
+#	func mut die(r: int)
+#		return_status = r
+#		clean_up_resources()
+#		status = TaskStatus.ZOMBIE
+#		send_death_message()
+#		
+#	func get_prev_pid() -> int
+#		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
+#		
+#	func mut handle_signal_link_iret(signal: int) -> int
+#		if signal < 0 or signal >= MAX_SIGNALS
+#			return -EINVAL
+#		#prints(" handle/link:")
+#		
+#		#printi(signal)
+#		#prints(" ")
+#		#printi(signal_handlers[signal])
+#		if in_signal
+#			prints(" in sig...die")
+#			if in_hw_irq >= 0
+#				TaskManager.ack_hw_irq = in_hw_irq
+#				in_hw_irq = -1
+#			die(0) # we're very friendly :-P
+#
+#		else if signal_handlers[signal] != 0
+#			#prints("...user > link iret ")
+#			in_signal = true
+#			# save registers
+#			memcpy(&signal_reg_buf, &tss, sizeof(TaskStateSegment))
+#			
+#			tss.edx = signal_handlers[signal]
+#			# allocate some extra space on the stack
+#			tss.esp = _i2p(_p2i(tss.esp) - 2048)
+#			tss.ebp = tss.esp
+#			# run the handler "loader stage" (in kernel memory)
+#			tss.eip = TaskManager.task_signal_handler
+#		else
+#			# default actions
+#			if signal == SIGSTOP
+#				if status == TaskStatus.RUNNING
+#					status = TaskStatus.SLEEPING
+#				else if status == TaskStatus.WAITING
+#					sleep_and_wait = true
+#			else if signal == SIGCONT
+#				if status == TaskStatus.SLEEPING
+#					status = TaskStatus.RUNNING
+#				else if status == TaskStatus.WAITING
+#					sleep_and_wait = false
+#			else
+#				die(0)
+#		return 0
+#
+##--------------------------------------------------------------
+## file access
+#	
+#	func get_handle(handle: int) -> OpenFileData*
+#		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+#			return nil
+#		return handles[handle]
+#
+#	func mut open(filename: cstring, flags: int) -> int
+#		var of = kernel_open(filename, flags, cur_dir)
+#		if !of
+#			return -ENOENT
+#		let index = add_handle(of)
+#		if index < 0
+#			of.unref()
+#		return index
+#
+#	func mut sys_open(faddr: int, flags: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return open(filename, flags)
+#
+#
+#	func mut sys_read(handle: int, addr: int, size: int) -> int
+#		var of = get_handle(handle)
+#		if !of
+#			return -EBADF
+#		let r = of.read(page_dir, addr, size)
+#		if r == -EWOULDBLOCK and of.blocking
+#			set_wait(WaitingMode.FILE_READ, handle, addr, size)
+#		return r
+#
+#
+#	func mut sys_write(handle: int, addr: int, size: int) -> int
+#		var of = get_handle(handle)
+#		if !of
+#			return -EBADF
+#		let r = of.write(page_dir, addr, size)
+#		if r == -EWOULDBLOCK and of.blocking
+#			set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
+#		return r
+#
+#	func mut sys_getdents(handle: int, addr: int, num: int) -> int
+#		var of = get_handle(handle)
+#		if !of
+#			return -EBADF
+#		return of.getdents(page_dir, addr, num)
+#
+#
+#	func mut sys_seek(handle: int, offset: int, mode: int) -> int
+#		var of = get_handle(handle)
+#		if !of
+#			return -EBADF
+#		return of.seek(offset, mode)
+#
+#	func mut sys_close(handle: int) -> int
+#		var of = get_handle(handle)
+#		if !of
+#			return -EBADF
+#		of.unref()
+#		handles[handle] = nil
+#		return 0
+#	
+#	func mut sys_dup(fd: int) -> int
+#		var of = get_handle(fd)
+#		if !of
+#			return -EBADF
+#		let index = add_handle(of)
+#		return index
+#	
+#	func mut sys_pipe(addr: int) -> int
+#		var e = create_file_entry(":pipe:", FileType.PIPE, nil)
+#		if !e
+#			return -ENFILE
+#		if !PipeManager.create(e)
+#			return -3
+#		var of_in = kernel_open_entry(e, O_RDONLY)
+#		var of_out = kernel_open_entry(e, O_WRONLY)
+#		var fd: int[2]
+#		fd[0] = add_handle(of_in)
+#		fd[1] = add_handle(of_out)
+#		if fd[0] < 0 or fd[1] < 0
+#			return -2
+#		if !page_dir.memcpy2task(addr, &fd, 8)
+#			return -EFAULT
+#		return 0
+#	
+#	func mut sys_set_cur_dir(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return set_cur_dir(filename)
+#		
+#	func mut sys_mkdir(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_mkdir(filename, cur_dir)
+#
+#	func mut sys_mknod(faddr: int, flags: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_mknod(filename, flags, cur_dir)
+#		
+#	func mut sys_unlink(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_unlink(filename, cur_dir)
+#		
+#	func mut sys_rmdir(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_rmdir(filename, cur_dir)
+#	
+#	func mut sys_execute(faddr: int, fd_in: int, fd_out: int) -> int
+#		let h = sys_open(faddr, O_RDONLY)
+#		if h < 0
+#			return -ENOENT
+#		var of = handles[h]
+#		var filename: cstring
+#		of.entry.get_path(filename)
+#		var addr = TASK_IMAGE_POS # task space...
+#		var t = TaskManager.add_task_user(filename, _i2p(addr), &self)
+#		if !t
+#			sys_close(h)
+#			return -ENOMEM
+#		if !page_dir.memcpy2kernel(&t.arg, faddr, sizeof(cstring))
+#			return -EFAULT
+#		while true
+#			#int r = sys_read(caller, h, addr, 1024)
+#			let r = of.read(t.page_dir, addr, 1024)
+#			if r <= 0
+#				break
+#			addr += r
+#		sys_close(h)
+#		
+#		var of_in = get_handle(fd_in)
+#		var of_out = get_handle(fd_out)
+#		t.add_handle(of_in)
+#		t.add_handle(of_out)
+#	
+#		t.activate()
+#		return t.pid
+#
+#	func mut sys_exit(r: int)
+#		die(r)
+#
+#	func mut sys_waitpid(_pid: int, status_addr: int, options: int) -> int
+#		var t = TaskManager.get_task(_pid)
+#		if !t
+#			return -ECHILD
+#		if t.status == TaskStatus.ZOMBIE
+#			page_dir.memcpy2task(status_addr, &t.return_status, 4)
+#			t.clean_up_deep()
+#			activate()
+#			return 0
+#		if (options & 1) > 0
+#			return -2
+#		set_wait(WaitingMode.TASK_EXIT, _pid, status_addr, 0)
+#		return 0
+#
+#	func sys_kill(_pid: int, signal: int) -> int
+#		var t = TaskManager.get_task(_pid)
+#		if !t
+#			return -ESRCH
+#		return t.handle_signal_link_iret(signal)
+#	
+#	func mut sys_nanosleep(p1: int, p2: int) -> int
+#		var tv: TimeValue
+#		if !page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
+#			return -EFAULT
+#		set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
+#		return 0
+#
+#	func mut sys_brk(_new_top: int) -> int
+#		let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
+#		let cur_top = mem_bottom + mem_size
+#		if new_top <= cur_top
+#			return cur_top
+#		if !page_dir.map_by_alloc(cur_top, new_top - cur_top, true)
+#			return -ENOMEM
+#		mem_size = new_top - mem_bottom
+#		return new_top
+#	
+#	func mut sys_fcntl(fd: int, op: int, param: int) -> int
+#		var of = get_handle(fd)
+#		if !of
+#			return -EBADF
+#		if op == F_GETFL
+#			return of.get_flags()
+#		if op == F_SETFL
+#			of.set_flags(param)
+#			return 0
+#		return -EINVAL
+#	
+#	func mut sys_fork() -> int
+#		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
+#		if !t
+#			return -ENOMEM
+#		
+#		# copy "normal" memory
+#		t.sys_brk(mem_bottom + mem_size)
+#		page_dir.copy_pages_to(t.page_dir, mem_bottom, mem_bottom, mem_size)
+#		
+#		# link shared memory
+#		for i=>r in shmem
+#			if !r.s
+#				t.shmem[i].s = r.s
+#				t.shmem[i].dest = r.dest
+#				r.s.refcount ++
+#				t.page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
+#		
+#		# open files...
+#		# TODO
+#		
+#		# data
+#		memcpy(&t.arg, &arg, sizeof(cstring))
+#		strcpy(t.name, name)
+#		t.cur_dir = cur_dir
+#		t.parent = &self
+#		t.tss = tss
+#		t.tss.cr3 = t.page_dir
+#		t.tss.eax = 0 # fork() return for child
+#	
+#		t.activate()
+#		return t.pid
+#	
+#	func mut sys_ipc(cmd: int, p1: int, p2: int, p3: int) -> int
+#		if cmd == SHMGET
+#			return SharedMemory.shm_get(p1, p2, p3, pid)
+#		else if cmd == SHMAT
+#			for r in shmem
+#				if !r.s
+#					r.s = SharedMemory.get(p1)
+#					if !r.s
+#						return -ENOENT
+#					r.dest = page_dir.find_free_space(0xe0000000, r.s.size) #0xa0000000
+#					if r.dest == -1
+#						return -ENOMEM
+#					r.s.refcount ++
+#					page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
+#					if !page_dir.memcpy2task(p2, &r.dest, 4)
+#						return -EFAULT
+#					return 0
+#			return -1
+#		else if cmd == SHMDT
+#			for r in shmem
+#				if r.s and r.dest == p1
+#					page_dir.unmap(r.dest, r.s.size, false)
+#					r.s.unref()
+#					r.s = nil
+#					return 0
+#			return -1
+#		else if cmd == 1001 # wait-for-message
+#			set_wait(WaitingMode.MESSAGE, 0, 0, 0)
+#			return 0
+#		else if cmd == 1002 # yield / wake-up
+#			var t = TaskManager.get_task(p1)
+#			if t
+#				t.activate()
+#			set_wait(WaitingMode.TIME, 0, 0, 0)
+#			return 0
+#		return -EINVAL
+#	
+#	func mut sys_socket(cmd: int, p1: int, p2: int) -> int
+#		if cmd == SYS_SOCKET
+#			var e = create_file_entry(":sock:", FileType.SOCKET, nil)
+#			if !e
+#				return -ENFILE
+#			if !SocketManager.create(e, p1)
+#				return -3
+#			var of = kernel_open_entry(e, O_RDWR)
+#			return add_handle(of)
+#		else if cmd == SYS_BIND
+#			var of = get_handle(p1)
+#			if !of
+#				return -EBADF
+#			if of.entry.type != FileType.SOCKET
+#				return -ENOTSOCK
+#			return of.socket.bind(p2)
+#		else if cmd == SYS_CONNECT
+#			var of = get_handle(p1)
+#			if !of
+#				return -EBADF
+#			if of.entry.type != FileType.SOCKET
+#				return -ENOTSOCK
+#			let e = of.socket.connect(p2)
+#			if e != -EWOULDBLOCK
+#				return e
+#			set_wait(WaitingMode.SOCKET_CONNECT, of.socket.port, 0, 0)
+#			return 0
+#		else if cmd == SYS_LISTEN
+#			var of = get_handle(p1)
+#			if !of
+#				return -EBADF
+#			if of.entry.type != FileType.SOCKET
+#				return -ENOTSOCK
+#			return of.socket.listen()
+#		else if cmd == SYS_ACCEPT
+#			var of = get_handle(p1)
+#			if !of
+#				return -EBADF
+#			if of.entry.type != FileType.SOCKET
+#				return -ENOTSOCK
+#			let e = of.socket.accept()
+#			if e == -EWOULDBLOCK
+#				if of.socket.blocking
+#					set_wait(WaitingMode.SOCKET_ACCEPT, of.socket.port, 0, 0)
+#					return 0
+#				else
+#					return e
+#			if e < 0
+#				return e
+#			# port
+#			var s = SocketManager.get_by_port(e)
+#			if !s
+#				return -1
+#			of = kernel_open_entry(s.e, O_RDWR)
+#			return add_handle(of)
+#		return -EINVAL
+#	
+#	func mut sys_sigaction(sig: int, addr: int) -> int
+#		if sig < 0 or sig >= MAX_SIGNALS or sig == SIGSTOP or sig == SIGKILL
+#			return -EINVAL
+#		#prints(" SIGAC ")
+#		#printh(&addr, 4)
+#		signal_handlers[sig] = addr # task address space!
+#		return 0
+#		
+#	func mut sys_exit_signal() -> int
+#		if !in_signal
+#			return -1
+#		
+#		#prints(" EXSIG ")
+#		in_signal = false
+#		if in_hw_irq >= 0
+#			TaskManager.ack_hw_irq = in_hw_irq
+#			in_hw_irq = -1
+#		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
+#		return 0
+#	
+#	func mut do_wait_update()
+#		if waiting_mode == WaitingMode.FILE_READ
+#			let r = sys_read(waiting_param_i1, waiting_param_i2, waiting_param_i3)
+#			if r >= 0
+#				tss.eax = r # return r
+#				activate()
+#		else if waiting_mode == WaitingMode.FILE_WRITE
+#			let r = sys_write(waiting_param_i1, waiting_param_i2, waiting_param_i3)
+#			if r >= 0
+#				tss.eax = r # return r
+#				activate()
+#		#else if waiting_mode == WaitingMode.TIME
+##			TimeValue *rem = &waiting_param_i1
+##			rem.dec_nanosec(kernel_timer.dt_nanosec)
+##			if rem.sec < 0
+##				tss.eax = 0 # return 0
+##				activate()
+#		else if waiting_mode == WaitingMode.SOCKET_ACCEPT
+#			var s = SocketManager.get_by_port(waiting_param_i1)
+#			if !s
+#				tss.eax = -EINVAL # return ...
+#				activate()
+#			if s.state == SocketState.WAIT_ACCEPT
+#				let e = s.accept()
+#				if e == -EWOULDBLOCK
+#					return
+#				if e < 0
+#					tss.eax = e # return e
+#				else
+#					s = SocketManager.get_by_port(e)
+#					if !s
+#						tss.eax = -2  # return -2
+#					else
+#						var of = kernel_open_entry(s.e, O_RDWR)
+#						tss.eax = add_handle(of) # return 0
+#				activate()
+#		else if waiting_mode == WaitingMode.SOCKET_CONNECT
+#			var s = SocketManager.get_by_port(waiting_param_i1)
+#			if !s
+#				tss.eax = -EINVAL # return ...
+#				activate()
+#			if s.state != SocketState.CONNECTING
 #				tss.eax = 0 # return 0
 #				activate()
-		else if waiting_mode == WaitingMode.SOCKET_ACCEPT
-			var s = SocketManager.get_by_port(waiting_param_i1)
-			if !s
-				tss.eax = -EINVAL # return ...
-				activate()
-			if s.state == SocketState.WAIT_ACCEPT
-				let e = s.accept()
-				if e == -EWOULDBLOCK
-					return
-				if e < 0
-					tss.eax = e # return e
-				else
-					s = SocketManager.get_by_port(e)
-					if !s
-						tss.eax = -2  # return -2
-					else
-						var of = kernel_open_entry(s.e, O_RDWR)
-						tss.eax = add_handle(of) # return 0
-				activate()
-		else if waiting_mode == WaitingMode.SOCKET_CONNECT
-			var s = SocketManager.get_by_port(waiting_param_i1)
-			if !s
-				tss.eax = -EINVAL # return ...
-				activate()
-			if s.state != SocketState.CONNECTING
-				tss.eax = 0 # return 0
-				activate()
+#
+
+class GlobalDescriptorTable as @noauto
+	#class Descriptor as @noauto
+	#	var a, b, c, d: int
+	#	
+	#	func mut clear()
+	#		a = 0
+	#		b = 0
+	#		c = 0
+	#		d = 0
+	#	func mut set_system_segment(addr: int, executable: bool, pvl: int)
+	#		# limit is ignored
+	#		a = (addr << 16) # base[15..0] limit[15..0]
+	#		b = (addr & 0xff000000) | ((addr >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
+	#		b = b | 0x00008000 # present
+	#		b = b | 0x00201200 # long mode + ...
+	#		if executable
+	#			b = b | 0x00000800
+	#		b = b | (0x00002000 * pvl)
+	
+	#var descriptors: Descriptor[NUM_PRE_GDT_ENTRIES + 1]
+	
+	var x: int[6]
+	
+	func mut init()
+		#for d in descriptors
+		#	d.clear()
+		# kernel code
+		#descriptors[1].set_system_segment(0, true, 0)
+		# kernel data
+		#descriptors[2].set_system_segment(0, false, 0)
+		# user code
+		#descriptors[3].set_system_segment(0, true, 0)#3)
+		# user data
+		#descriptors[4].set_system_segment(0, false, 0)#3)
+		#descriptors[5].set_task()
+		
+		# manual...
+		
+		# null
+		x[0] = 0
+		x[1] = 0
+		# code
+		x[2] = 0
+		x[3] = 0x00209800
+		# data
+		x[4] = 0
+		x[5] = 0x00009200
+	
+	func load()
+		# load GDT
+		__temp_i__ = 0x17 #sizeof(self) - 1
+		__temp_p__ = &self # __ref_gdt(gdt)#&gdt
+		asm{
+			jmp _after_gdt_data
+			_gdtr:
+			dw 0x0000
+			_gdtr_base:
+			dd 0x00000000
+			dd 0x00000000
+			_after_gdt_data:
+			mov eax, __temp_i__
+			mov [_gdtr], eax
+			mov rax, __temp_p__
+			mov [_gdtr_base], rax
+			lgdt [_gdtr]
+			
+			mov eax, 0x00000010
+			mov ds, ax
+			mov ss, ax
+		}
+		prints("lgdt...")
+		
+
+#class GlobalDescriptorData
+#	var a, b: int
+#	func mut set_base(base: int, limit: int, gran: bool)
+#		a = (base << 16) + (limit & 0xffff) # base[15..0] limit[15..0]
+#		b = (base & 0xff000000) + (limit & 0x0f0000) + ((base >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
+#		b += 0x00008000 # present
+#		if gran
+#			b += 0x00800000
+#	func mut set_data(base: int, limit: int, executable: bool, pvl: int)
+#		set_base(base, limit >> 12, true)
+#		b += 0x00401200
+#		if executable
+#			b += 0x00000800
+#		b += 0x00002000 * pvl
+##	func mut set_task(t: Task)
+##		set_base(_p2i(&t.tss), 103, false)
+##		b += 0x00000900 # not busy
+#	func mut set_busy(busy: bool)
+#		if busy
+#			b = b | 0x200
+#		else
+#			b = b & 0xfffffdff
 
 
-class GlobalDescriptorData
-	var a, b: int
-	func mut set_base(base: int, limit: int, gran: bool)
-		a = (base << 16) + (limit & 0xffff) # base[15..0] limit[15..0]
-		b = (base & 0xff000000) + (limit & 0x0f0000) + ((base >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
-		b += 0x00008000 # present
-		if gran
-			b += 0x00800000
-	func mut set_data(base: int, limit: int, executable: bool, pvl: int)
-		set_base(base, limit >> 12, true)
-		b += 0x00401200
-		if executable
-			b += 0x00000800
-		b += 0x00002000 * pvl
-	func mut set_task(t: Task)
-		set_base(_p2i(&t.tss), 103, false)
-		b += 0x00000900 # not busy
-	func mut set_busy(busy: bool)
-		if busy
-			b = b | 0x200
-		else
-			b = b & 0xfffffdff
+#var kernel_task: Task*
 
-
-var kernel_task: Task*
-
+func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
+	return &gdt
 
 class TaskManager as @noauto
-	func static get_task(pid: int) -> Task*
-		if pid < 0 or pid >= MAX_TASKS
-			return nil
-		var t = &tasks[pid]
-		if t.status == TaskStatus.UNUSED
-			return nil
-		return t
+	var static gdt: GlobalDescriptorTable
+#	func static get_task(pid: int) -> Task*
+#		if pid < 0 or pid >= MAX_TASKS
+#			return nil
+#		var t = &tasks[pid]
+#		if t.status == TaskStatus.UNUSED
+#			return nil
+#		return t
 
-	var static tasks: Task[MAX_TASKS]
-	var static idle_task: Task*
+#	var static tasks: Task[MAX_TASKS]
+#	var static idle_task: Task*
 	var static next_pid_to_assign: int
 	var static next_puid_to_assign: int
 	
@@ -779,61 +855,61 @@ class TaskManager as @noauto
 	var static ack_hw_irq: int
 
 
-	var static gdt: GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
+	#var static gdt: GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
 
-	func static get_next_pid() -> int
-		for i in next_pid_to_assign:MAX_TASKS
-			if tasks[i].status == TaskStatus.UNUSED
-				next_pid_to_assign = i + 1
-				return i
-		for i in 0:next_pid_to_assign
-			if tasks[i].status == TaskStatus.UNUSED
-				next_pid_to_assign = i + 1
-				return i
-		return -1
+#	func static get_next_pid() -> int
+#		for i in next_pid_to_assign:MAX_TASKS
+#			if tasks[i].status == TaskStatus.UNUSED
+#				next_pid_to_assign = i + 1
+#				return i
+#		for i in 0:next_pid_to_assign
+#			if tasks[i].status == TaskStatus.UNUSED
+#				next_pid_to_assign = i + 1
+#				return i
+#		return -1
 
-	func static add_task_user(name: cstring, F: void*, parent: Task*) -> Task*
-		let pid = get_next_pid()
-		if pid < 0
-			return nil
-		var t = &tasks[pid]
-	
-		t.init(pid, name, parent)
-		t.kernel_mode = false
-	
-		t.stack_size = TASK_STACK_SIZE
-		t.stack = _i2p(TASK_STACK_POS)
-		t.mem_bottom = KERNEL_MEM
-		t.mem_size = INITIAL_TASK_MEM
-		t.page_dir = Paging.create_root_table()
-		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
-		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-			panic("incomplete page dir") # ...
-		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
-		gdt[t.desc].set_task(t)
-
-		return t
-
-	func static add_task_kernel(name: cstring, F: void*, stack_size: int, parent: Task*) -> Task*
-		let pid = get_next_pid()
-		if pid < 0
-			return nil
-		var t = &tasks[pid]
-
-		t.init(pid, name, parent)
-		t.kernel_mode = true
-	
-		t.stack_size = stack_size
-		t.stack = Heap.malloc(stack_size)
-		t.page_dir = Paging.kernel_root_table
-		t.mem_bottom = 0
-		t.mem_size = 0
-		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_root_table, F)
-	
-		gdt[t.desc].set_task(t)
-
-		return t
-
+#	func static add_task_user(name: cstring, F: void*, parent: Task*) -> Task*
+#		let pid = get_next_pid()
+#		if pid < 0
+#			return nil
+#		var t = &tasks[pid]
+#	
+#		t.init(pid, name, parent)
+#		t.kernel_mode = false
+#	
+#		t.stack_size = TASK_STACK_SIZE
+#		t.stack = _i2p(TASK_STACK_POS)
+#		t.mem_bottom = KERNEL_MEM
+#		t.mem_size = INITIAL_TASK_MEM
+#		t.page_dir = Paging.create_root_table()
+#		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
+#		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+#			panic("incomplete page dir") # ...
+#		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
+#		gdt[t.desc].set_task(t)
+#
+#		return t
+#
+#	func static add_task_kernel(name: cstring, F: void*, stack_size: int, parent: Task*) -> Task*
+#		let pid = get_next_pid()
+#		if pid < 0
+#			return nil
+#		var t = &tasks[pid]
+#
+#		t.init(pid, name, parent)
+#		t.kernel_mode = true
+#	
+#		t.stack_size = stack_size
+#		t.stack = Heap.malloc(stack_size)
+#		t.page_dir = Paging.kernel_root_table
+#		t.mem_bottom = 0
+#		t.mem_size = 0
+#		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_root_table, F)
+#	
+#		gdt[t.desc].set_task(t)
+#
+#		return t
+#
 	func static idle_func()
 		while true
 			#prints("<idle>")
@@ -851,76 +927,65 @@ class TaskManager as @noauto
 
 
 	# running in task space
-	func static task_signal_handler()
-		asm {
-			mov TaskManager.__handler_p__, edx
-		}
-		#prints("[task-signal-handler] ")
-		#printh(&__handler_p__, 4)
-		#prints(" [call]\n")
-		asm {
-			mov eax, TaskManager.__handler_p__
-			call eax
-		}
-		#prints("[done...return]\n")
-		asm {
-			# return from handler
-			mov eax, 0x00002006
-			int 0x80
-		}
-		while true
-			nil
-
+#	func static task_signal_handler()
+#		asm {
+#			mov TaskManager.__handler_p__, edx
+#		}
+#		#prints("[task-signal-handler] ")
+#		#printh(&__handler_p__, 4)
+#		#prints(" [call]\n")
+#		asm {
+#			mov eax, TaskManager.__handler_p__
+#			call eax
+#		}
+#		#prints("[done...return]\n")
+#		asm {
+#			# return from handler
+#			mov eax, 0x00002006
+#			int 0x80
+#		}
+#		while true
+#			nil
+#
 	func static init()
 		prints("init tasks...")
+		gdt.init()
+		
 		ack_hw_irq = -1
 	
 		# null descriptor
-		for g in gdt
-			g.a = 0x00000000
-			g.b = 0x00000000
+#		for g in gdt
+#			g.a = 0x00000000
+#			g.b = 0x00000000
 		# kernel code
-		gdt[1].set_data(0, 0xffffffff, true, 0)
+#		gdt[1].set_data(0, 0xffffffff, true, 0)
 		# kernel data
-		gdt[2].set_data(0, 0xffffffff, false, 0)
+#		gdt[2].set_data(0, 0xffffffff, false, 0)
 		# user code
-		gdt[3].set_data(0, 0xffffffff, true, 0)#3)
+#		gdt[3].set_data(0, 0xffffffff, true, 0)#3)
 		# user data
-		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
+#		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
 
-		for t in tasks
-			t.status = TaskStatus.UNUSED
-			for h in t.handles
-				h = nil
-			for sm in t.shmem
-				sm.s = nil
+#		for t in tasks
+#			t.status = TaskStatus.UNUSED
+#			for h in t.handles
+#				h = nil
+#			for sm in t.shmem
+#				sm.s = nil
 
 		next_pid_to_assign = 0
 		next_puid_to_assign = 0
 		#UserMemMask = 0
 
-		kernel_task = add_task_kernel("kernel", nil, KERNEL_STACK_SIZE, nil)
-		idle_task = add_task_kernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
+#		kernel_task = add_task_kernel("kernel", nil, KERNEL_STACK_SIZE, nil)
+#		idle_task = add_task_kernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
 	
-		# load GDT
-		__temp_i__ = sizeof(gdt) - 1
-		__temp_p__ = &gdt
-		asm{
-			jmp _after_gdt_data
-			_gdtr:
-			dw 0x0000
-			_gdtr_base:
-			dd 0x00000000
-			_after_gdt_data:
-			mov eax, __temp_i__
-			mov [_gdtr], eax
-			mov eax, __temp_p__
-			mov [_gdtr_base], eax
-			lgdt [_gdtr]
-		}
+		gdt.load()
+		prints("no\n")
+		return
 
 		#prints("\n  setze Kernel-Task-Register")
-		__temp_i__ = kernel_task.desc * 8
+#		__temp_i__ = kernel_task.desc * 8
 		asm{
 			mov eax, __temp_i__ # Descriptor[n]
 			ltr ax
