@@ -1,0 +1,169 @@
+use common
+use io.text
+use io.io
+use fs.fs
+use mem.paging
+use irq.irq
+use tty
+
+
+class FileOperationsMouse extends FileOperations
+	var mouse_temp: int[4]
+	var mouse_temp_no = 0
+	var mouse_buf: cstring
+	var mouse_num = 0
+	
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+		var size = _size
+		if mouse_num == 0
+			return -EWOULDBLOCK
+		if size < 16
+			return 0
+		mouse_temp_no = 0 # CHEAP BUG FIX...
+		size = 16
+		if size > mouse_num
+			size = mouse_num
+		page_dir.memcpy2task(addr, &mouse_buf, size)
+		mouse_num -= size
+		memcpy(&mouse_buf, &mouse_buf[size], mouse_num)
+		return size
+		
+		
+		
+	func static register()
+		IrqManager.set_func(33, raw_function_pointer(int_mouse))
+	
+	
+		# Enable the auxiliary mouse device
+		mouse_wait_signal()
+		outportb(0x64, 0xa8)
+	  
+		# Enable the interrupts
+		mouse_wait_signal()
+		outportb(0x64, 0x20)
+		mouse_wait_data()
+		var _status = (inportb(0x60) | 2)
+		mouse_wait_signal()
+		outportb(0x64, 0x60)
+		mouse_wait_signal()
+		outportb(0x60, _status)
+	  
+		# Reset
+		mouse_write(0xff)
+		mouse_read() # acknowledge
+	  
+		# Set Defaults
+		mouse_write(0xf6)
+		mouse_read() # acknowledge
+	  
+		# Enable Packet Streaming
+		mouse_write(0xf4)
+		mouse_read() # acknowledge
+		
+
+
+	func static mouse_wait_data()
+		for i in 0:100000
+			if ((inportb(0x64) & 1) == 1)
+				return
+
+	func static mouse_wait_signal()
+		for i in 0:100000
+			if ((inportb(0x64) & 2) == 0)
+				return
+
+
+	func static mouse_write(data: int)
+		mouse_wait_signal()
+		outportb(0x64, 0xd4)
+		mouse_wait_signal()
+		outportb(0x60, data)
+
+	func static mouse_read() -> int
+		mouse_wait_data()
+		return inportb(0x60)
+
+
+	func mut ps2_read_mouse(_d: int)
+		var d = _d
+		mouse_temp[mouse_temp_no] = d & 0x000000ff
+		mouse_temp_no ++
+		
+		if mouse_temp_no >= 3
+			mouse_temp_no = 0
+		else
+			return
+		d = mouse_temp[0]
+		let MYOverflow = ((d & 0x80) > 0)
+		let MXOverflow = ((d & 0x40) > 0)
+		let MYNegative = ((d & 0x20) > 0)
+		let MXNegative = ((d & 0x10) > 0)
+		let mbut = ((d & 0x04) > 0)
+		let rbut = ((d & 0x02) > 0)
+		let lbut = ((d & 0x01) > 0)
+		mouse_temp[0] = 0
+		if lbut
+			mouse_temp[0] += 0x1
+		if mbut
+			mouse_temp[0] += 0x2
+		if rbut
+			mouse_temp[0] += 0x4
+		if MXNegative
+			mouse_temp[1] -= 256
+		if MYNegative
+			mouse_temp[2] -= 256
+		if MXOverflow
+			mouse_temp[1] = 0
+		if MYOverflow
+			mouse_temp[2] = 0
+		mouse_temp[3] = 0
+		
+		if mouse_num < 200
+			memcpy(&mouse_buf[mouse_num], &mouse_temp, 4*4)
+			mouse_num += 4*4
+
+	func mut ps2_try_read()
+		let k = inportb(0x64)
+		if (k & 0x01) == 0
+			return
+		let d = inportb(0x60)
+		if (k & 0x20) > 0
+			ps2_read_mouse(d)
+		else
+			pass
+			#ps2_read_key(d)
+		#ps2_try_read()
+		
+
+#	func static int_mouse()
+#		while true
+#			#prints("<mouse>")
+#			
+#			ps2_try_read()
+#						
+#			# allow more IRQs
+#			outportb(0xa0, 0x20)
+#			outportb(0x20, 0x20)
+#				
+#			asm {
+#				iret
+#			}
+	func static @noframe int_mouse()
+		asm{
+			cli
+		}
+		dev_mouse_ops.handle_irq()
+		asm{
+			sti
+			db 0x48
+			iret
+		}
+
+	func mut handle_irq()
+		IrqManager.mask(12)
+		prints("<mouse>")
+		ps2_try_read()
+		IrqManager.eoi(12)
+		IrqManager.unmask(12)
+		
+var dev_mouse_ops: FileOperationsMouse

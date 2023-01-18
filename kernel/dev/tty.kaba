@@ -1,0 +1,43 @@
+use common
+use io.text
+use io.io
+use fs.fs
+use mem.paging
+use irq.irq
+
+class FileOperationsTTY extends FileOperations
+	var key_buf: cstring
+	var key_num: int
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+		var size = _size
+		if key_num == 0
+			return -EWOULDBLOCK
+		if size > key_num
+			size = key_num
+		page_dir.memcpy2task(addr, &key_buf, size)
+		key_num -= size
+		memcpy(&key_buf, &key_buf[size], key_num)
+		return size
+	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
+		for i in 0:size
+			var buf = _i2p(page_dir.addr2kernel(addr + i))
+			TextMode.prints_low(buf, 1)
+		return size
+	
+	func mut add_key(k: int)
+		if k < 0 or key_num >= 64
+			return
+		if (k & 0xffffff00) == 0
+			key_buf[key_num] = k
+			key_num ++
+		else if (k & 0xffff0000) == 0
+			key_buf[key_num] = k >> 8
+			key_buf[key_num + 1] = k
+			key_num += 2
+		else
+			key_buf[key_num] = k >> 16
+			key_buf[key_num + 1] = k >> 8
+			key_buf[key_num + 2] = k
+			key_num += 3
+
+var dev_tty_ops: FileOperationsTTY
