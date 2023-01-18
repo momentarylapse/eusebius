@@ -16,6 +16,7 @@ use task.task
 ##use task.scheduler
 use irq.irq
 use irq.error
+use time.timer
 ##use syscall
 
 const KALIB_LOCATION = 0x00050000
@@ -105,6 +106,8 @@ func main()
 ##	InitSysCall()
 	
 	StdCharDevs.init()
+	
+	KernelTimer.init(100)
 	
 ##	load_kalib()
 ##	

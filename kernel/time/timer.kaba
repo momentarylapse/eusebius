@@ -1,10 +1,13 @@
 use common
 use io.io
+use io.text
 use time.timevalue
 use task.task
 use irq.irq
 
-class KernelTimer
+let TIMER_IRQ = 0
+
+class KernelTimer as @noauto
 	#int[2] state
 	var static tv: TimeValue
 	var static dt_nanosec: int
@@ -28,7 +31,9 @@ class KernelTimer
 	func static tick()
 		tv.inc_nanosec(dt_nanosec)
 
-	func static init_interrupt(out t: Task, dt_ms: int)
+#	func static init_interrupt(out t: Task, dt_ms: int)
+
+	func static init(dt_ms: int)
 		# read year from CMOS
 		#outportb(0x70, 0x40 | 0x09)
 		#int rr = inportb(0x71)
@@ -37,17 +42,41 @@ class KernelTimer
 		tv.clear()
 		dt_nanosec = dt_ms * 1000000
 	
-		irq.set_task(irq.hw2soft(0), &t) # IRQ 0
+	#	irq.set_task(irq.hw2soft(0), &t) # IRQ 0
+	
+		IrqManager.disable()
+		IrqManager.set_func(TIMER_IRQ + 32, raw_function_pointer(int_timer))
 	
 		# ticks/s: 1193180
 		# 100Hz:   11932 = 0x2e9c
-		int ticks_per_sec = 1193180
-		int ticks_till_irq = (ticks_per_sec >> 10) * dt_ms
+		let ticks_per_sec = 1193180
+		var ticks_till_irq = (ticks_per_sec >> 10) * dt_ms
 		if ticks_till_irq > 0xffff
 			ticks_till_irq = 0xffff
 
 		outportb(0x43, 0x34) # channel 0, rate generator
 		outportb(0x40, ticks_till_irq)
 		outportb(0x40, ticks_till_irq >> 8)
+		
+		IrqManager.unmask(TIMER_IRQ)
+		IrqManager.enable()
 
+	func static @noframe int_timer()
+		asm{
+			cli
+		}
+		handle_irq()
+		asm{
+			sti
+			db 0x48
+			iret
+		}
 
+	func static handle_irq()
+		IrqManager.mask(TIMER_IRQ)
+		prints("<timer>")
+		# do stuff
+		IrqManager.eoi(TIMER_IRQ)
+		IrqManager.unmask(TIMER_IRQ)
+	
+	

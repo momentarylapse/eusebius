@@ -32,7 +32,10 @@ class FileOperationsMouse extends FileOperations
 		
 		
 	func static register()
+		prints(" MOUSE REG ")
+		IrqManager.disable()
 		IrqManager.set_func(MOUSE_IRQ + 32, raw_function_pointer(int_mouse))
+		IrqManager.unmask(MOUSE_IRQ)
 	
 	
 		# Enable the auxiliary mouse device
@@ -61,6 +64,8 @@ class FileOperationsMouse extends FileOperations
 		mouse_write(0xf4)
 		mouse_read() # acknowledge
 		
+		
+		IrqManager.enable()
 
 
 	func static mouse_wait_data()

@@ -42,8 +42,11 @@ class FileOperationsKey extends FileOperations
 	
 	
 	func static register()
+		prints(" KEYB REG ")
+		IrqManager.disable()
 		IrqManager.set_func(KEYBOARD_IRQ + 32, raw_function_pointer(int_keyboard))
 		IrqManager.unmask(KEYBOARD_IRQ)
+		IrqManager.enable()
 		
 
 	func getchar(k: int) -> int
@@ -331,7 +334,7 @@ class FileOperationsKey extends FileOperations
 
 	func mut handle_irq()
 		IrqManager.mask(KEYBOARD_IRQ)
-		prints("<key>")
+		#prints("<key>")
 		ps2_try_read()
 		IrqManager.eoi(KEYBOARD_IRQ)
 		IrqManager.unmask(KEYBOARD_IRQ)

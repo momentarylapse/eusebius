@@ -102,6 +102,10 @@ class IrqManager as @noauto
 		let v = inportb(port)
 		let mask = 1 << index
 		if (v & mask) == 0
+#			prints(" mask ")
+#			printh(&v, 1)
+#			prints(" > ")
+#			printh(&(v|mask), 1)
 			outportb(port, v | mask)
 			
 	func static unmask(hw_irq: int)
@@ -113,6 +117,12 @@ class IrqManager as @noauto
 		let v = inportb(port)
 		let mask = 1 << index
 		if (v & mask) != 0
+#			prints(" unmask p=")
+#			printh(&port, 2)
+#			prints(" ")
+#			printh(&v, 1)
+#			prints(" > ")
+#			printh(&(v-mask), 1)
 			outportb(port, v - mask)
 		
 		
