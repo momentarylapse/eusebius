@@ -17,8 +17,8 @@ class FileOperationsZero extends FileOperations
 		return 0
 	func override close(f: FileEntry) -> int
 		return 0
-	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
-		int zero = 0
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
+		let zero = 0
 		for i in 0:size
 			page_dir.memcpy2task(addr + i, &zero, 1)
 		return size
@@ -26,14 +26,14 @@ var dev_zero_ops: FileOperationsZero
 
 
 class FileOperationsNull extends FileOperations
-	func override write(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
+	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		return size
 var dev_null_ops: FileOperationsNull
 
 
 class FileOperationsRand extends FileOperations
 	var state: int
-	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		for i in 0:size
 			state = (state * 23434 + 82374) % 8623
 			page_dir.memcpy2task(addr + i, &state, 1)
@@ -54,8 +54,8 @@ class FileOperationsKey extends FileOperations
 	func override close(f: FileEntry) -> int
 		dev_key_reading --
 		return 0
-	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, _size: int) -> int
-		int size = _size
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+		var size = _size
 		if dev_key_num == 0
 			return -EWOULDBLOCK
 		if size > dev_key_num
@@ -64,7 +64,7 @@ class FileOperationsKey extends FileOperations
 		dev_key_num -= size
 		memcpy(&dev_key_buf, &dev_key_buf[size], dev_key_num)
 		return size
-	func override write(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
+	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		return 0
 var dev_key_ops: FileOperationsKey
 	
@@ -72,8 +72,8 @@ var dev_key_ops: FileOperationsKey
 var dev_mouse_buf: cstring
 var dev_mouse_num: int
 class FileOperationsMouse extends FileOperations
-	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, _size: int) -> int
-		int size = _size
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+		var size = _size
 		if dev_mouse_num == 0
 			return -EWOULDBLOCK
 		if size < 16
@@ -92,8 +92,8 @@ var dev_mouse_ops: FileOperationsMouse
 var dev_tty_key_buf: cstring
 var dev_tty_key_num: int
 class FileOperationsTTY extends FileOperations
-	func override read(f: FileEntry, page_dir: PageDirectory*, addr: int, _size: int) -> int
-		int size = _size
+	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+		var size = _size
 		if dev_tty_key_num == 0
 			return -EWOULDBLOCK
 		if size > dev_tty_key_num
@@ -102,14 +102,15 @@ class FileOperationsTTY extends FileOperations
 		dev_tty_key_num -= size
 		memcpy(&dev_tty_key_buf, &dev_tty_key_buf[size], dev_key_num)
 		return size
-	func override write(f: FileEntry, page_dir: PageDirectory*, addr: int, size: int) -> int
+	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		for i in 0:size
-			int offset
-			cstring *buf = _i2p(page_dir.addr2kernel(addr + i, &offset))
+			var buf = _i2p(page_dir.addr2kernel(addr + i))
 			TextMode.prints_low(buf, 1)
 		return size
 var dev_tty_ops: FileOperationsTTY
 
+func __ref_ops(o: FileOperations) -> void*
+	return &o
 
 class StdCharDevs
 
@@ -129,44 +130,50 @@ class StdCharDevs
 			#dev = FileSystem.root.create_child("dev", FILE_TYPE_DIR, nil)
 			#dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
 
-		FileEntry *dev_zero = dev.create_child("zero", FILE_TYPE_CHAR, nil)
+		var dev_zero = dev.create_child("zero", FileType.CHAR, nil)
 		dev_zero_ops.__init__()
-		dev_zero.op = &dev_zero_ops
+		dev_zero.op = __ref_ops(dev_zero_ops)
 				
-		FileEntry *dev_null = dev.create_child("null", FILE_TYPE_CHAR, nil)
+		var dev_null = dev.create_child("null", FileType.CHAR, nil)
 		dev_null_ops.__init__()
-		dev_null.op = &dev_null_ops
+		dev_null.op = __ref_ops(dev_null_ops)
 		
 		dev_rand_ops.state = 13
 		
-		FileEntry *dev_rand = dev.create_child("random", FILE_TYPE_CHAR, nil)
+		var dev_rand = dev.create_child("random", FileType.CHAR, nil)
 		dev_rand_ops.__init__()
-		dev_rand.op = &dev_rand_ops
+		dev_rand.op = __ref_ops(dev_rand_ops)
 		
 		dev_key_num = 0
 		
-		FileEntry *dev_key = dev.create_child("keyboard", FILE_TYPE_CHAR, nil)
+		var dev_key = dev.create_child("keyboard", FileType.CHAR, nil)
 		dev_key_ops.__init__()
-		dev_key.op = &dev_key_ops
+		dev_key.op = __ref_ops(dev_key_ops)
 		
-		FileEntry *dev_tty = dev.create_child("tty", FILE_TYPE_CHAR, nil)
+		var dev_tty = dev.create_child("tty", FileType.CHAR, nil)
 		dev_tty_ops.__init__()
-		dev_tty.op = &dev_tty_ops
+		dev_tty.op = __ref_ops(dev_tty_ops)
 		
 		mouse_temp_no = 0
 		dev_mouse_num = 0
 		
-		FileEntry *dev_mouse = dev.create_child("mouse", FILE_TYPE_CHAR, nil)
+		var dev_mouse = dev.create_child("mouse", FileType.CHAR, nil)
 		dev_mouse_ops.__init__()
-		dev_mouse.op = &dev_mouse_ops
+		dev_mouse.op = __ref_ops(dev_mouse_ops)
 		
-		var key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
-		var mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
+		#var key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
+		#var mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
 	 	
-		irq.set_task(irq.hw2soft(1), key_task) # IRQ 1
-		irq.set_task(irq.hw2soft(12), mouse_task) # IRQ 12
+		#irq.set_task(irq.hw2soft(1), key_task) # IRQ 1
+		#irq.set_task(irq.hw2soft(12), mouse_task) # IRQ 12
+		
+		IrqManager.set_func(33, raw_function_pointer(int_keyboard))
 
+		
+	##	mouse_enable()
+		prints("ok\n")
 
+	func static mouse_enable()
 		# Enable the auxiliary mouse device
 		mouse_wait_signal()
 		outportb(0x64, 0xa8)
@@ -175,7 +182,7 @@ class StdCharDevs
 		mouse_wait_signal()
 		outportb(0x64, 0x20)
 		mouse_wait_data()
-		int _status = (inportb(0x60) | 2)
+		var _status = (inportb(0x60) | 2)
 		mouse_wait_signal()
 		outportb(0x64, 0x60)
 		mouse_wait_signal()
@@ -193,7 +200,6 @@ class StdCharDevs
 		mouse_write(0xf4)
 		mouse_read() # acknowledge
 		
-		prints("ok\n")
 
 
 	func static mouse_wait_data()
@@ -446,7 +452,7 @@ class StdCharDevs
 		return -1
 
 	func static ps2_read_key(_k: int)
-		int k = _k
+		var k = _k
 			
 		# add to low level device buffer
 		if dev_key_reading > 0
@@ -495,7 +501,7 @@ class StdCharDevs
 	var static mouse_temp_no: int
 
 	func static ps2_read_mouse(_d: int)
-		int d = _d
+		var d = _d
 		mouse_temp[mouse_temp_no] = d & 0x000000ff
 		mouse_temp_no ++
 		
@@ -504,13 +510,13 @@ class StdCharDevs
 		else
 			return
 		d = mouse_temp[0]
-		bool MYOverflow = ((d & 0x80) > 0)
-		bool MXOverflow = ((d & 0x40) > 0)
-		bool MYNegative = ((d & 0x20) > 0)
-		bool MXNegative = ((d & 0x10) > 0)
-		bool mbut = ((d & 0x04) > 0)
-		bool rbut = ((d & 0x02) > 0)
-		bool lbut = ((d & 0x01) > 0)
+		let MYOverflow = ((d & 0x80) > 0)
+		let MXOverflow = ((d & 0x40) > 0)
+		let MYNegative = ((d & 0x20) > 0)
+		let MXNegative = ((d & 0x10) > 0)
+		let mbut = ((d & 0x04) > 0)
+		let rbut = ((d & 0x02) > 0)
+		let lbut = ((d & 0x01) > 0)
 		mouse_temp[0] = 0
 		if lbut
 			mouse_temp[0] += 0x1
@@ -533,10 +539,10 @@ class StdCharDevs
 			dev_mouse_num += 4*4
 
 	func static ps2_try_read()
-		int k = inportb(0x64)
+		let k = inportb(0x64)
 		if (k & 0x01) == 0
 			return
-		int d = inportb(0x60)
+		let d = inportb(0x60)
 		if (k & 0x20) > 0
 			ps2_read_mouse(d)
 		else
@@ -544,19 +550,36 @@ class StdCharDevs
 		#ps2_try_read()
 
 
+	func static @noframe int_keyboard()
+		asm{
+			cli
+		}
+		int_keyboard_inner()
+		asm{
+			sti
+			db 0x48
+			iret
+		}
 
-	func static int_key()
-		while true
-			#prints("<key>")
-			
-			ps2_try_read()
-						
-			# allow more IRQs
-			outportb(0x20, 0x20)
-				
-			asm {
-				iret
-			}		
+	func static int_keyboard_inner()
+		IrqManager.mask(2)
+		prints("<key>")
+		ps2_try_read()
+		IrqManager.eoi(2)
+		IrqManager.unmask(2)
+
+#	func static int_key()
+#		while true
+#			#prints("<key>")
+#			
+#			ps2_try_read()
+#						
+#			# allow more IRQs
+#			outportb(0x20, 0x20)
+#				
+#			asm {
+#				iret
+#			}		
 
 	func static int_mouse()
 		while true

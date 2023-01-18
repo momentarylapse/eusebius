@@ -12,45 +12,45 @@ let PIC1_COMMAND = 0x20
 let PIC1_DATA = 0x21
 let PIC2_COMMAND = 0xa0
 let PIC2_DATA = 0xa1
-
-func @noframe int_keyboard()
-	asm{
-		cli
-	}
-	int_keyboard_inner()
-	asm{
-		sti
-		db 0x48
-		iret
-	}
-
-func int_keyboard_inner()
-	IrqManager.mask(2)
-	prints("[key=")
-	let k = inportb(0x60)
-	printh(&k, 1)
-	prints("]")
+#
+#func @noframe int_keyboard()
 #	asm{
-#		mov rax, rbp
-#		mov __temp_p__, rax
+#		cli
 #	}
-#	let rbp = __temp_p__
-#	prints("rbp=")
-#	printh(&rbp, 4)
-#	prints("\n")
-#	
-#	let size = 128
-#	#printh(_i2p(_p2i(rsp) - size), size)
-#	printh(rbp, size)
-#	prints("\n")
-#	
-	IrqManager.eoi(2)
-	IrqManager.unmask(2)
-
-
-func current_experiment()
-	IrqManager.set_func(33, raw_function_pointer(int_keyboard))
-
+#	int_keyboard_inner()
+#	asm{
+#		sti
+#		db 0x48
+#		iret
+#	}
+#
+#func int_keyboard_inner()
+#	IrqManager.mask(2)
+#	prints("[key=")
+#	let k = inportb(0x60)
+#	printh(&k, 1)
+#	prints("]")
+##	asm{
+##		mov rax, rbp
+##		mov __temp_p__, rax
+##	}
+##	let rbp = __temp_p__
+##	prints("rbp=")
+##	printh(&rbp, 4)
+##	prints("\n")
+##	
+##	let size = 128
+##	#printh(_i2p(_p2i(rsp) - size), size)
+##	printh(rbp, size)
+##	prints("\n")
+##	
+#	IrqManager.eoi(2)
+#	IrqManager.unmask(2)
+#
+#
+#func current_experiment()
+#	IrqManager.set_func(33, raw_function_pointer(int_keyboard))
+#
 
 class InterruptDescriptor as @noauto
 	var a, b, c, d: int
@@ -181,7 +181,7 @@ class IrqManager as @noauto
 		enable()
 		prints("   ok\n")
 		
-		current_experiment()
+		#current_experiment()
 	
 	func static init_pic()
 		# move IRQs to higher interrupts

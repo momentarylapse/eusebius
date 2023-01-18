@@ -4,7 +4,7 @@ use common
 use io.text
 use dev.ata
 use dev.block
-##use dev.std_char_devs
+use dev.std_char_devs
 use fs.fs
 use fs.access
 use fs.pipe
@@ -100,13 +100,12 @@ func main()
 	var boot = FileSystem.get("/boot", FileSystem.root)
 	if !boot
 		panic("/boot not found")
-	#printh(&boot, 4)
 	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 ##	InitSysCall()
-##	
-##	StdCharDevs.init()
-##	
+	
+	StdCharDevs.init()
+	
 ##	load_kalib()
 ##	
 ##	int stdin = kernel_task.open("/dev/tty", O_RDONLY)
