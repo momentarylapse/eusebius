@@ -13,25 +13,6 @@ let PIC1_DATA = 0x21
 let PIC2_COMMAND = 0xa0
 let PIC2_DATA = 0xa1
 
-
-#  rbp = 80.ff.17.00
-# 80 - e8.ff.17.00.00.00.00.00
-# 88 - 08.4b.01.00.00.00.00.00  return rip
-# 90 - 08.00.00.00.00.00.00.00  return cs
-# 98 - 02.02.00.00.00.00.00.00  RFLAGS
-# a0 - b8.ff.17.00.00.00.00.00  rsp
-# a8 - 10.00.00.00.00.00.00.00  ss
-# b0 - fe.4a.01.00.00.00.00.00
-# b8 - 00.00.00.00.00.00.00.00  <<--
-# c0 - fe.01.00.00.80.fb.07.00
-# c8 - 00.00.00.00.00.00.00.00
-# d0 - 00
-# d8 - 00
-# e0 - 00
-# e8 - f8.ff.17.00...
-# f0 - 05.00.01.00...
-# f8 - 00
-
 func @noframe int_keyboard()
 	asm{
 		cli
@@ -44,7 +25,8 @@ func @noframe int_keyboard()
 		out dx, al
 		#jmp $
 		
-		mov esp, 0x0017ff88
+		#sti
+		#mov esp, 0x0017ff88
 		db 0x48
 		iret
 	}
@@ -64,15 +46,9 @@ func int_keyboard_inner()
 	#printh(_i2p(_p2i(rsp) - size), size)
 	printh(rbp, size)
 	prints("\n")
-	
+
 
 func current_experiment()
-#	asm{
-#		mov rax, _int_keyboard
-#		mov __temp_p__, rax
-#	}
-#	let ppp = __temp_p__
-	#IrqManager.set_func(33, ppp)
 	IrqManager.set_func(33, raw_function_pointer(int_keyboard))
 	asm{
 		mov rax, rsp
@@ -82,66 +58,6 @@ func current_experiment()
 	prints("rsp=")
 	printh(&rsp, 4)
 	prints("\n")
-	return
-		
-#	asm{
-#	_int_keyboard:
-#		cli
-#	#	pusha
-#		mov eax, 0x000b8000
-#		mov [rax], 0x58 # "X"
-#		inc eax
-#		mov [rax], 0x04
-#		inc eax
-##		jmp $
-#	#	popa
-#	
-#		mov rdx, rsp # 0x17ff88
-#		#mov rdx, rbp # 0x17ffe8
-#		#xor rdx, rdx
-#		#mov dx, ss
-#		
-#	_out_nibble:
-#		mov cl, dl
-#		and cl, 0x0f
-#		add cl, 0x30
-#		cmp cl, 0x3a
-#		jl _after_letter
-#		add cl, 0x27
-#	_after_letter:
-#		mov [rax], cl
-#		inc eax
-#		mov [rax], 0x04
-#		inc eax
-#		
-#		shr rdx, 0x04
-#		cmp rdx, 0x00000000
-#		jnz _out_nibble
-#		
-##		mov eax, 0x00002000
-##	_xx2:
-##		mov rbx, [rax]
-##		mov [rax], rbx
-##		add eax, 0x00000008
-##		cmp eax, 0x00800000
-##		jl _xx2
-#		
-##		mov eax, 0x000b8000
-##		mov [rax], 0x5a # "Z"
-##		inc eax
-##		mov [rax], 0x04
-#		
-#		push rax
-#		pop rax
-#		
-#		# end of irq
-#		mov al, 0x20 # data: PIC_EOI
-#		mov edx, 0x00000020 # port: PIC1_COMMAND
-#		out dx, al
-#		#jmp $
-#		iret
-#	}
-
 
 
 class InterruptDescriptor as @noauto
@@ -271,8 +187,6 @@ class IrqManager as @noauto
 	
 	func static load_idt()
 		__temp_p__ = __ref_idt(idt)
-		printh(&__temp_p__, 8)
-		prints("\n")
 
 		asm {
 			jmp _after_idt_data
@@ -361,13 +275,13 @@ class IrqManager as @noauto
 ##			}
 ##
 	func static @noframe int_ignore()
-		while true
-			prints("[ignore irq]")
-			#while true
-			#	pass
-			asm {
-				iret
-			}
+		#prints("[ignore irq]")
+		#while true
+		#	pass
+		asm {
+			db 0x48
+			iret
+		}
 
 #	#var static ignore_task: Task*
 #

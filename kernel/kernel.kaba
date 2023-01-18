@@ -126,11 +126,12 @@ func main()
 #	*p = 3
 
 	prints("  \\(^_^)/")
-	asm{
-		jmp $
-	}
-	#while true
-	#	pass
+#	while true
+#		pass
+	while true
+		for i in 0:10000000
+			pass
+		prints(".")
 ##	
 ##	panic("no tasks")
 ##
