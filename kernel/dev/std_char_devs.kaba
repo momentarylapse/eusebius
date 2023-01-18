@@ -58,7 +58,6 @@ class StdCharDevs
 		dev_null_ops.__init__()
 		add(dev, "null", dev_null_ops)
 		
-		#dev_rand_ops.state = 13
 		dev_rand_ops.__init__()
 		add(dev, "random", dev_rand_ops)
 		

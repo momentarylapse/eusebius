@@ -6,6 +6,7 @@ use mem.paging
 use irq.irq
 use tty
 
+let MOUSE_IRQ = 12
 
 class FileOperationsMouse extends FileOperations
 	var mouse_temp: int[4]
@@ -31,7 +32,7 @@ class FileOperationsMouse extends FileOperations
 		
 		
 	func static register()
-		IrqManager.set_func(33, raw_function_pointer(int_mouse))
+		IrqManager.set_func(MOUSE_IRQ + 32, raw_function_pointer(int_mouse))
 	
 	
 		# Enable the auxiliary mouse device
@@ -160,10 +161,10 @@ class FileOperationsMouse extends FileOperations
 		}
 
 	func mut handle_irq()
-		IrqManager.mask(12)
+		IrqManager.mask(MOUSE_IRQ)
 		prints("<mouse>")
 		ps2_try_read()
-		IrqManager.eoi(12)
-		IrqManager.unmask(12)
+		IrqManager.eoi(MOUSE_IRQ)
+		IrqManager.unmask(MOUSE_IRQ)
 		
 var dev_mouse_ops: FileOperationsMouse

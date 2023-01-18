@@ -7,6 +7,7 @@ use irq.irq
 use tty
 #use task.task
 
+let KEYBOARD_IRQ = 1
 
 
 
@@ -41,7 +42,8 @@ class FileOperationsKey extends FileOperations
 	
 	
 	func static register()
-		IrqManager.set_func(33, raw_function_pointer(int_keyboard))
+		IrqManager.set_func(KEYBOARD_IRQ + 32, raw_function_pointer(int_keyboard))
+		IrqManager.unmask(KEYBOARD_IRQ)
 		
 
 	func getchar(k: int) -> int
@@ -328,11 +330,11 @@ class FileOperationsKey extends FileOperations
 		}
 
 	func mut handle_irq()
-		IrqManager.mask(2)
+		IrqManager.mask(KEYBOARD_IRQ)
 		prints("<key>")
 		ps2_try_read()
-		IrqManager.eoi(2)
-		IrqManager.unmask(2)
+		IrqManager.eoi(KEYBOARD_IRQ)
+		IrqManager.unmask(KEYBOARD_IRQ)
 
 var dev_key_ops: FileOperationsKey
 	
