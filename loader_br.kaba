@@ -7,7 +7,7 @@
 #| zuletzt geaendert: 2008.09.14 (c) by MichiSoft TM                            |
 #\*----------------------------------------------------------------------------
 
-void main()
+func @noframe main()
 	asm{
 		# wir befinden uns noch im 16bit RealMode
 		bits_16

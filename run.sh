@@ -9,7 +9,7 @@ qemu-system-x86_64 \
 ### not now... takes too much time to reset between runs
 ### -netdev user,id=network0 -device rtl8139,netdev=network0,mac=52:54:00:12:34:56 \
 ### -device AC97 \
- -smp cpus=2,cores=2 \
+### -smp cpus=2,cores=2 \
  -vga std
 # -device virtio-vga,virgl=on
 # -soundhw hda \

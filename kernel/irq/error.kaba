@@ -1,63 +1,17 @@
 use common
 use io.text
-use task.task
-use task.scheduler
+#use task.task
+#use task.scheduler
 use irq.irq
 use kaba
 
 const ERROR_STACK_SIZE = 4096
 
 
-class Error as @noauto
-
-	func static handle_task_error(out t: Task, out e: Task, i: int)
-		int pid = t.pid
-		#prints("\n    -- Interrupt #")
-	#	printi(i)
-	#	prints(" pid=")
-	#	printi(pid)
-	#	prints "  eip="
-	#	printh(t.tss.eip, 4)
-	#	prints(" --\n")
-	#	cstring s
-	#	get_error_text(i, s)
-	#	prints(s)
-		
-		# TODO send signal
-		
-		if i == 13 or i == 14 # GPF / page fault
-			t.handle_signal_link_iret(SIGSEGV)
-		else
-			t.die(i-666)
-		
-		int pid_next = Scheduler.get_next_task(pid)
-		Scheduler.reconnect_tasks(pid_next, e)
-		
-
-	func static handle_kernel_error(t: Task, i: int)
-		cstring s
-		get_error_text(i, s)
-		
-		prints("\neip=")
-		printh(t.tss.eip, 4)
-		prints("  esp=")
-		printh(t.tss.esp, 4)
-		prints("\n")
-		
-		#if i == 0
-	#		prints("   eflags=")
-	#		printh(&KernelTask.tss.eflags, 4)
-	#		prints(s)
-	#		prints("-y-")
-	#		return
-	#		asm{
-	#			iret
-	#		}
-	#		prints("xxxx")
-		panic(s)
+class ErrorManager as @noauto
 
 	func static get_error_text(i: int, out s: cstring)
-		cstring nn
+		var nn: cstring
 		strcpy(s, "Int ")
 		_i2s(i, nn)
 		strcat(s, nn)
@@ -76,7 +30,7 @@ class Error as @noauto
 		if i==7
 			strcat(s, ": no coprocessor")
 		if i==8
-			strcat(s, ": system error")
+			strcat(s, ": double fault")
 		if i==9
 			strcat(s, ": coprocessor segment overrun")
 		if i==10
@@ -90,119 +44,211 @@ class Error as @noauto
 		if i==14
 			strcat(s, ": page fault")
 		if i==16
-			strcat(s, ": coprocessor error")
+			strcat(s, ": x87 exception")
+		if i==17
+			strcat(s, ": alignment error")
+		if i==19
+			strcat(s, ": sse exception")
+		if i==21
+			strcat(s, ": control transfer")
 		strcat(s, "  8-P")
 
 	func static int_handler(i: int)
-		while true
-			# task?
-			var e = Error.tasks[i]
-			int prev_pid = e.get_prev_pid()
-			var prev = &TaskManager.tasks[prev_pid]
-			
-			# handle error
-			if prev.kernel_mode
-				handle_kernel_error(prev, i)
-			else
-				handle_task_error(prev, e, i)
-			
-			asm {
-				iret
-			}
-
-	func static int_00()
-		int_handler(0)
-	func static int_01()
-		int_handler(1)
-	func static int_02()
-		int_handler(2)
-	func static int_03()
-		int_handler(3)
-	func static int_04()
-		int_handler(4)
-	func static int_05()
-		int_handler(5)
-	func static int_06()
-		int_handler(6)
-	func static int_07()
-		int_handler(7)
-		prints("[CP]")
-		asm {
-			db 0x0f
-			db 0x06
-			iret
-		}
-	func static int_08()
-		int_handler(8)
-	func static int_09()
-		int_handler(9)
-	func static int_10()
-		int_handler(10)
-	func static int_11()
-		int_handler(11)
-	func static int_12()
-		int_handler(12)
-	func static int_13()
-		int_handler(13)
-	func static int_14()
-		int_handler(14)
-	func static int_15()
-		int_handler(15)
-	func static int_16()
-		int_handler(16)
-	func static int_XX()
-		int_handler(2004)
-		
-		
-	func static int_ignore_dummy()
-		asm {
-			_ignore_interrupt_handler:
-		}
-		#prints("  [ignore]")
-		asm {
-			db 0x0f
-			db 0x06
-			iret
-		}
-
-
-	var static handler: Function*[16]
-	var static tasks: Task*[16]
-	var static ignore_handler: Function*
+		# TODO rebuild task system
+		# for now...
+		var s: cstring
+		get_error_text(i, s)
+		panic(s)
 
 	func static init()
-		prints("setting error handler")
-
-		handler[ 0] = int_00
-		handler[ 1] = int_01
-		handler[ 2] = int_02
-		handler[ 3] = int_03
-		handler[ 4] = int_04
-		handler[ 5] = int_05
-		handler[ 6] = int_06
-		handler[ 7] = int_07
-		handler[ 8] = int_08
-		handler[ 9] = int_09
-		handler[10] = int_10
-		handler[11] = int_11
-		handler[12] = int_12
-		handler[13] = int_13
-		handler[14] = int_14
-		handler[15] = int_15
+		prints("setting error handler...")
 		
-		for h,i in handler
-			tasks[i] = TaskManager.add_task_kernel("irq-error", h, ERROR_STACK_SIZE, kernel_task)
-			irq.set_task(i, tasks[i])
+		IrqManager.set_func(0, raw_function_pointer(int_00))
+		IrqManager.set_func(1, raw_function_pointer(int_01))
+		IrqManager.set_func(2, raw_function_pointer(int_02))
+		IrqManager.set_func(3, raw_function_pointer(int_03))
+		IrqManager.set_func(4, raw_function_pointer(int_04))
+		IrqManager.set_func(5, raw_function_pointer(int_05))
+		IrqManager.set_func(6, raw_function_pointer(int_06))
+		IrqManager.set_func(7, raw_function_pointer(int_07))
+		IrqManager.set_func(8, raw_function_pointer(int_08))
+		IrqManager.set_func(9, raw_function_pointer(int_09))
+		IrqManager.set_func(10, raw_function_pointer(int_10))
+		IrqManager.set_func(11, raw_function_pointer(int_11))
+		IrqManager.set_func(12, raw_function_pointer(int_12))
+		IrqManager.set_func(13, raw_function_pointer(int_13))
+		IrqManager.set_func(14, raw_function_pointer(int_14))
+		IrqManager.set_func(15, raw_function_pointer(int_15))
+		IrqManager.set_func(16, raw_function_pointer(int_16))
+		IrqManager.set_func(17, raw_function_pointer(int_17))
+		IrqManager.set_func(19, raw_function_pointer(int_19))
+		IrqManager.set_func(21, raw_function_pointer(int_21))
 		
-		
-		# tell the cpu to ignore sse/task-switch-exceptions
-		asm {
-			mov eax, _ignore_interrupt_handler
-			mov Error.ignore_handler, eax
-		}
-		irq.set_func(7, ignore_handler)
-	
-		prints("   ok\n")
+		prints("ok\n")
+
+#	func static handle_task_error(out t: Task, out e: Task, i: int)
+#		int pid = t.pid
+#		#prints("\n    -- Interrupt #")
+#	#	printi(i)
+#	#	prints(" pid=")
+#	#	printi(pid)
+#	#	prints "  eip="
+#	#	printh(t.tss.eip, 4)
+#	#	prints(" --\n")
+#	#	cstring s
+#	#	get_error_text(i, s)
+#	#	prints(s)
+#		
+#		# TODO send signal
+#		
+#		if i == 13 or i == 14 # GPF / page fault
+#			t.handle_signal_link_iret(SIGSEGV)
+#		else
+#			t.die(i-666)
+#		
+#		int pid_next = Scheduler.get_next_task(pid)
+#		Scheduler.reconnect_tasks(pid_next, e)
+#		
+#
+#	func static handle_kernel_error(t: Task, i: int)
+#		cstring s
+#		get_error_text(i, s)
+#		
+#		prints("\neip=")
+#		printh(t.tss.eip, 4)
+#		prints("  esp=")
+#		printh(t.tss.esp, 4)
+#		prints("\n")
+#		
+#		#if i == 0
+#	#		prints("   eflags=")
+#	#		printh(&KernelTask.tss.eflags, 4)
+#	#		prints(s)
+#	#		prints("-y-")
+#	#		return
+#	#		asm{
+#	#			iret
+#	#		}
+#	#		prints("xxxx")
+#		panic(s)
 
 
-	
+#	func static @noframe int_handler(i: int)
+#		while true
+#			# task?
+#			var e = Error.tasks[i]
+#			int prev_pid = e.get_prev_pid()
+#			var prev = &TaskManager.tasks[prev_pid]
+#			
+#			# handle error
+#			if prev.kernel_mode
+#				handle_kernel_error(prev, i)
+#			else
+#				handle_task_error(prev, e, i)
+#			
+#			asm {
+#				iret
+#			}
+#
+	func static @noframe int_00()
+		int_handler(0)
+	func static @noframe int_01()
+		int_handler(1)
+	func static @noframe int_02()
+		int_handler(2)
+	func static @noframe int_03()
+		int_handler(3)
+	func static @noframe int_04()
+		int_handler(4)
+	func static @noframe int_05()
+		int_handler(5)
+	func static @noframe int_06()
+		int_handler(6)
+	func static @noframe int_07()
+		int_handler(7)
+#		prints("[CP]")
+#		asm {
+#			db 0x0f
+#			db 0x06
+#			iret
+#		}
+	func static @noframe int_08()
+		int_handler(8)
+	func static @noframe int_09()
+		int_handler(9)
+	func static @noframe int_10()
+		int_handler(10)
+	func static @noframe int_11()
+		int_handler(11)
+	func static @noframe int_12()
+		int_handler(12)
+	func static @noframe int_13()
+		int_handler(13)
+	func static @noframe int_14()
+		int_handler(14)
+	func static @noframe int_15()
+		int_handler(15)
+	func static @noframe int_16()
+		int_handler(16)
+	func static @noframe int_17()
+		int_handler(17)
+	func static @noframe int_19()
+		int_handler(19)
+	func static @noframe int_21()
+		int_handler(21)
+#	func static @noframe int_XX()
+#		int_handler(2004)
+#		
+#		
+#	func static @noframe int_ignore_dummy()
+#		asm {
+#			_ignore_interrupt_handler:
+#		}
+#		#prints("  [ignore]")
+#		asm {
+#			db 0x0f
+#			db 0x06
+#			iret
+#		}
+#
+#
+#	var static handler: Function*[16]
+#	var static tasks: Task*[16]
+#	var static ignore_handler: Function*
+#
+#	func static init()
+#		prints("setting error handler")
+#
+#		handler[ 0] = int_00
+#		handler[ 1] = int_01
+#		handler[ 2] = int_02
+#		handler[ 3] = int_03
+#		handler[ 4] = int_04
+#		handler[ 5] = int_05
+#		handler[ 6] = int_06
+#		handler[ 7] = int_07
+#		handler[ 8] = int_08
+#		handler[ 9] = int_09
+#		handler[10] = int_10
+#		handler[11] = int_11
+#		handler[12] = int_12
+#		handler[13] = int_13
+#		handler[14] = int_14
+#		handler[15] = int_15
+#		
+#		for h,i in handler
+#			tasks[i] = TaskManager.add_task_kernel("irq-error", h, ERROR_STACK_SIZE, kernel_task)
+#			irq.set_task(i, tasks[i])
+#		
+#		
+#		# tell the cpu to ignore sse/task-switch-exceptions
+#		asm {
+#			mov eax, _ignore_interrupt_handler
+#			mov Error.ignore_handler, eax
+#		}
+#		irq.set_func(7, ignore_handler)
+#	
+#		prints("   ok\n")
+#
+
+
