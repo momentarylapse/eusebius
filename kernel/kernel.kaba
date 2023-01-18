@@ -87,23 +87,21 @@ func main()
 	ErrorManager.init()
 
 
+	BlockDevManager.init()
 
-	if false
-		BlockDevManager.init()
+	InitFileAccessData()
+	PipeManager.init()
+	SocketManager.init()
 
-		InitFileAccessData()
-		PipeManager.init()
-		SocketManager.init()
+	FileSystem.init()
 
-		FileSystem.init()
-
-		# assume a default disk layout...
-		FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
-		var boot = FileSystem.get("/boot", FileSystem.root)
-		if !boot
-			panic("/boot not found")
-		#printh(&boot, 4)
-		FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
+	# assume a default disk layout...
+	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
+	var boot = FileSystem.get("/boot", FileSystem.root)
+	if !boot
+		panic("/boot not found")
+	#printh(&boot, 4)
+	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 ##	InitSysCall()
 ##	
@@ -126,12 +124,8 @@ func main()
 #	*p = 3
 
 	prints("  \\(^_^)/")
-#	while true
-#		pass
 	while true
-		for i in 0:10000000
-			pass
-		prints(".")
+		pass
 ##	
 ##	panic("no tasks")
 ##

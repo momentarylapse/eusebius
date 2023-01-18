@@ -19,45 +19,37 @@ func @noframe int_keyboard()
 	}
 	int_keyboard_inner()
 	asm{
-		# end of irq
-		mov al, 0x20 # data: PIC_EOI
-		mov edx, 0x00000020 # port: PIC1_COMMAND
-		out dx, al
-		#jmp $
-		
-		#sti
-		#mov esp, 0x0017ff88
+		sti
 		db 0x48
 		iret
 	}
 
 func int_keyboard_inner()
-	prints("=== [key] ===\n")
-	asm{
-		mov rax, rbp
-		mov __temp_p__, rax
-	}
-	let rbp = __temp_p__
-	prints("rbp=")
-	printh(&rbp, 4)
-	prints("\n")
-	
-	let size = 128
-	#printh(_i2p(_p2i(rsp) - size), size)
-	printh(rbp, size)
-	prints("\n")
+	IrqManager.mask(2)
+	prints("[key=")
+	let k = inportb(0x60)
+	printh(&k, 1)
+	prints("]")
+#	asm{
+#		mov rax, rbp
+#		mov __temp_p__, rax
+#	}
+#	let rbp = __temp_p__
+#	prints("rbp=")
+#	printh(&rbp, 4)
+#	prints("\n")
+#	
+#	let size = 128
+#	#printh(_i2p(_p2i(rsp) - size), size)
+#	printh(rbp, size)
+#	prints("\n")
+#	
+	IrqManager.eoi(2)
+	IrqManager.unmask(2)
 
 
 func current_experiment()
 	IrqManager.set_func(33, raw_function_pointer(int_keyboard))
-	asm{
-		mov rax, rsp
-		mov __temp_p__, rax
-	}
-	let rsp = __temp_p__
-	prints("rsp=")
-	printh(&rsp, 4)
-	prints("\n")
 
 
 class InterruptDescriptor as @noauto
@@ -135,6 +127,34 @@ class IrqManager as @noauto
 	func static hw2soft(hw_irq: int) -> int
 		return hw_irq + HARDWARE_IRQ_SHIFT
 
+	func static eoi(hw_irq: int)
+		if hw_irq >= 8
+			outportb(PIC2_COMMAND, 0x20)
+		outportb(PIC1_COMMAND, 0x20)
+	
+	func static mask(hw_irq: int)
+		var index = hw_irq
+		var port = PIC1_COMMAND
+		if hw_irq >= 8
+			index -= 8
+			port = PIC2_COMMAND
+		let v = inportb(port)
+		let mask = 1 << index
+		if (v & mask) == 0
+			outportb(port, v | mask)
+			
+	func static unmask(hw_irq: int)
+		var index = hw_irq
+		var port = PIC1_COMMAND
+		if hw_irq >= 8
+			index -= 8
+			port = PIC2_COMMAND
+		let v = inportb(port)
+		let mask = 1 << index
+		if (v & mask) != 0
+			outportb(port, v - mask)
+		
+		
 	func static init()
 		prints("loading interrupt table...")
 
@@ -282,6 +302,12 @@ class IrqManager as @noauto
 			db 0x48
 			iret
 		}
+	
+	func static slow_endless_loop()
+		while true
+			for i in 0:100000000
+				pass
+			prints(".")
 
 #	#var static ignore_task: Task*
 #
