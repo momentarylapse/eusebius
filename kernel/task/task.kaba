@@ -8,36 +8,34 @@ use mem.paging
 use mem.shared
 use net.socket
 use time.timevalue
+use gdt
 
 
 
 
-const MAX_OPEN_FILES_PER_TASK = 16
-const MAX_SHARED_MEMS_PER_TASK = 16
+let MAX_OPEN_FILES_PER_TASK = 16
+let MAX_SHARED_MEMS_PER_TASK = 16
 
-const SIGKILL = 9
-const SIGSEGV = 11
-const SIGCONT = 18
-const SIGSTOP = 19
-const SIGX = 23
-const MAX_SIGNALS = 32
+let SIGKILL = 9
+let SIGSEGV = 11
+let SIGCONT = 18
+let SIGSTOP = 19
+let SIGX = 23
+let MAX_SIGNALS = 32
 
 
-#--------------------------------------------------------------
-# Tasks
+let KERNEL_STACK_SIZE = 0x00020000 # 128k
+let KERNEL_MEM = 0x00800000 # 8mb
+let IDLE_STACK_SIZE = 0x00001000 # 4k
 
-const KERNEL_STACK_SIZE = 0x00020000 # 128k
-const KERNEL_MEM = 0x00800000 # 8mb
-const IDLE_STACK_SIZE = 0x00001000 # 4k
+let MAX_TASKS = 256
+let TASK_IMAGE_POS = KERNEL_MEM
+let TASK_STACK_SIZE = 0x00080000 # 512k
+let TASK_STACK_POS = 0x00880000
+let NUM_PRE_GDT_ENTRIES = 5
+let INITIAL_TASK_MEM = 0x00800000 # 8m
 
-const MAX_TASKS = 256
-const TASK_IMAGE_POS = KERNEL_MEM
-const TASK_STACK_SIZE = 0x00080000 # 512k
-const TASK_STACK_POS = 0x00880000
-const NUM_PRE_GDT_ENTRIES = 5
-const INITIAL_TASK_MEM = 0x00800000 # 8m
-
-const TASK_MAX_MESSAGES = 16
+let TASK_MAX_MESSAGES = 16
 
 enum TaskStatus as @noauto
 	UNUSED
@@ -48,21 +46,6 @@ enum TaskStatus as @noauto
 	INTERRUPT
 	#DEAD
 
-class TaskStateSegment as @noauto
-	var _prev: int
-	var rsp0: void*
-	var rsp1: void*
-	var rsp2: void*
-	var _a, _b: int
-	var ist1: void*
-	var ist2: void*
-	var ist3: void*
-	var ist4: void*
-	var ist5: void*
-	var ist6: void*
-	var ist7: void*
-	var _c, _d: int
-	var iomap: int
 
 var TaskCallData: int[2]
 
@@ -698,92 +681,6 @@ class TaskSharedMemoryRef as @noauto
 #				activate()
 #
 
-class GlobalDescriptorTable as @noauto
-	#class Descriptor as @noauto
-	#	var a, b, c, d: int
-	#	
-	#	func mut clear()
-	#		a = 0
-	#		b = 0
-	#		c = 0
-	#		d = 0
-	#	func mut set_system_segment(addr: int, executable: bool, pvl: int)
-	#		# limit is ignored
-	#		a = (addr << 16) # base[15..0] limit[15..0]
-	#		b = (addr & 0xff000000) | ((addr >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
-	#		b = b | 0x00008000 # present
-	#		b = b | 0x00201200 # long mode + ...
-	#		if executable
-	#			b = b | 0x00000800
-	#		b = b | (0x00002000 * pvl)
-	
-	#var descriptors: Descriptor[NUM_PRE_GDT_ENTRIES + 1]
-	
-	var x: int[10]
-	
-	func mut init()
-		#for d in descriptors
-		#	d.clear()
-		# kernel code
-		#descriptors[1].set_system_segment(0, true, 0)
-		# kernel data
-		#descriptors[2].set_system_segment(0, false, 0)
-		# user code
-		#descriptors[3].set_system_segment(0, true, 0)#3)
-		# user data
-		#descriptors[4].set_system_segment(0, false, 0)#3)
-		#descriptors[5].set_task()
-		
-		# manual...
-		
-		# null
-		x[0] = 0
-		x[1] = 0
-		# code
-		x[2] = 0
-		x[3] = 0x00209800
-		# data
-		x[4] = 0
-		x[5] = 0x00009200
-		# tss
-		#x[6] = 0x00000067 # size
-		#x[7] = 0x00008900
-		#x[8] = 0
-		#x[9] = 0
-	
-	func mut set_tss(tss: TaskStateSegment)
-		let addr = _p2i(&tss)
-		x[6] = (addr << 16) + 0x67
-		x[7] = (addr & 0xff000000) | ((addr >> 16) & 0xff) | 0x00008900
-		x[8] = 0
-		x[9] = 0
-	
-	func load()
-		# load GDT
-		__temp_i__ = sizeof(self) - 1
-		__temp_p__ = &self # __ref_gdt(gdt)#&gdt
-		asm{
-			jmp _after_gdt_data
-			_gdtr:
-			dw 0x0000
-			_gdtr_base:
-			dd 0x00000000
-			dd 0x00000000
-			_after_gdt_data:
-			mov eax, __temp_i__
-			mov [_gdtr], eax
-			mov rax, __temp_p__
-			mov [_gdtr_base], rax
-			lgdt [_gdtr]
-			
-			mov eax, 0x00000010
-			mov ds, ax
-			mov ss, ax
-			
-			# cs might require ret_far trick
-		}
-		prints("lgdt...")
-		
 
 #class GlobalDescriptorData
 #	var a, b: int
@@ -809,217 +706,4 @@ class GlobalDescriptorTable as @noauto
 #			b = b & 0xfffffdff
 
 
-#var kernel_task: Task*
-
-func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
-	return &gdt
-
-class TaskManager as @noauto
-	var static gdt: GlobalDescriptorTable
-	var static tss: TaskStateSegment
-	var static ist1: void*
-	
-#	func static get_task(pid: int) -> Task*
-#		if pid < 0 or pid >= MAX_TASKS
-#			return nil
-#		var t = &tasks[pid]
-#		if t.status == TaskStatus.UNUSED
-#			return nil
-#		return t
-
-#	var static tasks: Task[MAX_TASKS]
-#	var static idle_task: Task*
-	var static next_pid_to_assign: int
-	var static next_puid_to_assign: int
-	
-	var static __handler_p__: int
-	var static ack_hw_irq: int
-
-
-	#var static gdt: GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
-
-#	func static get_next_pid() -> int
-#		for i in next_pid_to_assign:MAX_TASKS
-#			if tasks[i].status == TaskStatus.UNUSED
-#				next_pid_to_assign = i + 1
-#				return i
-#		for i in 0:next_pid_to_assign
-#			if tasks[i].status == TaskStatus.UNUSED
-#				next_pid_to_assign = i + 1
-#				return i
-#		return -1
-
-#	func static add_task_user(name: cstring, F: void*, parent: Task*) -> Task*
-#		let pid = get_next_pid()
-#		if pid < 0
-#			return nil
-#		var t = &tasks[pid]
-#	
-#		t.init(pid, name, parent)
-#		t.kernel_mode = false
-#	
-#		t.stack_size = TASK_STACK_SIZE
-#		t.stack = _i2p(TASK_STACK_POS)
-#		t.mem_bottom = KERNEL_MEM
-#		t.mem_size = INITIAL_TASK_MEM
-#		t.page_dir = Paging.create_root_table()
-#		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
-#		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-#			panic("incomplete page dir") # ...
-#		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
-#		gdt[t.desc].set_task(t)
-#
-#		return t
-#
-#	func static add_task_kernel(name: cstring, F: void*, stack_size: int, parent: Task*) -> Task*
-#		let pid = get_next_pid()
-#		if pid < 0
-#			return nil
-#		var t = &tasks[pid]
-#
-#		t.init(pid, name, parent)
-#		t.kernel_mode = true
-#	
-#		t.stack_size = stack_size
-#		t.stack = Heap.malloc(stack_size)
-#		t.page_dir = Paging.kernel_root_table
-#		t.mem_bottom = 0
-#		t.mem_size = 0
-#		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_root_table, F)
-#	
-#		gdt[t.desc].set_task(t)
-#
-#		return t
-#
-	func static idle_func()
-		while true
-			#prints("<idle>")
-			asm {
-				hlt
-			}
-	func static get_pvl() -> int
-		asm {
-			db 0x9c # pushf
-			pop eax
-			mov __temp_i__, eax
-		}
-		let eflags = __temp_i__
-		return (eflags >> 12) & 3
-
-
-	# running in task space
-#	func static task_signal_handler()
-#		asm {
-#			mov TaskManager.__handler_p__, edx
-#		}
-#		#prints("[task-signal-handler] ")
-#		#printh(&__handler_p__, 4)
-#		#prints(" [call]\n")
-#		asm {
-#			mov eax, TaskManager.__handler_p__
-#			call eax
-#		}
-#		#prints("[done...return]\n")
-#		asm {
-#			# return from handler
-#			mov eax, 0x00002006
-#			int 0x80
-#		}
-#		while true
-#			nil
-
-	func static setup_hardware_task()
-		asm{
-			mov rax, _start_as_task
-			mov __temp_p__, rax
-		}
-		# not sure if this is neccessary
-		tss.rsp0 = __temp_p__
-		ist1 = Heap.malloc(1024)
-		tss.ist1 = _i2p(_p2i(ist1) + 1000)
-		prints("ltr...")
-		asm{
-			mov ax, 0x0018
-			ltr ax
-			_start_as_task:
-			
-			
-			mov eax, 0x00000008
-			push rax
-			mov eax, _start_as_task2
-			push rax
-			db 0x48
-			ret_far
-			_start_as_task2:
-		}
-		# markiert das aktuelle TSS als "busy"!
-
-	func static init()
-		prints("init tasks...")
-		gdt.init()
-		gdt.set_tss(tss)
-		
-		ack_hw_irq = -1
-	
-		# null descriptor
-#		for g in gdt
-#			g.a = 0x00000000
-#			g.b = 0x00000000
-		# kernel code
-#		gdt[1].set_data(0, 0xffffffff, true, 0)
-		# kernel data
-#		gdt[2].set_data(0, 0xffffffff, false, 0)
-		# user code
-#		gdt[3].set_data(0, 0xffffffff, true, 0)#3)
-		# user data
-#		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
-
-#		for t in tasks
-#			t.status = TaskStatus.UNUSED
-#			for h in t.handles
-#				h = nil
-#			for sm in t.shmem
-#				sm.s = nil
-
-		next_pid_to_assign = 0
-		next_puid_to_assign = 0
-		#UserMemMask = 0
-
-#		kernel_task = add_task_kernel("kernel", nil, KERNEL_STACK_SIZE, nil)
-#		idle_task = add_task_kernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
-	
-		gdt.load()
-		setup_hardware_task()
-	
-		# enable sse
-		asm{
-	
-			mov eax, cr0
-			and eax, 0xfffffffb # clear CR0.EM (don't emulate via IRQ)
-			or eax, 0x00000002 # set CR0.MP (inform about task-switches)
-			mov cr0, eax
-			mov __temp_i__, eax
-		
-			# set CR4.OSFXSR (enable sse)
-			mov eax, cr4
-			#mov __temp_i__, eax
-			or eax, 0x00000200
-			mov cr4, eax
-	
-			# flush cpu prefetch
-			jmp _flush_sse
-			_flush_sse:
-		}
-
-		prints("  ok\n")
-
-#int sys_getpid()
-#	asm{
-#		xor, eax, eax
-#		str ax
-#		mov __temp_i__, eax
-#	}
-#	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
-
-			
 

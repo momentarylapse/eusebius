@@ -12,14 +12,14 @@ use mem.heap
 use mem.paging
 use mem.shared
 use net.socket
-use task.task
+use task.manager
 ##use task.scheduler
 use irq.irq
 use irq.error
 use time.timer
 ##use syscall
 
-const KALIB_LOCATION = 0x00050000
+let KALIB_LOCATION = 0x00050000
 
 
 

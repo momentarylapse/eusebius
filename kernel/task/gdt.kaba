@@ -1,0 +1,114 @@
+use common
+use io.text
+
+
+class TaskStateSegment as @noauto
+	var _prev: int
+	var rsp0: void*
+	var rsp1: void*
+	var rsp2: void*
+	var _a, _b: int
+	var ist1: void*
+	var ist2: void*
+	var ist3: void*
+	var ist4: void*
+	var ist5: void*
+	var ist6: void*
+	var ist7: void*
+	var _c, _d: int
+	var iomap: int
+
+
+class GlobalDescriptorTable as @noauto
+	#class Descriptor as @noauto
+	#	var a, b, c, d: int
+	#	
+	#	func mut clear()
+	#		a = 0
+	#		b = 0
+	#		c = 0
+	#		d = 0
+	#	func mut set_system_segment(addr: int, executable: bool, pvl: int)
+	#		# limit is ignored
+	#		a = (addr << 16) # base[15..0] limit[15..0]
+	#		b = (addr & 0xff000000) | ((addr >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
+	#		b = b | 0x00008000 # present
+	#		b = b | 0x00201200 # long mode + ...
+	#		if executable
+	#			b = b | 0x00000800
+	#		b = b | (0x00002000 * pvl)
+	
+	#var descriptors: Descriptor[NUM_PRE_GDT_ENTRIES + 1]
+	
+	var x: int[14]
+	
+	func mut init()
+		#for d in descriptors
+		#	d.clear()
+		# kernel code
+		#descriptors[1].set_system_segment(0, true, 0)
+		# kernel data
+		#descriptors[2].set_system_segment(0, false, 0)
+		# user code
+		#descriptors[3].set_system_segment(0, true, 0)#3)
+		# user data
+		#descriptors[4].set_system_segment(0, false, 0)#3)
+		#descriptors[5].set_task()
+		
+		# manual...
+		
+		# null
+		x[0] = 0
+		x[1] = 0
+		# kernel code
+		x[2] = 0
+		x[3] = 0x00209800
+		# kernel data
+		x[4] = 0
+		x[5] = 0x00009200
+		# user code
+		x[6] = 0
+		x[7] = 0x00209800
+		# user data
+		x[8] = 0
+		x[9] = 0x00009200
+		# tss
+		#x[10] = 0x00000067 # size
+		#x[11] = 0x00008900
+		#x[12] = 0
+		#x[13] = 0
+	
+	func mut set_tss(tss: TaskStateSegment)
+		let addr = _p2i(&tss)
+		x[10] = (addr << 16) + 0x67
+		x[11] = (addr & 0xff000000) | ((addr >> 16) & 0xff) | 0x00008900
+		x[12] = 0
+		x[13] = 0
+	
+	func load()
+		prints("lgdt...")
+		
+		# load GDT
+		__temp_i__ = sizeof(self) - 1
+		__temp_p__ = &self
+		asm{
+			jmp _after_gdt_data
+			_gdtr:
+			dw 0x0000
+			_gdtr_base:
+			dd 0x00000000
+			dd 0x00000000
+			_after_gdt_data:
+			mov eax, __temp_i__
+			mov [_gdtr], eax
+			mov rax, __temp_p__
+			mov [_gdtr_base], rax
+			lgdt [_gdtr]
+			
+			mov eax, 0x00000010
+			mov ds, ax
+			mov ss, ax
+			
+			# cs might require ret_far trick
+		}
+		

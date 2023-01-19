@@ -1,0 +1,220 @@
+use common
+use io.text
+use mem.heap
+use task
+use gdt
+
+
+#var kernel_task: Task*
+
+func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
+	return &gdt
+
+class TaskManager as @noauto
+	var static gdt: GlobalDescriptorTable
+	var static tss: TaskStateSegment
+	var static ist1: void*
+	
+#	func static get_task(pid: int) -> Task*
+#		if pid < 0 or pid >= MAX_TASKS
+#			return nil
+#		var t = &tasks[pid]
+#		if t.status == TaskStatus.UNUSED
+#			return nil
+#		return t
+
+#	var static tasks: Task[MAX_TASKS]
+#	var static idle_task: Task*
+	var static next_pid_to_assign: int
+	var static next_puid_to_assign: int
+	
+	var static __handler_p__: int
+	var static ack_hw_irq: int
+
+
+	#var static gdt: GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
+
+#	func static get_next_pid() -> int
+#		for i in next_pid_to_assign:MAX_TASKS
+#			if tasks[i].status == TaskStatus.UNUSED
+#				next_pid_to_assign = i + 1
+#				return i
+#		for i in 0:next_pid_to_assign
+#			if tasks[i].status == TaskStatus.UNUSED
+#				next_pid_to_assign = i + 1
+#				return i
+#		return -1
+
+#	func static add_task_user(name: cstring, F: void*, parent: Task*) -> Task*
+#		let pid = get_next_pid()
+#		if pid < 0
+#			return nil
+#		var t = &tasks[pid]
+#	
+#		t.init(pid, name, parent)
+#		t.kernel_mode = false
+#	
+#		t.stack_size = TASK_STACK_SIZE
+#		t.stack = _i2p(TASK_STACK_POS)
+#		t.mem_bottom = KERNEL_MEM
+#		t.mem_size = INITIAL_TASK_MEM
+#		t.page_dir = Paging.create_root_table()
+#		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
+#		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
+#			panic("incomplete page dir") # ...
+#		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
+#		gdt[t.desc].set_task(t)
+#
+#		return t
+#
+#	func static add_task_kernel(name: cstring, F: void*, stack_size: int, parent: Task*) -> Task*
+#		let pid = get_next_pid()
+#		if pid < 0
+#			return nil
+#		var t = &tasks[pid]
+#
+#		t.init(pid, name, parent)
+#		t.kernel_mode = true
+#	
+#		t.stack_size = stack_size
+#		t.stack = Heap.malloc(stack_size)
+#		t.page_dir = Paging.kernel_root_table
+#		t.mem_bottom = 0
+#		t.mem_size = 0
+#		t.tss.set(t.get_initial_stack_pos(), 1, 2, 0, Paging.kernel_root_table, F)
+#	
+#		gdt[t.desc].set_task(t)
+#
+#		return t
+#
+	func static idle_func()
+		while true
+			#prints("<idle>")
+			asm {
+				hlt
+			}
+	func static get_pvl() -> int
+		asm {
+			db 0x9c # pushf
+			pop eax
+			mov __temp_i__, eax
+		}
+		let eflags = __temp_i__
+		return (eflags >> 12) & 3
+
+
+	# running in task space
+#	func static task_signal_handler()
+#		asm {
+#			mov TaskManager.__handler_p__, edx
+#		}
+#		#prints("[task-signal-handler] ")
+#		#printh(&__handler_p__, 4)
+#		#prints(" [call]\n")
+#		asm {
+#			mov eax, TaskManager.__handler_p__
+#			call eax
+#		}
+#		#prints("[done...return]\n")
+#		asm {
+#			# return from handler
+#			mov eax, 0x00002006
+#			int 0x80
+#		}
+#		while true
+#			nil
+
+	func static setup_hardware_task()
+		asm{
+			mov rax, _start_as_task
+			mov __temp_p__, rax
+		}
+		# not sure if this is neccessary
+		tss.rsp0 = __temp_p__
+		ist1 = Heap.malloc(1024)
+		tss.ist1 = _i2p(_p2i(ist1) + 1000)
+		prints("ltr...")
+		asm{
+			mov ax, 0x0028
+			ltr ax
+			_start_as_task:
+			
+			
+			mov eax, 0x00000008
+			push rax
+			mov eax, _start_as_task2
+			push rax
+			db 0x48
+			ret_far
+			_start_as_task2:
+		}
+		# markiert das aktuelle TSS als "busy"!
+
+	func static init()
+		prints("init tasks...")
+		gdt.init()
+		gdt.set_tss(tss)
+		
+		ack_hw_irq = -1
+	
+		# null descriptor
+#		for g in gdt
+#			g.a = 0x00000000
+#			g.b = 0x00000000
+		# kernel code
+#		gdt[1].set_data(0, 0xffffffff, true, 0)
+		# kernel data
+#		gdt[2].set_data(0, 0xffffffff, false, 0)
+		# user code
+#		gdt[3].set_data(0, 0xffffffff, true, 0)#3)
+		# user data
+#		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
+
+#		for t in tasks
+#			t.status = TaskStatus.UNUSED
+#			for h in t.handles
+#				h = nil
+#			for sm in t.shmem
+#				sm.s = nil
+
+		next_pid_to_assign = 0
+		next_puid_to_assign = 0
+		#UserMemMask = 0
+
+#		kernel_task = add_task_kernel("kernel", nil, KERNEL_STACK_SIZE, nil)
+#		idle_task = add_task_kernel("idle", idle_func, IDLE_STACK_SIZE, kernel_task)
+	
+		gdt.load()
+		setup_hardware_task()
+	
+		# enable sse
+		asm{
+	
+			mov eax, cr0
+			and eax, 0xfffffffb # clear CR0.EM (don't emulate via IRQ)
+			or eax, 0x00000002 # set CR0.MP (inform about task-switches)
+			mov cr0, eax
+			mov __temp_i__, eax
+		
+			# set CR4.OSFXSR (enable sse)
+			mov eax, cr4
+			#mov __temp_i__, eax
+			or eax, 0x00000200
+			mov cr4, eax
+	
+			# flush cpu prefetch
+			jmp _flush_sse
+			_flush_sse:
+		}
+
+		prints("  ok\n")
+
+#int sys_getpid()
+#	asm{
+#		xor, eax, eax
+#		str ax
+#		mov __temp_i__, eax
+#	}
+#	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
+
+			
