@@ -64,17 +64,63 @@ class KernelTimer as @noauto
 	func static @noframe int_timer()
 		asm{
 			cli
+			# general purpose registers
+			push rax
+			push rbx
+			push rcx
+			push rdx
+			push rbp
+			push rdi
+			push rsi
+			push r8
+			push r9
+			push r10
+			push r11
+			push r12
+			push r13
+			push r14
+			push r15
+			# control registers 4*8b=32b
+			mov eax, cr0
+			push rax
+			mov eax, cr2
+			push rax
+			mov eax, cr3
+			push rax
+			mov eax, cr4
+			push rax
+			#mov rax, cr8
+			#push rax
 		}
 		handle_irq()
 		asm{
+			# control registers
+			add rsp, 0x20
+			# general purpose registers
+			pop r15
+			pop r14
+			pop r13
+			pop r12
+			pop r11
+			pop r10
+			pop r9
+			pop r8
+			pop rsi
+			pop rdi
+			pop rbp
+			pop rdx
+			pop rcx
+			pop rbx
+			pop rax
 			sti
 			db 0x48
 			iret
 		}
+	#var static ii: int
 
 	func static handle_irq()
 		IrqManager.mask(TIMER_IRQ)
-		prints("<timer>")
+		#prints("<timer>")
 		# do stuff
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)
