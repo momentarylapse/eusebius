@@ -1,15 +1,14 @@
 use common
 use io.text
-use fs.fs
-use fs.pipe
-use fs.access
-use mem.heap
-use mem.paging
-use mem.shared
-use net.socket
-use time.timevalue
-use gdt
-
+##use fs.fs
+##use fs.pipe
+##use fs.access
+##use mem.heap
+##use mem.paging
+#use mem.shared
+##use net.socket
+##use time.timevalue
+##use gdt
 
 
 
@@ -58,9 +57,9 @@ enum WaitingMode as @noauto
 	SOCKET_ACCEPT
 	SOCKET_CONNECT
 
-class TaskSharedMemoryRef as @noauto
-	var s: SharedMemory.Block*
-	var dest: int
+#class TaskSharedMemoryRef as @noauto
+#	var s: SharedMemory.Block*
+#	var dest: int
 
 
 

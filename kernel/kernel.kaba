@@ -2,6 +2,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use common
 use io.text
+use cpu.cpu
 use dev.ata
 use dev.block
 use dev.std_char_devs
@@ -83,6 +84,7 @@ func main()
 
 
 	TaskManager.init()
+	enable_sse()
 	
 	IrqManager.init()
 	ErrorManager.init()
