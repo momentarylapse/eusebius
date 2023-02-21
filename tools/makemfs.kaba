@@ -23,11 +23,11 @@ func main(arg: string[])
 	var offset = 4
 	for e in list
 		f << str(e)
-		if fs.is_directory(dir << e)
+		if fs.is_directory(dir | e)
 			f << 1 # flags
 		else
 			f << 0
-		var size: int = fs.size(dir << e)
+		var size: int = fs.size(dir | e)
 		f << size
 		f << 1 # number of file parts
 		f << cluster
@@ -38,14 +38,15 @@ func main(arg: string[])
 	#h.seek(ClusterSize * cluster)
 	dummy.resize(ClusterSize * cluster)
 	h.write(dummy)
-	del f
+	#del f
 
 	# files
 	cluster = 2
 	for e in list
-		var s = "dd if='{{dir << e}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
+		let ee = dir | e
+		var s = "dd if='{{ee}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
 		shell_execute(s)
-		var size = fs.size(dir << e)
+		var size = fs.size(ee)
 		var num_clusters = (size - 1) / ClusterSize + 1
 		cluster += num_clusters
 		#string t = FileRead(arg[1] + e.name)

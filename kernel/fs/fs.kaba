@@ -1,5 +1,6 @@
 use common
 use mem.heap
+use mem.paging
 use dev.ata
 use dev.block
 use io.text
@@ -22,9 +23,9 @@ class FileOperations as @noauto
 		return 0
 	func virtual mut close(e: FileEntry) -> int
 		return 0
-	func virtual mut read(e: FileEntry, page_dir: void*, addr: int, size: int) -> int
+	func virtual mut read(e: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		return 0
-	func virtual mut write(e: FileEntry, page_dir: void*, addr: int, size: int) -> int
+	func virtual mut write(e: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		return 0
 
 class FileEntry as @noauto

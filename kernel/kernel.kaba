@@ -84,7 +84,7 @@ func main()
 
 
 	TaskManager.init()
-	enable_sse()
+	Cpu.enable_sse()
 	
 	IrqManager.init()
 	ErrorManager.init()
@@ -110,6 +110,12 @@ func main()
 	StdCharDevs.init()
 	
 	KernelTimer.init(100)
+	
+	Cpu.enable_syscall()
+	prints("trying syscall....")
+	asm{
+		syscall
+	}
 	
 ##	load_kalib()
 ##	

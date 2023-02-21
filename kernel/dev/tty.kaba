@@ -20,7 +20,7 @@ class FileOperationsTTY extends FileOperations
 		return size
 	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
 		for i in 0:size
-			var buf = _i2p(page_dir.addr2kernel(addr + i))
+			var buf = _i2p(page_dir.addr2kernel(addr + i)) as cstring*
 			TextMode.prints_low(buf, 1)
 		return size
 	
