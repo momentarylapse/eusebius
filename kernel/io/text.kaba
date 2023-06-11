@@ -6,12 +6,12 @@ const SCREEN_HEIGHT = 25
 
 class TextMode as @noauto
 
-	var static video_memory: void*
+	var static video_memory: cstring&
 	var static text_color, text_color2: char
 	var static pos, line: int
 
 	func static clear()
-		var d: cstring* = video_memory
+		var d = video_memory
 		for i in 0:SCREEN_WIDTH * SCREEN_HEIGHT
 			d[i * 2] = ' '
 			d[1 * 2 + 1] = 0
@@ -19,27 +19,28 @@ class TextMode as @noauto
 		pos = 0
 
 	func static init()
-		video_memory = _i2p(0x000b8000)
+		video_memory := _i2p(0x000b8000)
 		
 		clear()
 		text_color = 7
 
 	func static etm_shift()
-		var d: cstring* = video_memory
-		var d2: cstring* = &d[SCREEN_WIDTH * 2]
+		var d = video_memory
+		var d2 = &d[SCREEN_WIDTH * 2] as cstring&
 		for i in 0:SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2
 			d[i] = d2[i]
-		d2 = &d[SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2]
+		d2 := &d[SCREEN_WIDTH * (SCREEN_HEIGHT - 1) * 2] as cstring&
 		for i in 0:SCREEN_WIDTH
 			d2[i * 2] = ' '
 			d2[i * 2 + 1] = 0
 
-	func static prints_low(str: cstring*, size: int)
-		var d: cstring* = video_memory
-		d = &d[2*(SCREEN_WIDTH * line + pos)]
+	func static prints_low(str: cstring&, size: int)
+		var d = video_memory
+		d := &d[2*(SCREEN_WIDTH * line + pos)]
 		for i in 0:size
 			if str[i] == 0x7f or str[i] == 0x08 # BACKSPACE
-				d[-2] = 0x20
+				var N = 0
+				d[N-2] = 0x20 # FIXME
 				pos --
 				if pos < 0
 					if line > 0
@@ -52,7 +53,7 @@ class TextMode as @noauto
 			if str[i] != '\n'
 				d[0] = str[i]
 				d[1] = text_color
-				d = &d[2]
+				d := &d[2]
 				pos ++
 			if (pos >= SCREEN_WIDTH) or (str[i] == '\n')
 				pos = 0
@@ -60,8 +61,8 @@ class TextMode as @noauto
 				if line >= SCREEN_HEIGHT
 					etm_shift()
 					line --
-				d = video_memory
-				d = &d[2*(SCREEN_WIDTH * line)]
+				d := video_memory
+				d := &d[2*(SCREEN_WIDTH * line)]
 		let position = (line * SCREEN_WIDTH) + pos
 		# cursor LOW port to vga INDEX register
 		outportb(0x3d4, 0x0f)
@@ -97,8 +98,8 @@ func printi(i: int)
 	_i2s(i, s)
 	prints(s)
 
-func printh(_data: void*, size: int)
-	var data: cstring* = _data
+func printh(_data: void&, size: int)
+	var data = _data as cstring&
 	var ttt: cstring
 	for i in 0:size
 		let d: int = data[i]

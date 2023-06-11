@@ -96,9 +96,9 @@ func read_data_from_init()
 			break
 
 
-func memcpy(_dest: void*, _source: void*, size: int)
-	var dest: cstring* = _dest
-	let source: cstring* = _source
+func memcpy(_dest: void&, _source: void&, size: int)
+	var dest = _dest as cstring&
+	let source = _source as cstring&
 	for n in 0:size
 		dest[n] = source[n]
 #	if size > 0
@@ -155,20 +155,20 @@ var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int
 var __temp_i64__: int64
 var __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__: void*
 func _p2i(p: void*) -> int
-	var i: int* = &p
-	return *i
+	return &p as int&
 func _p2i64(p: void*) -> int64
-	var i: int64* = &p
-	return *i
+	return &p as int64&
 
 class PointerWrapper as @noauto
-	var p: void*
+	var p: void&
 
-func _i2p(i: int) -> void*
+func _i2p(i: int) -> void&
 	return _i642p(i)
 
-func _i642p(i: int64) -> void*
-	var p: PointerWrapper* = &i
+
+## FIXME
+func _i642p(i: int64) -> void&
+	var p = &i as PointerWrapper&
 	return p.p
 
 

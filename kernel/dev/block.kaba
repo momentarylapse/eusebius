@@ -29,8 +29,8 @@ class BlockDevManager as @noauto
 		read_partitions_from_disk(0)
 		show()
 	
-	func static add_dev(major: int, minor: int) -> BlockDevice*
-		var p = &devs[num_devs]
+	func static add_dev(major: int, minor: int) -> BlockDevice&
+		var p = &!devs[num_devs]
 		p.major = major
 		p.minor = minor
 		num_devs ++
@@ -55,7 +55,7 @@ class BlockDevManager as @noauto
 		strcpy(p.name, "hda")
 		p.name[2] = 'a' + disk_no
 		# read MBR
-		AtaController.read_sector(disk_no, 0, 1, &AtaController.buffer)
+		AtaController.read_sector(disk_no, 0, 1, &!AtaController.buffer)
 		#MountPartition=false
 		for n in 0:4
 			let offset: int* = &AtaController.buffer[454+n*16]
@@ -63,7 +63,7 @@ class BlockDevManager as @noauto
 			let type = int(AtaController.buffer[450+n*16])
 			if (type == 0) or (*size == 0)
 				continue
-			p = add_dev(0, n+1)
+			p := add_dev(0, n+1)
 			p.block_size = 512
 			p.disk_no = disk_no
 			p.offset = *offset
@@ -80,7 +80,7 @@ class BlockDevManager as @noauto
 		#printi(num_devs)
 		prints("primary partitions:       offset   size\n")
 		for n in 0:num_devs
-			var p = &devs[n]
+			var p = &!devs[n]
 			prints("/dev/")
 			prints(p.name)
 			TextMode.pos = 60
@@ -104,6 +104,6 @@ class BlockDevManager as @noauto
 			else if p.type == 0x0f
 				prints("Extended...")
 			else
-				printh(&p.type, 1)
+				printh(&!p.type, 1)
 			prints("\n")
 

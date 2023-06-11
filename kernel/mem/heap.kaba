@@ -17,14 +17,14 @@ class Heap as @noauto
 		var size: int
 		var next: MallocHeader*
 		var prev: MallocHeader*
-		func after() -> void*
+		func after() -> void&
+			var pp = &!self as char[0]&
+			return &!pp[size]
+		func payload() -> void&
 			var pp: char[0]* = &self
-			return &pp[size]
-		func payload() -> void*
-			var pp: char[0]* = &self
-			return &pp[sizeof(MallocHeader)]
-	var static first_free: MallocHeader*
-	var static end_marker: MallocHeader*
+			return &!pp[sizeof(MallocHeader)]
+	var static first_free: MallocHeader&
+	var static end_marker: MallocHeader&
 
 	# heap is split into a (hole-free) list of blocks
 	# blocks are either free or allocated
@@ -32,7 +32,7 @@ class Heap as @noauto
 	# allocated blocks are not linked
 
 
-	func static malloc(_size: int) -> void*
+	func static malloc(_size: int) -> void&
 		var size = ceil_quot(_size, 8) << 3
 		#prints("<+")
 		#printi(size)
@@ -41,38 +41,41 @@ class Heap as @noauto
 		size += sizeof(MallocHeader)
 		
 		# find a free block big enough
-		var cur = first_free as MallocHeader*
-		while cur.next
-			if size <= cur.size - sizeof(MallocHeader)
+		var cur = first_free as MallocHeader&
+		while true
+			for n in cur.next
+				if size <= cur.size - sizeof(MallocHeader)
 			
-				# shrink free block
-				cur.size -= size
+					# shrink free block
+					cur.size -= size
 				
-				# create allocated block at (former) end of free block
-				var hh = cur.after() as MallocHeader*
-				hh.size = size
-				hh.next = nil
-				hh.prev = nil
+					# create allocated block at (former) end of free block
+					var hh = cur.after() as MallocHeader&
+					hh.size = size
+					hh.next = nil
+					hh.prev = nil
 				
-				allocated += size
-				memcheck()
-				#prints(" ")
-				#let xx = hh.payload()
-				#printh(&xx, 4)
-				#prints("> ")
-				return hh.payload()
-			cur = cur.next
+					allocated += size
+					memcheck()
+					#prints(" ")
+					#let xx = hh.payload()
+					#printh(&xx, 4)
+					#prints("> ")
+					return hh.payload()
+				cur := n
 		panic("malloc: fail")
-		return nil
+		return first_free # dummy
 
-	func static _cleanup(_h: MallocHeader*)
+	func static _cleanup(_h: MallocHeader&)
 		var h = _h
-		if h.after() == h.next
+		if &(h.after()) == h.next
 			allocated -= sizeof(MallocHeader)
 			#prints(" merge after ")
-			h.size += h.next.size
-			h.next = h.next.next
-			h.next.prev = h
+			for n in h.next
+				h.size += n.size
+				h.next = n.next
+			for n in h.next
+				n.prev = h
 		if h.prev.after() == h
 			allocated -= sizeof(MallocHeader)
 			#prints(" merge before ")
@@ -124,7 +127,7 @@ class Heap as @noauto
 
 
 	func static memcheck()
-		var h = first_free as MallocHeader*
+		var h = first_free as MallocHeader&
 		while h.next
 			if _p2i(h.next) < _p2i(h) + h.size
 				panic("memcheck: h.next<h+size")
