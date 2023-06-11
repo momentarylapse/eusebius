@@ -27,7 +27,7 @@ class FileOperationsKey extends FileOperations
 	func override close(f: FileEntry) -> int
 		key_reading --
 		return 0
-	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, _size: int) -> int
 		var size = _size
 		if key_num == 0
 			return -EWOULDBLOCK
@@ -37,7 +37,7 @@ class FileOperationsKey extends FileOperations
 		key_num -= size
 		memcpy(&key_buf, &key_buf[size], key_num)
 		return size
-	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
+	func override write(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
 		return 0
 	
 	

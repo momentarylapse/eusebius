@@ -1,8 +1,8 @@
 use common
 use io
 
-const SCREEN_WIDTH = 80
-const SCREEN_HEIGHT = 25
+let SCREEN_WIDTH = 80
+let SCREEN_HEIGHT = 25
 
 class TextMode as @noauto
 

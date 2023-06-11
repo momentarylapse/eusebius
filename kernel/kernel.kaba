@@ -100,10 +100,10 @@ func main()
 
 	# assume a default disk layout...
 	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
-	var boot = FileSystem.get("/boot", FileSystem.root)
-	if !boot
+	for boot in FileSystem.get("/boot", FileSystem.root)
+		FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
+	else
 		panic("/boot not found")
-	FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	
 ##	InitSysCall()
 	

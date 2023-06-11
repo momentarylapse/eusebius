@@ -1,0 +1,41 @@
+#define __STRING_CONST_AS_CSTRING__
+#define __FUNCTION_POINTER_AS_CODE__
+
+use common
+use io.text
+use mem.paging
+use mem.heap
+
+func main()
+
+	read_data_from_init()
+	TextMode.init()
+	TextMode.clear()
+	
+	Paging.init()
+	Heap.init()
+	
+	var p = Heap.malloc(1024)
+	printh(&p, 8)
+	prints("\n")
+	var p2 = Heap.malloc(1024)
+	printh(&p2, 8)
+	prints("\n")
+	printi(Heap.allocated)
+	prints("  ")
+	Heap.free(p)
+	Heap.free(p2)
+	printi(Heap.allocated)
+	prints("\n")
+	p := Heap.malloc(1024)
+	p2 := Heap.malloc(1024)
+	printh(&p, 8)
+	prints("\n")
+	printh(&p2, 8)
+	prints("\n")
+	printi(Heap.allocated)
+	prints("  ")
+
+	while true
+		pass
+

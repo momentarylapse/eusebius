@@ -21,7 +21,7 @@ class AtaDiskInfo as @noauto
 
 # FIXME: some compiler bug.... &global does not work....
 func __fff(b: char[512]) -> int&
-	return &!b[0] as int&
+	return &b[0] as int&
 
 class AtaController as @noauto
 
@@ -156,7 +156,7 @@ class AtaController as @noauto
 
 		#BufferDW
 		#let xx = &buffer
-		BufferDW := &!buffer #__fff(buffer)
+		BufferDW := &buffer #__fff(buffer)
 		for n in 0:128
 			BufferDW[n] = inportd(IOBase)
 		# die Bytes des Namens korregieren
@@ -165,7 +165,7 @@ class AtaController as @noauto
 			disk_info[disk_no].name[n+1] = buffer[54+n]
 		disk_info[disk_no].name[40] = 0
 		prints(disk_info[disk_no].name)
-		memcpy(&!disk_info[disk_no].size, &!buffer[120], 4)
+		memcpy(&disk_info[disk_no].size, &buffer[120], 4)
 		#temp_i = Ata.DiskInfo[disk_no].size >> 11
 #		asm{
 #			mov eax, temp_i
@@ -188,18 +188,18 @@ class AtaController as @noauto
 	
 		var status: char
 		status = inportb(IOBase+7)
-		printh(&!status,1)
+		printh(&status,1)
 		status = inportb(IOBase+1)
-		printh(&!status,1)
+		printh(&status,1)
 		status = inportb(IOCtrl)
-		printh(&!status,1)
+		printh(&status,1)
 	
 		status = inportb(IOBase+7)
-		printh(&!status,1)
+		printh(&status,1)
 		status = inportb(IOBase+1)
-		printh(&!status,1)
+		printh(&status,1)
 		status = inportb(IOCtrl)
-		printh(&!status,1)
+		printh(&status,1)
 		prints("\n")
 
 	func static init()

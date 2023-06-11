@@ -18,11 +18,11 @@ class Heap as @noauto
 		var next: MallocHeader*
 		var prev: MallocHeader*
 		func after() -> void&
-			var pp = &!self as char[0]&
-			return &!pp[size]
+			var pp = &self as char[0]&
+			return &pp[size]
 		func payload() -> void&
-			var pp: char[0]* = &self
-			return &!pp[sizeof(MallocHeader)]
+			var pp = &self as char[0]&
+			return &pp[sizeof(MallocHeader)]
 	var static first_free: MallocHeader&
 	var static end_marker: MallocHeader&
 
@@ -41,7 +41,7 @@ class Heap as @noauto
 		size += sizeof(MallocHeader)
 		
 		# find a free block big enough
-		var cur = first_free as MallocHeader&
+		var cur = first_free #as MallocHeader&
 		while true
 			for n in cur.next
 				if size <= cur.size - sizeof(MallocHeader)
@@ -63,6 +63,8 @@ class Heap as @noauto
 					#prints("> ")
 					return hh.payload()
 				cur := n
+			else
+				break
 		panic("malloc: fail")
 		return first_free # dummy
 
@@ -76,66 +78,72 @@ class Heap as @noauto
 				h.next = n.next
 			for n in h.next
 				n.prev = h
-		if h.prev.after() == h
-			allocated -= sizeof(MallocHeader)
-			#prints(" merge before ")
-			h.prev.size += h.size
-			h.next.prev = h.prev
-			h.prev.next = h.next
+		for p in h.prev
+			if p.after() == h
+				allocated -= sizeof(MallocHeader)
+				#prints(" merge before ")
+				p.size += h.size
+				for n in h.next
+					n.prev = p
+				p.next = h.next
 
-	func static free(p: void*)
-		if !p
-			return
-		let ip = _p2i(p)
-		#prints "---free"
-		#prints("<-")
-		#printi(ip)
+	func static free(_p: void*)
+		for p in _p
+			let ip = _p2i(p)
+			#prints "---free"
+			#prints("<-")
+			#printi(ip)
 		
-		var hh = _i2p(ip - sizeof(MallocHeader)) as MallocHeader*
-		#prints(" ")
-		#printi(hh.size)
+			var hh = _i2p(ip - sizeof(MallocHeader)) as MallocHeader&
+			#prints(" ")
+			#printi(hh.size)
 		
-		# find last free window before p
-		var cur = first_free as MallocHeader*
-		while cur.next
-			if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
-				prints("\n")
-				printi(_p2i(cur))
-				prints("  ")
-				printi(cur.size)
+			# find last free window before p
+			var cur = first_free
+			while true
+				for next in cur.next
+					if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
+						prints("\n")
+						printi(_p2i(cur))
+						prints("  ")
+						printi(cur.size)
+						panic("double free")
+					if ip < _p2i(next)
+						# turn allocated block into a free one
 				
-				panic("double free")
-			if ip < _p2i(cur.next)
-				# turn allocated block into a free one
+						#printi(hh.size)
+						allocated -= hh.size - sizeof(MallocHeader)
 				
-				#printi(hh.size)
-				allocated -= hh.size - sizeof(MallocHeader)
+						# ..by linking it to its neighbors
+						hh.next = cur.next
+						next.prev = hh
+						hh.prev = cur
+						cur.next = hh
 				
-				# ..by linking it to its neighbors
-				hh.next = cur.next
-				cur.next.prev = hh
-				hh.prev = cur
-				cur.next = hh
-				
-				_cleanup(hh)
-				memcheck()
-				#prints(">")
-				return
-			cur = cur.next
-		panic("free: fail")
+						_cleanup(hh)
+						memcheck()
+						#prints(">")
+						return
+					cur := next
+				else
+					break
+			panic("free: fail")
 
 
 
 	func static memcheck()
-		var h = first_free as MallocHeader&
-		while h.next
-			if _p2i(h.next) < _p2i(h) + h.size
-				panic("memcheck: h.next<h+size")
-			if h != h.next.prev
-				panic("memcheck: h!=h.next.prev")
-			h = h.next
+		var h = first_free
+		while true
+			for next in h.next
+				if _p2i(next) < _p2i(h) + h.size
+					panic("memcheck: h.next<h+size")
+				if h != next.prev
+					panic("memcheck: h!=h.next.prev")
+				h := next
+			else
+				break
 
-	func static realloc(po: void*, old_size: int, new_size: int) -> void*
+	func static realloc(po: void&, old_size: int, new_size: int) -> void&
 		var pn = malloc(new_size)
 		var n = old_size
 		if new_size < n
@@ -147,10 +155,10 @@ class Heap as @noauto
 	func static init()
 		# intentionally leave a 8b gap to prevent merging
 		allocated = sizeof(MallocHeader)*2 - 8
-		first_free = _i2p(MEM_HEAP_OFFSET)
+		first_free := _i2p(MEM_HEAP_OFFSET) as MallocHeader&
 		first_free.size = MEM_HEAP_SIZE - sizeof(MallocHeader) - 8
 		first_free.prev = nil
-		end_marker = _i2p(MEM_HEAP_OFFSET + MEM_HEAP_SIZE - sizeof(MallocHeader))
+		end_marker := _i2p(MEM_HEAP_OFFSET + MEM_HEAP_SIZE - sizeof(MallocHeader)) as MallocHeader&
 		end_marker.size = sizeof(MallocHeader)
 		end_marker.next = nil
 		end_marker.prev = first_free

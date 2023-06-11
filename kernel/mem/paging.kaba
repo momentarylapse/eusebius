@@ -36,15 +36,15 @@ class PageTable extends Page
 	func get_sub(index: int) -> PageTable*
 		return _i2p(e[index] & 0xfffff000) as PageTable*
 	
-	func mut get_or_create_sub(index: int, flags: int) -> PageTable*
+	func mut get_or_create_sub(index: int, flags: int) -> PageTable&
 		if e[index] == 0
 			let pos = Paging.alloc_page()
-			var sub: PageTable* = _i2p(pos)
+			var sub = _i2p(pos) as PageTable&
 			sub.clear()
 			e[index] = pos + flags
 			return sub
 		else
-			return _i2p(e[index] & 0xfffff000) as PageTable*
+			return _i2p(e[index] & 0xfffff000) as PageTable&
 
 func page_params__(addr: int64, out x_no: int*, out dir_no: int*, out page_no: int*, out offset: int*)
 	*x_no = addr >> 30
@@ -130,34 +130,30 @@ class PageRootTable extends PageTable
 		var (dirp_no, dir_no, page_no, offset) = page_params(start)
 		var npages = ceil_quot(size, PAGE_SIZE)
 
-		var pdpt = get_sub(0)
-		if not pdpt
-			return
-		var pdt = pdpt.get_sub(0)
-		if not pdt
-			return
+		for pdpt in get_sub(0)
+			for pdt in pdpt.get_sub(0)
 		
-		while npages > 0
-			#var pt = pdt.get_sub(dir_no)
-			#if not pt
-			#	return
+				while npages > 0
+					#var pt = pdt.get_sub(dir_no)
+					#if not pt
+					#	return
 			
-			let pt_pos = e[dir_no] & 0xfffff000
-			var pt: PageTable* = _i2p(pt_pos)
-			let i0 = page_no
-			var i1 = page_no + npages
-			if i1 > PAGE_TABLE_ENTRIES
-				i1 = PAGE_TABLE_ENTRIES
-			for i in i0:i1
-				if pt.e[i] != 0
-					if dealloc
-						Paging.free_page(pt.e[i] & 0xfffff000)
-					pt.e[i] = 0
-			if pt.count_entries() == 0
-				Paging.free_page(pt_pos)
-			npages -= i1-i0
-			dir_no ++
-			page_no = 0
+					let pt_pos = e[dir_no] & 0xfffff000
+					var pt = _i2p(pt_pos) as PageTable&
+					let i0 = page_no
+					var i1 = page_no + npages
+					if i1 > PAGE_TABLE_ENTRIES
+						i1 = PAGE_TABLE_ENTRIES
+					for i in i0:i1
+						if pt.e[i] != 0
+							if dealloc
+								Paging.free_page(pt.e[i] & 0xfffff000)
+							pt.e[i] = 0
+					if pt.count_entries() == 0
+						Paging.free_page(pt_pos)
+					npages -= i1-i0
+					dir_no ++
+					page_no = 0
 	
 	func find_free_space(_start: int, size: int) -> int
 		panic("TODO: Paging.find_free_space()")
@@ -168,7 +164,7 @@ class PageRootTable extends PageTable
 		var pos = start
 		while page_no < PAGE_TABLE_ENTRIES
 			let pt_pos = e[dir_no] & 0xfffff000
-			var pt: PageTable* = _i2p(pt_pos)
+			var pt = _i2p(pt_pos) as PageTable&
 			let i0 = page_no
 			if pt
 				for i in i0:PAGE_TABLE_ENTRIES
@@ -193,30 +189,25 @@ class PageRootTable extends PageTable
 
 	func addr2kernel(addr: int) -> int
 		var (dirp_no, dir_no, page_no, offset) = page_params(addr)
-		var pdpt = get_sub(0)
-		if not pdpt
-			return 0
-		var pdt = pdpt.get_sub(0)
-		if not pdt
-			return 0
-		var pt = pdt.get_sub(dir_no)
-		if not pt
-			return 0
-		let n = pt.e[page_no] & 0xfffff000
-		if n == 0
-			return 0
-		return n + offset
+		for pdpt in get_sub(0)
+			for pdt in pdpt.get_sub(0)
+				for pt in pdt.get_sub(dir_no)
+					let n = pt.e[page_no] & 0xfffff000
+					if n == 0
+						return 0
+					return n + offset
+		return 0
 
-	func memcpy2kernel(_o: void*, _addr: int, _size: int) -> bool
+	func memcpy2kernel(_o: void&, _addr: int, _size: int) -> bool
 		panic("TODO: memcpy2kernel()")
-		var o: cstring* = _o
+		var o = _o as cstring&
 		var addr = _addr
 		var size = _size
 		while size > 0
 			let kaddr = addr2kernel(addr)
 			if kaddr == 0
 				return false
-			var pp: cstring* = _i2p(kaddr)
+			var pp = _i2p(kaddr) as cstring&
 			var offset = addr & 0xfffff000
 			var num = PAGE_SIZE - offset
 			if num > size
@@ -225,19 +216,19 @@ class PageRootTable extends PageTable
 				o[i] = pp[i]
 			addr += num
 			size -= num
-			o = &o[num]
+			o := &o[num]
 		return true
 
 	func memcpy2task(_addr: int, _p: void*, _size: int) -> bool
 		panic("TODO: memcpy2task()")
 		var addr = _addr
 		var size = _size
-		var p: cstring* = _p
+		var p = _p as cstring&
 		while size > 0
 			let kaddr = addr2kernel(addr)
 			if kaddr == 0
 				return false
-			var pp: cstring* = _i2p(kaddr)
+			var pp = _i2p(kaddr) as cstring&
 			var offset = addr & 0xfffff000
 			var num = PAGE_SIZE - offset
 			if num > size
@@ -246,17 +237,17 @@ class PageRootTable extends PageTable
 				pp[i] = p[i]
 			addr += num
 			size -= num
-			p = &p[num]
+			p := &p[num]
 		return true
 	
-	func copy_pages_to(out dest: PageRootTable*, start1: int, start2: int, size: int)
+	func copy_pages_to(out dest: PageRootTable&, start1: int, start2: int, size: int)
 		panic("TODO: copy_pages_to()")
 		var (dirp_no1, dir_no1, page_no1, offset1) = page_params(start1)
 		var (dirp_no2, dir_no2, page_no2, offset2) = page_params(start2)
 		var npages = ceil_quot(size, PAGE_SIZE)
-		var pt1: PageTable* = _i2p(e[dir_no1] & 0xfffff000)
+		var pt1 = _i2p(e[dir_no1] & 0xfffff000) as PageTable&
 		#int n = pt.e[page_no] & 0xfffff000
-		var pt2: PageTable* = _i2p(dest.e[dir_no2] & 0xfffff000)
+		var pt2 = _i2p(dest.e[dir_no2] & 0xfffff000) as PageTable&
 		#int n = pt.e[page_no] & 0xfffff000
 		while npages > 0
 			var pout = _i2p(pt2.e[page_no2] & 0xfffff000)
@@ -265,12 +256,12 @@ class PageRootTable extends PageTable
 			if page_no1 >= PAGE_SIZE
 				page_no1 = 0
 				dir_no1 ++
-				pt1 = _i2p(e[dir_no1] & 0xfffff000)
+				pt1 := _i2p(e[dir_no1] & 0xfffff000)
 			page_no2 ++
 			if page_no2 >= PAGE_SIZE
 				page_no2 = 0
 				dir_no2 ++
-				pt2 = _i2p(dest.e[dir_no2] & 0xfffff000)
+				pt2 := _i2p(dest.e[dir_no2] & 0xfffff000)
 			npages --
 	
 #	func show()
@@ -286,7 +277,7 @@ class Paging as @noauto
 	var static num_masks: int
 	var static pages_allocated: int
 	var static pages_usable: int
-	var static kernel_root_table: PageRootTable*
+	var static kernel_root_table: PageRootTable&
 	func static init()
 		prints("enable paging...")
 		num_masks = MemorySize / PAGE_SIZE / 32
@@ -305,7 +296,7 @@ class Paging as @noauto
 			
 		# kernel: flat paging
 		#let nmax = MemorySize / PAGE_SIZE / 1024
-		kernel_root_table = create_root_table()
+		kernel_root_table := create_root_table()
 		kernel_root_table.map_lin(0, 0, MemorySize, true)
 	
 		asm{
@@ -484,12 +475,11 @@ class Paging as @noauto
 						n ++
 		return n * PAGE_SIZE
 	
-	func static create_root_table() -> PageRootTable*
+	func static create_root_table() -> PageRootTable&
 		let pos = alloc_page()
 		if pos == -1
 			panic("can not create page root table")
-			return nil
-		var pd: PageRootTable* = _i2p(pos)
+		var pd = _i2p(pos) as PageRootTable&
 		pd.clear()
 		return pd
 

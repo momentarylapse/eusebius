@@ -14,7 +14,7 @@ class FileOperationsMouse extends FileOperations
 	var mouse_buf: cstring
 	var mouse_num = 0
 	
-	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, _size: int) -> int
+	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, _size: int) -> int
 		var size = _size
 		if mouse_num == 0
 			return -EWOULDBLOCK

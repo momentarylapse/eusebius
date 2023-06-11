@@ -8,7 +8,7 @@ func main()
 	TextMode.init()
 	TextMode.clear()
 	
-	prints("hello..  ")
+	prints("hello 64bit:  ")
 	let a = 0x0000000100000000
 	let b = 0x0000000200000000
 	let c = a + b

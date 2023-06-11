@@ -16,7 +16,7 @@ class FileOperationsZero extends FileOperations
 		return 0
 	func override close(f: FileEntry) -> int
 		return 0
-	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
+	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
 		let zero = 0
 		for i in 0:size
 			page_dir.memcpy2task(addr + i, &zero, 1)
@@ -25,14 +25,14 @@ var dev_zero_ops: FileOperationsZero
 
 
 class FileOperationsNull extends FileOperations
-	func override write(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
+	func override write(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
 		return size
 var dev_null_ops: FileOperationsNull
 
 
 class FileOperationsRand extends FileOperations
 	var state = 13
-	func override read(f: FileEntry, page_dir: PageRootTable*, addr: int, size: int) -> int
+	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
 		for i in 0:size
 			state = (state * 23434 + 82374) % 8623
 			page_dir.memcpy2task(addr + i, &state, 1)
@@ -46,41 +46,41 @@ class StdCharDevs
 		prints("init drivers... ")
 		
 		#FileEntry *dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
-		var dev = FileSystem.get("/dev", FileSystem.root)
-		if !dev
-			panic("/dev not found")
+		for dev in FileSystem.get("/dev", FileSystem.root)
 			#dev = FileSystem.root.create_child("dev", FILE_TYPE_DIR, nil)
 			#dev = FileSystem.add("dev", FILE_TYPE_DIR, nil, FileSystem.root)
 
-		dev_zero_ops.__init__()
-		add(dev, "zero", dev_zero_ops)
+			dev_zero_ops.__init__()
+			add(dev, "zero", dev_zero_ops)
 
-		dev_null_ops.__init__()
-		add(dev, "null", dev_null_ops)
+			dev_null_ops.__init__()
+			add(dev, "null", dev_null_ops)
 		
-		dev_rand_ops.__init__()
-		add(dev, "random", dev_rand_ops)
+			dev_rand_ops.__init__()
+			add(dev, "random", dev_rand_ops)
 		
-		dev_key_ops.__init__()
-		dev_key_ops.register()
-		add(dev, "keyboard", dev_key_ops)
+			dev_key_ops.__init__()
+			dev_key_ops.register()
+			add(dev, "keyboard", dev_key_ops)
 		
-		dev_tty_ops.__init__()
-		add(dev, "tty", dev_tty_ops)
+			dev_tty_ops.__init__()
+			add(dev, "tty", dev_tty_ops)
 		
-		dev_mouse_ops.__init__()
-		#dev_mouse_ops.register()
-		add(dev, "mouse", dev_mouse_ops)
+			dev_mouse_ops.__init__()
+			#dev_mouse_ops.register()
+			add(dev, "mouse", dev_mouse_ops)
 		
-		#var key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
-		#var mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
+			#var key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
+			#var mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
 	 	
-		#irq.set_task(irq.hw2soft(1), key_task) # IRQ 1
-		#irq.set_task(irq.hw2soft(12), mouse_task) # IRQ 12
+			#irq.set_task(irq.hw2soft(1), key_task) # IRQ 1
+			#irq.set_task(irq.hw2soft(12), mouse_task) # IRQ 12
 		
-		prints("ok\n")
+			prints("ok\n")
+		else
+			panic("/dev not found")
 
-	func static add(out dev: FileEntry*, name: cstring, op: FileOperations)
-		var entry = dev.create_child(name, FileType.CHAR, nil)
+	func static add(out dev: FileEntry&, name: cstring, op: FileOperations)
+		var entry = dev.create_child(name, FileType.CHAR, &FileSystem.dummy_mount)
 		entry.op = &op
 

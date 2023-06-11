@@ -13,10 +13,10 @@ const PIPE_BUFFER_SIZE = 1024
 
 class Pipe as @noauto
 	var used: bool
-	var e: FileEntry*
+	var e: FileEntry&
 	var read_ref_count: int
 	var write_ref_count: int
-	var buffer: char[0]*
+	var buffer: char[0]&
 	var buffer_used: int
 	func mut write(page_root: PageRootTable, addr: int, size: int) -> int
 		if buffer_used + size > PIPE_BUFFER_SIZE
@@ -80,11 +80,11 @@ class PipeManager as @noauto
 		for p in pipes
 			if !p.used
 				p.used = true
-				p.e = &e
+				p.e := &e
 				p.read_ref_count = 0
 				p.write_ref_count = 0
 				p.buffer_used = 0
-				p.buffer = Heap.malloc(PIPE_BUFFER_SIZE)
+				p.buffer := Heap.malloc(PIPE_BUFFER_SIZE)
 				return &p
 		return nil
 

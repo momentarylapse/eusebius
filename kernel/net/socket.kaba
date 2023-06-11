@@ -21,14 +21,14 @@ enum SocketState as @noauto
 class KSocket as @noauto
 	var _index: int
 	var used: bool
-	var e: FileEntry*
+	var e: FileEntry&
 	var type: int
 	var port: int
 	var peer_port: int
 	var state: SocketState
 	var blocking: bool
 	var ref_count: int
-	var buffer: char[0]*
+	var buffer: char[0]&
 	var buffer_used: int
 	
 	var _accept_wait_port: int
@@ -36,14 +36,14 @@ class KSocket as @noauto
 	func mut write(page_dir: PageRootTable, addr: int, size: int) -> int
 		if peer_port < 0
 			return -ENOTCONN
-		var s = SocketManager.get_by_port(peer_port)
-		if !s
+		for s in SocketManager.get_by_port(peer_port)
+			if s.buffer_used + size > SOCKET_BUFFER_SIZE
+				return -EWOULDBLOCK
+			page_dir.memcpy2kernel(&s.buffer[s.buffer_used], addr, size)
+			s.buffer_used += size
+			return size
+		else
 			return -ENOTCONN
-		if s.buffer_used + size > SOCKET_BUFFER_SIZE
-			return -EWOULDBLOCK
-		page_dir.memcpy2kernel(&s.buffer[s.buffer_used], addr, size)
-		s.buffer_used += size
-		return size
 	
 	func mut read(page_dir: PageRootTable, addr: int, _size: int) -> int
 		var size = _size
@@ -69,7 +69,7 @@ class KSocket as @noauto
 		port = _port
 		return 0
 		
-	func mut link(out s: KSocket*)
+	func mut link(out s: KSocket&)
 		s.peer_port = port
 		peer_port = s.port
 		
@@ -82,37 +82,36 @@ class KSocket as @noauto
 	func mut accept() -> int
 		if state == SocketState.WAIT_ACCEPT
 			# "remote socket"
-			var rs = SocketManager.get_by_port(_accept_wait_port)
-			if !rs
+			for rs in SocketManager.get_by_port(_accept_wait_port)
+				# "return socket"
+				var e = create_file_entry(":sock:", FileType.SOCKET, &FileSystem.dummy_mount)
+				for s in SocketManager.create(e, type)
+					s.assign_available_port()
+					s.link(rs)
+					self.set_state(SocketState.LISTENING)
+					rs.set_state(SocketState.NONE)
+					return s.port
+				#self.set_state(SocketState.LISTENING)
+				#return -ENFILE
+			else
 				return -1
-			# "return socket"
-			var e = create_file_entry(":sock:", FileType.SOCKET, nil)
-			if !e
-				self.set_state(SocketState.LISTENING)
-				return -ENFILE
-			var s = SocketManager.create(e, type)
-			s.assign_available_port()
-			s.link(rs)
-			self.set_state(SocketState.LISTENING)
-			rs.set_state(SocketState.NONE)
-			return s.port
 		if state != SocketState.LISTENING
 			return -ECONNREFUSED
 		return -EWOULDBLOCK
 		
 	func mut connect(_port: int) -> int
-		var rs = SocketManager.get_by_port(_port)
-		if !rs
-			return -ECONNREFUSED
-		if rs.state != SocketState.LISTENING
-			return -ECONNREFUSED
+		for rs in SocketManager.get_by_port(_port)
+			if rs.state != SocketState.LISTENING
+				return -ECONNREFUSED
 		
-		self.assign_available_port()
-		rs.set_state(SocketState.WAIT_ACCEPT)
-		rs._accept_wait_port = port
-		self.set_state(SocketState.CONNECTING)
+			self.assign_available_port()
+			rs.set_state(SocketState.WAIT_ACCEPT)
+			rs._accept_wait_port = port
+			self.set_state(SocketState.CONNECTING)
 		
-		return -EWOULDBLOCK
+			return -EWOULDBLOCK
+		else
+			return -ECONNREFUSED
 		
 	func mut assign_available_port()
 		for p in 10000:20000
@@ -132,8 +131,7 @@ class KSocket as @noauto
 	func mut clean_up()
 		if peer_port >= 0
 			# "unconnect"
-			var s = SocketManager.get_by_port(peer_port)
-			if s
+			for s in SocketManager.get_by_port(peer_port)
 				s.peer_port = -1
 		FileSystem.delete(e)
 		Heap.free(buffer)
@@ -148,7 +146,7 @@ class SocketManager as @noauto
 		for s in sockets
 			if !s.used
 				s.used = true
-				s.e = &e
+				s.e := &e
 				s.type = type
 				s.state = SocketState.NONE
 				s.blocking = true
@@ -156,7 +154,7 @@ class SocketManager as @noauto
 				s.peer_port = -1
 				s.ref_count = 0
 				s.buffer_used = 0
-				s.buffer = Heap.malloc(SOCKET_BUFFER_SIZE)
+				s.buffer := Heap.malloc(SOCKET_BUFFER_SIZE)
 				return &s
 		return nil
 
