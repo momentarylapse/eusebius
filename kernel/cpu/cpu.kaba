@@ -9,20 +9,23 @@ class Cpu as @noauto
 		CSTAR = 0xc0000083
 		SF_MASK = 0xc0000084
 
-	func static read_msr(msr: MSR) -> int
+	func static read_msr(msr: MSR) -> int64
 		__temp_i__ = int(msr)
 		asm{
 			mov ecx, __temp_i__
 			rdmsr
-			mov __temp_i64__, rax
+			mov __temp_i2__, eax
+			mov __temp_i3__, edx
 		}
-		return __temp_i__
+		return int64(__temp_i2__) + (int64(__temp_i3__) << 32)
 	func static write_msr(msr: MSR, v: int64)
 		__temp_i__ = int(msr)
-		__temp_i64__ = v
+		__temp_i2__ = int(v)
+		__temp_i3__ = int(v >> 32)
 		asm{
 			mov ecx, __temp_i__
-			mov rax, __temp_i64__
+			mov eax, __temp_i2__
+			mov edx, __temp_i3__
 			wrmsr
 		}
 	func static read_cr0() -> int

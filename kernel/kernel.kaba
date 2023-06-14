@@ -43,6 +43,11 @@ let KALIB_LOCATION = 0x00050000
 ##	printi(size)
 ##	prints("b  ok\n")
 
+func @noframe syscall_test()
+	prints("syscall worked!")
+	while true
+		pass
+
 func main()
 	read_data_from_init()
 	TextMode.init()
@@ -111,7 +116,28 @@ func main()
 	
 	KernelTimer.init(100)
 	
+#	__temp_i64__ = _p2i(raw_function_pointer(syscall_test))
+#	prints("aaa:")
+#	asm{
+#		mov rax, __temp_i64__
+#		call rax
+#	}
+	
 	Cpu.enable_syscall()
+	Cpu.write_msr(Cpu.MSR.STAR, 0x0008000800000000)
+	Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_test)))
+	Cpu.write_msr(Cpu.MSR.CSTAR, _p2i(raw_function_pointer(syscall_test)))
+#	let x = Cpu.read_msr(Cpu.MSR.STAR)
+#	printh(&x, 8)
+#	prints(" STAR\n")
+#	let x2 = Cpu.read_msr(Cpu.MSR.LSTAR)
+#	printh(&x2, 8)
+#	prints(" LSTAR\n")
+#	let x3 = Cpu.read_msr(Cpu.MSR.SF_MASK)
+#	printh(&x3, 8)
+#	prints("\n")
+##	for pp in raw_function_pointer(syscall_test)
+#		printh(pp, 8)
 	prints("trying syscall....")
 	asm{
 		syscall

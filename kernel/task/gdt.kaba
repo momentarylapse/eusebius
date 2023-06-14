@@ -68,10 +68,10 @@ class GlobalDescriptorTable as @noauto
 		x[5] = 0x00009200
 		# user code
 		x[6] = 0
-		x[7] = 0x00209800
+		x[7] = 0x0020f800
 		# user data
 		x[8] = 0
-		x[9] = 0x00009200
+		x[9] = 0x0000f200
 		# tss
 		#x[10] = 0x00000067 # size
 		#x[11] = 0x00008900
