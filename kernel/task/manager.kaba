@@ -195,9 +195,9 @@ class TaskManager as @noauto
 	
 	func static jump_to_user()
 		let stack = Heap.malloc(1024)
-		__temp_p__ = _i2p(_p2i(stack) + 1000)
+		__temp_p__ = _i2p(_p2i(stack) + 1016)
 		asm{
-			cli
+		#	cli
 			#sti
 			push 0x0000001b #0x1b # ss + ring3
 			mov rax, __temp_p__
@@ -219,6 +219,23 @@ class TaskManager as @noauto
 		asm{
 			jmp $
 		}
+
+	var static x_first: bool
+	var static x_rsp: int64
+	var static x_rip: int64
+	
+	func static @noframe x_user()
+		asm{
+			cli
+			jmp $
+		}
+	
+	func static x()
+		prints("...experiment:\n")
+		x_first = true
+		let stack = Heap.malloc(1024)
+		x_rsp = _p2i(stack) + 1016
+		x_rip = _p2i(raw_function_pointer(x_user))
 
 #int sys_getpid()
 #	asm{

@@ -130,6 +130,7 @@ func main()
 	StdCharDevs.init()
 	
 	KernelTimer.init(100)
+	#IrqManager.enable()
 	
 #	__temp_i64__ = _p2i(raw_function_pointer(syscall_test))
 #	prints("aaa:")
@@ -138,8 +139,11 @@ func main()
 #		call rax
 #	}
 
-	prints("...user:\n")
-	TaskManager.jump_to_user()
+	TaskManager.x()
+	IrqManager.enable()
+
+	#prints("...user:\n")
+	#TaskManager.jump_to_user()
 	asm{
 		jmp $
 	}
@@ -148,6 +152,7 @@ func main()
 	Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000)
 	Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_test)))
 	Cpu.write_msr(Cpu.MSR.CSTAR, _p2i(raw_function_pointer(syscall_test)))
+	Cpu.write_msr(Cpu.MSR.SF_MASK, (1 << 9) + (1 << 10)) # mask irq + direction flag
 #	let x = Cpu.read_msr(Cpu.MSR.STAR)
 #	printh(&x, 8)
 #	prints(" STAR\n")
@@ -178,8 +183,8 @@ func main()
 		syscall
 	#	jmp $
 	}
-#	if _xxx_ == 7
-#		pass
+	if _xxx_ == 7
+		pass
 #		asm{
 #			syscall
 #			syscall

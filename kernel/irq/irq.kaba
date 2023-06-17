@@ -13,6 +13,12 @@ let PIC1_DATA = 0x21
 let PIC2_COMMAND = 0xa0
 let PIC2_DATA = 0xa1
 
+class InterruptFrame as @noauto
+	rip, cs, rflags, rsp, ss: int64
+	rax, rbx, rcx, rdx, rbo, rdi, rsi: int64
+	reg8ff: int64[8]
+	cr4, cr3, cr2, cr0: int64
+
 class InterruptDescriptor as @noauto
 	var a, b, c, d: int
 	
@@ -149,7 +155,7 @@ class IrqManager as @noauto
 		load_idt()
 		init_pic()
 
-		enable()
+		#enable()
 		prints("   ok\n")
 	
 	func static init_pic()

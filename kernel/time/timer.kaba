@@ -3,6 +3,7 @@ use io.io
 use io.text
 use time.timevalue
 use task.task
+use task.manager
 use irq.irq
 
 let TIMER_IRQ = 0
@@ -59,7 +60,7 @@ class KernelTimer as @noauto
 		outportb(0x40, ticks_till_irq >> 8)
 		
 		IrqManager.unmask(TIMER_IRQ)
-		IrqManager.enable()
+		#IrqManager.enable()
 
 	func static @noframe int_timer()
 		asm{
@@ -91,11 +92,21 @@ class KernelTimer as @noauto
 			push rax
 			#mov rax, cr8
 			#push rax
+			mov rax, rsp
+			mov __temp_p__, rax
 		}
-		handle_irq()
+		handle_irq(__temp_p__ as InterruptFrame&)
 		asm{
 			# control registers
-			add rsp, 0x20
+			#add rsp, 0x20
+			pop rax
+			mov cr4, eax
+			pop rax
+			mov cr3, eax
+			pop rax
+			mov cr2, eax
+			pop rax
+			mov cr0, eax
 			# general purpose registers
 			pop r15
 			pop r14
@@ -118,9 +129,15 @@ class KernelTimer as @noauto
 		}
 	#var static ii: int
 
-	func static handle_irq()
+	func static handle_irq(out frame: InterruptFrame&)
 		IrqManager.mask(TIMER_IRQ)
-		#prints("<timer>")
+		prints("<timer>")
+		if TaskManager.x_first
+			frame.cs = 0x23
+			frame.ss = 0x1b
+			frame.rip = TaskManager.x_rip
+			frame.rsp = TaskManager.x_rsp
+			frame.rflags = 0x202
 		# do stuff
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)
