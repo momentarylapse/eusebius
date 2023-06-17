@@ -380,6 +380,11 @@ class FileOperationsKey extends FileOperations
 	func mut handle_irq()
 		IrqManager.mask(KEYBOARD_IRQ)
 		prints("<key>")
+#		asm{
+#			mov rax, rsp
+#			mov __temp_p__, rax
+#		}
+#		printh(&__temp_p__, 8)
 		ps2_try_read()
 		IrqManager.eoi(KEYBOARD_IRQ)
 		IrqManager.unmask(KEYBOARD_IRQ)

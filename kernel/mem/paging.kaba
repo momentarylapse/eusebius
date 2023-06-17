@@ -46,12 +46,6 @@ class PageTable extends Page
 		else
 			return _i2p(e[index] & 0xfffff000) as PageTable&
 
-func page_params__(addr: int64, out x_no: int*, out dir_no: int*, out page_no: int*, out offset: int*)
-	*x_no = addr >> 30
-	*dir_no = (addr >> 21) & 0x000001ff # 512 dirs
-	*page_no = (addr >> 12) & 0x000003ff
-	*offset = addr & 0x00000fff
-
 func page_params(addr: int64) -> (int,int,int,int)
 	let dirp_no = int(addr >> 30)
 	let dir_no = int(addr >> 21) & 0x000001ff # 512 dirs

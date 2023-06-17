@@ -13,6 +13,7 @@ func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
 class TaskManager as @noauto
 	var static gdt: GlobalDescriptorTable
 	var static tss: TaskStateSegment
+	var static stack0: void*
 	var static ist1: void*
 	
 #	func static get_task(pid: int) -> Task*
@@ -130,7 +131,10 @@ class TaskManager as @noauto
 			mov __temp_p__, rax
 		}
 		# not sure if this is neccessary
-		tss.rsp0 = __temp_p__
+		#tss.rsp0 = Heap.malloc(2048)#__temp_p__
+#		stack2 = Heap.malloc(1024)
+#		printh(&stack2, 8)
+#		tss.rsp2 = _i2p(_p2i(stack2) + 1000)
 		ist1 = Heap.malloc(1024)
 		tss.ist1 = _i2p(_p2i(ist1) + 1000)
 		prints("ltr...")
@@ -188,6 +192,33 @@ class TaskManager as @noauto
 		setup_hardware_task()
 
 		prints("  ok\n")
+	
+	func static jump_to_user()
+		let stack = Heap.malloc(1024)
+		__temp_p__ = _i2p(_p2i(stack) + 1000)
+		asm{
+			cli
+			#sti
+			push 0x0000001b #0x1b # ss + ring3
+			mov rax, __temp_p__
+			push rax # rsp
+			push 0x00000000#0x202 # flags
+			push 0x00000023 #0x23 # cs + ring3
+			mov rax, _user
+			push rax # rip
+		#	jmp $
+			db 0x48
+			iret
+			
+			
+			_user:
+			cli
+			jmp $
+		}
+		prints("x")
+		asm{
+			jmp $
+		}
 
 #int sys_getpid()
 #	asm{

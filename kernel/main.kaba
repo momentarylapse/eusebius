@@ -8,6 +8,7 @@ use kernel
 #use "test-virtual.kaba"
 #use "test-func-pointer.kaba"
 #use "test-sound.kaba"
+#use "test-irq-key.kaba"
 
 #func main()
 #	var p: void*

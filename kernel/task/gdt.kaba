@@ -62,16 +62,16 @@ class GlobalDescriptorTable as @noauto
 		x[1] = 0
 		# kernel code
 		x[2] = 0
-		x[3] = 0x00209800
+		x[3] = 0x00209800 # longmode=1, present=1, dpl=0
 		# kernel data
 		x[4] = 0
-		x[5] = 0x00009200
-		# user code
-		x[6] = 0
-		x[7] = 0x0020f800
+		x[5] = 0x00009200 # present=1, dpl=0, writable=1 (ignored?)
 		# user data
+		x[6] = 0
+		x[7] = 0x0000f200 # present=1, dpl=3, writable=1 (ignored?)
+		# user code
 		x[8] = 0
-		x[9] = 0x0000f200
+		x[9] = 0x0020f800 # longmode=1, present=1, dpl=3
 		# tss
 		#x[10] = 0x00000067 # size
 		#x[11] = 0x00008900

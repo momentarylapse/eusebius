@@ -43,26 +43,6 @@ var _xxx_: int
 ##	printi(size)
 ##	prints("b  ok\n")
 
-func @noframe syscall_test()
-	asm{
-		mov __temp_i64__, rcx
-	}
-	let ret_addr = __temp_i64__
-	asm{
-		mov rax, rsp
-		mov __temp_p__, rax
-	}
-	printh(&__temp_p__, 8)
-	#printh(&ret_addr, 8)
-	prints("<syscall>")
-	__temp_i64__ = ret_addr
-	asm{
-		mov rcx, __temp_i64__
-		sysret
-	}
-	while true
-		pass
-
 func main()
 	read_data_from_init()
 	TextMode.init()
@@ -125,86 +105,10 @@ func main()
 	else
 		panic("/boot not found")
 	
-##	InitSysCall()
-	
 	StdCharDevs.init()
 	
 	KernelTimer.init(100)
 	
-#	__temp_i64__ = _p2i(raw_function_pointer(syscall_test))
-#	prints("aaa:")
-#	asm{
-#		mov rax, __temp_i64__
-#		call rax
-#	}
-
-	prints("...user:\n")
-	TaskManager.jump_to_user()
-	asm{
-		jmp $
-	}
-	
-	Cpu.enable_syscall()
-	Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000)
-	Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_test)))
-	Cpu.write_msr(Cpu.MSR.CSTAR, _p2i(raw_function_pointer(syscall_test)))
-#	let x = Cpu.read_msr(Cpu.MSR.STAR)
-#	printh(&x, 8)
-#	prints(" STAR\n")
-#	let x2 = Cpu.read_msr(Cpu.MSR.LSTAR)
-#	printh(&x2, 8)
-#	prints(" LSTAR\n")
-#	let x3 = Cpu.read_msr(Cpu.MSR.SF_MASK)
-#	printh(&x3, 8)
-#	prints("\n")
-##	for pp in raw_function_pointer(syscall_test)
-#		printh(pp, 8)
-	prints("trying syscall....")
-	#let pp = &__temp_i__
-	#printh(&pp, 8)
-	_xxx_ = 7
-	asm{
-		mov rax, rsp
-		mov __temp_p__, rax
-	}
-	printh(&__temp_p__, 8)
-	asm{
-		#jmp $
-		cli
-		syscall
-		syscall
-#		mov eax, 0x00100000
-#		mov [rax], 0x00000000
-		syscall
-	#	jmp $
-	}
-#	if _xxx_ == 7
-#		pass
-#		asm{
-#			syscall
-#			syscall
-#			syscall
-#		}
-	asm{
-		jmp $
-	}
-	
-##	load_kalib()
-##	
-##	int stdin = kernel_task.open("/dev/tty", O_RDONLY)
-##	int stdout = kernel_task.open("/dev/tty", O_WRONLY)
-##	
-##	if kernel_task.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
-##		panic("can not read file /bin/shell!")
-##	
-##	Scheduler.start()
-##	panic("test")
-
-#	for i in 0:300000000
-#		pass
-#	var p:int* = _i2p(0xf0000000)
-#	*p = 3
-
 	prints("  \\(^_^)/")
 	#IrqManager.slow_endless_loop()
 	while true

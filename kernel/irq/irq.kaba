@@ -29,14 +29,14 @@ class InterruptDescriptor as @noauto
 		# [31..16] = descriptor[1]
 		# [15..0] = addr[15..0]
 		
-		b = (addr & 0xffff0000) + 0x00008e00
+		b = (addr & 0xffff0000) + 0x00008e01
 		# [31..16] = addr[31..16]
 		# [15] = Present
 		# [14..13] = DPL
 		# [12] = 0
 		# [11..8] = typ 0xe
 		# [7..3] = reserved
-		# [2..0] = IST stack
+		# [2..0] = 1 IST stack
 		
 		c = 0 # addr[63..32]
 		#printh(&self, sizeof(self))
