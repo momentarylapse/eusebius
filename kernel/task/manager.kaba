@@ -194,8 +194,9 @@ class TaskManager as @noauto
 
 		prints("  ok\n")
 	
-	func static jump_to_user()
+	func static jump_to_user(rsp: void*)
 		let stack = Heap.malloc(1024)
+		__temp_i64__ = _p2i(rsp)#raw_function_pointer(f_user))
 		__temp_p__ = _i2p(_p2i(stack) + 1016)
 		asm{
 			#cli
@@ -206,7 +207,7 @@ class TaskManager as @noauto
 			push 0x00003200 # flags: iopl=3, iterrupts=1
 			#push 0x00003000#0x202 # flags: iopl=3, iterrupts=1
 			push 0x00000023 #0x23 # cs + ring3
-			mov rax, _user
+			mov rax, __temp_i64__
 			push rax # rip
 		#	jmp $
 			db 0x48
@@ -214,6 +215,8 @@ class TaskManager as @noauto
 			
 			_user:
 		}
+
+	func static @noframe f_user()
 		while true
 			prints("\nhi, user!\n")
 			for i in 0:100000000
@@ -239,7 +242,7 @@ class TaskManager as @noauto
 		x_first = true
 		let stack = Heap.malloc(1024)
 		x_rsp = _p2i(stack) + 1016
-		x_rip = _p2i(raw_function_pointer(x_user))
+		x_rip = _p2i(raw_function_pointer(f_user))
 
 #int sys_getpid()
 #	asm{

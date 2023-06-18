@@ -95,7 +95,7 @@ class KernelTimer as @noauto
 			mov rax, rsp
 			mov __temp_p__, rax
 		}
-		handle_irq(__temp_p__ as InterruptFrame&)
+		handle_irq(__temp_p__ as InterruptFrame*)
 		asm{
 			# control registers
 			#add rsp, 0x20
@@ -129,19 +129,17 @@ class KernelTimer as @noauto
 		}
 	#var static ii: int
 
-	func static handle_irq(out frame: InterruptFrame&)
+	func static handle_irq(_frame: InterruptFrame*)
 		IrqManager.mask(TIMER_IRQ)
 		prints("<timer>")
 		if TaskManager.x_first
-			frame.cs = 0x23
-			frame.ss = 0x1b
-			#frame.cs = 0x08
-			#frame.ss = 0x10
-			frame.rip = TaskManager.x_rip
-			frame.rsp = TaskManager.x_rsp
-			frame.rflags = 0x202
-			TaskManager.x_first = false
-		# do stuff
+			for frame in _frame
+				frame.cs = 0x23
+				frame.ss = 0x1b
+				frame.rip = TaskManager.x_rip
+				frame.rsp = TaskManager.x_rsp
+				frame.rflags = 0x3200
+				TaskManager.x_first = false
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)
 	
