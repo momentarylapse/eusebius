@@ -119,6 +119,14 @@ class Syscall
 			prints("  <SYSCALL HI>  ")
 			TextMode.text_color = 0x07
 			return 0
+		else if index == 0x1235
+			TextMode.text_color = 0x04
+			#printh(&frame.rdi, 8)
+			#prints("  ")
+			#printi(frame.rsi)
+			TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
+			TextMode.text_color = 0x07
+			return 0
 		else
 			prints("<syscall>")
 			printi(index)

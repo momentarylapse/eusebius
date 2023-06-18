@@ -45,7 +45,7 @@ class KernelTimer as @noauto
 	
 	#	irq.set_task(irq.hw2soft(0), &t) # IRQ 0
 	
-		IrqManager.disable()
+		#IrqManager.disable()
 		IrqManager.set_func(TIMER_IRQ + 32, raw_function_pointer(int_timer))
 	
 		# ticks/s: 1193180
@@ -60,7 +60,6 @@ class KernelTimer as @noauto
 		outportb(0x40, ticks_till_irq >> 8)
 		
 		IrqManager.unmask(TIMER_IRQ)
-		#IrqManager.enable()
 
 	func static @noframe int_timer()
 		asm{
@@ -127,19 +126,18 @@ class KernelTimer as @noauto
 			db 0x48
 			iret
 		}
-	#var static ii: int
 
 	func static handle_irq(_frame: InterruptFrame*)
 		IrqManager.mask(TIMER_IRQ)
 		prints("<timer>")
-		if TaskManager.x_first
+		for n in TaskManager.next
 			for frame in _frame
 				frame.cs = 0x23
 				frame.ss = 0x1b
-				frame.rip = TaskManager.x_rip
-				frame.rsp = TaskManager.x_rsp
+				frame.rip = n.rip
+				frame.rsp = n.rsp
 				frame.rflags = 0x3200
-				TaskManager.x_first = false
+				TaskManager.next = nil
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)
 	

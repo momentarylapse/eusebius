@@ -4,11 +4,7 @@ use mem.heap
 use task
 use gdt
 
-
-#var kernel_task: Task*
-
-func __ref_gdt(gdt: GlobalDescriptorTable) -> void*
-	return &gdt
+let MAX_TASKS = 256
 
 class TaskManager as @noauto
 	var static gdt: GlobalDescriptorTable
@@ -24,7 +20,7 @@ class TaskManager as @noauto
 #			return nil
 #		return t
 
-#	var static tasks: Task[MAX_TASKS]
+	var static tasks: Task[MAX_TASKS]
 #	var static idle_task: Task*
 	var static next_pid_to_assign: int
 	var static next_puid_to_assign: int
@@ -32,25 +28,31 @@ class TaskManager as @noauto
 	var static __handler_p__: int
 	var static ack_hw_irq: int
 
+	func static get_next_pid() -> int
+		for i in next_pid_to_assign:MAX_TASKS
+			if tasks[i].status == TaskStatus.UNUSED
+				next_pid_to_assign = i + 1
+				return i
+		for i in 0:next_pid_to_assign
+			if tasks[i].status == TaskStatus.UNUSED
+				next_pid_to_assign = i + 1
+				return i
+		return -1
 
-	#var static gdt: GlobalDescriptorData[NUM_PRE_GDT_ENTRIES + MAX_TASKS]
+	func static add_task_user(name: cstring, F: int64, parent: Task*) -> Task*
 
-#	func static get_next_pid() -> int
-#		for i in next_pid_to_assign:MAX_TASKS
-#			if tasks[i].status == TaskStatus.UNUSED
-#				next_pid_to_assign = i + 1
-#				return i
-#		for i in 0:next_pid_to_assign
-#			if tasks[i].status == TaskStatus.UNUSED
-#				next_pid_to_assign = i + 1
-#				return i
-#		return -1
+		let pid = get_next_pid()
+		if pid < 0
+			return nil
+		var t = &tasks[pid]
+	
+#		var t = Heap.malloc(sizeof(Task)) as Task&
+		t.pid = pid
+		t.status = TaskStatus.RUNNING
+		t.stack := Heap.malloc(1024)
+		t.rsp = _p2i(t.stack) + 1024
+		t.rip = F
 
-#	func static add_task_user(name: cstring, F: void*, parent: Task*) -> Task*
-#		let pid = get_next_pid()
-#		if pid < 0
-#			return nil
-#		var t = &tasks[pid]
 #	
 #		t.init(pid, name, parent)
 #		t.kernel_mode = false
@@ -65,8 +67,8 @@ class TaskManager as @noauto
 #			panic("incomplete page dir") # ...
 #		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
 #		gdt[t.desc].set_task(t)
-#
-#		return t
+
+		return t
 #
 #	func static add_task_kernel(name: cstring, F: void*, stack_size: int, parent: Task*) -> Task*
 #		let pid = get_next_pid()
@@ -88,20 +90,20 @@ class TaskManager as @noauto
 #
 #		return t
 #
-	func static idle_func()
-		while true
-			#prints("<idle>")
-			asm {
-				hlt
-			}
-	func static get_pvl() -> int
-		asm {
-			db 0x9c # pushf
-			pop eax
-			mov __temp_i__, eax
-		}
-		let eflags = __temp_i__
-		return (eflags >> 12) & 3
+#	func static idle_func()
+#		while true
+#			#prints("<idle>")
+#			asm {
+#				hlt
+#			}
+#	func static get_pvl() -> int
+#		asm {
+#			db 0x9c # pushf
+#			pop eax
+#			mov __temp_i__, eax
+#		}
+#		let eflags = __temp_i__
+#		return (eflags >> 12) & 3
 
 
 	# running in task space
@@ -153,6 +155,10 @@ class TaskManager as @noauto
 			_start_as_task2:
 		}
 		# markiert das aktuelle TSS als "busy"!
+		
+
+	var static cur: Task*
+	var static next: Task*
 
 	func static init()
 		prints("init tasks...")
@@ -174,8 +180,8 @@ class TaskManager as @noauto
 		# user data
 #		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
 
-#		for t in tasks
-#			t.status = TaskStatus.UNUSED
+		for t in tasks
+			t.status = TaskStatus.UNUSED
 #			for h in t.handles
 #				h = nil
 #			for sm in t.shmem
@@ -190,13 +196,14 @@ class TaskManager as @noauto
 	
 		gdt.load()
 		setup_hardware_task()
-		x_first = false
+		cur = nil
+		next = nil
 
 		prints("  ok\n")
 	
-	func static jump_to_user(rsp: void*)
+	func static jump_to_user(f: void*)
 		let stack = Heap.malloc(1024)
-		__temp_i64__ = _p2i(rsp)#raw_function_pointer(f_user))
+		__temp_i64__ = _p2i(f)#raw_function_pointer(f_user))
 		__temp_p__ = _i2p(_p2i(stack) + 1016)
 		asm{
 			#cli
@@ -217,37 +224,23 @@ class TaskManager as @noauto
 		}
 
 	func static @noframe f_user()
+		var s: cstring
+		strcpy(s, "USER: HI")
 		while true
-			prints("\nhi, user!\n")
+			#prints("\nhi, user!\n")
+			__temp_p__ = &s
+			__temp_i__ = strlen(s)
+			asm{
+				mov rdi, __temp_p__
+				mov esi, __temp_i__
+				mov eax, 0x00001235
+				syscall
+			}
 			for i in 0:100000000
 				pass
-			asm{
-				mov eax, 0x00001234
-				syscall
-				#jmp $
-			}
-		asm{
-			jmp $
-		}
 
-	var static x_first: bool
-	var static x_rsp: int64
-	var static x_rip: int64
-	
-	func static @noframe x_user()
-		#prints("X")
-		asm{
-			#sti
-			#syscall
-			jmp $
-		}
-	
 	func static x()
-		prints("...experiment:\n")
-		x_first = true
-		let stack = Heap.malloc(1024)
-		x_rsp = _p2i(stack) + 1016
-		x_rip = _p2i(raw_function_pointer(f_user))
+		next = add_task_user("dummy", _p2i(raw_function_pointer(f_user)), nil)
 
 #int sys_getpid()
 #	asm{

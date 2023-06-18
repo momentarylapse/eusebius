@@ -108,7 +108,7 @@ func main()
 	
 	StdCharDevs.init()
 	
-	KernelTimer.init(100)
+	KernelTimer.init(50)
 	#IrqManager.enable()
 	
 #	__temp_i64__ = _p2i(raw_function_pointer(syscall_test))
@@ -124,43 +124,10 @@ func main()
 	TaskManager.x()
 	IrqManager.enable()
 
-#	prints("...user:\n")
-#	TaskManager.jump_to_user(raw_function_pointer(TaskManager.f_user))
 	asm{
 		jmp $
 	}
 	
-
-
-	prints("trying syscall....")
-	#let pp = &__temp_i__
-	#printh(&pp, 8)
-	_xxx_ = 7
-	asm{
-		mov rax, rsp
-		mov __temp_p__, rax
-	}
-	printh(&__temp_p__, 8)
-	asm{
-		#jmp $
-		cli
-		syscall
-		syscall
-#		mov eax, 0x00100000
-#		mov [rax], 0x00000000
-		syscall
-	#	jmp $
-	}
-	if _xxx_ == 7
-		pass
-#		asm{
-#			syscall
-#			syscall
-#			syscall
-#		}
-	asm{
-		jmp $
-	}
 	
 ##	load_kalib()
 ##	

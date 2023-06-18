@@ -27,7 +27,6 @@ let KERNEL_STACK_SIZE = 0x00020000 # 128k
 let KERNEL_MEM = 0x00800000 # 8mb
 let IDLE_STACK_SIZE = 0x00001000 # 4k
 
-let MAX_TASKS = 256
 let TASK_IMAGE_POS = KERNEL_MEM
 let TASK_STACK_SIZE = 0x00080000 # 512k
 let TASK_STACK_POS = 0x00880000
@@ -46,7 +45,7 @@ enum TaskStatus as @noauto
 	#DEAD
 
 
-var TaskCallData: int[2]
+#var TaskCallData: int[2]
 
 enum WaitingMode as @noauto
 	TASK_EXIT
@@ -61,21 +60,19 @@ enum WaitingMode as @noauto
 #	var s: SharedMemory.Block*
 #	var dest: int
 
-
-
-#class Task as @noauto
-#	var tss: TaskStateSegment
-#	var stack: int[0]*
-#	var stack_size: int
+class Task
+	var stack: void&
+	var rsp: int64
+	var rip: int64
 #	var desc: int
-#	var pid, puid: int
-#	var status: TaskStatus
-#	var return_status: int
-#	var waiting_mode: WaitingMode
-#	var waiting_param_i1, waiting_param_i2, waiting_param_i3: int
+	var pid, puid: int
+	var status: TaskStatus
+	var return_status: int
+	var waiting_mode: WaitingMode
+	var waiting_param_i1, waiting_param_i2, waiting_param_i3: int
 #	var sleep_and_wait: bool
 #	var parent: Task*
-#	var name: cstring
+	var name: cstring
 #	var arg: cstring
 #	var cur_dir: FileEntry*
 #	var page_dir: PageRootTable*
