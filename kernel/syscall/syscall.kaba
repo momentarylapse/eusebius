@@ -24,7 +24,7 @@ func @noframe syscall_test()
 		# general purpose registers
 		push rax
 		push rbx
-		push rcx
+		push rcx # < task rip
 		push rdx
 		push rbp
 		push rdi
@@ -32,7 +32,7 @@ func @noframe syscall_test()
 		push r8
 		push r9
 		push r10
-		push r11
+		push r11 # < task rflags
 		push r12
 		push r13
 		push r14
@@ -40,12 +40,18 @@ func @noframe syscall_test()
 		mov rax, rsp
 		mov __temp_p__, rax
 	}
+	
+	# switch to kernel/syscall stack
+#	__temp_p2__ = Syscall.rsp
+#	asm{
+#		mov rsp, __temp_p2__
+#		#mov rbp,...
+#	}
+	# nah, later...
+	
 	var task_rsp = __temp_p__
 	var frame = __temp_p__ as Syscall.Frame&
-	prints("<syscall>  rsp=")
-	printh(&frame.rsp, 8)
-	prints("  ret=")
-	printh(&frame.rcx, 8)
+	Syscall.handle(frame)
 	__temp_p__ = task_rsp
 	asm{
 		mov rax, __temp_p__
@@ -65,14 +71,12 @@ func @noframe syscall_test()
 		pop rdx
 		pop rcx
 		pop rbx
-		#pop rax
-		add rsp, 0x08
+		pop rax
+		#add rsp, 0x08
 		
 		db 0x48
 		sysret
 	}
-	while true
-		pass
 
 
 class Syscall
@@ -85,8 +89,10 @@ class Syscall
 		rsp: int64
 	
 	var static stack: void&
+	var static rsp: void&
 	func static init()
 		stack := Heap.malloc(STACK_SIZE)
+		rsp := _i2p(_p2i(stack) + STACK_SIZE)
 		
 		Cpu.enable_syscall()
 		Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000)
@@ -106,6 +112,17 @@ class Syscall
 #			printh(pp, 8)
 
 
+	func static handle(frame: Frame) -> int64
+		let index = int(frame.rax)
+		if index == 0x1234
+			TextMode.text_color = 0x04
+			prints("  <SYSCALL HI>  ")
+			TextMode.text_color = 0x07
+			return 0
+		else
+			prints("<syscall>")
+			printi(index)
+		return -1
 
 
 #class SysInfo as @noauto

@@ -222,6 +222,7 @@ class TaskManager as @noauto
 			for i in 0:100000000
 				pass
 			asm{
+				mov eax, 0x00001234
 				syscall
 				#jmp $
 			}
