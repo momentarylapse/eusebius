@@ -221,6 +221,10 @@ class TaskManager as @noauto
 			prints("\nhi, user!\n")
 			for i in 0:100000000
 				pass
+			asm{
+				syscall
+				#jmp $
+			}
 		asm{
 			jmp $
 		}

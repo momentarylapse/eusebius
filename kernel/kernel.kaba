@@ -2,7 +2,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use common
 use io.text
-use cpu.cpu
+use cpu
 use dev.ata
 use dev.block
 use dev.std_char_devs
@@ -18,7 +18,7 @@ use task.manager
 use irq.irq
 use irq.error
 use time.timer
-##use syscall
+use syscall
 
 let KALIB_LOCATION = 0x00050000
 
@@ -43,25 +43,6 @@ var _xxx_: int
 ##	printi(size)
 ##	prints("b  ok\n")
 
-func @noframe syscall_test()
-	asm{
-		mov __temp_i64__, rcx
-	}
-	let ret_addr = __temp_i64__
-	asm{
-		mov rax, rsp
-		mov __temp_p__, rax
-	}
-	printh(&__temp_p__, 8)
-	#printh(&ret_addr, 8)
-	prints("<syscall>")
-	__temp_i64__ = ret_addr
-	asm{
-		mov rcx, __temp_i64__
-		sysret
-	}
-	while true
-		pass
 
 func main()
 	read_data_from_init()
@@ -125,8 +106,6 @@ func main()
 	else
 		panic("/boot not found")
 	
-##	InitSysCall()
-	
 	StdCharDevs.init()
 	
 	KernelTimer.init(100)
@@ -139,6 +118,9 @@ func main()
 #		call rax
 #	}
 
+	Syscall.init()
+
+
 	TaskManager.x()
 	IrqManager.enable()
 
@@ -148,22 +130,8 @@ func main()
 		jmp $
 	}
 	
-	Cpu.enable_syscall()
-	Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000)
-	Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_test)))
-	Cpu.write_msr(Cpu.MSR.CSTAR, _p2i(raw_function_pointer(syscall_test)))
-	Cpu.write_msr(Cpu.MSR.SF_MASK, (1 << 9) + (1 << 10)) # mask irq + direction flag
-#	let x = Cpu.read_msr(Cpu.MSR.STAR)
-#	printh(&x, 8)
-#	prints(" STAR\n")
-#	let x2 = Cpu.read_msr(Cpu.MSR.LSTAR)
-#	printh(&x2, 8)
-#	prints(" LSTAR\n")
-#	let x3 = Cpu.read_msr(Cpu.MSR.SF_MASK)
-#	printh(&x3, 8)
-#	prints("\n")
-##	for pp in raw_function_pointer(syscall_test)
-#		printh(pp, 8)
+
+
 	prints("trying syscall....")
 	#let pp = &__temp_i__
 	#printh(&pp, 8)
