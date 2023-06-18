@@ -198,48 +198,24 @@ class TaskManager as @noauto
 		let stack = Heap.malloc(1024)
 		__temp_p__ = _i2p(_p2i(stack) + 1016)
 		asm{
-			cli
+			#cli
 			#sti
 			push 0x0000001b #0x1b # ss + ring3
-			#push 0x00000010 #0x1b # ss + ring3
 			mov rax, __temp_p__
 			push rax # rsp
-			push 0x00000000#0x202 # flags
+			#push 0x00000202 # flags: iterrupts=1
+			push 0x00003000#0x202 # flags: iopl=3, iterrupts=1
 			push 0x00000023 #0x23 # cs + ring3
-			#push 0x00000008 #0x23 # cs + ring3
 			mov rax, _user
 			push rax # rip
 		#	jmp $
 			db 0x48
 			iret
 			
-			
 			_user:
-			#cli
-			#mov eax, 0x000b8004
-			#mov ecx, 0x20202020
-			#mov cl, 'A'
-			#mov [eax], ecx
-		#	jmp $
 		}
-		TextMode.clear()
-#		let position = 0
-#		outportb(0x3d4, 0x0f)
-#		outportb(0x3d5, position)
-#		# cursor HIGH port to vga INDEX register
-#		outportb(0x3d4, 0x0e)
-#		outportb(0x3d5, position >> 8)
-		__temp_p__ = _i2p(0x00b8004)
-		#prints("x")
+		prints("hi, user!")
 		asm{
-			mov al, 0x0f
-			mov edx, 0x000003d4
-			#out dx, al
-			mov rax, __temp_p__
-		#	mov eax, 0x000b8004
-			mov ecx, 0x20202020
-			mov cl, 'B'
-			mov [eax], ecx
 			jmp $
 		}
 
