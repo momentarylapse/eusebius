@@ -63,9 +63,9 @@ class PageRootTable extends PageTable
 		var dest = _dest & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(source)
 		var npages = ceil_quot(size, PAGE_SIZE)
-		var flags = 5
+		var flags = 0x105
 		if writable
-			flags = 7
+			flags += 2
 
 		var pdpt = get_or_create_sub(0, flags)
 		var pdt = pdpt.get_or_create_sub(0, flags)
@@ -92,9 +92,9 @@ class PageRootTable extends PageTable
 		var start = _start & 0xfffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(start)
 		var npages = ceil_quot(size, PAGE_SIZE)
-		var flags = 5 # present + user
+		var flags = 0x105 # present + user + global
 		if writable
-			flags = 7 # present + user + writable
+			flags += 2 # writable
 
 		var pdpt = get_or_create_sub(0, flags)
 		var pdt = pdpt.get_or_create_sub(0, flags)

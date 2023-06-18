@@ -139,11 +139,11 @@ func main()
 #		call rax
 #	}
 
-	TaskManager.x()
-	IrqManager.enable()
+#	TaskManager.x()
+#	IrqManager.enable()
 
-	#prints("...user:\n")
-	#TaskManager.jump_to_user()
+	prints("...user:\n")
+	TaskManager.jump_to_user()
 	asm{
 		jmp $
 	}

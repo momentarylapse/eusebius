@@ -135,9 +135,12 @@ class KernelTimer as @noauto
 		if TaskManager.x_first
 			frame.cs = 0x23
 			frame.ss = 0x1b
+			#frame.cs = 0x08
+			#frame.ss = 0x10
 			frame.rip = TaskManager.x_rip
 			frame.rsp = TaskManager.x_rsp
 			frame.rflags = 0x202
+			TaskManager.x_first = false
 		# do stuff
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)

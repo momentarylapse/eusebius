@@ -190,6 +190,7 @@ class TaskManager as @noauto
 	
 		gdt.load()
 		setup_hardware_task()
+		x_first = false
 
 		prints("  ok\n")
 	
@@ -197,13 +198,15 @@ class TaskManager as @noauto
 		let stack = Heap.malloc(1024)
 		__temp_p__ = _i2p(_p2i(stack) + 1016)
 		asm{
-		#	cli
+			cli
 			#sti
 			push 0x0000001b #0x1b # ss + ring3
+			#push 0x00000010 #0x1b # ss + ring3
 			mov rax, __temp_p__
 			push rax # rsp
 			push 0x00000000#0x202 # flags
 			push 0x00000023 #0x23 # cs + ring3
+			#push 0x00000008 #0x23 # cs + ring3
 			mov rax, _user
 			push rax # rip
 		#	jmp $
@@ -212,11 +215,21 @@ class TaskManager as @noauto
 			
 			
 			_user:
-			cli
-			jmp $
+			#cli
+			#mov eax, 0x000b8004
+			#mov ecx, 0x20202020
+			#mov cl, 'A'
+			#mov [eax], ecx
+		#	jmp $
 		}
-		prints("x")
+		__temp_i64__ = 0x00b8004
+		#prints("x")
 		asm{
+			mov rax, __temp_i64__
+		#	mov eax, 0x000b8004
+			mov ecx, 0x20202020
+			mov cl, 'B'
+			mov [eax], ecx
 			jmp $
 		}
 
@@ -225,8 +238,10 @@ class TaskManager as @noauto
 	var static x_rip: int64
 	
 	func static @noframe x_user()
+		#prints("X")
 		asm{
-			cli
+			#sti
+			#syscall
 			jmp $
 		}
 	
