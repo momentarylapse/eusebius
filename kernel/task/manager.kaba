@@ -222,10 +222,20 @@ class TaskManager as @noauto
 			#mov [eax], ecx
 		#	jmp $
 		}
-		__temp_i64__ = 0x00b8004
+		TextMode.clear()
+#		let position = 0
+#		outportb(0x3d4, 0x0f)
+#		outportb(0x3d5, position)
+#		# cursor HIGH port to vga INDEX register
+#		outportb(0x3d4, 0x0e)
+#		outportb(0x3d5, position >> 8)
+		__temp_p__ = _i2p(0x00b8004)
 		#prints("x")
 		asm{
-			mov rax, __temp_i64__
+			mov al, 0x0f
+			mov edx, 0x000003d4
+			#out dx, al
+			mov rax, __temp_p__
 		#	mov eax, 0x000b8004
 			mov ecx, 0x20202020
 			mov cl, 'B'
