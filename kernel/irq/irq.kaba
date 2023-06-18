@@ -35,8 +35,8 @@ class InterruptDescriptor as @noauto
 		# [31..16] = descriptor[1]
 		# [15..0] = addr[15..0]
 		
-	#	b = (addr & 0xffff0000) + 0x00008e01
-		b = (addr & 0xffff0000) + 0x00008e00
+		b = (addr & 0xffff0000) + 0x00008e01
+	#	b = (addr & 0xffff0000) + 0x00008e00
 		# [31..16] = addr[31..16]
 		# [15] = Present
 		# [14..13] = DPL
