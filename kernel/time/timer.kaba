@@ -122,7 +122,7 @@ class KernelTimer as @noauto
 			pop rcx
 			pop rbx
 			pop rax
-			sti
+			#sti
 			db 0x48
 			iret
 		}
@@ -136,6 +136,8 @@ class KernelTimer as @noauto
 				frame.ss = 0x1b
 				frame.rip = n.rip
 				frame.rsp = n.rsp
+				frame.rbp = n.rsp
+				frame.rax = 0
 				frame.rflags = 0x3200
 				TaskManager.next = nil
 		IrqManager.eoi(TIMER_IRQ)

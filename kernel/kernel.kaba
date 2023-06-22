@@ -109,19 +109,26 @@ func main()
 	StdCharDevs.init()
 	
 	KernelTimer.init(50)
-	#IrqManager.enable()
-	
-#	__temp_i64__ = _p2i(raw_function_pointer(syscall_test))
-#	prints("aaa:")
-#	asm{
-#		mov rax, __temp_i64__
-#		call rax
-#	}
 
 	Syscall.init()
 
 
-	TaskManager.x()
+	#TaskManager.x()
+	
+	prints("loading process ")
+	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
+		prints("OK")
+		var code = Heap.malloc(1024)
+		prints("  xxx")
+		let r = of.read(Paging.kernel_root_table, _p2i(code), 1024)
+		#printh(code, r)
+		#prints("\n")
+		
+		TaskManager.next = TaskManager.add_task_user("simple", _p2i(code), nil)
+	else
+		panic("can not open")
+	
+	
 	IrqManager.enable()
 
 	asm{

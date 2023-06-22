@@ -1,0 +1,22 @@
+#define __FUNCTION_POINTER_AS_CODE__
+
+#func @noframe main()
+func main()
+	asm{
+#		push rbp
+		#push rax
+#		mov rbp, rsp
+##		sub rsp, 0x10
+	}
+	
+	while true
+		asm{
+			mov eax, 0x00001234
+			syscall
+		}
+		for i in 0:1000000
+			pass
+
+#func main()
+#	var i = 23
+#	#main()

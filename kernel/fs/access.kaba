@@ -76,7 +76,8 @@ class OpenFileData as @noauto
 				cur_size = block_size - pos_in_block
 
 			# direkt lesen (aus dem Lese-Puffer kopieren)
-			page_dir.memcpy2task(addr, &buffer[pos_in_block], cur_size)
+			#page_dir.memcpy2task(addr, &buffer[pos_in_block], cur_size)
+			memcpy(_i2p(addr), &buffer[pos_in_block], cur_size)
 			pos_in_block += cur_size
 			offset += cur_size
 			r += cur_size
