@@ -29,7 +29,8 @@ func main()
 	let xxx = max(a, b)
 	
 	#var p = @malloc(100) as int[10]&
-	kprinti(13)
+	#kprinti(13)
+	#kprintp(&s)
 	
 	while true
 		

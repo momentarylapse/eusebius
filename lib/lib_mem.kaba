@@ -69,6 +69,9 @@ func _init_memory()
 	malloc_end_marker.prev = malloc_first_free
 	malloc_first_free.next = malloc_end_marker
 	
+	kprintp(malloc_first_free)
+	kprintp(malloc_end_marker)
+	
 #	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
 #	malloc_small_block.init()
 

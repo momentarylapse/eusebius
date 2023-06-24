@@ -50,7 +50,7 @@ func @noframe syscall_test()
 	
 	# no local variables allowed! (rbp still from task-frame)
 	Syscall.task_rsp = __temp_p__
-	Syscall.handle(__temp_p__ as Syscall.Frame&)
+	__temp_i64__ = Syscall.handle(__temp_p__ as Syscall.Frame&)
 	__temp_p__ = Syscall.task_rsp
 	asm{
 		mov rax, __temp_p__
@@ -70,8 +70,9 @@ func @noframe syscall_test()
 		pop rdx
 		pop rcx
 		pop rbx
-		pop rax
-		#add rsp, 0x08
+		#pop rax
+		mov rax, __temp_i64__ # return value -> rax
+		add rsp, 0x08
 		
 		db 0x48
 		sysret
@@ -119,7 +120,7 @@ class Syscall
 		if index == 0x0001 # exit
 			panic("process called exit()")
 		else if index == 0x002d # brk
-			return 10000
+			return 8000000
 		else if index == 0x1234 # print hi
 			TextMode.text_color = 0x04
 			prints("  <SYSCALL HI>  ")
@@ -130,6 +131,9 @@ class Syscall
 			return 0
 		else if index == 0x2003 # kprinti
 			printi(frame.rdi)
+			return 0
+		else if index == 0x2004 # kprintp
+			printh(&frame.rdi, 8)
 			return 0
 		else
 			prints("<syscall>")

@@ -53,11 +53,11 @@ class SharedMemory
 				# :P
 				b.p = key
 			else if absolute
-				if !Paging.alloc_chunk(key, size, true)
+				if !Paging.reserve_physical_chunk(key, size, true)
 					return -ENOMEM
 				b.p = key
 			else
-				b.p = Paging.find_and_alloc_chunk(size)
+				b.p = Paging.find_and_reserve_chunk(size)
 				if b.p == -1
 					return -ENOMEM
 			b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE

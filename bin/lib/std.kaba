@@ -156,6 +156,7 @@ func extern exit(r: int) -> bool
 #
 #func extern kprint(s: string)
 func extern kprinti(i: int)
+func extern kprintp(p: void*)
 func extern kprintc(s: cstring, l: int)
 #
 #func extern socket(type: int) -> int
