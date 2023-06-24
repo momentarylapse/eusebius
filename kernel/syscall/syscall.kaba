@@ -42,17 +42,16 @@ func @noframe syscall_test()
 	}
 	
 	# switch to kernel/syscall stack
-#	__temp_p2__ = Syscall.rsp
-#	asm{
-#		mov rsp, __temp_p2__
-#		#mov rbp,...
-#	}
-	# nah, later...
+	__temp_p2__ = Syscall.rsp
+	asm{
+		mov rsp, __temp_p2__
+		mov rbp, rsp
+	}
 	
-	var task_rsp = __temp_p__
-	var frame = __temp_p__ as Syscall.Frame&
-	Syscall.handle(frame)
-	__temp_p__ = task_rsp
+	# no local variables allowed! (rbp still from task-frame)
+	Syscall.task_rsp = __temp_p__
+	Syscall.handle(__temp_p__ as Syscall.Frame&)
+	__temp_p__ = Syscall.task_rsp
 	asm{
 		mov rax, __temp_p__
 		mov rsp, rax
@@ -89,7 +88,10 @@ class Syscall
 		rsp: int64
 	
 	var static stack: void&
-	var static rsp: void&
+	var static rsp: void& # kernel/handler
+	
+	var static task_rsp: void*
+	
 	func static init()
 		stack := Heap.malloc(STACK_SIZE)
 		rsp := _i2p(_p2i(stack) + STACK_SIZE)

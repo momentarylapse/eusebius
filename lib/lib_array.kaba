@@ -36,9 +36,9 @@ func sa2cs(a: string[], out cs: cstring)
 # memory management
 
 
-func memcpy(_dest: void*, _source: void*, size: int)
-	var dest: char[0]* = _dest
-	var source: char[0]* = _source
+func memcpy(_dest: void&, _source: void&, size: int)
+	var dest = _dest as char[0]&
+	var source = _source as char[0]&
 	for i in 0:size
 		dest[i] = source[i]
 

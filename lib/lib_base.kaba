@@ -30,9 +30,9 @@ var __temp_i__, __temp_i2__, __temp_i3__: int
 var __temp_f__: float
 var __temp_p__, __temp_p2__: void*
 
-func _p2i(p: void*) -> int
-	var i: int* = &p
-	return *i
+func _p2i(p: void&) -> int
+	var i = &p as int&
+	return i
 
 #class PointerWrapper
 #	void *p

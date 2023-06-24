@@ -1,17 +1,35 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
+var p: void*
+
 #func @noframe main()
-func main()
+func _main()
 	asm{
 #		push rbp
-		#push rax
 #		mov rbp, rsp
 ##		sub rsp, 0x10
+		mov eax, 0x00001234
+		syscall
+		jmp $
 	}
+
+
+func main()
+	
+	var s: cstring
+	s[0] = 'A'
+	s[1] = 'x'
+	
+	p = &s
+	
+	#var x: string
 	
 	while true
+		
 		asm{
-			mov eax, 0x00001234
+			mov rdi, p
+			mov esi, 0x00000002
+			mov eax, 0x00001235
 			syscall
 		}
 		for i in 0:1000000
