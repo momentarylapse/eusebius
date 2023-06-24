@@ -179,10 +179,9 @@ bin/c: bin/c.kaba $(PDEP)
 bin/cake: bin/cake.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
 
-SPFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point
-# --import-symbols kalib_symbols
+SPFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point --import-symbols kalib_symbols
 
-bin/simple: bin/simple.kaba
+bin/simple: bin/simple.kaba $(PDEP)
 	$(KABA) $(SPFLAGS) -o bin/simple bin/simple.kaba
 
 lib/kalib: lib/kalib.kaba lib/lib_*.kaba
@@ -211,7 +210,7 @@ img.ext2: bin/simple img.mfs
 	cp -r home/* img-src/home
 	cp -r bin/simple img-src/bin
 #	cp -r $(BINS) img-src/bin
-#	cp -r $(LIBS) img-src/lib
+	cp -r $(LIBS) img-src/lib
 	cp -r kernel/*.kaba img-src/src
 	cp data/images/cursor.tga img-src/images
 	# block-size 1k, 256 inodes, size 4M

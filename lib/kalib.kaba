@@ -1,111 +1,112 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use lib_base
-use lib_syscalls
-use lib_array
-use lib_file
+#use lib_syscalls
+#use lib_array
+#use lib_file
 use lib_math
-use lib_image
-
-
-func execute(arg: string[], fd_in: int, fd_out: int) -> int
-	var tt_arg: cstring
-	sa2cs(arg, tt_arg)
-	__temp_p__ = &tt_arg
-	__temp_i__ = fd_in
-	__temp_i2__ = fd_out
-	asm{
-		mov eax, 0x0000000b
-		mov ebx, __temp_p__
-		mov ecx, __temp_i__
-		mov edx, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error
-
-
-func get_args(out arg: lib__string@list)
-	var cs: cstring
-	__temp_p__ = &cs
-	asm{
-		mov eax, 0x00002001
-		mov ebx, __temp_p__
-		int 0x80
-	}
-	var s: lib__string
-	
-	var p = 0
-	for i in 0:250
-		if cs[i] == 0
-			if s.num == 0
-				break
-			arg.add(s)
-			s.clear()
-			p = i + 1
-		else
-			s.add(cs[i])
-
-
-
-class lib__Exception
-	var msg: lib__string
-	func __init__(_msg: lib__string)
-		msg = _msg
-	func virtual __str__() -> lib__string
-		return msg
-
-func lib__raise(e: lib__Exception*)
-	var msg: string* = &e.msg
-	lib_print_endl = false
-	lib__print("\n  EXCEPTION:    ")
-	lib__print(*msg)
-	lib__print("\n")
-	exit(1)	
-
-#--------------------------------------------------------------------------
-# start
-
-func signal_handler_segv()
-	#kprint("--->SEGFAULT<--")
-	lib_print_endl = true
-	lib__print("  -- Segmentation Fault --\n")
-	exit(1)
-func signal_handler_x()
-	#kprint("--->SEGFAULT<--")
-	lib_print_endl = true
-	lib__print("  -- XXXX --\n")
-	exit(1)
-
-func _init_memory()
-	__free_error__ = false
-	lib_mem_debug = false
-	
-	var malloc_begin = 0x00b00000
-	cur_break_value = brk(-1)
-	var malloc_size_all = cur_break_value - malloc_begin # 0x00200000
-	
-	# intentionally leave a 8b gap to prevent merging
-	malloc_first_free = _i2p(malloc_begin)
-	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
-	malloc_first_free.prev = nil
-	malloc_end_marker = _i2p(cur_break_value - sizeof(MallocHeader))
-	malloc_end_marker.size = sizeof(MallocHeader)
-	malloc_end_marker.next = nil
-	malloc_end_marker.prev = malloc_first_free
-	malloc_first_free.next = malloc_end_marker
-	
-	malloc_small_block = lib__@malloc(sizeof(MallocSmallBlock))
-	malloc_small_block.init()
-
-func init_lib()
-	lib_print_endl = true
-	_init_memory()
-	
-	rand_state = 0
-	
-	sigaction(SIGSEGV, raw_function_pointer(signal_handler_segv))
-	
-	stdin = 0
-	stdout = 1
-	
-
+#use lib_image
+#
+#
+#func execute(arg: string[], fd_in: int, fd_out: int) -> int
+#	var tt_arg: cstring
+#	sa2cs(arg, tt_arg)
+#	__temp_p__ = &tt_arg
+#	__temp_i__ = fd_in
+#	__temp_i2__ = fd_out
+#	asm{
+#		mov eax, 0x0000000b
+#		mov ebx, __temp_p__
+#		mov ecx, __temp_i__
+#		mov edx, __temp_i2__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error
+#
+#
+#func get_args(out arg: lib__string@list)
+#	var cs: cstring
+#	__temp_p__ = &cs
+#	asm{
+#		mov eax, 0x00002001
+#		mov ebx, __temp_p__
+#		int 0x80
+#	}
+#	var s: lib__string
+#	
+#	var p = 0
+#	for i in 0:250
+#		if cs[i] == 0
+#			if s.num == 0
+#				break
+#			arg.add(s)
+#			s.clear()
+#			p = i + 1
+#		else
+#			s.add(cs[i])
+#
+#
+#
+#class lib__Exception
+#	var msg: lib__string
+#	func __init__(_msg: lib__string)
+#		msg = _msg
+#	func virtual __str__() -> lib__string
+#		return msg
+#
+#func lib__raise(e: lib__Exception*)
+#	var msg: string* = &e.msg
+#	lib_print_endl = false
+#	lib__print("\n  EXCEPTION:    ")
+#	lib__print(*msg)
+#	lib__print("\n")
+#	exit(1)	
+#
+##--------------------------------------------------------------------------
+## start
+#
+#func signal_handler_segv()
+#	#kprint("--->SEGFAULT<--")
+#	lib_print_endl = true
+#	lib__print("  -- Segmentation Fault --\n")
+#	exit(1)
+#func signal_handler_x()
+#	#kprint("--->SEGFAULT<--")
+#	lib_print_endl = true
+#	lib__print("  -- XXXX --\n")
+#	exit(1)
+#
+#func _init_memory()
+#	__free_error__ = false
+#	lib_mem_debug = false
+#	
+#	var malloc_begin = 0x00b00000
+#	cur_break_value = brk(-1)
+#	var malloc_size_all = cur_break_value - malloc_begin # 0x00200000
+#	
+#	# intentionally leave a 8b gap to prevent merging
+#	malloc_first_free = _i2p(malloc_begin)
+#	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
+#	malloc_first_free.prev = nil
+#	malloc_end_marker = _i2p(cur_break_value - sizeof(MallocHeader))
+#	malloc_end_marker.size = sizeof(MallocHeader)
+#	malloc_end_marker.next = nil
+#	malloc_end_marker.prev = malloc_first_free
+#	malloc_first_free.next = malloc_end_marker
+#	
+#	malloc_small_block = lib__@malloc(sizeof(MallocSmallBlock))
+#	malloc_small_block.init()
+#
+#func init_lib()
+#	lib_print_endl = true
+#	_init_memory()
+#	
+#	rand_state = 0
+#	
+#	sigaction(SIGSEGV, raw_function_pointer(signal_handler_segv))
+#	
+#	stdin = 0
+#	stdout = 1
+#	
+#
+#

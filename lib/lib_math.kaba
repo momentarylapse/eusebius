@@ -1,24 +1,5 @@
 use lib_base
-use lib_array
-
-
-func lib__clamp(i: int, min: int, max: int) -> int
-	if i > max
-		return max
-	if i < min
-		return min
-	return i
-
-func lib__loop(i: int, min: int, max: int) -> int
-	var d = max - min + 1
-	if i < min
-		var n = ( (min-i-1) / d ) + 1
-		return i + d * n
-	if i > max
-		var n = ( (i-max-1) / d ) + 1
-		return i - d * n
-	return i
-
+#use lib_array
 
 var rand_state: int
 
@@ -41,26 +22,26 @@ func hex_nibble(i: int) -> char
 	return '0' + i
 
 class lib__int
-	func static __str__(i: int) -> lib__string
-		return i2s(i)
-	func static hex(i: int, n: int) -> lib__string
-		var r: lib__string
-		r.resize(n)
-		for k in 0:n
-			r.data[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
-		return r
-	func static format(i: int, f: lib__string) -> lib__string
-		if f.data[f.num - 1] == 'x'
-			return hex(i, f.data[0] - '0')
-		var n = int(f)
-		var space = ' '
-		if f.data[0] == '0'
-			space = '0'
-		return str_fill(i2s(i), n, space)
+#	func static __str__(i: int) -> lib__string
+#		return i2s(i)
+#	func static hex(i: int, n: int) -> lib__string
+#		var r: lib__string
+#		r.resize(n)
+#		for k in 0:n
+#			r.data[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
+#		return r
+#	func static format(i: int, f: lib__string) -> lib__string
+#		if f.data[f.num - 1] == 'x'
+#			return hex(i, f.data[0] - '0')
+#		var n = int(f)
+#		var space = ' '
+#		if f.data[0] == '0'
+#			space = '0'
+#		return str_fill(i2s(i), n, space)
 
 class lib__float
-	func static __str__(f: float) -> lib__string
-		return f2s(f, 6)
+#	func static __str__(f: float) -> lib__string
+#		return f2s(f, 6)
 
 func lib__sin(f: float) -> float
 	__temp_f__ = f
@@ -163,51 +144,51 @@ func lib__loop(f: float, min: float, max: float) -> float
 class lib__complex
 	var x, y: float
 	
-	func __str__() -> lib__string
-		return _complex2s(self)
+#	func __str__() -> lib__string
+#		return _complex2s(self)
 
-func _complex2s(c: lib__complex) -> lib__string
-	var r: lib__string
-	r.add('(')
-	r += f2s(c.x, 6)
-	r.add(',')
-	r.add(' ')
-	r += f2s(c.y, 6)
-	r.add(')')
-	return r
-
-
-class lib__complex@list extends lib__@DynamicArray
-	var override data: complex[0]*
-	func __init__()
-		__mem_init__(sizeof(complex))
-	func __delete__()
-		clear()
-	func mut clear()
-		__mem_clear__()
-	func mut resize(size: int)
-		if size > num
-			reserve(size)
-		num = size
-	func mut add(c: complex)
-		resize(num + 1)
-		data[num - 1] = c
-	func mut remove(index: int)
-		if (index < 0) or (index >= num)
-			return
-		for i in index : num - 1
-			data[i] = data[i+1]
-		resize(num - 1)
-	func mut __assign__(o: lib__complex@list)
-		resize(o.num)
-		for i in 0:num
-			data[i] = o.data[i]
+#func _complex2s(c: lib__complex) -> lib__string
+#	var r: lib__string
+#	r.add('(')
+#	r += f2s(c.x, 6)
+#	r.add(',')
+#	r.add(' ')
+#	r += f2s(c.y, 6)
+#	r.add(')')
+#	return r
 
 
-func lib__p2s(p: void*) -> lib__string
-	var r: lib__string
-	var i: int* = &p
-	r.add('0')
-	r.add('x')
-	return r + lib__int.hex(*i, 8)
-	
+#class lib__complex@list extends lib__@DynamicArray
+#	var override data: complex[0]*
+#	func __init__()
+#		__mem_init__(sizeof(complex))
+#	func __delete__()
+#		clear()
+#	func mut clear()
+#		__mem_clear__()
+#	func mut resize(size: int)
+#		if size > num
+#			reserve(size)
+#		num = size
+#	func mut add(c: complex)
+#		resize(num + 1)
+#		data[num - 1] = c
+#	func mut remove(index: int)
+#		if (index < 0) or (index >= num)
+#			return
+#		for i in index : num - 1
+#			data[i] = data[i+1]
+#		resize(num - 1)
+#	func mut __assign__(o: lib__complex@list)
+#		resize(o.num)
+#		for i in 0:num
+#			data[i] = o.data[i]
+#
+#
+#func lib__p2s(p: void*) -> lib__string
+#	var r: lib__string
+#	var i: int* = &p
+#	r.add('0')
+#	r.add('x')
+#	return r + lib__int.hex(*i, 8)
+#	

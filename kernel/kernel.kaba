@@ -26,22 +26,22 @@ var _xxx_: int
 
 
 
-##func load_kalib()
-##	prints("loading kalib... ")
-##	int h = kernel_task.open("/lib/kalib", O_RDONLY)
-##	if h < 0
-##		panic("can not read file /lib/kalib!")
-##	int addr = KALIB_LOCATION
-##	int size = 0
-##	while true
-##		int r = kernel_task.sys_read(h, addr, 1024)
-##		if r <= 0
-##			break
-##		size += r
-##		addr += r
-##	kernel_task.sys_close(h)
-##	printi(size)
-##	prints("b  ok\n")
+func load_kalib()
+	prints("loading kalib... ")
+	
+	for of in kernel_open("/lib/kalib", O_RDONLY, FileSystem.root)
+		var addr = KALIB_LOCATION
+		var size = 0
+		while true
+			let r = of.read(Paging.kernel_root_table, addr, 1024)
+			if r <= 0
+				break
+			size += r
+			addr += r
+		printi(size)
+		prints("b ok\n")
+	else
+		panic("can not read /lib/kalib")
 
 
 func main()
@@ -112,6 +112,7 @@ func main()
 
 	Syscall.init()
 
+	load_kalib()
 
 	#TaskManager.x()
 	

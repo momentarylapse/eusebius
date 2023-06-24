@@ -13,6 +13,7 @@ func _main()
 		jmp $
 	}
 
+var xxx: int
 
 func main()
 	
@@ -24,11 +25,15 @@ func main()
 	
 	#var x: string
 	
+	let a = 2
+	let b = 1
+	xxx = max(a, b)
+	
 	while true
 		
 		asm{
 			mov rdi, p
-			mov esi, 0x00000002
+			mov esi, xxx
 			mov eax, 0x00001235
 			syscall
 		}
