@@ -3,6 +3,8 @@ use lib_base
 func kprint(s: string)
 func kprinti(i: int)
 func brk(i: int) -> int
+	if i < 0
+		return 1000000
 	return -1
 func lib__print(s: string)
 func exit(i: int)
@@ -41,6 +43,27 @@ func _align8_(size: int) -> int
 		return size
 	return (size & 0xfffffff8) + 8
 
+
+func _init_memory()
+	__free_error__ = false
+	lib_mem_debug = false
+	
+	var malloc_begin = 0x00b00000
+	cur_break_value = brk(-1)
+	var malloc_size_all = cur_break_value - malloc_begin # 0x00200000
+	
+	# intentionally leave a 8b gap to prevent merging
+	malloc_first_free := _i2p(malloc_begin)
+	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
+	malloc_first_free.prev = nil
+	malloc_end_marker := _i2p(cur_break_value - sizeof(MallocHeader))
+	malloc_end_marker.size = sizeof(MallocHeader)
+	malloc_end_marker.next = nil
+	malloc_end_marker.prev = malloc_first_free
+	malloc_first_free.next = malloc_end_marker
+	
+	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
+	malloc_small_block.init()
 
 func lib__@malloc(_size: int) -> void&
 	if _size <= MALLOC_SMALL_SIZE
