@@ -1,9 +1,9 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use lib_base
 #use lib_syscalls
-#use lib_array
-#use lib_file
+use lib_array
 use lib_math
+#use lib_file
 #use lib_image
 #
 #
