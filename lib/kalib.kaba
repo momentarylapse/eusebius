@@ -1,21 +1,12 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use lib_base
-#use lib_syscalls
+use lib_syscalls
 use lib_mem
 use lib_array
 use lib_math
 #use lib_file
 #use lib_image
 
-func kprintc(s: cstring, l: int)
-	__temp_p__ := &s
-	__temp_i__ = l
-	asm {
-		mov rdi, __temp_p__
-		mov esi, __temp_i__
-		mov eax, 0x00001235
-		syscall
-	}
 
 #func execute(arg: string[], fd_in: int, fd_out: int) -> int
 #	var tt_arg: cstring
@@ -87,7 +78,7 @@ func kprintc(s: cstring, l: int)
 #	exit(1)
 
 func init_lib()
-#	lib_print_endl = true
+	lib_print_endl = true
 	_init_memory()
 #	
 #	rand_state = 0

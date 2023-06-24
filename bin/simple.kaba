@@ -14,13 +14,13 @@ use lib.std
 #	}
 
 func main()
-	#init_lib()
+	init_lib()
 	
 	var s: cstring
 	s[0] = 'A'
-	s[1] = 'x'
+	s[1] = ' '
 	
-	var p = &s
+	#var p = &s
 	
 	#var x: string
 	
@@ -29,6 +29,7 @@ func main()
 	let xxx = max(a, b)
 	
 	#var p = @malloc(100) as int[10]&
+	kprinti(13)
 	
 	while true
 		
@@ -36,6 +37,7 @@ func main()
 		
 		for i in 0:1000000
 			pass
+		#exit(0)
 
 #func main()
 #	var i = 23

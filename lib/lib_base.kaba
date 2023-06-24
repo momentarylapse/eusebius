@@ -1,9 +1,4 @@
 
-const MALLOC_OFFSET = 0x00b00000
-const MALLOC_STOPPER = 8
-const MALLOC_SMALL_SIZE = 8
-const MALLOC_SMALL_NUM = 4096*16
-
 const O_RDONLY = 1
 const O_WRONLY = 2
 const O_RDWR = 3

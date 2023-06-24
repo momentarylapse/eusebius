@@ -1,13 +1,20 @@
 use lib_base
+use lib_syscalls
+
+let MALLOC_OFFSET = 0x00b00000
+let MALLOC_STOPPER = 8
+let MALLOC_MAGIC = 0x12345678
+let MALLOC_SMALL_SIZE = 0# disabled... 8
+let MALLOC_SMALL_NUM = 4096*16
+
 
 func kprint(s: string)
-func kprinti(i: int)
-func brk(i: int) -> int
-	if i < 0
-		return 1000000
-	return -1
+#func kprinti(i: int)
+#func brk(i: int) -> int
+#	if i < 0
+#		return 1000000
+#	return -1
 func lib__print(s: string)
-func exit(i: int)
 
 func memcpy(_dest: void&, _source: void&, size: int)
 	var dest = _dest as char[0]&
@@ -62,8 +69,8 @@ func _init_memory()
 	malloc_end_marker.prev = malloc_first_free
 	malloc_first_free.next = malloc_end_marker
 	
-	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
-	malloc_small_block.init()
+#	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
+#	malloc_small_block.init()
 
 func lib__@malloc(_size: int) -> void&
 	if _size <= MALLOC_SMALL_SIZE
@@ -89,7 +96,7 @@ func lib__@malloc(_size: int) -> void&
 			
 			# create allocated block at (former) end of free block
 			var hh = cur.after() as MallocHeader&
-			hh.magic = 0x12345678
+			hh.magic = MALLOC_MAGIC
 			hh.size = size
 			hh.next = nil
 			hh.prev = nil
@@ -126,7 +133,7 @@ func lib__@malloc(_size: int) -> void&
 	var last_before_end_old = malloc_end_marker.prev as MallocHeader&
 	last_before_end_old.next = last_before_end_new
 	last_before_end_new.prev = last_before_end_old
-	last_before_end_new.magic = 0x1234567
+	last_before_end_new.magic = MALLOC_MAGIC
 	
 	
 	# add allocated block
@@ -179,7 +186,7 @@ func lib__@free(_p: void*)
 			kprinti(ip)
 		
 		var hh = _i2p(ip - sizeof(MallocHeader)) as MallocHeader&
-		if hh.magic != 0x12345678
+		if hh.magic != MALLOC_MAGIC
 			kprint(" free___:  ")
 			kprinti(ip)
 			__lib_fatal__("evil free(1)")
@@ -259,9 +266,7 @@ func __lib_free_error__()
 
 
 func lib__@realloc(p: void&, size: int) -> void&
-	var hp = p as MallocHeader[0]&
-	let neg1 = -1
-	var h = &hp[neg1] as MallocHeader&
+	var h = _i2p(_p2i(p) - sizeof(MallocHeader)) as MallocHeader&
 	var old_size: int
 	let sm_index = small_malloc_no(p)
 	if sm_index >= 0

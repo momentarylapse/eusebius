@@ -114,7 +114,7 @@ func extern init_lib()
 #func extern cs2s(cs: cstring) -> string
 ##func extern binary(p: void*, num: int) -> string
 #
-#func extern exit(r: int) -> bool
+func extern exit(r: int) -> bool
 #func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
 #func extern fork() -> int
 #func extern open(filename: Path, flags: int) -> int
@@ -155,7 +155,7 @@ func extern init_lib()
 #func extern addr2phys(p: void*) -> int
 #
 #func extern kprint(s: string)
-#func extern kprinti(i: int)
+func extern kprinti(i: int)
 func extern kprintc(s: cstring, l: int)
 #
 #func extern socket(type: int) -> int

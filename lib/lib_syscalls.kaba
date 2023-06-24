@@ -7,8 +7,8 @@ func exit(r: int) -> bool
 	__temp_i__ = r
 	asm{
 		mov eax, 0x00000001
-		mov ebx, __temp_i__
-		int 0x80
+		mov edi, __temp_i__
+		syscall
 		mov lib_error, eax
 	}
 	return lib_error == 0
@@ -17,436 +17,447 @@ func brk(size: int) -> int
 	__temp_i__ = size
 	asm{
 		mov eax, 0x0000002d
-		mov ebx, __temp_i__
-		int 0x80
+		mov edi, __temp_i__
+		syscall
 		mov __temp_i__, eax
 	}
 	return __temp_i__
 
 
 
-func close(h: int) -> bool
-	__temp_i__ = h
-	asm{
-		mov eax, 0x00000006
-		mov ebx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func read(h: int, buf: void*, size: int) -> int
-	__temp_i__ = h
-	__temp_i2__ = size
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x00000003
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
+#func close(h: int) -> bool
+#	__temp_i__ = h
+#	asm{
+#		mov eax, 0x00000006
+#		mov ebx, __temp_i__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func read(h: int, buf: void&, size: int) -> int
+#	__temp_i__ = h
+#	__temp_i2__ = size
+#	__temp_p__ := buf
+#	asm{
+#		mov eax, 0x00000003
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		mov edx, __temp_i2__
+#		int 0x80
+#		mov __temp_i3__, eax
+#	}
+#	return __temp_i3__
+#	
+#func write(h: int, buf: void&, size: int) -> int
+#	__temp_i__ = h
+#	__temp_i2__ = size
+#	__temp_p__ := buf
+#	asm{
+#		mov eax, 0x00000004
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		mov edx, __temp_i2__
+#		int 0x80
+#		mov __temp_i3__, eax
+#	}
+#	return __temp_i3__
+#
+#func seek(h: int, pos: int, mode: int) -> int
+#	__temp_i__ = h
+#	__temp_i2__ = pos
+#	__temp_i3__ = mode
+#	asm{
+#		mov eax, 0x00000013
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_i2__
+#		mov edx, __temp_i3__
+#		int 0x80
+#		mov __temp_i3__, eax
+#	}
+#	return __temp_i3__
+#
+#
+#
+#func getdents(h: int, buf: void&) -> bool
+#	__temp_i__ = h
+#	__temp_i2__ = 1
+#	__temp_p__ := buf
+#	asm{
+#		mov eax, 0x0000008d
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		mov edx, __temp_i2__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error > 0
+#
+#func dup(h: int) -> int
+#	__temp_i__ = h
+#	asm{
+#		mov eax, 0x00000029
+#		mov ebx, __temp_i__
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	return __temp_i__
+#
+#func pipe(h: int[2]) -> bool
+#	__temp_p__ := &h
+#	asm{
+#		mov eax, 0x0000002a
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func fcntl(h: int, op: int, param: int) -> int
+#	__temp_i__ = h
+#	__temp_i2__ = op
+#	__temp_i3__ = param
+#	asm{
+#		mov eax, 0x00000033
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_i2__
+#		mov edx, __temp_i3__
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	return __temp_i__
+#
+#func getpid() -> int
+#	asm{
+#		mov eax, 0x00000014
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	return __temp_i__
+#
+#func sigaction(sig: int, f: void&) -> bool
+#	__temp_i__ = sig
+#	__temp_p__ := f
+#	asm{
+#		mov eax, 0x00000043
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#	
+#func waitpid(pid: int, status: void&, block: bool) -> int
+#	__temp_i__ = pid
+#	__temp_p__ := status
+#	__temp_i2__ = 0
+#	if !block
+#		__temp_i2__ = 1
+#	asm{
+#		mov eax, 0x00000007
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		mov edx, __temp_i2__
+#		int 0x80
+#		mov __temp_i3__, eax
+#	}
+#	return __temp_i3__
+#	
+#func kill(pid: int, signal: int) -> bool
+#	__temp_i__ = pid
+#	__temp_i2__ = signal
+#	asm{
+#		mov eax, 0x00000025
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_i2__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func shmget(key: int, size: int, flags: int) -> int
+#	__temp_i__ = key
+#	__temp_i2__ = size
+#	__temp_i3__ = flags
+#	asm{
+#		mov eax, 0x00000075 # ipc
+#		mov ebx, 0x0000000b
+#		mov ecx, __temp_i__
+#		mov edx, __temp_i2__
+#		mov esi, __temp_i3__
+#		int 0x80
+#		mov __temp_i3__, eax
+#	}
+#	return __temp_i3__
+#
+#func shmat(id: int, flags: int) -> void*
+#	var p: void*
+#	__temp_i__ = id
+#	__temp_p__ := &p
+#	__temp_i2__ = flags
+#	asm{
+#		mov eax, 0x00000075 # ipc
+#		mov ebx, 0x00000009
+#		mov ecx, __temp_i__
+#		mov edx, __temp_p__
+#		mov esi, __temp_i2__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	if lib_error < 0 and lib_error > - 1024
+#		return nil
+#	return p
+#	
+#func shmdt(addr: void&) -> bool
+#	__temp_p__ := addr
+#	asm{
+#		mov eax, 0x00000075 # ipc
+#		mov ebx, 0x0000000a
+#		mov ecx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#	
+#func waitmsg() -> bool
+#	asm{
+#		mov eax, 0x00000075 # ipc
+#		mov ebx, 0x000003e9 # 1001 = wait-msg
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#	
+#func yield(pid: int) -> bool
+#	__temp_i__ = pid
+#	asm{
+#		mov eax, 0x00000075 # ipc
+#		mov ebx, 0x000003ea # 1002 = yield
+#		mov ecx, __temp_i__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#class SysInfo
+#	var dummy: int
+#
+#func sysinfo(buf: SysInfo) -> bool
+#	__temp_p__ := &buf
+#	asm{
+#		mov eax, 0x00000074
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#class TaskInfo
+#	var dummy: int
+#
+#func taskinfo(pid: int, buf: TaskInfo) -> bool
+#	__temp_i__ = pid
+#	__temp_p__ := &buf
+#	asm{
+#		mov eax, 0x00002005
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#class MountInfo
+#	var dummy: int
+#
+#func mountinfo(pid: int, buf: MountInfo) -> bool
+#	__temp_i__ = pid
+#	__temp_p__ := &buf
+#	asm{
+#		mov eax, 0x00002008
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#class BlockDevice
+#	var _dummy: int
+#
+#func blockinfo(major: int, minor: int, buf: BlockDevice) -> bool
+#	__temp_i__ = major
+#	__temp_i2__ = minor
+#	__temp_p__ := &buf
+#	asm{
+#		mov eax, 0x00002009
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_i2__
+#		mov edx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#
+#func uname(buf: void&) -> bool
+#	__temp_p__ := buf
+#	asm{
+#		mov eax, 0x0000007a
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#class TimeValue
+#	var sec, nanosec: int
+#
+#func time(buf: TimeValue) -> bool
+#	__temp_p__ := &buf
+#	asm{
+#		mov eax, 0x00000019
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
+#	__temp_p__ := &buf
+#	asm{
+#		mov eax, 0x000000a2
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func sleep(sec: int) -> bool
+#	var tv, tv0: TimeValue
+#	tv.sec = sec
+#	tv.nanosec = 0
+#	return nanosleep(tv, tv0)
+#
+#func usleep(usec: int) -> bool
+#	var tv, tv0: TimeValue
+#	tv.sec = usec / 1000000
+#	tv.nanosec = (usec % 1000000) * 1000
+#	return nanosleep(tv, tv0)
+#
+#func sched_yield(pid: int) -> bool
+#	__temp_i__ = pid
+#	asm{
+#		mov eax, 0x0000009e
+#		mov ebx, __temp_i__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
 	
-func write(h: int, buf: void*, size: int) -> int
-	__temp_i__ = h
-	__temp_i2__ = size
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x00000004
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-
-func seek(h: int, pos: int, mode: int) -> int
-	__temp_i__ = h
-	__temp_i2__ = pos
-	__temp_i3__ = mode
-	asm{
-		mov eax, 0x00000013
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_i3__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-
-
-
-func getdents(h: int, buf: void*) -> bool
-	__temp_i__ = h
-	__temp_i2__ = 1
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x0000008d
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error > 0
-
-func dup(h: int) -> int
-	__temp_i__ = h
-	asm{
-		mov eax, 0x00000029
-		mov ebx, __temp_i__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-
-func pipe(h: int[2]) -> bool
-	__temp_p__ = &h
-	asm{
-		mov eax, 0x0000002a
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func fcntl(h: int, op: int, param: int) -> int
-	__temp_i__ = h
-	__temp_i2__ = op
-	__temp_i3__ = param
-	asm{
-		mov eax, 0x00000033
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_i3__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-
-func getpid() -> int
-	asm{
-		mov eax, 0x00000014
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-
-func sigaction(sig: int, f: void*) -> bool
-	__temp_i__ = sig
-	__temp_p__ = f
-	asm{
-		mov eax, 0x00000043
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-func waitpid(pid: int, status: void*, block: bool) -> int
-	__temp_i__ = pid
-	__temp_p__ = status
-	__temp_i2__ = 0
-	if !block
-		__temp_i2__ = 1
-	asm{
-		mov eax, 0x00000007
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		mov edx, __temp_i2__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-	
-func kill(pid: int, signal: int) -> bool
-	__temp_i__ = pid
-	__temp_i2__ = signal
-	asm{
-		mov eax, 0x00000025
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func shmget(key: int, size: int, flags: int) -> int
-	__temp_i__ = key
-	__temp_i2__ = size
-	__temp_i3__ = flags
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x0000000b
-		mov ecx, __temp_i__
-		mov edx, __temp_i2__
-		mov esi, __temp_i3__
-		int 0x80
-		mov __temp_i3__, eax
-	}
-	return __temp_i3__
-
-func shmat(id: int, flags: int) -> void*
-	var p: void*
-	__temp_i__ = id
-	__temp_p__ = &p
-	__temp_i2__ = flags
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x00000009
-		mov ecx, __temp_i__
-		mov edx, __temp_p__
-		mov esi, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	if lib_error < 0 and lib_error > - 1024
-		return nil
-	return p
-	
-func shmdt(addr: void*) -> bool
-	__temp_p__ = addr
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x0000000a
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-func waitmsg() -> bool
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x000003e9 # 1001 = wait-msg
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-func yield(pid: int) -> bool
-	__temp_i__ = pid
-	asm{
-		mov eax, 0x00000075 # ipc
-		mov ebx, 0x000003ea # 1002 = yield
-		mov ecx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-class SysInfo
-	var dummy: int
-
-func sysinfo(buf: SysInfo) -> bool
-	__temp_p__ = &buf
-	asm{
-		mov eax, 0x00000074
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-class TaskInfo
-	var dummy: int
-
-func taskinfo(pid: int, buf: TaskInfo) -> bool
-	__temp_i__ = pid
-	__temp_p__ = &buf
-	asm{
-		mov eax, 0x00002005
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-class MountInfo
-	var dummy: int
-
-func mountinfo(pid: int, buf: MountInfo) -> bool
-	__temp_i__ = pid
-	__temp_p__ = &buf
-	asm{
-		mov eax, 0x00002008
-		mov ebx, __temp_i__
-		mov ecx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-class BlockDevice
-	var _dummy: int
-
-func blockinfo(major: int, minor: int, buf: BlockDevice) -> bool
-	__temp_i__ = major
-	__temp_i2__ = minor
-	__temp_p__ = &buf
-	asm{
-		mov eax, 0x00002009
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-
-func uname(buf: void*) -> bool
-	__temp_p__ = buf
-	asm{
-		mov eax, 0x0000007a
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-class TimeValue
-	var sec, nanosec: int
-
-func time(buf: TimeValue) -> bool
-	__temp_p__ = &buf
-	asm{
-		mov eax, 0x00000019
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
-	__temp_p__ = &buf
-	asm{
-		mov eax, 0x000000a2
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func sleep(sec: int) -> bool
-	var tv, tv0: TimeValue
-	tv.sec = sec
-	tv.nanosec = 0
-	return nanosleep(tv, tv0)
-
-func usleep(usec: int) -> bool
-	var tv, tv0: TimeValue
-	tv.sec = usec / 1000000
-	tv.nanosec = (usec % 1000000) * 1000
-	return nanosleep(tv, tv0)
-
-func sched_yield(pid: int) -> bool
-	__temp_i__ = pid
-	asm{
-		mov eax, 0x0000009e
-		mov ebx, __temp_i__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-	
-func kprint(s: string)
-	__temp_p__ = &s[0]
-	__temp_i__ = s.num
-	asm{
-		mov eax, 0x00002002
-		mov ebx, __temp_p__
-		mov ecx, __temp_i__
-		int 0x80
-	}
+#func kprint(s: string)
+#	__temp_p__ = &s[0]
+#	__temp_i__ = s.num
+#	asm{
+#		mov eax, 0x00002002
+#		mov ebx, __temp_p__
+#		mov ecx, __temp_i__
+#		int 0x80
+#	}
 	
 func kprinti(i: int)
 	__temp_i__ = i
 	asm{
+		mov edi, __temp_i__
 		mov eax, 0x00002003
-		mov ebx, __temp_i__
-		int 0x80
+		syscall
 	}
 	
-func mapirq(irq: int, signal: int) -> bool
-	__temp_i__ = irq
-	__temp_i2__ = signal
-	asm{
-		mov eax, 0x00002007
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-
-func sys_socket(cmd: int, p1: int, p2: int) -> int
-	__temp_i__ = cmd
-	__temp_i2__ = p1
-	__temp_i3__ = p2
-	asm{
-		mov eax, 0x00000066
-		mov ebx, __temp_i__
-		mov ecx, __temp_i2__
-		mov edx, __temp_i3__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error
-
-
-func socket(type: int) -> int
-	return sys_socket(1, type, 0)
-
-func bind(fd: int, port: int) -> bool
-	return sys_socket(2, fd, port) == 0
-
-func connect(fd: int, port: int) -> bool
-	return sys_socket(3, fd, port) == 0
-
-func listen(fd: int) -> bool
-	return sys_socket(4, fd, 0) == 0
-
-func accept(fd: int) -> int
-	return sys_socket(5, fd, 0)
-
-
-
-
-func prints(s: cstring)
-	__temp_p__ = &s
+func kprintc(s: cstring, l: int)
+	__temp_p__ := &s
+	__temp_i__ = l
 	asm {
-		mov eax, 0x00002002
-		mov ebx, __temp_p__
-		int 0x80
+		mov rdi, __temp_p__
+		mov esi, __temp_i__
+		mov eax, 0x00001235
+		syscall
 	}
 
+#func mapirq(irq: int, signal: int) -> bool
+#	__temp_i__ = irq
+#	__temp_i2__ = signal
+#	asm{
+#		mov eax, 0x00002007
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_i2__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#
+#func sys_socket(cmd: int, p1: int, p2: int) -> int
+#	__temp_i__ = cmd
+#	__temp_i2__ = p1
+#	__temp_i3__ = p2
+#	asm{
+#		mov eax, 0x00000066
+#		mov ebx, __temp_i__
+#		mov ecx, __temp_i2__
+#		mov edx, __temp_i3__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error
+#
+#
+#func socket(type: int) -> int
+#	return sys_socket(1, type, 0)
+#
+#func bind(fd: int, port: int) -> bool
+#	return sys_socket(2, fd, port) == 0
+#
+#func connect(fd: int, port: int) -> bool
+#	return sys_socket(3, fd, port) == 0
+#
+#func listen(fd: int) -> bool
+#	return sys_socket(4, fd, 0) == 0
+#
+#func accept(fd: int) -> int
+#	return sys_socket(5, fd, 0)
+#
 
-func lib__print(s: string)
-	var done = 0
-	while done < s.num
-		let r = write(stdout, &s[done], s.num - done)
-		if r == -EWOULDBLOCK
-			continue
-		if r > 0
-			done += r
-	if lib_print_endl
-		let r = write(stdout, &0x0000000a, 1)
+
+
+#func prints(s: cstring)
+#	__temp_p__ = &s
+#	asm {
+#		mov eax, 0x00002002
+#		mov ebx, __temp_p__
+#		int 0x80
+#	}
+
+
+#func lib__print(s: string)
+#	var done = 0
+#	while done < s.num
+#		let r = write(stdout, &s[done], s.num - done)
+#		if r == -EWOULDBLOCK
+#			continue
+#		if r > 0
+#			done += r
+#	if lib_print_endl
+#		let r = write(stdout, &0x0000000a, 1)
 
 
 	
-func addr2phys(p: void*) -> int
-	__temp_p__ = p
-	asm {
-		mov eax, 0x0000200b
-		mov ebx, __temp_p__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
+#func addr2phys(p: void*) -> int
+#	__temp_p__ = p
+#	asm {
+#		mov eax, 0x0000200b
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	return __temp_i__
+	

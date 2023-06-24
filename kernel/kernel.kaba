@@ -116,14 +116,12 @@ func main()
 
 	#TaskManager.x()
 	
-	prints("loading process ")
+	prints("loading dummy process... ")
 	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
-		prints("OK")
 		var code = Heap.malloc(1024)
-		prints("  xxx")
 		let r = of.read(Paging.kernel_root_table, _p2i(code), 1024)
 		#printh(code, r)
-		#prints("\n")
+		prints("ok\n")
 		
 		TaskManager.next = TaskManager.add_task_user("simple", _p2i(code), nil)
 	else

@@ -129,7 +129,7 @@ class KernelTimer as @noauto
 
 	func static handle_irq(_frame: InterruptFrame*)
 		IrqManager.mask(TIMER_IRQ)
-		prints("<timer>")
+		#prints("<timer>")
 		for n in TaskManager.next
 			for frame in _frame
 				frame.cs = 0x23

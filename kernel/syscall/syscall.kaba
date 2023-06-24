@@ -116,18 +116,20 @@ class Syscall
 
 	func static handle(frame: Frame) -> int64
 		let index = int(frame.rax)
-		if index == 0x1234
+		if index == 0x0001 # exit
+			panic("process called exit()")
+		else if index == 0x002d # brk
+			return 10000
+		else if index == 0x1234 # print hi
 			TextMode.text_color = 0x04
 			prints("  <SYSCALL HI>  ")
 			TextMode.text_color = 0x07
 			return 0
-		else if index == 0x1235
-			TextMode.text_color = 0x04
-			#printh(&frame.rdi, 8)
-			#prints("  ")
-			#printi(frame.rsi)
+		else if index == 0x1235 # kprintc
 			TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
-			TextMode.text_color = 0x07
+			return 0
+		else if index == 0x2003 # kprinti
+			printi(frame.rdi)
 			return 0
 		else
 			prints("<syscall>")
