@@ -4,8 +4,8 @@ KABA  = ~/Projekte/Kaba/kaba
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --arch amd64:gnu
 FLAGS =  $(MACHINE) --no-std-lib
-LOADERFLAGS = $(MACHINE) --os --code-origin 0x7c00
-INITFLAGS = $(MACHINE) --os --code-origin 0x7e00
+LOADERFLAGS = --arch x86:gnu --os --code-origin 0x7c00
+INITFLAGS = --arch x86:gnu --os --code-origin 0x7e00
 #KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 # --remove-unused
