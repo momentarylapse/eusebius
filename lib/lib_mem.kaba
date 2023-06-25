@@ -1,7 +1,7 @@
 use lib_base
 use lib_syscalls
 
-let MALLOC_OFFSET = 0x00b00000
+let MALLOC_OFFSET = 0x40300000
 let MALLOC_STOPPER = 8
 let MALLOC_MAGIC = 0x12345678
 let MALLOC_SMALL_SIZE = 0# disabled... 8
@@ -55,12 +55,11 @@ func _init_memory()
 	__free_error__ = false
 	lib_mem_debug = false
 	
-	var malloc_begin = 0x00b00000
 	cur_break_value = brk(-1)
-	var malloc_size_all = cur_break_value - malloc_begin # 0x00200000
+	var malloc_size_all = cur_break_value - MALLOC_OFFSET
 	
 	# intentionally leave a 8b gap to prevent merging
-	malloc_first_free := _i2p(malloc_begin)
+	malloc_first_free := _i2p(MALLOC_OFFSET)
 	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
 	malloc_first_free.prev = nil
 	malloc_end_marker := _i2p(cur_break_value - sizeof(MallocHeader))
@@ -69,11 +68,11 @@ func _init_memory()
 	malloc_end_marker.prev = malloc_first_free
 	malloc_first_free.next = malloc_end_marker
 	
-	kprintp(malloc_first_free)
-	kprintp(malloc_end_marker)
+	#kprintp(malloc_first_free)
+	#kprintp(malloc_end_marker)
 	
-#	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
-#	malloc_small_block.init()
+	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
+	malloc_small_block.init()
 
 func lib__@malloc(_size: int) -> void&
 	if _size <= MALLOC_SMALL_SIZE

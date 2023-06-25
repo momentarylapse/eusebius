@@ -49,7 +49,7 @@ class TaskManager as @noauto
 #		var t = Heap.malloc(sizeof(Task)) as Task&
 		t.pid = pid
 		t.status = TaskStatus.RUNNING
-		t.stack := Heap.malloc(1024)
+		t.stack := _i2p(0x40070000)#Heap.malloc(1024)
 		t.rsp = _p2i(t.stack) + 1024
 		t.rip = F
 
