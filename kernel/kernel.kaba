@@ -9,6 +9,7 @@ use dev.std_char_devs
 use fs.fs
 use fs.access
 use fs.pipe
+use mem.memory
 use mem.heap
 use mem.paging
 use mem.shared
@@ -55,31 +56,11 @@ func main()
 	prints(KERNEL_VERSION)
 	prints("   (c) by MichiSoft TM 2023\n")
 	prints("memory: ")
-	printi(MemorySize / 1024 / 1024)
+	printi(memory_size / 1024 / 1024)
 	prints("m\n")
 
-
-	#asm{
-#		mov eax, 0x8000000
-#		db 0x0f
-#		db 0xa2
-#		mov __temp_i__, eax
-#		mov __temp_i2__, ecx
-#		mov __temp_i3__, edx
-#	}
-#	prints("   cpu:  ")
-#	printh(&__temp_i__, 4)
-#	printh(&__temp_i2__, 4)
-#	printh(&__temp_i3__, 4)
-#	prints("\n")
-	
 	Paging.init()
 	Heap.init()
-
-#	for i in 0x01000000:0x02000000
-#		var p: int* = _i2p(i)
-#		*p = 3
-
 
 	SharedMemory.init()
 
@@ -118,12 +99,13 @@ func main()
 	
 	prints("loading dummy process... ")
 	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
-		var code = Heap.malloc(1024)
-		let r = of.read(Paging.kernel_root_table, _p2i(code), 1024)
+		#var code = 0x00800000# _p2i(Heap.malloc(1024))
+		var code = _p2i(Heap.malloc(1024))
+		let r = of.read(Paging.kernel_root_table, code, 1024)
 		#printh(code, r)
 		prints("ok\n")
 		
-		TaskManager.next = TaskManager.add_task_user("simple", _p2i(code), nil)
+		TaskManager.next = TaskManager.add_task_user("simple", code, nil)
 	else
 		panic("can not open")
 	

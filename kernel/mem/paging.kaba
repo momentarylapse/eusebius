@@ -1,10 +1,13 @@
 use common
 use io.text
+use mem.memory
 use mem.heap
 
-const PAGE_SIZE = 4096
-const PAGE_TABLE_ENTRIES = PAGE_SIZE / 8 #512
-const MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
+let PAGE_SIZE = 4096
+let PAGE_TABLE_ENTRIES = PAGE_SIZE / 8 #512
+let PAGE_TABLES_OFFSET = 0x00700000
+#let LINEAR_AREA = 0x01000000 # 16mb linearly mapped
+let MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 # 1 mask = 32 pages = 128k
 
 # pointer: 48bit = 9bit in L4 + 9bit in PDPT + 9bit in PDT + 9bit in PT + 12bit offset in page
@@ -39,7 +42,7 @@ class PageTable extends Page
 	
 	func mut get_or_create_sub(index: int, flags: int) -> PageTable&
 		if e[index] == 0
-			let pos = Paging.reserve_physical_page()
+			let pos = Paging.reserve_physical_page(true)
 			var sub = _i2p(pos) as PageTable&
 			sub.clear()
 			e[index] = pos + flags
@@ -109,7 +112,7 @@ class PageRootTable extends PageTable
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
-				let dest = Paging.reserve_physical_page()
+				let dest = Paging.reserve_physical_page(false)
 				if dest == -1
 					unmap(vaddr, size, true)
 					return false
@@ -283,13 +286,20 @@ class Paging as @noauto
 
 	func static init()
 		prints("enable paging...")
-		num_physical_masks = MemorySize / PAGE_SIZE / 32
-		MemorySize = num_physical_masks * PAGE_SIZE * 32 # easier memory management...
+		
+		# test read 24m ID-mapped by init
+#		for i in 0:0x01800000:4
+#			var p = _i2p(i) as int&
+#			var x: int = p
+
+		
+		num_physical_masks = memory_size / PAGE_SIZE / 32
+		memory_size = num_physical_masks * PAGE_SIZE * 32 # easier memory management...
 		for i in 0:num_physical_masks
 			physical_mask[i] = 0
 		
 		# reserve 8mb for kernel
-		for i in 0:64
+		for i in 0:64#(64-8)#(LINEAR_AREA / PAGE_SIZE / 32)
 			physical_mask[i] = 0xffffffff
 		
 		mark_reserved_by_bios()
@@ -300,7 +310,7 @@ class Paging as @noauto
 		# kernel: flat paging
 		#let nmax = MemorySize / PAGE_SIZE / 1024
 		kernel_root_table := create_root_table()
-		kernel_root_table.map_linear(0, 0, MemorySize, true)
+		kernel_root_table.map_linear(0, 0, memory_size, true)
 	
 		asm{
 			#mov eax, cr3
@@ -315,22 +325,41 @@ class Paging as @noauto
 			jmp _flush
 			_flush:
 		}
+		
+		# test read all memory
+#		for i in 0:memory_size:4
+#			var p = _i2p(i) as int&
+#			var x: int = p
+
+		
 		prints("  ok\n")
 		
 	
 	func static mark_reserved_by_bios()
 		for i=>m in bios_mem_map
+			#printi(m.type)
+			#prints("  ")
+			#continue
 			if m.type < 0
 				break
 			if m.type == 1
 				continue
 			
 			let p0 = m.offset / PAGE_SIZE
-			let p1 = ceil_quot(m.offset + m.size, PAGE_SIZE)
+			let p1 = ceil_quot(m.offset + m.size, int64(PAGE_SIZE))
+			#printh(&m.offset, 8)
+			#prints("  ")
+			#printh(&p0, 8)
+			#prints("  ")
+			#printh(&p1, 8)
+			#prints("  ")
+			#printi(m.size)
+			#prints("\n")
 			reserve_physical_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
 	# does not clear
-	func static reserve_physical_page() -> int
+	func static reserve_physical_page(for_page_table: bool) -> int
+		#prints(" RP ")
 		for i in 0:num_physical_masks
 			if physical_mask[i] == 0xffffffff
 				continue
@@ -382,6 +411,7 @@ class Paging as @noauto
 		return 0
 	
 	func static reserve_physical_chunk(paddr: int, size: int, test_free: bool) -> bool
+		prints(" RC ")
 		if (paddr & 0x00000fff) != 0
 			return false
 		if size == 0
@@ -479,34 +509,9 @@ class Paging as @noauto
 	
 	# hmmm, this assumes we are still in linear space...
 	func static create_root_table() -> PageRootTable&
-		let paddr = reserve_physical_page()
+		let paddr = reserve_physical_page(true)
 		if paddr == -1
 			panic("can not create page root table")
 		var pd = _i2p(paddr) as PageRootTable&
 		pd.clear()
 		return pd
-
-
-
-func show_mem_map()
-	for i=>m in bios_mem_map
-		if m.type < 0
-			break
-		printh(&m.offset, 4)
-		prints("    ")
-		printh(&m.size, 4)
-		prints("    ")
-		if m.type == 1
-			prints("free")
-		else if m.type == 2
-			prints("used-2")
-		else if m.type == 3
-			prints("used-3")
-		else if m.type == 4
-			prints("used-4")
-		else if m.type == 5
-			prints("BAD")
-		else
-			printh(&m.type, 1)
-		prints("\n")
-

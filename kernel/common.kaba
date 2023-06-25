@@ -51,49 +51,19 @@ const SYS_SENDTO = 11
 const SYS_RECV = 12
 const SYS_RECVFROM = 13
 
-const SHM_ABSOLUTE = 1<<20
-const SHM_DEST = 1<<11
-const IPC_CREAT = 1<<12
-const IPC_EXCL = 1<<13
+let SHM_ABSOLUTE = 1<<20
+let SHM_DEST = 1<<11
+let IPC_CREAT = 1<<12
+let IPC_EXCL = 1<<13
 
 
-var MemorySize: int
-
-const KERNEL_NAME = "Eusebius"
-const KERNEL_VERSION = "0.2.99.0"
-const MACHINE_TYPE = "x64"
-
-class BiosMemoryMapEntry as @noauto
-	var offset, offset_hi: int
-	var size, size_hi: int
-	var type, dummy: int # type < 0 -> end
-
-var bios_mem_map: BiosMemoryMapEntry[64]
+let KERNEL_NAME = "Eusebius"
+let KERNEL_VERSION = "0.2.99.0"
+let MACHINE_TYPE = "x64"
 
 
 #--------------------------------------------------------------
 # Low Level
-
-
-func read_data_from_init()
-	asm {
-		mov rax, [0x00005100]
-		shl rax, 0x0a
-		mov MemorySize, eax
-		
-		mov rax, [0x00005104]
-		mov __temp_i__, eax
-	}
-
-	var bmmn = __temp_i__ & 0x0000ffff
-	memcpy(&bios_mem_map, _i2p(0x00006000), 64*24)#sizeof(bio_mem_map))
-	for i=>m in bios_mem_map
-		if i == 0
-			continue
-		if m.offset == bios_mem_map[0].offset #and m.size == bios_mem_map[0].size
-			bmmn = i
-			m.type = -1
-			break
 
 
 func memcpy(_dest: void&, _source: void&, size: int)
@@ -149,6 +119,9 @@ func strcmp(a: cstring, b: cstring) -> int
 
 
 func ceil_quot(n: int, m: int) -> int
+	return (n + m - 1) / m
+
+func ceil_quot(n: int64, m: int64) -> int64
 	return (n + m - 1) / m
 
 var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int

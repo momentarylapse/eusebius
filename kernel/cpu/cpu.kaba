@@ -76,3 +76,18 @@ class Cpu as @noauto
 	func static enable_syscall()
 		write_msr(MSR.EFER, read_msr(MSR.EFER) | 1)
 	
+#	func static show_info()
+#		asm{
+#			mov eax, 0x8000000
+#			db 0x0f
+#			db 0xa2
+#			mov __temp_i__, eax
+#			mov __temp_i2__, ecx
+#			mov __temp_i3__, edx
+#		}
+#		prints("   cpu:  ")
+#		printh(&__temp_i__, 4)
+#		printh(&__temp_i2__, 4)
+#		printh(&__temp_i3__, 4)
+#		prints("\n")
+	

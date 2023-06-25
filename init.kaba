@@ -72,10 +72,14 @@ func @noframe main()
 		mov ecx, 0x00000018
 		int 0x15
 		
-		# end of list?
+		# end of list? (carry flag)
 		jb _read_mem_map_end
+		
+		# end of list? (ebx = 0)
+		cmp ebx, 0x00000000
+		jz _read_mem_map_end
 	
-		cmp si, 0x040
+		cmp si, 0x0040 #  max 64 entries
 		jl _read_mem_map_loop
 	_read_mem_map_end:
 		
@@ -332,15 +336,27 @@ func @noframe main()
 		# PDT[7] -> PT7
 		add edi, 0x00000008
 		mov [edi], 0x0100b003
+		# PDT[8] -> PT8
+		add edi, 0x00000008
+		mov [edi], 0x0100c003
+		# PDT[9] -> PT9
+		add edi, 0x00000008
+		mov [edi], 0x0100d003
+		# PDT[10] -> PT10
+		add edi, 0x00000008
+		mov [edi], 0x0100e003
+		# PDT[11] -> PT11
+		add edi, 0x00000008
+		mov [edi], 0x0100f003
 		
 #		dec ecx
 #		cmp ecx, 0x00000000
 #		jnz _link_pts_into_pdt
 		
-		# identity map first 16mb (=4096 pages)
+		# identity map first 24mb (=6144 pages)
 		mov edi, 0x01004000
 		mov ebx, 0x00000003
-		mov ecx, 0x00001000 #512*8=4096 pages via 8 PTs
+		mov ecx, 0x00001800 #512*12=6144 pages via 12 PTs
 	_set_table_entry:
 		mov [edi], ebx
 		add ebx, 0x00001000
