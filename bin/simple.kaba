@@ -32,13 +32,18 @@ func main()
 	#kprinti(13)
 	#kprintp(&s)
 	
+	var x = 0
 	while true
 		
 		kprintc(s, xxx)
 		
-		for i in 0:1000000
+		for i in 0:10000000
 			pass
 		#exit(0)
+		x ++
+		if x > 100
+			while true
+				pass
 
 #func main()
 #	var i = 23

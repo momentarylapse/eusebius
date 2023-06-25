@@ -27,10 +27,11 @@
 	  0x0070 0000:0x0080 0000    page tables
 	0x00a3 f000:...            kalib variables
 	----------------------------------- user space (randomly mapped)
-	0x0080 0000    user task code (max 512k)
-	0x0088 0000    user task variables
+	0x4000 0000    user task code (max 512k)
+	0x4008 0000    user task variables
 
 ### Paging
 
 * init will identity-map first 24m (tables located @16m)
 * kernel will identity-map ALL physical memory (tables located @8m)
+* user tasks will have virtual addresses starting @1G, randomly mapped

@@ -99,15 +99,15 @@ func main()
 	
 	prints("loading dummy process... ")
 	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
-		#var code = 0x00800000# _p2i(Heap.malloc(1024))
-		var code = _p2i(Heap.malloc(1024))
+		var code = 0x40000000
+		#var code = _p2i(Heap.malloc(1024))
 		let r = of.read(Paging.kernel_root_table, code, 1024)
 		#printh(code, r)
 		prints("ok\n")
 		
 		TaskManager.next = TaskManager.add_task_user("simple", code, nil)
 	else
-		panic("can not open")
+		panic("can not open /bin/simple")
 	
 	
 	IrqManager.enable()

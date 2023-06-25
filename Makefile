@@ -179,7 +179,7 @@ bin/c: bin/c.kaba $(PDEP)
 bin/cake: bin/cake.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
 
-SPFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point --import-symbols kalib_symbols
+SPFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x40000000 --variable-offset 0x40080000 --add-entry-point --import-symbols kalib_symbols
 
 bin/simple: bin/simple.kaba $(PDEP)
 	$(KABA) $(SPFLAGS) -o bin/simple bin/simple.kaba

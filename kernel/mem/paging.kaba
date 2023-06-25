@@ -28,6 +28,12 @@ class Page as @noauto
 		for i in 0:PAGE_TABLE_ENTRIES
 			e[i] = 0
 
+enum PageFlags as @noauto
+	PRESENT = 0x100
+	GLOBAL = 0x01
+	WRITABLE = 0x02
+	USER = 0x04
+
 
 class PageTable extends Page
 	func count_entries() -> int
@@ -40,12 +46,12 @@ class PageTable extends Page
 	func get_sub(index: int) -> PageTable*
 		return _i2p(e[index] & 0xfffff000) as PageTable*
 	
-	func mut get_or_create_sub(index: int, flags: int) -> PageTable&
+	func mut get_or_create_sub(index: int, flags: PageFlags) -> PageTable&
 		if e[index] == 0
-			let pos = Paging.reserve_physical_page(true)
+			let pos = Paging.reserve_physical_page()
 			var sub = _i2p(pos) as PageTable&
 			sub.clear()
-			e[index] = pos + flags
+			e[index] = pos + int(flags)
 			return sub
 		else
 			return _i2p(e[index] & 0xfffff000) as PageTable&
@@ -59,24 +65,22 @@ func page_params(vaddr: int64) -> (int,int,int,int)
 	let offset = int(vaddr) & 0x00000fff
 	return (dirp_no, dir_no, page_no, offset)
 
-
 class PageRootTable extends PageTable
 
 	# (does not reserve pages, but page tables)
-	func mut map_linear(_vaddr: int64, _paddr: int64, size: int, writable: bool)
+	func mut map_linear(_vaddr: int64, _paddr: int64, size: int, _flags: PageFlags)
 		let vaddr = _vaddr & 0xfffffffffffff000
 		var paddr = _paddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
-		var flags = 0x105
-		if writable
-			flags += 2
+		var table_flags = PageFlags.PRESENT | PageFlags.WRITABLE | PageFlags.GLOBAL | PageFlags.USER
+		let flags = _flags | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
 
-		var pdpt = get_or_create_sub(0, flags)
-		var pdt = pdpt.get_or_create_sub(0, flags)
+		var pdpt = get_or_create_sub(0, table_flags)
+		var pdt = pdpt.get_or_create_sub(dirp_no, table_flags)
 			
 		while npages > 0
-			var pt = pdt.get_or_create_sub(dir_no, flags)
+			var pt = pdt.get_or_create_sub(dir_no, table_flags)
 			
 			# pages
 			var i0 = page_no
@@ -86,25 +90,24 @@ class PageRootTable extends PageTable
 			for i in i0:i1
 				if pt.e[i] != 0
 					panic("double map")
-				pt.e[i] = paddr + flags
+				pt.e[i] = paddr + int(flags)
 				paddr += PAGE_SIZE
 			npages -= i1-i0
 			dir_no ++
 			page_no = 0
 
-	func mut map_by_alloc(_vaddr: int, size: int, writable: bool) -> bool
+	func mut map_by_alloc(_vaddr: int, size: int, _flags: PageFlags) -> bool
 		var vaddr = _vaddr & 0xfffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
-		var flags = 0x105 # present + user + global
-		if writable
-			flags += 2 # writable
+		let table_flags = PageFlags.PRESENT + PageFlags.WRITABLE + PageFlags.GLOBAL | PageFlags.USER
+		let flags = _flags | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
 
-		var pdpt = get_or_create_sub(0, flags)
-		var pdt = pdpt.get_or_create_sub(0, flags)
+		var pdpt = get_or_create_sub(0, table_flags)
+		var pdt = pdpt.get_or_create_sub(dirp_no, table_flags)
 		
 		while npages > 0
-			var pt = pdt.get_or_create_sub(dir_no, flags)
+			var pt = pdt.get_or_create_sub(dir_no, table_flags)
 			
 			# pages
 			var i0 = page_no
@@ -112,11 +115,11 @@ class PageRootTable extends PageTable
 			if i1 > PAGE_TABLE_ENTRIES
 				i1 = PAGE_TABLE_ENTRIES
 			for i in i0:i1
-				let dest = Paging.reserve_physical_page(false)
-				if dest == -1
+				let paddr = Paging.reserve_physical_page()
+				if paddr == -1
 					unmap(vaddr, size, true)
 					return false
-				pt.e[i] = dest + flags
+				pt.e[i] = paddr + int(flags)
 			npages -= i1-i0
 			dir_no ++
 			page_no = 0
@@ -129,7 +132,7 @@ class PageRootTable extends PageTable
 		var npages = ceil_quot(size, PAGE_SIZE)
 
 		for pdpt in get_sub(0)
-			for pdt in pdpt.get_sub(0)
+			for pdt in pdpt.get_sub(dirp_no)
 		
 				while npages > 0
 					#var pt = pdt.get_sub(dir_no)
@@ -310,7 +313,7 @@ class Paging as @noauto
 		# kernel: flat paging
 		#let nmax = MemorySize / PAGE_SIZE / 1024
 		kernel_root_table := create_root_table()
-		kernel_root_table.map_linear(0, 0, memory_size, true)
+		kernel_root_table.map_linear(0, 0, memory_size, PageFlags.WRITABLE)
 	
 		asm{
 			#mov eax, cr3
@@ -330,6 +333,13 @@ class Paging as @noauto
 #		for i in 0:memory_size:4
 #			var p = _i2p(i) as int&
 #			var x: int = p
+
+
+		# alloc + randomly map 8m for user task
+		# FIXME: ...everything
+		kernel_root_table.map_by_alloc(2^30, 0x00800000, PageFlags.WRITABLE | PageFlags.USER)
+		var pp = _i2p(2^30) as int&
+		pp = 13
 
 		
 		prints("  ok\n")
@@ -358,7 +368,7 @@ class Paging as @noauto
 			reserve_physical_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
 	# does not clear
-	func static reserve_physical_page(for_page_table: bool) -> int
+	func static reserve_physical_page() -> int
 		#prints(" RP ")
 		for i in 0:num_physical_masks
 			if physical_mask[i] == 0xffffffff
@@ -509,7 +519,7 @@ class Paging as @noauto
 	
 	# hmmm, this assumes we are still in linear space...
 	func static create_root_table() -> PageRootTable&
-		let paddr = reserve_physical_page(true)
+		let paddr = reserve_physical_page()
 		if paddr == -1
 			panic("can not create page root table")
 		var pd = _i2p(paddr) as PageRootTable&
