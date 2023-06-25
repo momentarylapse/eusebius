@@ -16,26 +16,24 @@ use lib.std
 func main()
 	init_lib()
 	
-	var s: cstring
-	s[0] = 'A'
-	s[1] = ' '
+	var s = "Hi "
 	
-	#var p = &s
-	
-	#var x: string
+	s += "a  "
 	
 	let a = 2
 	let b = 1
 	let xxx = max(a, b)
+	#print(xxx)
 	
 	#var p = @malloc(100) as int[10]&
 	#kprinti(13)
+	#@free(p)
 	#kprintp(&s)
 	
 	var x = 0
 	while true
 		
-		kprintc(s, xxx)
+		print(s)
 		
 		for i in 0:10000000
 			pass

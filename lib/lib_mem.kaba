@@ -4,17 +4,9 @@ use lib_syscalls
 let MALLOC_OFFSET = 0x40300000
 let MALLOC_STOPPER = 8
 let MALLOC_MAGIC = 0x12345678
-let MALLOC_SMALL_SIZE = 0# disabled... 8
+let MALLOC_SMALL_SIZE = 8
 let MALLOC_SMALL_NUM = 4096*16
 
-
-func kprint(s: string)
-#func kprinti(i: int)
-#func brk(i: int) -> int
-#	if i < 0
-#		return 1000000
-#	return -1
-func lib__print(s: string)
 
 func memcpy(_dest: void&, _source: void&, size: int)
 	var dest = _dest as char[0]&
