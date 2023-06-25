@@ -51,55 +51,48 @@ const SHM_DEST = 1<<11
 const IPC_CREAT = 1<<12
 const IPC_EXCL = 1<<13
 
-class TimeValue
-	var sec, nanosec: int
-
-class SysInfo
-	var uptime: int
-	var loads: int[3]
-	var totalram, freeram, sharedram, bufferram: int
-	var totalswap, freeswap: int
-	var procs: int
-	var totalhigh, freehigh: int
-	var mem_unit: int
-	var pad: int[2]
-	var totalheap, freeheap: int
-
-class TaskInfo
-	var name: cstring
-	var pid, ppid, mode, status: int
-	var mem: int
-	var cpu: int
-	var life: TimeValue
-	func __assign__(o: TaskInfo)
-		pass
-
-class MountInfo
-	var major, minor: int
-	var dir: cstring
-	func __assign__(o: MountInfo)
-		pass
-class BlockDevice
-	var major, minor: int
-	var disk_no: int
-	var offset, size: int
-	var block_size: int
-	var type: char
-	var active: bool
-	var name: cstring
-	var p: void*
-	func __assign__(o: BlockDevice)
-		pass
-
-class StatData
-	var name: cstring
-	var type: int
-	var size: int
-	var inode: int
-	var mp_inode: int
-	var time: int
-	func __assign__(o: StatData)
-		pass
+#class TimeValue
+#	var sec, nanosec: int
+#
+#class SysInfo
+#	var uptime: int
+#	var loads: int[3]
+#	var totalram, freeram, sharedram, bufferram: int
+#	var totalswap, freeswap: int
+#	var procs: int
+#	var totalhigh, freehigh: int
+#	var mem_unit: int
+#	var pad: int[2]
+#	var totalheap, freeheap: int
+#
+#class TaskInfo
+#	var name: cstring
+#	var pid, ppid, mode, status: int
+#	var mem: int
+#	var cpu: int
+#	var life: TimeValue
+#
+#class MountInfo
+#	var major, minor: int
+#	var dir: cstring
+#
+#class BlockDevice
+#	var major, minor: int
+#	var disk_no: int
+#	var offset, size: int
+#	var block_size: int
+#	var type: char
+#	var active: bool
+#	var name: cstring
+#	var p: void*
+#
+#class StatData
+#	var name: cstring
+#	var type: int
+#	var size: int
+#	var inode: int
+#	var mp_inode: int
+#	var time: int
 
 func extern init_lib()
 #func extern get_args(arg: string[])

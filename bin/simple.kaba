@@ -13,23 +13,40 @@ use lib.std
 #		jmp $
 #	}
 
+#func main()
+#	var i = 13
+#	str(i)
+
 func main()
 	init_lib()
 	
 	var s = "Hi "
-	
 	s += "a  "
 	
-	let a = 2
-	let b = 1
-	let xxx = max(a, b)
+	let a = 20
+	#let b = 1
+	#let xxx = max(a, b)
+	#kprinti(xxx)
+	#print("  ")
 	#print(xxx)
+	#print("  ")
+	#kprinti(a)
+	#print("  ")
+	print(a.format("04") + "\n")
+	print(a.format("4") + "\n")
+	print(a.format("4x") + "\n")
+	let f = 1.234
+	print(str(f))
+	print("\nX")
 	
-	#var p = @malloc(100) as int[10]&
-	#kprinti(13)
-	#@free(p)
-	#kprintp(&s)
-	
+	while true
+		pass
+#	
+#	#var p = @malloc(100) as int[10]&
+#	#kprinti(13)
+#	#@free(p)
+#	#kprintp(&s)
+#	
 	var x = 0
 	while true
 		
@@ -42,7 +59,3 @@ func main()
 		if x > 100
 			while true
 				pass
-
-#func main()
-#	var i = 23
-#	#main()

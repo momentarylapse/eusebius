@@ -28,7 +28,7 @@
 	0x00a3 f000:...            kalib variables
 	----------------------------------- user space (randomly mapped)
 	0x4000 0000:0x4007 0000    user task code (max 512k-64k)
-	0x4007 0000:0x4008 0000    user task variables (64k)
+	0x4007 0000:0x4008 0000    user task stack (64k)
 	0x4008 0000:0x4030 0000    user task variables (2.5m)
 	0x4030 0000:...            user task heap
 

@@ -137,6 +137,7 @@ class KernelTimer as @noauto
 				frame.rip = n.rip
 				frame.rsp = n.rsp
 				frame.rbp = n.rsp
+				#frame.cr4 = frame.cr4 | 0x200 # sse=1
 				frame.rax = 0
 				frame.rflags = 0x3200
 				TaskManager.next = nil
