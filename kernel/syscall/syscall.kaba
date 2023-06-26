@@ -8,6 +8,7 @@ use mem.heap
 use mem.paging
 #use mem.shared
 #use task.task
+use task.manager
 #use task.scheduler
 #use time.timevalue
 #use time.timer
@@ -135,6 +136,13 @@ class Syscall
 		else if index == 0x2004 # kprintp
 			printh(&frame.rdi, 8)
 			return 0
+		else if index == 0x200a # stat
+			var pd = _i2p(frame.rsi) as StatData&
+			var pf = _i2p(frame.rdi) as cstring&
+			for t in TaskManager.cur
+				for d in t.cur_dir
+					return pd.get(pf, d)
+			return 1
 		else
 			prints("<syscall>")
 			printi(index)
@@ -230,26 +238,25 @@ class Syscall
 #		return 0
 #
 #var _mount_info: MountInfo
-#
-#
-#class StatData as @noauto
-#	var name: cstring
-#	var type: int
-#	var size: int
-#	var inode: int
-#	var mp_inode: int
-#	var time: int
-#	func get(filename: cstring, cur_dir: FileEntry) -> int
-#		var e = FileSystem.get(filename, cur_dir)
-#		if !e
-#			#panic(filename)
-#			return -1
-#		strcpy(name, e.name)
-#		type = e.type
-#		size = e.size
-#		inode = e.inode
-#		return 0
-#
+
+
+class StatData as @noauto
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
+	func mut get(filename: cstring, cur_dir: FileEntry) -> int
+		for e in FileSystem.get(filename, cur_dir)
+			strcpy(name, e.name)
+			type = int(e.type)
+			size = e.size
+			inode = e.inode
+			return 0
+		#panic(filename)
+		return 1
+
 #var _stat_data: StatData
 #
 #func int_syscall()

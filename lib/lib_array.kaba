@@ -3,12 +3,13 @@ use lib_mem
 #use lib_syscalls
 
 
-#
-#func _s2cs(s: lib__string, out cs: cstring)
-#	for i in 0:s.num
-#		cs[i] = s.data[i]
-#	cs[s.num] = 0
-#
+
+func _s2cs(s: lib__string, out cs: cstring)
+	for d in s.data
+		for i in 0:s.num
+			cs[i] = d[i]
+	cs[s.num] = 0
+
 #func _cs2s(cs: cstring, out s: lib__string)
 #	s.clear()
 #	for i in 0:255

@@ -48,6 +48,14 @@ class lib__int
 				space = '0'
 		return str_fill(i2s(i), n, space)
 
+class lib__int64
+	_i: int64
+	# FIXME: @callbyvalue
+	
+	func __str__() -> lib__string
+		let i = _p2i(&self) # (T_T)
+		return i2s(i)
+
 class lib__float
 	_f: float # FIXME @callbyvalue
 	func static __str__() -> lib__string

@@ -3,133 +3,156 @@ use lib_syscalls
 use lib_array
 
 
-func open(filename: lib__Path, flags: int) -> int
-	var tt: cstring
-	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	__temp_i__ = flags
-	asm{
-		mov eax, 0x00000005
-		mov ebx, __temp_p__
-		mov ecx, __temp_i__
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
+#func open(filename: lib__Path, flags: int) -> int
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	__temp_i__ = flags
+#	asm{
+#		mov eax, 0x00000005
+#		mov ebx, __temp_p__
+#		mov ecx, __temp_i__
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	return __temp_i__
+#
+#func create(filename: lib__Path) -> int
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x00000008
+#		mov ebx, __temp_p__
+#		mov ecx, 0x00000000
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	return __temp_i__
+#
+#func fork() -> int
+#	asm{
+#		mov eax, 0x00000002
+#		int 0x80
+#		mov __temp_i__, eax
+#	}
+#	if __temp_i__ == 0
+#		var p: lib__Path* = &"/dev/tty"
+#		stdout = open(*p, O_RDONLY)
+#	return __temp_i__
+#
+#func mkdir(filename: lib__Path) -> bool
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x00000027
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func rmdir(filename: lib__Path) -> bool
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x00000028
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#
+#func mkfifo(filename: lib__Path) -> bool
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x0000000e
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func unlink(filename: lib__Path) -> bool
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x0000000a
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func chdir(dir: lib__Path) -> bool
+#	var tt: cstring
+#	_s2cs(dir.s, tt)
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x0000000c
+#		mov ebx, __temp_p__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
+#
+#func lib__Filesystem@@current_directory() -> lib__string
+#	var tt: cstring
+#	__temp_p__ = &tt
+#	asm{
+#		mov eax, 0x000000b7
+#		mov ebx, __temp_p__
+#		mov ecx, 0x00000100
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	var r: lib__string
+#	_cs2s(tt, r)
+#	return r
 
-func create(filename: lib__Path) -> int
-	var tt: cstring
-	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x00000008
-		mov ebx, __temp_p__
-		mov ecx, 0x00000000
-		int 0x80
-		mov __temp_i__, eax
-	}
-	return __temp_i__
-
-func fork() -> int
-	asm{
-		mov eax, 0x00000002
-		int 0x80
-		mov __temp_i__, eax
-	}
-	if __temp_i__ == 0
-		var p: lib__Path* = &"/dev/tty"
-		stdout = open(*p, O_RDONLY)
-	return __temp_i__
-
-func mkdir(filename: lib__Path) -> bool
-	var tt: cstring
-	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x00000027
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func rmdir(filename: lib__Path) -> bool
-	var tt: cstring
-	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x00000028
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-
-func mkfifo(filename: lib__Path) -> bool
-	var tt: cstring
-	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x0000000e
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func unlink(filename: lib__Path) -> bool
-	var tt: cstring
-	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x0000000a
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func chdir(dir: lib__Path) -> bool
-	var tt: cstring
-	_s2cs(dir.s, tt)
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x0000000c
-		mov ebx, __temp_p__
-		int 0x80
-		mov lib_error, eax
-	}
-	return lib_error == 0
-
-func lib__Filesystem@@current_directory() -> lib__string
-	var tt: cstring
-	__temp_p__ = &tt
-	asm{
-		mov eax, 0x000000b7
-		mov ebx, __temp_p__
-		mov ecx, 0x00000100
-		int 0x80
-		mov lib_error, eax
-	}
-	var r: lib__string
-	_cs2s(tt, r)
-	return r
-
+class StatData
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
+	func __assign__(o: StatData)
+		pass
 
 func stat(filename: lib__Path, buf: StatData) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ = &tt
-	__temp_p2__ = &buf
-	asm{
+	__temp_p__ := &tt
+	__temp_p2__ := &buf
+	asm {
+		mov rdi, __temp_p__
+		mov rsi, __temp_p2__
 		mov eax, 0x0000200a
-		mov ebx, __temp_p__
-		mov ecx, __temp_p2__
-		int 0x80
-		mov lib_error, eax
+		syscall
+		mov __temp_i__, eax
 	}
-	return lib_error == 0
+	return __temp_i__ == 0
+
+#func stat(filename: lib__Path, buf: StatData) -> bool
+#	var tt: cstring
+#	_s2cs(filename.s, tt)
+#	__temp_p__ = &tt
+#	__temp_p2__ = &buf
+#	asm{
+#		mov eax, 0x0000200a
+#		mov ebx, __temp_p__
+#		mov ecx, __temp_p2__
+#		int 0x80
+#		mov lib_error, eax
+#	}
+#	return lib_error == 0
 
 
 
@@ -139,20 +162,24 @@ class lib__Path
 	func __init__(p: lib__string)
 		s = p
 	func __delete__()
-	func const __str__() -> lib__string
+	func __str__() -> lib__string
 		return s
-	func const is_empty() -> bool
+	func is_empty() -> bool
 		return len(s) == 0
-	func const is_absolute() -> bool
+	func is_absolute() -> bool
 		if len(s) == 0
 			return false
-		return s.data[0] == '/'
-	func const is_relative() -> bool
+		for d in s.data
+			return d[0] == '/'
+		return false
+	func is_relative() -> bool
 		return not is_absolute()
-	func const has_dir_ending() -> bool
+	func has_dir_ending() -> bool
 		if len(s) == 0
 			return false
-		return s.data[len(s)-1] == '/'
+		for d in s.data
+			return d[len(s)-1] == '/'
+		return false
 	func const __lshift__(p: lib__Path) -> lib__string
 		if is_empty()
 			return p.s
@@ -170,204 +197,201 @@ class lib__Path
 #class lib__Path@list extends lib__string@list
 # not working because this does not export new functions...
 
-class lib__Path@list
-	var l: lib__string@list
-	func mut add(p: lib__Path)
-		l.add(p.s)
-	func __add__(o: lib__Path@list) -> lib__string@list
-		return l + o.l
-	func mut __iadd__(o: lib__Path@list)
-		l + o.l
-	func mut __assign__(o: lib__Path@list)
-		l = o.l
-		
-
-#--------------------------------------------------------------------------
-# dir entry
-
-class dirent_struct
-	var struct_size: int
-	var size: int
-	var type: int
-	var name: cstring
-	func __assign__(o: dirent_struct)
-		pass
-
-
-
-func lib__Filesystem@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
-	var list_dirs, list_files: lib__string@list
-	lib__print("") # ?!?!?!? FIXME
-	var h = open(dirname, O_RDONLY)
-	if h < 0
-		lib_error = -1
-		return list_files
-	var d: dirent_struct
-	while getdents(h, &d)
-		var s: lib__string
-		_cs2s(d.name, s)
-		if d.type == 1
-			list_dirs.add(s)
-		else
-			list_files.add(s)
-	close(h)
-	lib_error = 0
-	
-	var flag_dir = false
-	var flag_file = false
-	for c in options
-		if c == 'f'
-			flag_file = true
-		else if c == 'd'
-			flag_dir = true
-	
-	if flag_dir
-		for i in 0:list_dirs.num-1
-			for j in i+1:list_dirs.num
-				if list_dirs.data[i].compare(list_dirs.data[j]) > 0
-					list_dirs.swap(i, j)
-	if flag_file
-		for i in 0:list_files.num-1
-			for j in i+1:list_files.num
-				if list_files.data[i].compare(list_files.data[j]) > 0
-					list_files.swap(i, j)
-	return list_dirs + list_files
-
-class lib__File
-	var h: int
-	var buf_pos: int
-	var pos: int
-	
-	func __init__()
-		h = -1
-	
-	func __delete__()
-		close()
-	
-	func mut open(filename: lib__Path) -> bool
-		h = xxx_open(filename, O_RDONLY)
-		pos = 0
-		return h >= 0
-	
-	func mut create(filename: lib__Path) -> bool
-		h = xxx_create(filename)
-		pos = 0
-		return h >= 0
-	
-	func mut close()
-		if h < 0
-			return
-		xxx_close(h)
-		h = -1
-	
-	func mut setBinaryMode(b: bool)
-	
-	func mut read(size: int) -> lib__string
-		var s: lib__string
-		s.resize(size)
-		var r = xxx_read(h, s.data, size)
-		if r < 0
-			r = 0
-		s.resize(r)
-		
-		pos += r
-		return s
-	
-	func mut write(s: lib__string) -> int
-		var r = xxx_write(h, s.data, s.num)
-		if r > 0
-			pos += r
-		return r
-	
-	func getPos() -> int
-		return pos
-		#return xxx_seek(h, 0, SEEK_CUR)
-	
-	func mut seek(_pos: int, absolute: bool)
-		if absolute
-			pos = _pos
-			xxx_seek(h, pos, SEEK_SET)
-		else
-			xxx_seek(h, pos, SEEK_CUR)
-
-func xxx_close(h: int) -> bool
-	return close(h)
-
-func xxx_open(filename: lib__Path, flags: int) -> int
-	return open(filename, flags)
-
-func xxx_create(filename: lib__Path) -> int
-	return create(filename)
-
-func xxx_read(h: int, buf: void*, size: int) -> int
-	return read(h, buf, size)
-
-func xxx_write(h: int, buf: void*, size: int) -> int
-	return write(h, buf, size)
-
-func xxx_seek(h: int, pos: int, mode: int) -> int
-	seek(h, pos, mode)
-
-func lib__Filesystem@@open(filename: lib__Path) -> lib__File*
-	var f: lib__File* = lib__@malloc(sizeof(lib__File))
-	f.__init__()
-	if !f.open(filename)
-		lib__@free(f)
-		return nil
-	return f
-
-func lib__Filesystem@@create(filename: lib__Path) -> lib__File*
-	var f: lib__File* = lib__@malloc(sizeof(lib__File))
-	f.__init__()
-	if !f.create(filename)
-		lib__@free(f)
-		return nil
-	return f
-
-func lib__Filesystem@@read(filename: lib__Path) -> lib__string
-	var content: lib__string
-	var h = open(filename, O_RDONLY)
-	if h < 0
-		lib__print("can not open file: ")
-		#lib__print(filename.s)
-		lib__print("\n")
-		return content
-	var size = 0
-	while true
-		content.resize(size + 1024)
-		var r = read(h, &content.data[size], 1024)
-		if r < 0
-			lib__print("Error while reading...\n")
-		if r <= 0
-			break
-		size += r
-	content.resize(size)
-	close(h)
-	return content
-
-class StatData
-	var name: cstring
-	var type: int
-	var size: int
-	var inode: int
-	var mp_inode: int
-	var time: int
-	func __assign__(o: StatData)
-		pass
+#class lib__Path@list
+#	var l: lib__string@list
+#	func mut add(p: lib__Path)
+#		l.add(p.s)
+#	func __add__(o: lib__Path@list) -> lib__string@list
+#		return l + o.l
+#	func mut __iadd__(o: lib__Path@list)
+#		l + o.l
+#	func mut __assign__(o: lib__Path@list)
+#		l = o.l
+#		
+#
+##--------------------------------------------------------------------------
+## dir entry
+#
+#class dirent_struct
+#	var struct_size: int
+#	var size: int
+#	var type: int
+#	var name: cstring
+#	func __assign__(o: dirent_struct)
+#		pass
+#
+#
+#
+#func lib__Filesystem@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
+#	var list_dirs, list_files: lib__string@list
+#	lib__print("") # ?!?!?!? FIXME
+#	var h = open(dirname, O_RDONLY)
+#	if h < 0
+#		lib_error = -1
+#		return list_files
+#	var d: dirent_struct
+#	while getdents(h, &d)
+#		var s: lib__string
+#		_cs2s(d.name, s)
+#		if d.type == 1
+#			list_dirs.add(s)
+#		else
+#			list_files.add(s)
+#	close(h)
+#	lib_error = 0
+#	
+#	var flag_dir = false
+#	var flag_file = false
+#	for c in options
+#		if c == 'f'
+#			flag_file = true
+#		else if c == 'd'
+#			flag_dir = true
+#	
+#	if flag_dir
+#		for i in 0:list_dirs.num-1
+#			for j in i+1:list_dirs.num
+#				if list_dirs.data[i].compare(list_dirs.data[j]) > 0
+#					list_dirs.swap(i, j)
+#	if flag_file
+#		for i in 0:list_files.num-1
+#			for j in i+1:list_files.num
+#				if list_files.data[i].compare(list_files.data[j]) > 0
+#					list_files.swap(i, j)
+#	return list_dirs + list_files
+#
+#class lib__File
+#	var h: int
+#	var buf_pos: int
+#	var pos: int
+#	
+#	func __init__()
+#		h = -1
+#	
+#	func __delete__()
+#		close()
+#	
+#	func mut open(filename: lib__Path) -> bool
+#		h = xxx_open(filename, O_RDONLY)
+#		pos = 0
+#		return h >= 0
+#	
+#	func mut create(filename: lib__Path) -> bool
+#		h = xxx_create(filename)
+#		pos = 0
+#		return h >= 0
+#	
+#	func mut close()
+#		if h < 0
+#			return
+#		xxx_close(h)
+#		h = -1
+#	
+#	func mut setBinaryMode(b: bool)
+#	
+#	func mut read(size: int) -> lib__string
+#		var s: lib__string
+#		s.resize(size)
+#		var r = xxx_read(h, s.data, size)
+#		if r < 0
+#			r = 0
+#		s.resize(r)
+#		
+#		pos += r
+#		return s
+#	
+#	func mut write(s: lib__string) -> int
+#		var r = xxx_write(h, s.data, s.num)
+#		if r > 0
+#			pos += r
+#		return r
+#	
+#	func getPos() -> int
+#		return pos
+#		#return xxx_seek(h, 0, SEEK_CUR)
+#	
+#	func mut seek(_pos: int, absolute: bool)
+#		if absolute
+#			pos = _pos
+#			xxx_seek(h, pos, SEEK_SET)
+#		else
+#			xxx_seek(h, pos, SEEK_CUR)
+#
+#func xxx_close(h: int) -> bool
+#	return close(h)
+#
+#func xxx_open(filename: lib__Path, flags: int) -> int
+#	return open(filename, flags)
+#
+#func xxx_create(filename: lib__Path) -> int
+#	return create(filename)
+#
+#func xxx_read(h: int, buf: void*, size: int) -> int
+#	return read(h, buf, size)
+#
+#func xxx_write(h: int, buf: void*, size: int) -> int
+#	return write(h, buf, size)
+#
+#func xxx_seek(h: int, pos: int, mode: int) -> int
+#	seek(h, pos, mode)
+#
+#func lib__Filesystem@@open(filename: lib__Path) -> lib__File*
+#	var f: lib__File* = lib__@malloc(sizeof(lib__File))
+#	f.__init__()
+#	if !f.open(filename)
+#		lib__@free(f)
+#		return nil
+#	return f
+#
+#func lib__Filesystem@@create(filename: lib__Path) -> lib__File*
+#	var f: lib__File* = lib__@malloc(sizeof(lib__File))
+#	f.__init__()
+#	if !f.create(filename)
+#		lib__@free(f)
+#		return nil
+#	return f
+#
+#func lib__Filesystem@@read(filename: lib__Path) -> lib__string
+#	var content: lib__string
+#	var h = open(filename, O_RDONLY)
+#	if h < 0
+#		lib__print("can not open file: ")
+#		#lib__print(filename.s)
+#		lib__print("\n")
+#		return content
+#	var size = 0
+#	while true
+#		content.resize(size + 1024)
+#		var r = read(h, &content.data[size], 1024)
+#		if r < 0
+#			lib__print("Error while reading...\n")
+#		if r <= 0
+#			break
+#		size += r
+#	content.resize(size)
+#	close(h)
+#	return content
 
 
-func lib__Filesystem@@is_directory(filename: lib__Path) -> bool
+func lib__fs@@exists(filename: lib__Path) -> bool
+	var d: StatData
+	return stat(filename, &d)
+
+func lib__fs@@is_directory(filename: lib__Path) -> bool
 	var d: StatData
 	if stat(filename, &d)
 		return d.type == 1
 	return false
 
-func lib__Filesystem@@size(filename: lib__Path) -> int64
-	pass
+func lib__fs@@size(filename: lib__Path) -> int64
+	var d: StatData
+	if stat(filename, d)
+		return d.size
+	return -1
 
 func Filesystem_size32(filename: lib__Path) -> int
 	var d: StatData
 	if stat(filename, &d)
 		return d.size
-	return d.size
+#	return d.size
 	return -1

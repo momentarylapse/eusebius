@@ -1,6 +1,6 @@
 use common
 use io.text
-##use fs.fs
+use fs.fs
 ##use fs.pipe
 ##use fs.access
 ##use mem.heap
@@ -74,7 +74,7 @@ class Task
 #	var parent: Task*
 	var name: cstring
 #	var arg: cstring
-#	var cur_dir: FileEntry*
+	var cur_dir: FileEntry*
 #	var page_dir: PageRootTable*
 #	var mem_bottom, mem_size: int
 #	

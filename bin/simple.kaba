@@ -1,6 +1,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
 use lib.std
+use os
 
 ##func @noframe main()
 #func _main()
@@ -32,16 +33,24 @@ func main()
 	#print("  ")
 	#kprinti(a)
 	#print("  ")
-	print(a.format("04") + "\n")
-	print(a.format("4") + "\n")
-	print(a.format("4x") + "\n")
-	let f = 1.234
-	print(str(f))
-	print("\nX")
-	for x in 0.0:2*pi:0.1
-		#print(cos(x))
-		print(sin(x)*sin(x) + cos(x)*cos(x))
-		print("  ")
+	
+#	print(a.format("04") + "\n")
+#	print(a.format("4") + "\n")
+#	print(a.format("4x") + "\n")
+
+#	let f = 1.234
+#	print(str(f))
+#	print("\nX")
+#	for x in 0.0:2*pi:0.1
+#		#print(cos(x))
+#		print(sin(x)*sin(x) + cos(x)*cos(x))
+#		print("  ")
+	
+	print(os.fs.size("/bin/simple"))
+	if os.fs.exists("/bin/simple")
+		print(" FILE")
+	if os.fs.is_directory("/bin")
+		print(" DIR")
 	
 	while true
 		pass

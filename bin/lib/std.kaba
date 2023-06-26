@@ -85,14 +85,14 @@ const IPC_EXCL = 1<<13
 #	var active: bool
 #	var name: cstring
 #	var p: void*
-#
-#class StatData
-#	var name: cstring
-#	var type: int
-#	var size: int
-#	var inode: int
-#	var mp_inode: int
-#	var time: int
+
+class StatData
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
 
 func extern init_lib()
 #func extern get_args(arg: string[])
@@ -120,6 +120,7 @@ func extern exit(r: int) -> bool
 #func extern rmdir(filename: Path) -> bool
 #func extern mkfifo(filename: Path) -> bool
 #func extern unlink(filename: Path) -> bool
+func extern stat(filename: Path, out s: StatData) -> bool
 #func extern dup(h: int) -> int
 #func extern pipe(h: int[2]) -> bool
 #func extern fcntl(h: int, op: int, param: int) -> int
@@ -136,7 +137,6 @@ func extern exit(r: int) -> bool
 #func extern taskinfo(pid: int, out t: TaskInfo) -> bool
 #func extern mountinfo(index: int, out i: MountInfo) -> bool
 #func extern blockinfo(major: int, minor: int, out d: BlockDevice) -> bool
-#func extern stat(filename: Path, out s: StatData) -> bool
 #func extern sched_yield(pid: int) -> bool
 #func extern uname(buf: void*) -> bool
 #func extern time(t: TimeValue) -> bool

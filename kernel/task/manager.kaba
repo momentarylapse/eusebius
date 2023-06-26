@@ -1,5 +1,6 @@
 use common
 use io.text
+use fs
 use mem.heap
 use task
 use gdt
@@ -45,6 +46,8 @@ class TaskManager as @noauto
 		if pid < 0
 			return nil
 		var t = &tasks[pid]
+		
+		t.cur_dir = FileSystem.root
 	
 #		var t = Heap.malloc(sizeof(Task)) as Task&
 		t.pid = pid

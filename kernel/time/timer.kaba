@@ -141,6 +141,7 @@ class KernelTimer as @noauto
 				frame.rax = 0
 				frame.rflags = 0x3200
 				TaskManager.next = nil
+				TaskManager.cur = n
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)
 	

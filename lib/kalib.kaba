@@ -4,7 +4,7 @@ use lib_syscalls
 use lib_mem
 use lib_array
 use lib_math
-#use lib_file
+use lib_file
 #use lib_image
 
 
