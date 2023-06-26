@@ -57,25 +57,44 @@ class lib__float
 		var f = __temp_f__
 		return f2s(f, 6)
 
-# FIXME: sse
 func lib__sin(f: float) -> float
-	__temp_f__ = f
-#	asm{
-#		fld __temp_f__
-#		fsin
-#		fst __temp_f__
-#	}
-	return __temp_f__
+	if f < 0.0
+		return - lib__sin(-f)
+	__temp_f__ = f * (2.0 / pi)
+	asm {
+		movss xmm0, __temp_f__
+		cvttss2si eax, xmm0
+		mov __temp_i__, eax
+		cvtsi2ss xmm1, eax
+		subss xmm0, xmm1
+		movss __temp_f__, xmm0
+	}
+	var x = __temp_f__ * (pi / 2.0)
+	if (__temp_i__ & 1) > 0
+		x = pi/2 - x
+	x = x - (x*x*x) / 6 + (x*x*x*x*x) / 120 - (x*x*x*x*x*x*x) / 5040
+	if (__temp_i__ & 2) > 0
+		return - x
+	return x
 
-# FIXME: sse
 func lib__cos(f: float) -> float
-	__temp_f__ = f
-#	asm{
-#		fld __temp_f__
-#		fcos
-#		fst __temp_f__
+	return lib__sin(f + pi/2)
+#	if f < 0.0
+#		return lib__cos(-f)
+#	__temp_f__ = f * (2.0 / pi)
+#	asm {
+#		movss xmm0, __temp_f__
+#		cvttss2si eax, xmm0
+#		mov __temp_i__, eax
+#		cvtsi2ss xmm1, eax
+#		subss xmm0, xmm1
+#		movss __temp_f__, xmm0
 #	}
-	return __temp_f__
+#	let x = __temp_f__ * (pi / 2.0)
+#	if (__temp_i__ & 1) > 0
+#		x = pi/2 - x
+#	...
+#	return x
 
 func lib__min(a: float, b: float) -> float
 	if a < b

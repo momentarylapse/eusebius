@@ -38,6 +38,10 @@ func main()
 	let f = 1.234
 	print(str(f))
 	print("\nX")
+	for x in 0.0:2*pi:0.1
+		#print(cos(x))
+		print(sin(x)*sin(x) + cos(x)*cos(x))
+		print("  ")
 	
 	while true
 		pass
