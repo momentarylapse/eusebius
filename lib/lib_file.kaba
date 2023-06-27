@@ -3,33 +3,33 @@ use lib_syscalls
 use lib_array
 
 
-#func open(filename: lib__Path, flags: int) -> int
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	__temp_i__ = flags
-#	asm{
-#		mov eax, 0x00000005
-#		mov ebx, __temp_p__
-#		mov ecx, __temp_i__
-#		int 0x80
-#		mov __temp_i__, eax
-#	}
-#	return __temp_i__
-#
-#func create(filename: lib__Path) -> int
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x00000008
-#		mov ebx, __temp_p__
-#		mov ecx, 0x00000000
-#		int 0x80
-#		mov __temp_i__, eax
-#	}
-#	return __temp_i__
-#
+func open(filename: lib__Path, flags: int) -> int
+	var tt: cstring
+	_s2cs(filename.s, tt)
+	__temp_p__ := &tt
+	__temp_i__ = flags
+	asm{
+		mov eax, 0x00000005
+		mov rdi, __temp_p__
+		mov esi, __temp_i__
+		syscall
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
+func create(filename: lib__Path) -> int
+	var tt: cstring
+	_s2cs(filename.s, tt)
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x00000008
+		mov rdi, __temp_p__
+		mov esi, 0x00000000
+		syscall
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
 #func fork() -> int
 #	asm{
 #		mov eax, 0x00000002

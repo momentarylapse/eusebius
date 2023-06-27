@@ -55,6 +55,12 @@ func main()
 	os.fs.set_current_directory("/bin")
 	print("  ")
 	print(os.fs.current_directory())
+	print("\n")
+	var h = open("/bin/simple", O_RDONLY)
+	var xx: cstring
+	read(h, &xx, 80)
+	print(as_binary(&xx, 80).hex())
+	
 	
 	while true
 		pass

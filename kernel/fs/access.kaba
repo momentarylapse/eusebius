@@ -159,7 +159,7 @@ class OpenFileData as @noauto
 		
 		return r
 
-	func getdents(page_dir: PageRootTable, addr: int, num: int) -> int
+	func getdents(addr: int, num: int) -> int
 		if !used
 			return -EBADF
 
@@ -180,7 +180,7 @@ class OpenFileData as @noauto
 			r.size = e.size
 			r.type = e.type
 			strcpy(r.name, e.name)
-			page_dir.memcpy2task(addr, &r, r.struct_size)
+			memcpy(_i2p(addr), &r, r.struct_size)
 			offset ++
 			return 1
 		else

@@ -118,49 +118,58 @@ class Syscall
 
 	func static handle(frame: Frame) -> int64
 		let index = int(frame.rax)
-		if index == 0x0001 # exit
-			panic("process called exit()")
-		else if index == 0x000c # chdir
-			var pf = _i2p(frame.rdi) as cstring&
-			for t in TaskManager.cur
-				for d0 in t.cur_dir
-					for e in FileSystem.get(pf, d0)
-						t.cur_dir = e
-						return 0
-			return -EFAULT
-		else if index == 0x002d # brk
-			return 0x40800000
-		else if index == 0xb7 # getcwd
-			var pf = _i2p(frame.rdi) as cstring&
-			for t in TaskManager.cur
+		for t in TaskManager.cur
+			if index == 0x0001 # exit
+				panic("process called exit()")
+			else if index == 0x0003 # read
+				return t.sys_read(frame.rdi, frame.rsi, frame.rdx)
+			else if index == 0x0004 # write
+				return t.sys_write(frame.rdi, frame.rsi, frame.rdx)
+			else if index == 0x0005 # open
+				return t.sys_open(frame.rdi, frame.rsi)
+			else if index == 0x0006 # close
+				return t.sys_close(frame.rdi)
+#			else if index == 7 # waitpid
+#				r = caller.sys_waitpid(param1, param2, param3)
+#			else if index == 8 # create
+#				r = caller.sys_open(param1, O_CREATE | O_WRONLY | O_TRUNC)
+#			else if index == 10 # unlink
+#				r = caller.sys_unlink(param1)
+#			else if index == 11 # exec
+#				r = caller.sys_execute(param1, param2, param3)
+			else if index == 12 # chdir
+				return t.sys_set_cur_dir(frame.rdi)
+			else if index == 0x002d # brk
+				return 0x40800000
+			else if index == 0xb7 # getcwd
+				var pf = _i2p(frame.rdi) as cstring&
 				for d in t.cur_dir
 					d.get_path(pf)
 					return 0
-			return -EFAULT
-		else if index == 0x1234 # print hi
-			TextMode.text_color = 0x04
-			prints("  <SYSCALL HI>  ")
-			TextMode.text_color = 0x07
-			return 0
-		else if index == 0x2002 # kprint
-			TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
-			return 0
-		else if index == 0x2003 # kprinti
-			printi(frame.rdi)
-			return 0
-		else if index == 0x2004 # kprintp
-			printh(&frame.rdi, 8)
-			return 0
-		else if index == 0x200a # stat
-			var pd = _i2p(frame.rsi) as StatData&
-			var pf = _i2p(frame.rdi) as cstring&
-			for t in TaskManager.cur
+				return -EFAULT
+			else if index == 0x1234 # print hi
+				TextMode.text_color = 0x04
+				prints("  <SYSCALL HI>  ")
+				TextMode.text_color = 0x07
+				return 0
+			else if index == 0x2002 # kprint
+				TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
+				return 0
+			else if index == 0x2003 # kprinti
+				printi(frame.rdi)
+				return 0
+			else if index == 0x2004 # kprintp
+				printh(&frame.rdi, 8)
+				return 0
+			else if index == 0x200a # stat
+				var pd = _i2p(frame.rsi) as StatData&
+				var pf = _i2p(frame.rdi) as cstring&
 				for d in t.cur_dir
 					return pd.get(pf, d)
-			return 1
-		else
-			prints("<syscall>")
-			printi(index)
+				return 1
+			else
+				prints("<syscall>")
+				printi(index)
 		return -1
 
 
@@ -296,24 +305,8 @@ class StatData as @noauto
 #			caller.sys_exit(param1)
 #		else if index == 2 # fork
 #			r = caller.sys_fork()
-#		else if index == 3 # read
-#			r = caller.sys_read(param1, param2, param3)
-#		else if index == 4 # write
-#			r = caller.sys_write(param1, param2, param3)
-#		else if index == 5 # open
-#			r = caller.sys_open(param1, param2)
-#		else if index == 6 # close
-#			r = caller.sys_close(param1)
-#		else if index == 7 # waitpid
-#			r = caller.sys_waitpid(param1, param2, param3)
-#		else if index == 8 # create
-#			r = caller.sys_open(param1, O_CREATE | O_WRONLY | O_TRUNC)
-#		else if index == 10 # unlink
-#			r = caller.sys_unlink(param1)
-#		else if index == 11 # exec
-#			r = caller.sys_execute(param1, param2, param3)
-#		else if index == 12 # chdir
-#			r = caller.sys_set_cur_dir(param1)
+
+
 #		else if index == 14 # mknod
 #			r = caller.sys_mknod(param1, param2)
 #		else if index == 19 # seek

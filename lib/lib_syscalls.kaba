@@ -25,74 +25,74 @@ func brk(size: int) -> int
 
 
 
-#func close(h: int) -> bool
-#	__temp_i__ = h
-#	asm{
-#		mov eax, 0x00000006
-#		mov ebx, __temp_i__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#func read(h: int, buf: void&, size: int) -> int
-#	__temp_i__ = h
-#	__temp_i2__ = size
-#	__temp_p__ := buf
-#	asm{
-#		mov eax, 0x00000003
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_p__
-#		mov edx, __temp_i2__
-#		int 0x80
-#		mov __temp_i3__, eax
-#	}
-#	return __temp_i3__
-#	
-#func write(h: int, buf: void&, size: int) -> int
-#	__temp_i__ = h
-#	__temp_i2__ = size
-#	__temp_p__ := buf
-#	asm{
-#		mov eax, 0x00000004
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_p__
-#		mov edx, __temp_i2__
-#		int 0x80
-#		mov __temp_i3__, eax
-#	}
-#	return __temp_i3__
-#
-#func seek(h: int, pos: int, mode: int) -> int
-#	__temp_i__ = h
-#	__temp_i2__ = pos
-#	__temp_i3__ = mode
-#	asm{
-#		mov eax, 0x00000013
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_i2__
-#		mov edx, __temp_i3__
-#		int 0x80
-#		mov __temp_i3__, eax
-#	}
-#	return __temp_i3__
-#
-#
-#
-#func getdents(h: int, buf: void&) -> bool
-#	__temp_i__ = h
-#	__temp_i2__ = 1
-#	__temp_p__ := buf
-#	asm{
-#		mov eax, 0x0000008d
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_p__
-#		mov edx, __temp_i2__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error > 0
-#
+func close(h: int) -> bool
+	__temp_i__ = h
+	asm{
+		mov eax, 0x00000006
+		mov edi, __temp_i__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+func read(h: int, buf: void&, size: int) -> int
+	__temp_i__ = h
+	__temp_p__ := buf
+	__temp_i2__ = size
+	asm{
+		mov eax, 0x00000003
+		mov edi, __temp_i__
+		mov rsi, __temp_p__
+		mov edx, __temp_i2__
+		syscall
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+	
+func write(h: int, buf: void&, size: int) -> int
+	__temp_i__ = h
+	__temp_p__ := buf
+	__temp_i2__ = size
+	asm{
+		mov eax, 0x00000004
+		mov edi, __temp_i__
+		mov rsi, __temp_p__
+		mov edx, __temp_i2__
+		syscall
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+func seek(h: int, pos: int, mode: int) -> int
+	__temp_i__ = h
+	__temp_i2__ = pos
+	__temp_i3__ = mode
+	asm{
+		mov eax, 0x00000013
+		mov edi, __temp_i__
+		mov esi, __temp_i2__
+		mov edx, __temp_i3__
+		syscall
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+
+
+func getdents(h: int, buf: void&) -> bool
+	__temp_i__ = h
+	__temp_i2__ = 1
+	__temp_p__ := buf
+	asm{
+		mov eax, 0x0000008d
+		mov edi, __temp_i__
+		mov rsi, __temp_p__
+		mov edx, __temp_i2__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error > 0
+
 #func dup(h: int) -> int
 #	__temp_i__ = h
 #	asm{

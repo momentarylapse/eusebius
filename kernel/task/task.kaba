@@ -160,18 +160,19 @@ class Task
 #		}
 #	func addr2kernel(addr: int) -> int
 #		return page_dir.addr2kernel(addr)
-#	
-#	func mut set_cur_dir(dir: cstring) -> int
-#		var e = get_file(dir)
-#		if !e
-#			return -1
-#		if e.type != FileType.DIR
-#			return -2
-#		cur_dir = e
-#		return 0
-#		
-#	func get_file(path: cstring) -> FileEntry*
-#		return FileSystem.get(path, cur_dir)
+	
+	func mut set_cur_dir(dir: cstring) -> int
+		for e in get_file(dir)
+			if e.type != FileType.DIR
+				return -2
+			cur_dir = e
+			return 0
+		return -1
+		
+	func get_file(path: cstring) -> FileEntry*
+		for d in cur_dir
+			return FileSystem.get(path, d)
+		return nil
 		
 	func mut add_handle(oh: OpenFileData) -> int
 		for i=>h in handles
@@ -303,8 +304,9 @@ class Task
 				return index
 		return -ENOENT
 
-#	func mut sys_open(filename: cstring, flags: int) -> int
-#		return open(filename, flags)
+	func mut sys_open(addr: int64, flags: int) -> int
+		var filename = _i2p(addr) as cstring&
+		return open(filename, flags)
 
 
 	func mut sys_read(handle: int, addr: int64, size: int) -> int
@@ -317,27 +319,27 @@ class Task
 			return -EBADF
 
 
-#	func mut sys_write(handle: int, addr: int, size: int) -> int
-#		var of = get_handle(handle)
-#		if !of
-#			return -EBADF
-#		let r = of.write(page_dir, addr, size)
-#		if r == -EWOULDBLOCK and of.blocking
-#			set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
-#		return r
-#
-#	func mut sys_getdents(handle: int, addr: int, num: int) -> int
-#		var of = get_handle(handle)
-#		if !of
-#			return -EBADF
-#		return of.getdents(page_dir, addr, num)
-#
-#
-#	func mut sys_seek(handle: int, offset: int, mode: int) -> int
-#		var of = get_handle(handle)
-#		if !of
-#			return -EBADF
-#		return of.seek(offset, mode)
+	func mut sys_write(handle: int, addr: int, size: int) -> int
+		for of in get_handle(handle)
+			let r = of.write(addr, size)
+	#		if r == -EWOULDBLOCK and of.blocking
+	#			set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
+			return r
+		else
+			return -EBADF
+
+	func mut sys_getdents(handle: int, addr: int, num: int) -> int
+		for of in get_handle(handle)
+			return of.getdents(addr, num)
+		else
+			return -EBADF
+
+
+	func mut sys_seek(handle: int, offset: int, mode: int) -> int
+		for of in get_handle(handle)
+			return of.seek(offset, mode)
+		else
+			return -EBADF
 
 	func mut sys_close(handle: int) -> int
 		for of in get_handle(handle)
@@ -370,12 +372,12 @@ class Task
 #		if !page_dir.memcpy2task(addr, &fd, 8)
 #			return -EFAULT
 #		return 0
-#	
-#	func mut sys_set_cur_dir(faddr: int) -> int
-#		var filename: cstring
-#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+	
+	func mut sys_set_cur_dir(faddr: int64) -> int
+		var filename = _i2p(faddr) as cstring&
+#		if !memcpy2kernel(&filename, faddr, sizeof(cstring))
 #			return -EFAULT
-#		return set_cur_dir(filename)
+		return set_cur_dir(filename)
 #		
 #	func mut sys_mkdir(faddr: int) -> int
 #		var filename: cstring

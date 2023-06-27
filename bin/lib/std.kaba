@@ -110,12 +110,12 @@ func extern init_lib()
 func extern exit(r: int) -> bool
 #func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
 #func extern fork() -> int
-#func extern open(filename: Path, flags: int) -> int
+func extern open(filename: Path, flags: int) -> int
 #func extern create(filename: Path) -> int
-#func extern close(h: int) -> bool
-#func extern read(h: int, buf: void&, size: int) -> int
-#func extern write(h: int, buf: void&, size: int) -> int
-#func extern seek(h: int, offset: int, mode: int) -> int
+func extern close(h: int) -> bool
+func extern read(h: int, buf: void&, size: int) -> int
+func extern write(h: int, buf: void&, size: int) -> int
+func extern seek(h: int, offset: int, mode: int) -> int
 #func extern mkdir(filename: Path) -> bool
 #func extern rmdir(filename: Path) -> bool
 #func extern mkfifo(filename: Path) -> bool

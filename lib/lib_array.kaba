@@ -382,7 +382,7 @@ class lib__string extends lib__@DynamicArray
 		let n = int(f)
 		return str_fill(self, n, ' ')
 
-func lib__asbinary(p: void&, num: int) -> lib__string
+func lib__as_binary(p: void&, num: int) -> lib__string
 	var s: lib__string
 	s.num = num
 	s.data = p
