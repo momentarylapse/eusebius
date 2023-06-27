@@ -125,7 +125,7 @@ func extern stat(filename: Path, out s: StatData) -> bool
 #func extern pipe(h: int[2]) -> bool
 #func extern fcntl(h: int, op: int, param: int) -> int
 #func extern getpid() -> int
-#func extern chdir(dir: Path) -> bool
+##func extern chdir(dir: Path) -> bool
 #func extern waitpid(pid: int, status: void&, block: bool) -> int
 #func extern kill(pid: int, signal: int) -> bool
 #func extern shmget(key: int, size: int, flags: int) -> int

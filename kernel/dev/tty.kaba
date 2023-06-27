@@ -8,19 +8,19 @@ use irq.irq
 class FileOperationsTTY extends FileOperations
 	var key_buf: cstring
 	var key_num: int
-	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, _size: int) -> int
+	func override read(f: FileEntry, addr: int64, _size: int) -> int
 		var size = _size
 		if key_num == 0
 			return -EWOULDBLOCK
 		if size > key_num
 			size = key_num
-		page_dir.memcpy2task(addr, &key_buf, size)
+		memcpy(_i2p(addr), &key_buf, size)
 		key_num -= size
 		memcpy(&key_buf, &key_buf[size], key_num)
 		return size
-	func override write(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
+	func override write(f: FileEntry, addr: int64, size: int) -> int
 		for i in 0:size
-			var buf = _i2p(page_dir.addr2kernel(addr + i)) as cstring&
+			var buf = _i2p(addr + i) as cstring&
 			TextMode.prints_low(buf, 1)
 		return size
 	

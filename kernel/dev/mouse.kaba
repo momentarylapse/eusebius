@@ -14,7 +14,7 @@ class FileOperationsMouse extends FileOperations
 	var mouse_buf: cstring
 	var mouse_num = 0
 	
-	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, _size: int) -> int
+	func override read(f: FileEntry, addr: int64, _size: int) -> int
 		var size = _size
 		if mouse_num == 0
 			return -EWOULDBLOCK
@@ -24,7 +24,7 @@ class FileOperationsMouse extends FileOperations
 		size = 16
 		if size > mouse_num
 			size = mouse_num
-		page_dir.memcpy2task(addr, &mouse_buf, size)
+		memcpy(_i2p(addr), &mouse_buf, size)
 		mouse_num -= size
 		memcpy(&mouse_buf, &mouse_buf[size], mouse_num)
 		return size

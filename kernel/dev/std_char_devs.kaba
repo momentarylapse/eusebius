@@ -16,26 +16,26 @@ class FileOperationsZero extends FileOperations
 		return 0
 	func override close(f: FileEntry) -> int
 		return 0
-	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
+	func override read(f: FileEntry, addr: int64, size: int) -> int
 		let zero = 0
 		for i in 0:size
-			page_dir.memcpy2task(addr + i, &zero, 1)
+			memcpy(_i2p(addr + i), &zero, 1)
 		return size
 var dev_zero_ops: FileOperationsZero
 
 
 class FileOperationsNull extends FileOperations
-	func override write(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
+	func override write(f: FileEntry, addr: int64, size: int) -> int
 		return size
 var dev_null_ops: FileOperationsNull
 
 
 class FileOperationsRand extends FileOperations
 	var state = 13
-	func override read(f: FileEntry, page_dir: PageRootTable&, addr: int, size: int) -> int
+	func override read(f: FileEntry, addr: int64, size: int) -> int
 		for i in 0:size
 			state = (state * 23434 + 82374) % 8623
-			page_dir.memcpy2task(addr + i, &state, 1)
+			memcpy(_i2p(addr + i), &state, 1)
 		return size
 var dev_rand_ops: FileOperationsRand
 

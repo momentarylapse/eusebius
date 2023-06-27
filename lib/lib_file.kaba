@@ -90,31 +90,35 @@ use lib_array
 #	}
 #	return lib_error == 0
 #
-#func chdir(dir: lib__Path) -> bool
-#	var tt: cstring
-#	_s2cs(dir.s, tt)
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x0000000c
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#func lib__Filesystem@@current_directory() -> lib__string
-#	var tt: cstring
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x000000b7
-#		mov ebx, __temp_p__
-#		mov ecx, 0x00000100
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	var r: lib__string
-#	_cs2s(tt, r)
-#	return r
+func chdir(dir: lib__Path) -> bool
+	var tt: cstring
+	_s2cs(dir.s, tt)
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x0000000c
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+func lib__fs@@set_current_directory(dir: lib__Path)
+	chdir(dir)
+
+func lib__fs@@current_directory() -> lib__string
+	var tt: cstring
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x000000b7
+		mov rdi, __temp_p__
+		mov esi, 0x00000100
+		syscall
+		mov lib_error, eax
+	}
+	var r: lib__string
+	if lib_error == 0
+		_cs2s(tt, r)
+	return r
 
 class StatData
 	var name: cstring
@@ -139,21 +143,6 @@ func stat(filename: lib__Path, buf: StatData) -> bool
 		mov __temp_i__, eax
 	}
 	return __temp_i__ == 0
-
-#func stat(filename: lib__Path, buf: StatData) -> bool
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	__temp_p2__ = &buf
-#	asm{
-#		mov eax, 0x0000200a
-#		mov ebx, __temp_p__
-#		mov ecx, __temp_p2__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-
 
 
 class lib__Path

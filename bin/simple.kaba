@@ -48,9 +48,13 @@ func main()
 	
 	print(os.fs.size("/bin/simple"))
 	if os.fs.exists("/bin/simple")
-		print(" FILE")
+		print(" FILE ")
 	if os.fs.is_directory("/bin")
-		print(" DIR")
+		print(" DIR ")
+	print(os.fs.current_directory())
+	os.fs.set_current_directory("/bin")
+	print("  ")
+	print(os.fs.current_directory())
 	
 	while true
 		pass

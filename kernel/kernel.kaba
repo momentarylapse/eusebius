@@ -34,7 +34,7 @@ func load_kalib()
 		var addr = KALIB_LOCATION
 		var size = 0
 		while true
-			let r = of.read(Paging.kernel_root_table, addr, 1024)
+			let r = of.read(addr, 1024)
 			if r <= 0
 				break
 			size += r
@@ -101,7 +101,7 @@ func main()
 	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
 		var code = 0x40000000
 		#var code = _p2i(Heap.malloc(1024))
-		let r = of.read(Paging.kernel_root_table, code, 4096)
+		let r = of.read(code, 4096)
 		#printh(code, r)
 		prints("ok\n")
 		

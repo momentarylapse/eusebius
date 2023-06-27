@@ -2,7 +2,7 @@ use common
 use io.text
 use fs.fs
 ##use fs.pipe
-##use fs.access
+use fs.access
 ##use mem.heap
 ##use mem.paging
 #use mem.shared
@@ -82,7 +82,7 @@ class Task
 #	var cpu_load: int
 #	
 #	var kernel_mode: bool
-#	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
+	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
 #	var shmem: TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK]
 #	
 #	var signal_handlers: int[MAX_SIGNALS]
@@ -172,15 +172,15 @@ class Task
 #		
 #	func get_file(path: cstring) -> FileEntry*
 #		return FileSystem.get(path, cur_dir)
-#		
-#	func mut add_handle(oh: OpenFileData) -> int
-#		for i=>h in handles
-#			if !h
-#				h = &oh
-#				oh.ref_count ++
-#				return i
-#		return -1
-#
+		
+	func mut add_handle(oh: OpenFileData) -> int
+		for i=>h in handles
+			if !h
+				h = &oh
+				oh.ref_count ++
+				return i
+		return -1
+
 #	func mut clean_up_resources()
 #		for h in handles
 #			if h
@@ -285,41 +285,38 @@ class Task
 #			else
 #				die(0)
 #		return 0
-#
-##--------------------------------------------------------------
-## file access
-#	
-#	func get_handle(handle: int) -> OpenFileData*
-#		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
-#			return nil
-#		return handles[handle]
-#
-#	func mut open(filename: cstring, flags: int) -> int
-#		var of = kernel_open(filename, flags, cur_dir)
-#		if !of
-#			return -ENOENT
-#		let index = add_handle(of)
-#		if index < 0
-#			of.unref()
-#		return index
-#
-#	func mut sys_open(faddr: int, flags: int) -> int
-#		var filename: cstring
-#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-#			return -EFAULT
+
+#--------------------------------------------------------------
+# file access
+	
+	func get_handle(handle: int) -> OpenFileData*
+		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
+			return nil
+		return handles[handle]
+
+	func mut open(filename: cstring, flags: int) -> int
+		for d in cur_dir
+			for of in kernel_open(filename, flags, d)
+				let index = add_handle(of)
+				if index < 0
+					of.unref()
+				return index
+		return -ENOENT
+
+#	func mut sys_open(filename: cstring, flags: int) -> int
 #		return open(filename, flags)
-#
-#
-#	func mut sys_read(handle: int, addr: int, size: int) -> int
-#		var of = get_handle(handle)
-#		if !of
-#			return -EBADF
-#		let r = of.read(page_dir, addr, size)
-#		if r == -EWOULDBLOCK and of.blocking
-#			set_wait(WaitingMode.FILE_READ, handle, addr, size)
-#		return r
-#
-#
+
+
+	func mut sys_read(handle: int, addr: int64, size: int) -> int
+		for of in get_handle(handle)
+			let r = of.read(addr, size)
+#			if r == -EWOULDBLOCK and of.blocking
+#				set_wait(WaitingMode.FILE_READ, handle, addr, size)
+			return r
+		else
+			return -EBADF
+
+
 #	func mut sys_write(handle: int, addr: int, size: int) -> int
 #		var of = get_handle(handle)
 #		if !of
@@ -341,15 +338,15 @@ class Task
 #		if !of
 #			return -EBADF
 #		return of.seek(offset, mode)
-#
-#	func mut sys_close(handle: int) -> int
-#		var of = get_handle(handle)
-#		if !of
-#			return -EBADF
-#		of.unref()
-#		handles[handle] = nil
-#		return 0
-#	
+
+	func mut sys_close(handle: int) -> int
+		for of in get_handle(handle)
+			of.unref()
+			handles[handle] = nil
+			return 0
+		else
+			return -EBADF
+	
 #	func mut sys_dup(fd: int) -> int
 #		var of = get_handle(fd)
 #		if !of
