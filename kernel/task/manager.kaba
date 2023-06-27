@@ -29,7 +29,7 @@ class TaskManager as @noauto
 	var static __handler_p__: int
 	var static ack_hw_irq: int
 
-	func static get_next_pid() -> int
+	func static get_next_unused_pid() -> int
 		for i in next_pid_to_assign:MAX_TASKS
 			if tasks[i].status == TaskStatus.UNUSED
 				next_pid_to_assign = i + 1
@@ -42,34 +42,21 @@ class TaskManager as @noauto
 
 	func static add_task_user(name: cstring, F: int64, parent: Task*) -> Task*
 
-		let pid = get_next_pid()
+		let pid = get_next_unused_pid()
 		if pid < 0
 			return nil
 		var t = &tasks[pid]
 		
-		t.cur_dir = FileSystem.root
-	
-#		var t = Heap.malloc(sizeof(Task)) as Task&
-		t.pid = pid
-		t.status = TaskStatus.RUNNING
-		t.stack := _i2p(0x40070000)#Heap.malloc(1024)
-		t.rsp = _p2i(t.stack) + 1024
-		t.rip = F
+		t.init(pid, name, F, parent)
+		t.puid = next_puid_to_assign
+		next_puid_to_assign ++
 
-#	
-#		t.init(pid, name, parent)
-#		t.kernel_mode = false
-#	
-#		t.stack_size = TASK_STACK_SIZE
-#		t.stack = _i2p(TASK_STACK_POS)
-#		t.mem_bottom = KERNEL_MEM
-#		t.mem_size = INITIAL_TASK_MEM
 #		t.page_dir = Paging.create_root_table()
 #		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
 #		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
 #			panic("incomplete page dir") # ...
-#		t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, F)
-#		gdt[t.desc].set_task(t)
+
+		t.status = TaskStatus.RUNNING
 
 		return t
 #
@@ -160,9 +147,6 @@ class TaskManager as @noauto
 		# markiert das aktuelle TSS als "busy"!
 		
 
-	var static cur: Task*
-	var static next: Task*
-
 	func static init()
 		prints("init tasks...")
 		gdt.init()
@@ -199,8 +183,6 @@ class TaskManager as @noauto
 	
 		gdt.load()
 		setup_hardware_task()
-		cur = nil
-		next = nil
 
 		prints("  ok\n")
 	
@@ -242,8 +224,8 @@ class TaskManager as @noauto
 			for i in 0:100000000
 				pass
 
-	func static x()
-		next = add_task_user("dummy", _p2i(raw_function_pointer(f_user)), nil)
+	func static add_dummy()
+		add_task_user("dummy", _p2i(raw_function_pointer(f_user)), nil)
 
 #int sys_getpid()
 #	asm{

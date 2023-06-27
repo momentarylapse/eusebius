@@ -9,7 +9,7 @@ use mem.paging
 #use mem.shared
 #use task.task
 use task.manager
-#use task.scheduler
+use task.scheduler
 #use time.timevalue
 #use time.timer
 #use irq.irq
@@ -118,7 +118,7 @@ class Syscall
 
 	func static handle(frame: Frame) -> int64
 		let index = int(frame.rax)
-		for t in TaskManager.cur
+		for t in Scheduler.cur
 			if index == 0x0001 # exit
 				panic("process called exit()")
 			else if index == 0x0003 # read

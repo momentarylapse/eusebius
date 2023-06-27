@@ -4,7 +4,7 @@ use fs.fs
 ##use fs.pipe
 use fs.access
 ##use mem.heap
-##use mem.paging
+use mem.paging
 #use mem.shared
 ##use net.socket
 ##use time.timevalue
@@ -28,8 +28,8 @@ let KERNEL_MEM = 0x00800000 # 8mb
 let IDLE_STACK_SIZE = 0x00001000 # 4k
 
 let TASK_IMAGE_POS = KERNEL_MEM
+let TASK_STACK_POS = 0x40070000
 let TASK_STACK_SIZE = 0x00080000 # 512k
-let TASK_STACK_POS = 0x00880000
 let NUM_PRE_GDT_ENTRIES = 5
 let INITIAL_TASK_MEM = 0x00800000 # 8m
 
@@ -70,12 +70,12 @@ class Task
 	var return_status: int
 	var waiting_mode: WaitingMode
 	var waiting_param_i1, waiting_param_i2, waiting_param_i3: int
-#	var sleep_and_wait: bool
-#	var parent: Task*
+	var sleep_and_wait: bool
+	var parent: Task*
 	var name: cstring
 #	var arg: cstring
 	var cur_dir: FileEntry*
-#	var page_dir: PageRootTable*
+	var page_dir: PageRootTable&
 #	var mem_bottom, mem_size: int
 #	
 #	var time_all, time_temp: TimeValue
@@ -85,35 +85,39 @@ class Task
 	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
 #	var shmem: TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK]
 #	
-#	var signal_handlers: int[MAX_SIGNALS]
+	var signal_handlers: int[MAX_SIGNALS]
 #	var signal_reg_buf: TaskStateSegment
-#	var in_signal: bool
-#	var in_hw_irq: int
-#	
-#	func mut init(_pid: int, _name: cstring, _parent: Task*)
-#		for s in signal_handlers
-#			s = 0
-#		sleep_and_wait = false
-#			
-#		pid = _pid
-#		puid = TaskManager.next_puid_to_assign
-#		TaskManager.next_puid_to_assign ++
-#
-#		strcpy(name, _name)
-#		desc = NUM_PRE_GDT_ENTRIES + pid
-#		status = TaskStatus.SLEEPING
-#		parent = _parent
-#		if parent
-#			cur_dir = parent.cur_dir
-#		else
-#			cur_dir = FileSystem.root
+	var in_signal: bool
+	var in_hw_irq: int
+	
+	var first_time_running: bool
+	
+	func mut init(_pid: int, _name: cstring, F: int64, _parent: Task*)
+		for s in signal_handlers
+			s = 0
+		sleep_and_wait = false
+		first_time_running = true
+			
+		pid = _pid
+
+		strcpy(name, _name)
+		status = TaskStatus.SLEEPING
+		parent = _parent
+		for p in parent
+			cur_dir = p.cur_dir
+		else
+			cur_dir = FileSystem.root
 #		kernel_mode = false
-#		
-#		in_signal = false
-#		in_hw_irq = -1
-#	
-#		#t.stack_size = TASK_STACK_SIZE
-##	t.stack = _i2p(TASK_STACK_POS)
+		
+		in_signal = false
+		in_hw_irq = -1
+	
+		#t.stack_size = TASK_STACK_SIZE
+		
+		stack := _i2p(TASK_STACK_POS)
+		rsp = _p2i(stack) + TASK_STACK_SIZE
+		rip = F
+		
 ##	t.mem_bottom = KERNEL_MEM
 ##	t.mem_size = INITIAL_TASK_MEM
 ##	t.page_dir = paging.create_page_directory()

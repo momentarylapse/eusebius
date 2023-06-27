@@ -46,24 +46,24 @@ func main()
 #		print(sin(x)*sin(x) + cos(x)*cos(x))
 #		print("  ")
 	
-	print(os.fs.size("/bin/simple"))
-	if os.fs.exists("/bin/simple")
-		print(" FILE ")
-	if os.fs.is_directory("/bin")
-		print(" DIR ")
-	print(os.fs.current_directory())
-	os.fs.set_current_directory("/bin")
-	print("  ")
-	print(os.fs.current_directory())
-	print("\n")
-	var h = open("/bin/simple", O_RDONLY)
-	var xx: cstring
-	read(h, &xx, 80)
-	print(as_binary(&xx, 80).hex())
+#	print(os.fs.size("/bin/simple"))
+#	if os.fs.exists("/bin/simple")
+#		print(" FILE ")
+#	if os.fs.is_directory("/bin")
+#		print(" DIR ")
+#	print(os.fs.current_directory())
+#	os.fs.set_current_directory("/bin")
+#	print("  ")
+#	print(os.fs.current_directory())
+#	print("\n")
+#	var h = open("/bin/simple", O_RDONLY)
+#	var xx: cstring
+#	read(h, &xx, 80)
+#	print(as_binary(&xx, 80).hex())
 	
 	
-	while true
-		pass
+#	while true
+#		pass
 #	
 #	#var p = @malloc(100) as int[10]&
 #	#kprinti(13)
@@ -75,7 +75,7 @@ func main()
 		
 		print(s)
 		
-		for i in 0:10000000
+		for i in 0:100000000
 			pass
 		#exit(0)
 		x ++

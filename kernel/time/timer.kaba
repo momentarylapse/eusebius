@@ -2,8 +2,6 @@ use common
 use io.io
 use io.text
 use time.timevalue
-use task.task
-use task.manager
 use irq.irq
 
 let TIMER_IRQ = 0
@@ -34,7 +32,7 @@ class KernelTimer as @noauto
 
 #	func static init_interrupt(out t: Task, dt_ms: int)
 
-	func static init(dt_ms: int)
+	func static init(F: void*, dt_ms: int)
 		# read year from CMOS
 		#outportb(0x70, 0x40 | 0x09)
 		#int rr = inportb(0x71)
@@ -46,7 +44,7 @@ class KernelTimer as @noauto
 	#	irq.set_task(irq.hw2soft(0), &t) # IRQ 0
 	
 		#IrqManager.disable()
-		IrqManager.set_func(TIMER_IRQ + 32, raw_function_pointer(int_timer))
+		IrqManager.set_func(TIMER_IRQ + 32, F)
 	
 		# ticks/s: 1193180
 		# 100Hz:   11932 = 0x2e9c
@@ -58,91 +56,9 @@ class KernelTimer as @noauto
 		outportb(0x43, 0x34) # channel 0, rate generator
 		outportb(0x40, ticks_till_irq)
 		outportb(0x40, ticks_till_irq >> 8)
-		
+	
+	func static start()
 		IrqManager.unmask(TIMER_IRQ)
 
-	func static @noframe int_timer()
-		asm{
-			cli
-			# general purpose registers
-			push rax
-			push rbx
-			push rcx
-			push rdx
-			push rbp
-			push rdi
-			push rsi
-			push r8
-			push r9
-			push r10
-			push r11
-			push r12
-			push r13
-			push r14
-			push r15
-			# control registers 4*8b=32b
-			mov eax, cr0
-			push rax
-			mov eax, cr2
-			push rax
-			mov eax, cr3
-			push rax
-			mov eax, cr4
-			push rax
-			#mov rax, cr8
-			#push rax
-			mov rax, rsp
-			mov __temp_p__, rax
-		}
-		handle_irq(__temp_p__ as InterruptFrame*)
-		asm{
-			# control registers
-			#add rsp, 0x20
-			pop rax
-			mov cr4, eax
-			pop rax
-			mov cr3, eax
-			pop rax
-			mov cr2, eax
-			pop rax
-			mov cr0, eax
-			# general purpose registers
-			pop r15
-			pop r14
-			pop r13
-			pop r12
-			pop r11
-			pop r10
-			pop r9
-			pop r8
-			pop rsi
-			pop rdi
-			pop rbp
-			pop rdx
-			pop rcx
-			pop rbx
-			pop rax
-			#sti
-			db 0x48
-			iret
-		}
-
-	func static handle_irq(_frame: InterruptFrame*)
-		IrqManager.mask(TIMER_IRQ)
-		#prints("<timer>")
-		for n in TaskManager.next
-			for frame in _frame
-				frame.cs = 0x23
-				frame.ss = 0x1b
-				frame.rip = n.rip
-				frame.rsp = n.rsp
-				frame.rbp = n.rsp
-				#frame.cr4 = frame.cr4 | 0x200 # sse=1
-				frame.rax = 0
-				frame.rflags = 0x3200
-				TaskManager.next = nil
-				TaskManager.cur = n
-		IrqManager.eoi(TIMER_IRQ)
-		IrqManager.unmask(TIMER_IRQ)
 	
 	

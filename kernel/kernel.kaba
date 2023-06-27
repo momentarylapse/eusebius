@@ -15,7 +15,7 @@ use mem.paging
 use mem.shared
 use net.socket
 use task.manager
-##use task.scheduler
+use task.scheduler
 use irq.irq
 use irq.error
 use time.timer
@@ -88,14 +88,12 @@ func main()
 		panic("/boot not found")
 	
 	StdCharDevs.init()
-	
-	KernelTimer.init(50)
 
 	Syscall.init()
 
 	load_kalib()
 
-	#TaskManager.x()
+	#TaskManager.add_dummy()
 	
 	prints("loading dummy process... ")
 	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
@@ -105,16 +103,13 @@ func main()
 		#printh(code, r)
 		prints("ok\n")
 		
-		TaskManager.next = TaskManager.add_task_user("simple", code, nil)
+		TaskManager.add_task_user("simple", code, nil)
 	else
 		panic("can not open /bin/simple")
 	
 	
-	IrqManager.enable()
-
-	asm{
-		jmp $
-	}
+	KernelTimer.init(raw_function_pointer(Scheduler.int_timer), 50)
+	Scheduler.run()
 	
 	
 ##	load_kalib()

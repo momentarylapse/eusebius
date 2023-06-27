@@ -2,6 +2,7 @@ use common
 use io.text
 use io.io
 use task.task
+use task.manager
 use time.timevalue
 use time.timer
 use irq.irq
@@ -17,9 +18,9 @@ class Scheduler
 
 #	var static scheduler_task: Task*
 #
-#	var static next_perf_calc: TimeValue
-#	var static running_pid: int
-#
+	var static next_perf_calc: TimeValue
+	var static running_pid: int
+
 #	func static int_timer()
 #		while true
 #			#prints("(")
@@ -45,30 +46,136 @@ class Scheduler
 #			asm {
 #				iret
 #			}
-#
-#	func static start()
-#		running_pid = 0
-#		prints("starting scheduler\n")
-#	
+
+	var static cur: Task*
+	var static next: Task*
+	
+	func static run()
+		running_pid = 0
+		prints("starting scheduler\n")
+		
+		next = nil#&TaskManager.tasks[0]
+		cur = nil
+
+		KernelTimer.start()
+		IrqManager.enable()
+
+		asm{
+			jmp $
+		}
+
+
 #		scheduler_task = TaskManager.add_task_kernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, kernel_task)
 #	
 #		KernelTimer.init_interrupt(scheduler_task, TASK_SWITCH_DT)
 #		next_perf_calc = KernelTimer.tv
 #		next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
 #		scheduler_task.run_forced()
-#
-#
-#
-#	# Scheduler
-#	func static get_next_task(pid: int) -> int
-#		for i in pid + 1:MAX_TASKS
-#			if TaskManager.tasks[i].status == TASK_STATUS_RUNNING
-#				return i
-#		for i in 0:pid+1
-#			if TaskManager.tasks[i].status == TASK_STATUS_RUNNING
-#				return i
-#		return TaskManager.idle_task.pid
-#
+
+	func static @noframe int_timer()
+		asm{
+			cli
+			# general purpose registers
+			push rax
+			push rbx
+			push rcx
+			push rdx
+			push rbp
+			push rdi
+			push rsi
+			push r8
+			push r9
+			push r10
+			push r11
+			push r12
+			push r13
+			push r14
+			push r15
+			# control registers 4*8b=32b
+			mov eax, cr0
+			push rax
+			mov eax, cr2
+			push rax
+			mov eax, cr3
+			push rax
+			mov eax, cr4
+			push rax
+			#mov rax, cr8
+			#push rax
+			mov rax, rsp
+			mov __temp_p__, rax
+		}
+		handle_irq(__temp_p__ as InterruptFrame*)
+		asm{
+			# control registers
+			#add rsp, 0x20
+			pop rax
+			mov cr4, eax
+			pop rax
+			mov cr3, eax
+			pop rax
+			mov cr2, eax
+			pop rax
+			mov cr0, eax
+			# general purpose registers
+			pop r15
+			pop r14
+			pop r13
+			pop r12
+			pop r11
+			pop r10
+			pop r9
+			pop r8
+			pop rsi
+			pop rdi
+			pop rbp
+			pop rdx
+			pop rcx
+			pop rbx
+			pop rax
+			#sti
+			db 0x48
+			iret
+		}
+
+	func static handle_irq(_frame: InterruptFrame*)
+		IrqManager.mask(TIMER_IRQ)
+		#prints("<timer>")
+		let next_pid = get_next_task()
+		if next_pid < 0
+			panic("no running tasks")
+		cur = &TaskManager.tasks[next_pid]
+		for t in cur
+			if t.first_time_running
+				for frame in _frame
+					frame.cs = 0x23
+					frame.ss = 0x1b
+					frame.rip = t.rip
+					frame.rsp = t.rsp
+					frame.rbp = t.rsp
+					#frame.cr4 = frame.cr4 | 0x200 # sse=1
+					frame.rax = 0
+					frame.rflags = 0x3200
+					t.first_time_running = false
+		IrqManager.eoi(TIMER_IRQ)
+		IrqManager.unmask(TIMER_IRQ)
+
+
+	# Scheduler
+	func static get_next_task() -> int
+		var pid0 = 0
+		for c in cur
+			pid0 = c.pid
+		for i in pid0 + 1:MAX_TASKS
+			if TaskManager.tasks[i].status == TaskStatus.RUNNING
+				return i
+		for i in 0:pid0+1
+			if TaskManager.tasks[i].status == TaskStatus.RUNNING
+				return i
+		for i in 0:5
+			printi(int(TaskManager.tasks[i].status))
+		return -1#TaskManager.idle_task.pid
+
 #	func static process_waiting_tasks()
 #		for t in TaskManager.tasks
 #			if t.status == TASK_STATUS_WAITING
