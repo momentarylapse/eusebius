@@ -93,8 +93,10 @@ func main()
 	Syscall.init()
 
 	load_kalib()
+	
+	#--------- experiments:
 
-	#TaskManager.add_dummy()
+	TaskManager.add_dummy()
 	
 	prints("loading dummy process... ")
 	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
@@ -112,9 +114,7 @@ func main()
 	KernelTimer.init(raw_function_pointer(Scheduler.int_timer), 50)
 	Scheduler.run()
 	
-	
-##	load_kalib()
-##	
+
 ##	int stdin = kernel_task.open("/dev/tty", O_RDONLY)
 ##	int stdout = kernel_task.open("/dev/tty", O_WRONLY)
 ##	

@@ -141,23 +141,30 @@ class Scheduler
 	func static handle_irq(_frame: InterruptFrame*)
 		IrqManager.mask(TIMER_IRQ)
 		#prints("<timer>")
+		
+		for t in cur
+			for frame in _frame
+				memcpy(&t.frame, frame, sizeof(InterruptFrame))
+		
 		let next_pid = get_next_task()
 		if next_pid < 0
 			panic("no running tasks")
 		cur = &TaskManager.tasks[next_pid]
 		for t in cur
-			if t.first_time_running
-				for frame in _frame
-					frame.cs = 0x23
-					frame.ss = 0x1b
+			for frame in _frame
+				if t.first_time_running
+					frame.cs = t.frame.cs
+					frame.ss = t.frame.ss
 					frame.rip = t.frame.rip
 					frame.rsp = t.frame.rsp
 					frame.rbp = t.frame.rsp
 					frame.cr3 = t.frame.cr3
 					#frame.cr4 = frame.cr4 | 0x200 # sse=1
-					frame.rax = 0
-					frame.rflags = 0x3200
+					frame.rax = t.frame.rax
+					frame.rflags = t.frame.rflags
 					t.first_time_running = false
+				else
+					memcpy(frame, &t.frame, sizeof(InterruptFrame))
 		IrqManager.eoi(TIMER_IRQ)
 		IrqManager.unmask(TIMER_IRQ)
 

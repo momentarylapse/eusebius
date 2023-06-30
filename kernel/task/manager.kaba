@@ -233,10 +233,10 @@ class TaskManager as @noauto
 			asm{
 				mov rdi, __temp_p__
 				mov esi, __temp_i__
-				mov eax, 0x00001235
+				mov eax, 0x00001234
 				syscall
 			}
-			for i in 0:100000000
+			for i in 0:370000000
 				pass
 
 	func static add_dummy()
