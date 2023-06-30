@@ -44,17 +44,17 @@ class PageTable extends Page
 		return num_entries
 		
 	func get_sub(index: int) -> PageTable*
-		return _i2p(e[index] & 0xfffff000) as PageTable*
+		return _i642p(e[index] & 0xfffffffffffff000) as PageTable*
 	
 	func mut get_or_create_sub(index: int, flags: PageFlags) -> PageTable&
 		if e[index] == 0
 			let pos = Paging.reserve_physical_page()
-			var sub = _i2p(pos) as PageTable&
+			var sub = _i642p(pos) as PageTable&
 			sub.clear()
 			e[index] = pos + int(flags)
 			return sub
 		else
-			return _i2p(e[index] & 0xfffff000) as PageTable&
+			return _i642p(e[index] & 0xfffffffffffff000) as PageTable&
 
 
 # split virtual address -> page indices
@@ -75,10 +75,10 @@ class PageRootTable extends PageTable
 		var npages = ceil_quot(size, PAGE_SIZE)
 		var table_flags = PageFlags.PRESENT | PageFlags.WRITABLE | PageFlags.GLOBAL | PageFlags.USER
 		let flags = _flags | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
-
+		
 		var pdpt = get_or_create_sub(0, table_flags)
 		var pdt = pdpt.get_or_create_sub(dirp_no, table_flags)
-			
+		
 		while npages > 0
 			var pt = pdt.get_or_create_sub(dir_no, table_flags)
 			
@@ -189,12 +189,12 @@ class PageRootTable extends PageTable
 			page_no = 0
 		return -1
 
-	func virtual_to_physical(addr: int) -> int
+	func virtual_to_physical(addr: int64) -> int64
 		var (dirp_no, dir_no, page_no, offset) = page_params(addr)
 		for pdpt in get_sub(0)
-			for pdt in pdpt.get_sub(0)
+			for pdt in pdpt.get_sub(dirp_no)
 				for pt in pdt.get_sub(dir_no)
-					let n = pt.e[page_no] & 0xfffff000
+					let n = pt.e[page_no] & 0xfffffffffffff000
 					if n == 0
 						return 0
 					return n + offset
@@ -302,7 +302,7 @@ class Paging as @noauto
 			physical_mask[i] = 0
 		
 		# reserve 8mb for kernel
-		for i in 0:64#(64-8)#(LINEAR_AREA / PAGE_SIZE / 32)
+		for i in 0:(KERNEL_MEMORY_SIZE / PAGE_SIZE / 32)
 			physical_mask[i] = 0xffffffff
 		
 		mark_reserved_by_bios()
@@ -334,14 +334,6 @@ class Paging as @noauto
 #			var p = _i2p(i) as int&
 #			var x: int = p
 
-
-		# alloc + randomly map 8m for user task
-		# FIXME: ...everything
-		kernel_root_table.map_by_alloc(2^30, 0x00800000, PageFlags.WRITABLE | PageFlags.USER)
-		var pp = _i2p(2^30) as int&
-		pp = 13
-
-		
 		prints("  ok\n")
 		
 	
@@ -421,7 +413,6 @@ class Paging as @noauto
 		return 0
 	
 	func static reserve_physical_chunk(paddr: int, size: int, test_free: bool) -> bool
-		prints(" RC ")
 		if (paddr & 0x00000fff) != 0
 			return false
 		if size == 0

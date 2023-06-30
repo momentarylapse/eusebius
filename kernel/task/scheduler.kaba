@@ -150,9 +150,10 @@ class Scheduler
 				for frame in _frame
 					frame.cs = 0x23
 					frame.ss = 0x1b
-					frame.rip = t.rip
-					frame.rsp = t.rsp
-					frame.rbp = t.rsp
+					frame.rip = t.frame.rip
+					frame.rsp = t.frame.rsp
+					frame.rbp = t.frame.rsp
+					frame.cr3 = t.frame.cr3
 					#frame.cr4 = frame.cr4 | 0x200 # sse=1
 					frame.rax = 0
 					frame.rflags = 0x3200

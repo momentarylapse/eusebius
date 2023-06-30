@@ -62,6 +62,10 @@ let KERNEL_VERSION = "0.2.99.0"
 let MACHINE_TYPE = "x64"
 
 
+let KERNEL_MEMORY_SIZE = 0x00800000 # 8mb
+let KERNEL_STACK_SIZE = 0x00020000 # 128k
+let IDLE_STACK_SIZE = 0x00001000 # 4k
+
 #--------------------------------------------------------------
 # Low Level
 

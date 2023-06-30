@@ -7,6 +7,7 @@ use fs.access
 use mem.paging
 #use mem.shared
 ##use net.socket
+use irq.irq
 ##use time.timevalue
 ##use gdt
 
@@ -23,15 +24,12 @@ let SIGX = 23
 let MAX_SIGNALS = 32
 
 
-let KERNEL_STACK_SIZE = 0x00020000 # 128k
-let KERNEL_MEM = 0x00800000 # 8mb
-let IDLE_STACK_SIZE = 0x00001000 # 4k
-
-let TASK_IMAGE_POS = KERNEL_MEM
+let TASK_MEMORY_OFFSET = 0x40000000 # 1g
+let TASK_IMAGE_POS = TASK_MEMORY_OFFSET
 let TASK_STACK_POS = 0x40070000
 let TASK_STACK_SIZE = 0x00080000 # 512k
 let NUM_PRE_GDT_ENTRIES = 5
-let INITIAL_TASK_MEM = 0x00800000 # 8m
+let TASK_INITIAL_MEMORY_SIZE = 0x00800000 # 8m
 
 let TASK_MAX_MESSAGES = 16
 
@@ -62,8 +60,7 @@ enum WaitingMode as @noauto
 
 class Task
 	var stack: void&
-	var rsp: int64
-	var rip: int64
+	var frame: InterruptFrame
 #	var desc: int
 	var pid, puid: int
 	var status: TaskStatus
@@ -75,7 +72,7 @@ class Task
 	var name: cstring
 #	var arg: cstring
 	var cur_dir: FileEntry*
-	var page_dir: PageRootTable&
+	var page_root_dir: PageRootTable&
 #	var mem_bottom, mem_size: int
 #	
 #	var time_all, time_temp: TimeValue
@@ -115,8 +112,8 @@ class Task
 		#t.stack_size = TASK_STACK_SIZE
 		
 		stack := _i2p(TASK_STACK_POS)
-		rsp = _p2i(stack) + TASK_STACK_SIZE
-		rip = F
+		frame.rsp = _p2i(stack) + TASK_STACK_SIZE
+		frame.rip = F
 		
 ##	t.mem_bottom = KERNEL_MEM
 ##	t.mem_size = INITIAL_TASK_MEM

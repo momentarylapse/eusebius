@@ -2,6 +2,7 @@ use common
 use io.text
 use fs
 use mem.heap
+use mem.paging
 use task
 use gdt
 
@@ -51,14 +52,28 @@ class TaskManager as @noauto
 		t.puid = next_puid_to_assign
 		next_puid_to_assign ++
 
-#		t.page_dir = Paging.create_root_table()
-#		t.page_dir.map_lin(PAGE_SIZE, PAGE_SIZE, KERNEL_MEM - PAGE_SIZE, false)
-#		if !t.page_dir.map_by_alloc(t.mem_bottom, t.mem_size, true)
-#			panic("incomplete page dir") # ...
+		t.page_root_dir := create_page_root_table_for_task()
+		t.frame.cr3 = _p2i64(t.page_root_dir)
 
 		t.status = TaskStatus.RUNNING
 
 		return t
+		
+	func static create_page_root_table_for_task() -> PageRootTable&
+		var table_flags = PageFlags.PRESENT | PageFlags.WRITABLE | PageFlags.GLOBAL | PageFlags.USER
+		let flags = PageFlags.WRITABLE | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
+
+		var rt = Paging.create_root_table()
+		var pdpt = rt.get_or_create_sub(0, table_flags)
+		var kernel_pdpt = _i642p(Paging.kernel_root_table.e[0] & 0xfffffffffffff000) as PageTable&
+		# reuse 1g from kernel
+		pdpt.e[0] = kernel_pdpt.e[0]
+		
+		
+		# alloc + randomly map 8m for user task
+		# FIXME: ...everything
+		rt.map_by_alloc(TASK_MEMORY_OFFSET, TASK_INITIAL_MEMORY_SIZE, PageFlags.WRITABLE | PageFlags.USER)
+		return rt
 #
 #	func static add_task_kernel(name: cstring, F: void*, stack_size: int, parent: Task*) -> Task*
 #		let pid = get_next_pid()
