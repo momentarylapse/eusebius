@@ -1,91 +1,34 @@
 use common
 use io.text
 use cpu
-use fs.fs
-use fs.access
-use dev.block
 use mem.heap
 use mem.paging
 #use mem.shared
 use task.task
 use task.manager
 use task.scheduler
-use time.timevalue
-use time.timer
+use syscall.operations
 #use irq.irq
 
 #let SYSCALL_STACK_SIZE = 65536
 
 
+# syscall:
+#  (cs = STAR...)
+#  (ss = STAR...)
+#  (rflags = ..MSTAR)
+#  (cpl = 0)
+#  rcx = rip
+#  r11 = rflags
+#  rip = LSTAR
 
+# sysret:
+#  (cs = STAR...)
+#  (ss = STAR...)
+#  (cpl = 3)
+#  rflags = r11
+#  rip = rcx
 
-func @noframe syscall_test()
-	asm{
-		cli
-		# general purpose registers
-		push rax
-		push rbx
-		push rcx # < task rip
-		push rdx
-		push rbp
-		push rdi
-		push rsi
-		push r8
-		push r9
-		push r10
-		push r11 # < task rflags
-		push r12
-		push r13
-		push r14
-		push r15
-	}
-	
-	# switch to kernel/syscall stack
-	asm {
-		mov rax, rsp
-		mov __temp_p__, rax
-	}
-	Syscall.task_rsp = __temp_p__
-	__temp_p__ = Syscall.rsp
-	asm {
-		mov rsp, __temp_p__
-		mov rbp, rsp
-	}
-	
-	# no local variables allowed! (rbp still from task-frame)
-#	__temp_i64__ = Syscall.handle(__temp_p__ as Syscall.Frame&)
-	Syscall.handle_meta(Syscall.task_rsp as Syscall.Frame&)
-
-	# switch to task stack
-	__temp_p__ = Syscall.task_rsp
-	asm {
-		mov rax, __temp_p__
-		mov rsp, rax
-	}
-	
-	asm {
-		# general purpose registers
-		pop r15
-		pop r14
-		pop r13
-		pop r12
-		pop r11
-		pop r10
-		pop r9
-		pop r8
-		pop rsi
-		pop rdi
-		pop rbp
-		pop rdx
-		pop rcx
-		pop rbx
-		pop rax
-		#mov rax, __temp_i64__ # return value -> rax
-		#add rsp, 0x08
-		
-		db 0x48
-		sysret
-	}
 
 
 class Syscall
@@ -108,8 +51,7 @@ class Syscall
 		
 		Cpu.enable_syscall()
 		Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000)
-		Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_test)))
-#		Cpu.write_msr(Cpu.MSR.CSTAR, _p2i(raw_function_pointer(syscall_test)))
+		Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_handler)))
 		Cpu.write_msr(Cpu.MSR.SF_MASK, (1 << 9) + (1 << 10)) # mask irq + direction flag
 #		let x = Cpu.read_msr(Cpu.MSR.STAR)
 #		printh(&x, 8)
@@ -122,6 +64,78 @@ class Syscall
 #		prints("\n")
 ##		for pp in raw_function_pointer(syscall_test)
 #			printh(pp, 8)
+
+
+	func static @noframe syscall_handler()
+		asm {
+			cli
+			# general purpose registers
+			push rax
+			push rbx
+			push rcx # < task rip
+			push rdx
+			push rbp
+			push rdi
+			push rsi
+			push r8
+			push r9
+			push r10
+			push r11 # < task rflags
+			push r12
+			push r13
+			push r14
+			push r15
+		}
+	
+		# switch to kernel/syscall stack
+		asm {
+			mov rax, rsp
+			mov __temp_p__, rax
+		}
+		Syscall.task_rsp = __temp_p__
+		__temp_p__ = Syscall.rsp
+		asm {
+			mov rsp, __temp_p__
+			mov rbp, rsp
+		}
+	
+		# no local variables allowed! (rbp still from task-frame)
+#		__temp_i64__ = Syscall.handle(__temp_p__ as Syscall.Frame&)
+		Syscall.handle_meta(Syscall.task_rsp as Syscall.Frame&)
+
+		# switch to task stack
+		__temp_p__ = Syscall.task_rsp
+		asm {
+			mov rax, __temp_p__
+			mov rsp, rax
+		}
+	
+		asm {
+			# general purpose registers
+			pop r15
+			pop r14
+			pop r13
+			pop r12
+			pop r11
+			pop r10
+			pop r9
+			pop r8
+			pop rsi
+			pop rdi
+			pop rbp
+			pop rdx
+			pop rcx
+			pop rbx
+			pop rax
+			#mov rax, __temp_i64__ # return value -> rax
+			#add rsp, 0x08
+		
+			db 0x48
+			sysret
+		}
+
+
+
 
 	func static handle_meta(out frame: Frame)
 		let r = handle(frame)
@@ -182,11 +196,7 @@ class Syscall
 			else if index == 0x0014 # getpid
 				return Scheduler.running_pid
 			else if index == 0x0019 # stime
-				KernelTimer.update()
-				var tv = _i642p(frame.rdi) as TimeValue&
-				tv = KernelTimer.tv
-				#return -EFAULT
-				return 0
+				return sys_stime(frame.rdi)
 #			else if index == 37 # kill
 #				r = caller.sys_kill(param1, param2)
 #			else if index == 39 # mkdir
@@ -260,279 +270,3 @@ class Syscall
 				printi(index)
 		return -1
 
-
-func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int
-	var tv = _i642p(p1) as TimeValue&
-	tv.add(KernelTimer.tv)
-	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
-	return 0
-
-func sys_exit(out t: Task, r: int)
-	TaskManager.die(t, r)
-
-
-func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
-	let h = t.sys_open(faddr, O_RDONLY)
-	if h < 0
-		return -ENOENT
-	for of in t.handles[h]
-		var filename: cstring
-		of.entry.get_path(filename)
-		var addr = TASK_IMAGE_POS # task space...
-		for tt in TaskManager.add_task_user(filename, addr, &t)
-			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-			while true
-				let r = of.read(code, 1024)
-				if r <= 0
-					break
-				code += r
-			t.sys_close(h)
-			
-		#	var of_in = get_handle(fd_in)
-		#	var of_out = get_handle(fd_out)
-		#	tt.add_handle(of_in)
-		#	tt.add_handle(of_out)
-	
-			#tt.activate()
-			return tt.pid
-		else
-			t.sys_close(h)
-			return -ENOMEM
-	t.sys_close(h)
-	return -1
-
-#class SysInfo as @noauto
-#	var uptime: int
-#	var loads: int[3]
-#	var totalram, freeram, sharedram, bufferram: int
-#	var totalswap, freeswap: int
-#	var procs: int
-#	var totalhigh, freehigh: int
-#	var mem_unit: int
-#	var pad: int[2]
-#	var totalheap, freeheap: int
-#	func get()
-#		KernelTimer.update()
-#		uptime = KernelTimer.tv.sec
-#		for l in loads
-#			l = 0
-#		mem_unit = 1024 #PAGE_SIZE
-#		totalram = MemorySize / mem_unit
-#		freeram = (MemorySize - Paging.get_used()) / mem_unit
-#		sharedram = SharedMemory.get_used() / mem_unit
-#		bufferram = 0
-#		totalswap = 0
-#		freeswap = 0
-#		procs = 0
-#		for t in TaskManager.tasks
-#			if t.status != TASK_STATUS_UNUSED
-#				procs ++
-#		totalhigh = 0
-#		freehigh = 0
-#		totalheap = MEM_HEAP_SIZE / mem_unit
-#		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
-#
-#var _sys_info: SysInfo
-
-class UTSName as @noauto
-	var sysname: cstring
-	var nodename: cstring
-	var release: cstring
-	var version: cstring
-	var machine: cstring
-	var domainname: cstring
-	func mut get()
-		strcpy(sysname, KERNEL_NAME)
-		strcpy(nodename, "???")
-		strcpy(release, KERNEL_VERSION)
-		strcpy(version, KERNEL_VERSION)
-		strcpy(machine, MACHINE_TYPE)
-		strcpy(domainname, "-no domain-")
-
-#class TaskInfo as @noauto
-#	var name: cstring
-#	var pid, ppid, mode, status: int
-#	var mem: int
-#	var cpu: int
-#	var life: TimeValue
-#	func get(_pid: int) -> int
-#		var t = TaskManager.get_task(_pid)
-#		if !t
-#			return -1
-#		strcpy(name, t.name)
-#		pid = t.pid
-#		ppid = -1
-#		if t.parent
-#			ppid = t.parent.pid
-#		status = t.status
-#		mode = 1
-#		if t.kernel_mode
-#			mode = 0
-#		mem = t.pages_alloced()
-#		cpu = t.cpu_load
-#		life = t.time_all
-#		return 0
-#
-#var _task_info: TaskInfo
-#
-#class MountInfo as @noauto
-#	var major, minor: int
-#	var dir: cstring
-#	func get(_index: int) -> int
-#		var m = &FileSystem.mounts[_index]
-#		if !m.dev
-#			return -1
-#		major = m.dev.major
-#		minor = m.dev.minor
-#		m.dest.get_path(dir)
-#		return 0
-#
-#var _mount_info: MountInfo
-
-
-class StatData as @noauto
-	var name: cstring
-	var type: int
-	var size: int
-	var inode: int
-	var mp_inode: int
-	var time: int
-	func mut get(filename: cstring, cur_dir: FileEntry) -> int
-		for e in FileSystem.get(filename, cur_dir)
-			strcpy(name, e.name)
-			type = int(e.type)
-			size = e.size
-			inode = e.inode
-			return 0
-		#panic(filename)
-		return 1
-
-#var _stat_data: StatData
-#
-#func int_syscall()
-#	while true
-#		#show_pvl()
-#		int r = 0
-#		
-#		#int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-#		var caller = &TaskManager.tasks[Scheduler.running_pid]
-#		#printi(pid)
-#		int index = caller.tss.eax
-#		int param1 = caller.tss.ebx
-#		int param2 = caller.tss.ecx
-#		int param3 = caller.tss.edx
-#		int param4 = caller.tss.esi
-#		#printi(RunningPid)
-##		prints(" ")
-##		printi(index)
-##		prints(" ")
-#	
-#		if index == 1 # exit
-#			caller.sys_exit(param1)
-#		else if index == 2 # fork
-#			r = caller.sys_fork()
-
-
-#		else if index == 14 # mknod
-#			r = caller.sys_mknod(param1, param2)
-#		else if index == 19 # seek
-#			r = caller.sys_seek(param1, param2, param3)
-#		else if index == 20 # getpid
-#			r = Scheduler.running_pid
-#		else if index == 25 # stime
-#			KernelTimer.update()
-#			r = 0
-#			if !caller.page_dir.memcpy2task(param1, &KernelTimer.tv, sizeof(TimeValue))
-#				r = -EFAULT
-#		else if index == 37 # kill
-#			r = caller.sys_kill(param1, param2)
-#		else if index == 39 # mkdir
-#			r = caller.sys_mkdir(param1)
-#		else if index == 40 # rmdir
-#			r = caller.sys_rmdir(param1)
-#		else if index == 41 # dup
-#			r = caller.sys_dup(param1)
-#		else if index == 42 # pipe
-#			r = caller.sys_pipe(param1)
-#		else if index == 45 # brk
-#			r = caller.sys_brk(param1)
-
-
-#		else if index == 0x2002 # kprints
-#			cstring filename
-#			if param2 < sizeof(filename)
-#				caller.page_dir.memcpy2kernel(&filename, param1, param2)
-#				filename[param2] = 0
-#				prints(filename)
-#		else if index == 0x2003 # kprinti
-#			printi(param1)
-#		else if index == 0x2005 # taskinfo
-#			r = _task_info.get(param1)
-#			if r == 0
-#				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
-#		else if index == 0x2006 # exit_signal
-#			r = caller.sys_exit_signal()
-#			asm {
-#				# don't overwrite eax with return value
-#				jmp __sys_call_return
-#			}
-#		else if index == 0x2007 # map IRQ
-#			r = irq.sys_map_irq(param1, caller, param2)
-#		else if index == 0x2008 # mountinfo
-#			r = _mount_info.get(param1)
-#			if r == 0
-#				caller.page_dir.memcpy2task(param2, &_mount_info, sizeof(_mount_info))
-#		else if index == 0x2009 # blockinfo
-#			r = -1
-#			var d = BlockDevManager.get(param1, param2)
-#			if d
-#				caller.page_dir.memcpy2task(param3, d, sizeof(BlockDevice))
-#				r = 0
-#		else if index == 0x200a # stat
-#			cstring filename
-#			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
-#			r = _stat_data.get(filename, caller.cur_dir)
-#			if r == 0
-#				caller.page_dir.memcpy2task(param2, &_stat_data, sizeof(_stat_data))
-#		else if index == 0x200b # addr2phys
-#			int offset
-#			r = caller.page_dir.addr2kernel(param1, &offset)
-#		else
-#			r = -ENOSYS
-#		#TextColor = 4
-##		prints("<<")
-##		prints(caller.name)
-##		prints(":")
-##		printi(index)
-##		prints(">>")
-##		TextColor = 7
-#		#while true
-#		#	nil
-#		
-#		if TaskManager.ack_hw_irq >= 0
-#			#prints(" <ACK> ")
-#			irq.end_of_interrupt(TaskManager.ack_hw_irq)
-#			TaskManager.ack_hw_irq = -1
-#		
-#		# task switch?
-#		if caller.status != TASK_STATUS_RUNNING
-#			#prints("S")
-#			int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
-#			Scheduler.reconnect_tasks(pid_next, sys_call_task)
-#			#printi(pid_next)
-#
-#		# back
-#		caller.tss.eax = r
-#		
-#		#prints(">")
-#		asm {
-#		__sys_call_return:
-#			iret
-#		}
-#		#prints("<")
-#	
-#var sys_call_task: Task*
-#
-#func InitSysCall()
-#	sys_call_task = TaskManager.add_task_kernel("irq-syscall", int_syscall, SYSCALL_STACK_SIZE, kernel_task)
-#	irq.set_task(0x80, sys_call_task)

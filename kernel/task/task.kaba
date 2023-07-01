@@ -41,6 +41,7 @@ enum TaskStatus as @noauto
 	ZOMBIE
 	INTERRUPT
 	#DEAD
+	IDLE
 
 
 #var TaskCallData: int[2]

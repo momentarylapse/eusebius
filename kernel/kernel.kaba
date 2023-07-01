@@ -96,6 +96,8 @@ func main()
 	
 	#--------- experiments:
 
+	TaskManager.add_idle_task()
+
 #	TaskManager.add_dummy()
 #	
 #	prints("loading dummy process... ")
@@ -112,7 +114,7 @@ func main()
 
 	prints("loading shell... ")
 	for of in kernel_open("/bin/shell", O_RDONLY, FileSystem.root)
-		for t in TaskManager.add_task_user("shell", TASK_MEMORY_OFFSET, nil)
+		for t in TaskManager.add_user_task("shell", TASK_MEMORY_OFFSET, nil)
 			var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
 			let r = of.read(code, 65536)
 			#printh(code, r)

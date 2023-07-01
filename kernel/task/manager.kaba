@@ -41,7 +41,7 @@ class TaskManager as @noauto
 				return i
 		return -1
 
-	func static add_task_user(name: cstring, F: int64, parent: Task*) -> Task*
+	func static add_user_task(name: cstring, F: int64, parent: Task*) -> Task*
 
 		let pid = get_next_unused_pid()
 		if pid < 0
@@ -232,7 +232,7 @@ class TaskManager as @noauto
 			#prints("\nhi, user!\n")
 			__temp_p__ = &s
 			__temp_i__ = strlen(s)
-			asm{
+			asm {
 				mov rdi, __temp_p__
 				mov esi, __temp_i__
 				mov eax, 0x00001234
@@ -241,10 +241,29 @@ class TaskManager as @noauto
 			for i in 0:370000000
 				pass
 
+	# needs to be able to randomly "restart"
+	func static @noframe f_idle()
+		var s: cstring
+		strcpy(s, ".")
+		while true
+			__temp_p__ = &s
+			__temp_i__ = strlen(s)
+			asm {
+				mov rdi, __temp_p__
+				mov esi, __temp_i__
+				mov eax, 0x00002002
+				syscall
+			}
+			for i in 0:37000000
+				pass
+
 	func static add_dummy()
-		add_task_user("dummy", _p2i(raw_function_pointer(f_user)), nil)
+		add_user_task("dummy", _p2i(raw_function_pointer(f_user)), nil)
 
 
+	func static add_idle_task()
+		for t in add_user_task("idle", _p2i(raw_function_pointer(f_idle)), nil)
+			t.status = TaskStatus.IDLE
 
 	
 	func static send_death_message(out t: Task)
