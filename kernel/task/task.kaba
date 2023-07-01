@@ -8,7 +8,7 @@ use mem.paging
 #use mem.shared
 ##use net.socket
 use irq.irq
-##use time.timevalue
+use time.timevalue
 ##use gdt
 
 
@@ -73,8 +73,8 @@ class Task
 #	var arg: cstring
 	var cur_dir: FileEntry*
 	var page_root_dir: PageRootTable&
-#	var mem_bottom, mem_size: int
-#	
+	var memory_offset, memory_size: int
+	
 #	var time_all, time_temp: TimeValue
 #	var cpu_load: int
 #	
@@ -225,14 +225,14 @@ class Task
 #		
 #	func get_initial_stack_pos() -> void*
 #		return _i2p(_p2i(stack) + stack_size)
-#	
-#	func mut set_wait(mode: WaitingMode, param_i1: int, param_i2: int, param_i3: int)
-#		status = TaskStatus.WAITING
-#		waiting_mode = mode
-#		waiting_param_i1 = param_i1
-#		waiting_param_i2 = param_i2
-#		waiting_param_i3 = param_i3
-#	
+	
+	func mut set_wait(mode: WaitingMode, param_i1: int, param_i2: int, param_i3: int)
+		status = TaskStatus.WAITING
+		waiting_mode = mode
+		waiting_param_i1 = param_i1
+		waiting_param_i2 = param_i2
+		waiting_param_i3 = param_i3
+	
 #	func pages_alloced() -> int
 #		var n = mem_size / PAGE_SIZE
 #		n += page_dir.count_entries() # all page tables
@@ -354,13 +354,11 @@ class Task
 		else
 			return -EBADF
 	
-#	func mut sys_dup(fd: int) -> int
-#		var of = get_handle(fd)
-#		if !of
-#			return -EBADF
-#		let index = add_handle(of)
-#		return index
-#	
+	func mut sys_dup(fd: int) -> int
+		for of in get_handle(fd)
+			return add_handle(of)
+		return -EBADF
+	
 #	func mut sys_pipe(addr: int) -> int
 #		var e = create_file_entry(":pipe:", FileType.PIPE, nil)
 #		if !e
@@ -460,35 +458,32 @@ class Task
 #		if !t
 #			return -ESRCH
 #		return t.handle_signal_link_iret(signal)
-#	
-#	func mut sys_nanosleep(p1: int, p2: int) -> int
-#		var tv: TimeValue
-#		if !page_dir.memcpy2kernel(&tv, p1, sizeof(tv))
-#			return -EFAULT
-#		set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
-#		return 0
-#
-#	func mut sys_brk(_new_top: int) -> int
-#		let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
-#		let cur_top = mem_bottom + mem_size
-#		if new_top <= cur_top
-#			return cur_top
-#		if !page_dir.map_by_alloc(cur_top, new_top - cur_top, true)
-#			return -ENOMEM
-#		mem_size = new_top - mem_bottom
-#		return new_top
-#	
-#	func mut sys_fcntl(fd: int, op: int, param: int) -> int
-#		var of = get_handle(fd)
-#		if !of
-#			return -EBADF
-#		if op == F_GETFL
-#			return of.get_flags()
-#		if op == F_SETFL
-#			of.set_flags(param)
-#			return 0
-#		return -EINVAL
-#	
+
+	func mut sys_nanosleep(p1: int64, p2: int) -> int
+		var tv = _i642p(p1) as TimeValue&
+		set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
+		return 0
+
+	func mut sys_brk(_new_top: int) -> int
+		let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
+		let cur_top = memory_offset + memory_size
+		if new_top <= cur_top
+			return cur_top
+		if !page_root_dir.map_by_alloc(cur_top, new_top - cur_top, PageFlags.WRITABLE | PageFlags.USER)
+			return -ENOMEM
+		memory_size = new_top - memory_offset
+		return new_top
+
+	func mut sys_fcntl(fd: int, op: int, param: int) -> int
+		for of in get_handle(fd)
+			if op == F_GETFL
+				return of.get_flags()
+			if op == F_SETFL
+				of.set_flags(param)
+				return 0
+			return -EINVAL
+		return -EBADF
+	
 #	func mut sys_fork() -> int
 #		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
 #		if !t

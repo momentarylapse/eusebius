@@ -93,16 +93,16 @@ func getdents(h: int, buf: void&) -> bool
 	}
 	return lib_error > 0
 
-#func dup(h: int) -> int
-#	__temp_i__ = h
-#	asm{
-#		mov eax, 0x00000029
-#		mov ebx, __temp_i__
-#		int 0x80
-#		mov __temp_i__, eax
-#	}
-#	return __temp_i__
-#
+func dup(h: int) -> int
+	__temp_i__ = h
+	asm{
+		mov eax, 0x00000029
+		mov edi, __temp_i__
+		syscall
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
 #func pipe(h: int[2]) -> bool
 #	__temp_p__ := &h
 #	asm{
@@ -127,14 +127,14 @@ func fcntl(h: int, op: int, param: int) -> int
 	}
 	return __temp_i__
 
-#func getpid() -> int
-#	asm{
-#		mov eax, 0x00000014
-#		int 0x80
-#		mov __temp_i__, eax
-#	}
-#	return __temp_i__
-#
+func getpid() -> int
+	asm{
+		mov eax, 0x00000014
+		syscall
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
 #func sigaction(sig: int, f: void&) -> bool
 #	__temp_i__ = sig
 #	__temp_p__ := f
@@ -238,113 +238,113 @@ func kill(pid: int, signal: int) -> bool
 #		mov lib_error, eax
 #	}
 #	return lib_error == 0
-#
-#class SysInfo
-#	var dummy: int
-#
-#func sysinfo(buf: SysInfo) -> bool
-#	__temp_p__ := &buf
-#	asm{
-#		mov eax, 0x00000074
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#class TaskInfo
-#	var dummy: int
-#
-#func taskinfo(pid: int, buf: TaskInfo) -> bool
-#	__temp_i__ = pid
-#	__temp_p__ := &buf
-#	asm{
-#		mov eax, 0x00002005
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#class MountInfo
-#	var dummy: int
-#
-#func mountinfo(pid: int, buf: MountInfo) -> bool
-#	__temp_i__ = pid
-#	__temp_p__ := &buf
-#	asm{
-#		mov eax, 0x00002008
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#class BlockDevice
-#	var _dummy: int
-#
-#func blockinfo(major: int, minor: int, buf: BlockDevice) -> bool
-#	__temp_i__ = major
-#	__temp_i2__ = minor
-#	__temp_p__ := &buf
-#	asm{
-#		mov eax, 0x00002009
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_i2__
-#		mov edx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#
-#func uname(buf: void&) -> bool
-#	__temp_p__ := buf
-#	asm{
-#		mov eax, 0x0000007a
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#class TimeValue
-#	var sec, nanosec: int
-#
-#func time(buf: TimeValue) -> bool
-#	__temp_p__ := &buf
-#	asm{
-#		mov eax, 0x00000019
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
-#	__temp_p__ := &buf
-#	asm{
-#		mov eax, 0x000000a2
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#func sleep(sec: int) -> bool
-#	var tv, tv0: TimeValue
-#	tv.sec = sec
-#	tv.nanosec = 0
-#	return nanosleep(tv, tv0)
-#
-#func usleep(usec: int) -> bool
-#	var tv, tv0: TimeValue
-#	tv.sec = usec / 1000000
-#	tv.nanosec = (usec % 1000000) * 1000
-#	return nanosleep(tv, tv0)
-#
+
+class SysInfo
+	var dummy: int
+
+func sysinfo(buf: SysInfo) -> bool
+	__temp_p__ := &buf
+	asm{
+		mov eax, 0x00000074
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+class TaskInfo
+	var dummy: int
+
+func taskinfo(pid: int, buf: TaskInfo) -> bool
+	__temp_i__ = pid
+	__temp_p__ := &buf
+	asm{
+		mov eax, 0x00002005
+		mov edi, __temp_i__
+		mov rsi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+class MountInfo
+	var dummy: int
+
+func mountinfo(pid: int, buf: MountInfo) -> bool
+	__temp_i__ = pid
+	__temp_p__ := &buf
+	asm{
+		mov eax, 0x00002008
+		mov edi, __temp_i__
+		mov rsi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+class BlockDevice
+	var _dummy: int
+
+func blockinfo(major: int, minor: int, buf: BlockDevice) -> bool
+	__temp_i__ = major
+	__temp_i2__ = minor
+	__temp_p__ := &buf
+	asm{
+		mov eax, 0x00002009
+		mov edi, __temp_i__
+		mov esi, __temp_i2__
+		mov rdx, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+
+func uname(buf: void&) -> bool
+	__temp_p__ := buf
+	asm{
+		mov eax, 0x0000007a
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+struct TimeValue
+	var sec, nanosec: int
+
+func time(buf: TimeValue) -> bool
+	__temp_p__ := &buf
+	asm{
+		mov eax, 0x00000019
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
+	__temp_p__ := &buf
+	asm{
+		mov eax, 0x000000a2
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+func sleep(sec: int) -> bool
+	var tv, tv0: TimeValue
+	tv.sec = sec
+	tv.nanosec = 0
+	return nanosleep(tv, tv0)
+
+func usleep(usec: int) -> bool
+	var tv, tv0: TimeValue
+	tv.sec = usec / 1000000
+	tv.nanosec = (usec % 1000000) * 1000
+	return nanosleep(tv, tv0)
+
 #func sched_yield(pid: int) -> bool
 #	__temp_i__ = pid
 #	asm{

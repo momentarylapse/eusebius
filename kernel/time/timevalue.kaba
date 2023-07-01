@@ -1,9 +1,10 @@
 use common
 
 
-class TimeValue
+struct TimeValue
 	var sec: int
 	var nanosec: int
+
 	func mut clear()
 		sec = 0
 		nanosec = 0

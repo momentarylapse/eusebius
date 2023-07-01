@@ -10,8 +10,8 @@ use mem.paging
 #use task.task
 use task.manager
 use task.scheduler
-#use time.timevalue
-#use time.timer
+use time.timevalue
+use time.timer
 #use irq.irq
 
 #let SYSCALL_STACK_SIZE = 65536
@@ -129,19 +129,71 @@ class Syscall
 				return t.sys_open(frame.rdi, frame.rsi)
 			else if index == 0x0006 # close
 				return t.sys_close(frame.rdi)
-#			else if index == 7 # waitpid
+#			else if index == 0x0007 # waitpid
 #				r = caller.sys_waitpid(param1, param2, param3)
-#			else if index == 8 # create
-#				r = caller.sys_open(param1, O_CREATE | O_WRONLY | O_TRUNC)
-#			else if index == 10 # unlink
+			else if index == 0x0008 # create
+				return t.sys_open(frame.rdi, O_CREATE | O_WRONLY | O_TRUNC)
+#			else if index == 0x000a # unlink
 #				r = caller.sys_unlink(param1)
-#			else if index == 11 # exec
+#			else if index == 0x000b # exec
 #				r = caller.sys_execute(param1, param2, param3)
-			else if index == 12 # chdir
+			else if index == 0x000c # chdir
 				return t.sys_set_cur_dir(frame.rdi)
+				
+				
+#			else if index == 0x000e # mknod
+#				r = caller.sys_mknod(param1, param2)
+			else if index == 0x0013 # seek
+				return t.sys_seek(frame.rdi, frame.rsi, frame.rdx)
+			else if index == 0x0014 # getpid
+				return Scheduler.running_pid
+			else if index == 0x0019 # stime
+				KernelTimer.update()
+				var tv = _i642p(frame.rdi) as TimeValue&
+				tv = KernelTimer.tv
+				#return -EFAULT
+				return 0
+#			else if index == 37 # kill
+#				r = caller.sys_kill(param1, param2)
+#			else if index == 39 # mkdir
+#				r = caller.sys_mkdir(param1)
+#			else if index == 40 # rmdir
+#				r = caller.sys_rmdir(param1)
+			else if index == 41 # dup
+				return t.sys_dup(frame.rdi)
+#			else if index == 42 # pipe
+#				return t.sys_pipe(frame.rdi)
+				
 			else if index == 0x002d # brk
-				return 0x40800000
-			else if index == 0xb7 # getcwd
+				return t.sys_brk(frame.rdi)
+			else if index == 0x0033 # fcntl
+				return t.sys_fcntl(frame.rdi, frame.rsi, frame.rdx)
+#			else if index == 0x0043 # sigaction
+#				r = caller.sys_sigaction(param1, param2)
+			else if index == 0x0058 # reboot
+				pass
+#			else if index == 0x0066 # socket
+#				r = caller.sys_socket(param1, param2, param3)
+#			else if index == 0x0074 # sysinfo
+#				_sys_info.get()
+#				caller.page_dir.memcpy2task(param1, &_sys_info, sizeof(_sys_info))
+#			else if index == 0x0075 # ipc
+#				r = caller.sys_ipc(param1, param2, param3, param4)
+			else if index == 0x007a # uname
+				var un = _i642p(frame.rdi) as UTSName&
+				un.get()
+				return 0
+#			else if index == 141 # getdents
+#				r = caller.sys_getdents(param1, param2, param3)
+#			else if index == 158 # sched_yield
+#				int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
+#				Scheduler.reconnect_tasks(pid_next, sys_call_task)
+			else if index == 0x00a2 # nanosleep
+				t.sys_nanosleep(frame.rdi, frame.rsi)
+				# p1 = &duration
+				# p2 = &duration_more
+				return 0
+			else if index == 0x00b7 # getcwd
 				var pf = _i2p(frame.rdi) as cstring&
 				for d in t.cur_dir
 					d.get_path(pf)
@@ -152,6 +204,8 @@ class Syscall
 				prints("  <SYSCALL HI>  ")
 				TextMode.text_color = 0x07
 				return 0
+#			else if index == 0x2001 # getarg
+#				caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
 			else if index == 0x2002 # kprint
 				TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
 				return 0
@@ -205,24 +259,22 @@ class Syscall
 #		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
 #
 #var _sys_info: SysInfo
-#
-#class UTSName as @noauto
-#	var sysname: cstring
-#	var nodename: cstring
-#	var release: cstring
-#	var version: cstring
-#	var machine: cstring
-#	var domainname: cstring
-#	func get()
-#		strcpy(sysname, KERNEL_NAME)
-#		strcpy(nodename, "???")
-#		strcpy(release, KERNEL_VERSION)
-#		strcpy(version, KERNEL_VERSION)
-#		strcpy(machine, MACHINE_TYPE)
-#		strcpy(domainname, "-no domain-")
-#
-#var _uts_name: UTSName
-#
+
+class UTSName as @noauto
+	var sysname: cstring
+	var nodename: cstring
+	var release: cstring
+	var version: cstring
+	var machine: cstring
+	var domainname: cstring
+	func mut get()
+		strcpy(sysname, KERNEL_NAME)
+		strcpy(nodename, "???")
+		strcpy(release, KERNEL_VERSION)
+		strcpy(version, KERNEL_VERSION)
+		strcpy(machine, MACHINE_TYPE)
+		strcpy(domainname, "-no domain-")
+
 #class TaskInfo as @noauto
 #	var name: cstring
 #	var pid, ppid, mode, status: int
@@ -330,39 +382,8 @@ class StatData as @noauto
 #			r = caller.sys_pipe(param1)
 #		else if index == 45 # brk
 #			r = caller.sys_brk(param1)
-#		else if index == 51 # fcntl
-#			r = caller.sys_fcntl(param1, param2, param3)
-#		else if index == 67 # sigaction
-#			r = caller.sys_sigaction(param1, param2)
-#		else if index == 88 # reboot
-#			pass
-#		else if index == 102 # socket
-#			r = caller.sys_socket(param1, param2, param3)
-#		else if index == 116 # sysinfo
-#			_sys_info.get()
-#			caller.page_dir.memcpy2task(param1, &_sys_info, sizeof(_sys_info))
-#		else if index == 117 # ipc
-#			r = caller.sys_ipc(param1, param2, param3, param4)
-#		else if index == 122 # uname
-#			_uts_name.get()
-#			caller.page_dir.memcpy2task(param1, &_uts_name, sizeof(_uts_name))
-#		else if index == 141 # getdents
-#			r = caller.sys_getdents(param1, param2, param3)
-#		else if index == 158 # sched_yield
-#			int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
-#			Scheduler.reconnect_tasks(pid_next, sys_call_task)
-#		else if index == 162 # nanosleep
-#			caller.sys_nanosleep(param1, param2)
-#			# p1 = &duration
-#			# p2 = &duration_more
-#		else if index == 183 # getcwd
-#			cstring filename
-#			caller.cur_dir.get_path(filename)
-#			r = 0
-#			if !caller.page_dir.memcpy2task(param1, &filename, sizeof(cstring))
-#				r = -EFAULT
-#		else if index == 0x2001 # getarg
-#			caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
+
+
 #		else if index == 0x2002 # kprints
 #			cstring filename
 #			if param2 < sizeof(filename)

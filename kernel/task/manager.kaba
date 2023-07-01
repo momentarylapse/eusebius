@@ -52,6 +52,8 @@ class TaskManager as @noauto
 		t.puid = next_puid_to_assign
 		next_puid_to_assign ++
 
+		t.memory_offset = TASK_MEMORY_OFFSET
+		t.memory_size = TASK_INITIAL_MEMORY_SIZE
 		t.page_root_dir := create_page_root_table_for_task()
 		t.frame.cr3 = _p2i64(t.page_root_dir)
 

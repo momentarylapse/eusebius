@@ -379,7 +379,7 @@ func main()
 #	jobs.__init__()
 	
 	stdin = open("/dev/tty", O_RDONLY)
-	#fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
+	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	prompt.show()
 	
