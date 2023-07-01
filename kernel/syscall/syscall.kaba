@@ -38,24 +38,32 @@ func @noframe syscall_test()
 		push r13
 		push r14
 		push r15
-		mov rax, rsp
-		mov __temp_p__, rax
 	}
 	
 	# switch to kernel/syscall stack
-	__temp_p2__ = Syscall.rsp
-	asm{
-		mov rsp, __temp_p2__
+	asm {
+		mov rax, rsp
+		mov __temp_p__, rax
+	}
+	Syscall.task_rsp = __temp_p__
+	__temp_p__ = Syscall.rsp
+	asm {
+		mov rsp, __temp_p__
 		mov rbp, rsp
 	}
 	
 	# no local variables allowed! (rbp still from task-frame)
-	Syscall.task_rsp = __temp_p__
-	__temp_i64__ = Syscall.handle(__temp_p__ as Syscall.Frame&)
+#	__temp_i64__ = Syscall.handle(__temp_p__ as Syscall.Frame&)
+	Syscall.handle_meta(Syscall.task_rsp as Syscall.Frame&)
+
+	# switch to task stack
 	__temp_p__ = Syscall.task_rsp
-	asm{
+	asm {
 		mov rax, __temp_p__
 		mov rsp, rax
+	}
+	
+	asm {
 		# general purpose registers
 		pop r15
 		pop r14
@@ -71,9 +79,9 @@ func @noframe syscall_test()
 		pop rdx
 		pop rcx
 		pop rbx
-		#pop rax
-		mov rax, __temp_i64__ # return value -> rax
-		add rsp, 0x08
+		pop rax
+		#mov rax, __temp_i64__ # return value -> rax
+		#add rsp, 0x08
 		
 		db 0x48
 		sysret
@@ -87,7 +95,7 @@ class Syscall
 		reg8ff: int64[8]
 		rsi, rdi, rbp, rdx, rcx, rbx, rax: int64
 		#rip, cs, rflags, rsp, ss: int64
-		rsp: int64
+#		rsp: int64
 	
 	var static stack: void&
 	var static rsp: void& # kernel/handler
@@ -115,12 +123,38 @@ class Syscall
 ##		for pp in raw_function_pointer(syscall_test)
 #			printh(pp, 8)
 
+	func static handle_meta(out frame: Frame)
+		let r = handle(frame)
+		frame.rax = r
+		for t in Scheduler.cur
+			if t.status != TaskStatus.RUNNING
+				leave_task(frame)
+				Scheduler.do_scheduling()
+				enter_task(frame)
+				#panic("???")
+	
+	func static leave_task(out frame: Frame)
+		for t in Scheduler.cur
+			memcpy(&t.frame.reg8ff, &frame.reg8ff, sizeof(int64) * (8 + 7))
+			t.syscall_rsp := Syscall.task_rsp as void&
+	
+	func static enter_task(out frame: Frame)
+		for t in Scheduler.cur
+			if t.first_time_running
+				panic("x432")
+			else
+				Syscall.task_rsp = t.syscall_rsp
+				var next_frame = Syscall.task_rsp as Frame&
+				memcpy(&next_frame.reg8ff, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
+		prints("BACK...")
+
 
 	func static handle(frame: Frame) -> int64
 		let index = int(frame.rax)
 		for t in Scheduler.cur
 			if index == 0x0001 # exit
-				panic("process called exit()")
+				sys_exit(t, frame.rdi)
+				return 0
 			else if index == 0x0003 # read
 				return t.sys_read(frame.rdi, frame.rsi, frame.rdx)
 			else if index == 0x0004 # write
@@ -189,7 +223,7 @@ class Syscall
 #				int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
 #				Scheduler.reconnect_tasks(pid_next, sys_call_task)
 			else if index == 0x00a2 # nanosleep
-				t.sys_nanosleep(frame.rdi, frame.rsi)
+				sys_nanosleep(t, frame.rdi, frame.rsi)
 				# p1 = &duration
 				# p2 = &duration_more
 				return 0
@@ -226,6 +260,15 @@ class Syscall
 				printi(index)
 		return -1
 
+
+func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int
+	var tv = _i642p(p1) as TimeValue&
+	tv.add(KernelTimer.tv)
+	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
+	return 0
+
+func sys_exit(out t: Task, r: int)
+	TaskManager.die(t, r)
 
 
 func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int

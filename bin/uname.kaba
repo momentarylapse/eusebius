@@ -7,8 +7,6 @@ class UTSName
 	var version: cstring
 	var machine: cstring
 	var domainname: cstring
-	func __assign__(o: UTSName)
-		pass
 
 func main()
 	init_lib()

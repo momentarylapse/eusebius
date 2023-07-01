@@ -7,30 +7,24 @@ use irq.irq
 let TIMER_IRQ = 0
 
 class KernelTimer as @noauto
-	#int[2] state
+	var static state: int[2]
 	var static tv: TimeValue
-	var static dt_nanosec: int
 	
-	#void update_state()
-#		asm{
-#			db 0x0f
-#			db 0x31
-#			mov __temp_i__, eax
-#			mov __temp_i2__, edx
-#		}
-#		state[0] = __temp_i2__
-#		state[1] = __temp_i__
+	func static update_state()
+		asm{
+			db 0x0f # RDTSC eax:edx
+			db 0x31
+			mov __temp_i__, eax
+			mov __temp_i2__, edx
+		}
+		state[0] = __temp_i2__
+		state[1] = __temp_i__
 	
 	func static update()
-		#update_state()
-		# TODO   :P
-		#tv.sec = (state[0] << 8) + (state[1] >> 24)
-		#tv.nanosec = 0
-		#tv.nanosec = (state[1] << 6) & 0x3fffffff
-	func static tick()
-		tv.inc_nanosec(dt_nanosec)
-
-#	func static init_interrupt(out t: Task, dt_ms: int)
+		update_state()
+		# TODO: precise formula   :P
+		tv.sec = (state[0] << 8) + (state[1] >> 24)
+		tv.nanosec = (state[1] << 6) & 0x3fffffff
 
 	func static init(F: void*, dt_ms: int)
 		# read year from CMOS
@@ -39,11 +33,7 @@ class KernelTimer as @noauto
 		# year=0x09 month=0x08 day=0x07 hours=0x04 min=0x02 sec=0x00
 
 		tv.clear()
-		dt_nanosec = dt_ms * 1000000
-	
-	#	irq.set_task(irq.hw2soft(0), &t) # IRQ 0
-	
-		#IrqManager.disable()
+
 		IrqManager.set_func(TIMER_IRQ + 32, F)
 	
 		# ticks/s: 1193180

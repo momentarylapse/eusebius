@@ -6,8 +6,8 @@ func main()
 	init_lib()
 	lib_print_endl = false
 	
-	TimeValue t
-	if !time(t)
+	var t: TimeValue
+	if not time(t)
 		exit(lib_error)
 	print("{{t.sec / 3600}}:{{(t.sec / 60) % 60|02}}:{{t.sec % 60)|02}} {{t.nanosec/1000000|03}}ms\n")
 	

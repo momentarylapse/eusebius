@@ -142,31 +142,39 @@ class Scheduler
 		IrqManager.mask(TIMER_IRQ)
 		#prints("<timer>")
 		
+		for frame in _frame
+			leave_task(frame)
+			do_scheduling()
+			enter_task(frame)
+			
+		IrqManager.eoi(TIMER_IRQ)
+		IrqManager.unmask(TIMER_IRQ)
+	
+	func static leave_task(out frame: InterruptFrame)
 		for t in cur
-			for frame in _frame
-				memcpy(&t.frame, frame, sizeof(InterruptFrame))
-		
+			memcpy(&t.frame, &frame, sizeof(InterruptFrame))
+
+	func static do_scheduling()
 		let next_pid = get_next_task()
 		if next_pid < 0
 			panic("no running tasks")
 		cur = &TaskManager.tasks[next_pid]
+		
+	func static enter_task(out frame: InterruptFrame)
 		for t in cur
-			for frame in _frame
-				if t.first_time_running
-					frame.cs = t.frame.cs
-					frame.ss = t.frame.ss
-					frame.rip = t.frame.rip
-					frame.rsp = t.frame.rsp
-					frame.rbp = t.frame.rsp
-					frame.cr3 = t.frame.cr3
-					#frame.cr4 = frame.cr4 | 0x200 # sse=1
-					frame.rax = t.frame.rax
-					frame.rflags = t.frame.rflags
-					t.first_time_running = false
-				else
-					memcpy(frame, &t.frame, sizeof(InterruptFrame))
-		IrqManager.eoi(TIMER_IRQ)
-		IrqManager.unmask(TIMER_IRQ)
+			if t.first_time_running
+				frame.cs = t.frame.cs
+				frame.ss = t.frame.ss
+				frame.rip = t.frame.rip
+				frame.rsp = t.frame.rsp
+				frame.rbp = t.frame.rsp
+				frame.cr3 = t.frame.cr3
+				#frame.cr4 = frame.cr4 | 0x200 # sse=1
+				frame.rax = t.frame.rax
+				frame.rflags = t.frame.rflags
+				t.first_time_running = false
+			else
+				memcpy(&frame, &t.frame, sizeof(InterruptFrame))
 
 
 	# Scheduler
@@ -182,21 +190,20 @@ class Scheduler
 				return i
 		for i in 0:5
 			printi(int(TaskManager.tasks[i].status))
-		return -1#TaskManager.idle_task.pid
+		return -1 #TaskManager.idle_task.pid
 
-#	func static process_waiting_tasks()
-#		for t in TaskManager.tasks
-#			if t.status == TASK_STATUS_WAITING
-#				if t.waiting_mode == WAITING_MODE_TIME
-#					TimeValue *rem = &t.waiting_param_i1
-#					rem.dec_nanosec(KernelTimer.dt_nanosec)
-#					if rem.sec < 0
-#						t.tss.eax = 0 # return 0
-#						t.activate()
+	func static process_waiting_tasks()
+		for t in TaskManager.tasks
+			if t.status == TaskStatus.WAITING
+				if t.waiting_mode == WaitingMode.TIME
+					var tv = &t.waiting_param_i1 as TimeValue&
+					if KernelTimer.tv.is_before(tv)
+						t.frame.rax = 0 # return 0
+						t.activate()
 #				else
 #					t.do_wait_update()
-#
-#
+
+
 #	func static reconnect_tasks(pid_next: int, out irq_task: Task)
 #		#int pid_cur = irq_task.get_prev_task()
 #		TaskManager.gdt[TaskManager.tasks[running_pid].desc].set_busy(false)

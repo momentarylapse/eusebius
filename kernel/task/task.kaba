@@ -61,6 +61,7 @@ enum WaitingMode as @noauto
 class Task
 	var stack: void&
 	var frame: InterruptFrame
+	var syscall_rsp: void&
 #	var desc: int
 	var pid, puid: int
 	var status: TaskStatus
@@ -131,14 +132,14 @@ class Task
 #		time_all.clear()
 #		cpu_load = 0
 #		time_temp.clear()
-#	
-#	func mut activate()
-#		if sleep_and_wait
-#			status = TaskStatus.SLEEPING
-#			sleep_and_wait = false
-#		else
-#			status = TaskStatus.RUNNING
-#	
+
+	func mut activate()
+		if sleep_and_wait
+			status = TaskStatus.SLEEPING
+			sleep_and_wait = false
+		else
+			status = TaskStatus.RUNNING
+	
 #	# nur um einmalig den Scheduler zu starten
 #	func mut run_forced()
 #		#prints("springe in ")
@@ -187,42 +188,31 @@ class Task
 				return i
 		return -1
 
-#	func mut clean_up_resources()
-#		for h in handles
-#			if h
-#				h.unref()
-#				h = nil
-#		
+	func mut clean_up_resources()
+		for i=>_h in handles
+			for h in _h
+				h.unref()
+				handles[i] = nil
+		
 #		for s in shmem
 #			if s.s
 #				page_dir.unmap(s.dest, s.s.size, false)
 #				s.s.unref()
 #				s.s = nil
-#				
-#		if !kernel_mode
-#			if page_dir
-#				page_dir.unmap(0, KERNEL_MEM, false)
-#				page_dir.unmap(mem_bottom, mem_size, true)
-#				Paging.free_page(_p2i(page_dir))
-#				page_dir = nil
-#
-#	func mut clean_up_deep()
-#		clean_up_resources()
-#		status = TaskStatus.UNUSED
-#		puid = -1
-#		#if in_hw_irq >= 0
-#		#	TaskManager.ack_hw_irq = in_hw_irq
-#		
-#	
-#	func mut send_death_message()
-#		for t in TaskManager.tasks
-#			if t.status == TaskStatus.WAITING
-#				if t.waiting_mode == WaitingMode.TASK_EXIT and t.waiting_param_i1 == pid
-#					t.tss.eax = 0# # return waitpid()
-#					t.page_dir.memcpy2task(t.waiting_param_i2, &return_status, 4)
-#					clean_up_deep()
-#					t.activate()
-#		
+
+		#page_dir.unmap(0, KERNEL_MEM, false)
+		page_root_dir.unmap(memory_offset, memory_size, true)
+
+	func mut clean_up_deep()
+		clean_up_resources()
+		Paging.free_physical_page(page_root_dir.e[0])
+		Paging.free_physical_page(_p2i64(page_root_dir))
+		status = TaskStatus.UNUSED
+		puid = -1
+		#if in_hw_irq >= 0
+		#	TaskManager.ack_hw_irq = in_hw_irq
+		
+		
 #	func get_initial_stack_pos() -> void*
 #		return _i2p(_p2i(stack) + stack_size)
 	
@@ -238,14 +228,8 @@ class Task
 #		n += page_dir.count_entries() # all page tables
 #		n ++ # page_dir itself
 #		return n
-#	
-#	
-#	func mut die(r: int)
-#		return_status = r
-#		clean_up_resources()
-#		status = TaskStatus.ZOMBIE
-#		send_death_message()
-#		
+	
+		
 #	func get_prev_pid() -> int
 #		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 #		
@@ -317,8 +301,8 @@ class Task
 	func mut sys_read(handle: int, addr: int64, size: int) -> int
 		for of in get_handle(handle)
 			let r = of.read(addr, size)
-#			if r == -EWOULDBLOCK and of.blocking
-#				set_wait(WaitingMode.FILE_READ, handle, addr, size)
+			if r == -EWOULDBLOCK and of.blocking
+				set_wait(WaitingMode.FILE_READ, handle, addr, size)
 			return r
 		else
 			return -EBADF
@@ -327,8 +311,8 @@ class Task
 	func mut sys_write(handle: int, addr: int, size: int) -> int
 		for of in get_handle(handle)
 			let r = of.write(addr, size)
-	#		if r == -EWOULDBLOCK and of.blocking
-	#			set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
+			if r == -EWOULDBLOCK and of.blocking
+				set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
 			return r
 		else
 			return -EBADF
@@ -406,9 +390,6 @@ class Task
 #			return -EFAULT
 #		return kernel_rmdir(filename, cur_dir)
 
-#	func mut sys_exit(r: int)
-#		die(r)
-#
 #	func mut sys_waitpid(_pid: int, status_addr: int, options: int) -> int
 #		var t = TaskManager.get_task(_pid)
 #		if !t
@@ -428,11 +409,6 @@ class Task
 #		if !t
 #			return -ESRCH
 #		return t.handle_signal_link_iret(signal)
-
-	func mut sys_nanosleep(p1: int64, p2: int) -> int
-		var tv = _i642p(p1) as TimeValue&
-		set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
-		return 0
 
 	func mut sys_brk(_new_top: int) -> int
 		let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
@@ -599,18 +575,18 @@ class Task
 #			in_hw_irq = -1
 #		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
 #		return 0
-#	
-#	func mut do_wait_update()
-#		if waiting_mode == WaitingMode.FILE_READ
-#			let r = sys_read(waiting_param_i1, waiting_param_i2, waiting_param_i3)
-#			if r >= 0
-#				tss.eax = r # return r
-#				activate()
-#		else if waiting_mode == WaitingMode.FILE_WRITE
-#			let r = sys_write(waiting_param_i1, waiting_param_i2, waiting_param_i3)
-#			if r >= 0
-#				tss.eax = r # return r
-#				activate()
+
+	func mut do_wait_update()
+		if waiting_mode == WaitingMode.FILE_READ
+			let r = sys_read(waiting_param_i1, waiting_param_i2, waiting_param_i3)
+			if r >= 0
+				frame.rax = r # return r
+				activate()
+		else if waiting_mode == WaitingMode.FILE_WRITE
+			let r = sys_write(waiting_param_i1, waiting_param_i2, waiting_param_i3)
+			if r >= 0
+				frame.rax = r # return r
+				activate()
 #		#else if waiting_mode == WaitingMode.TIME
 ##			TimeValue *rem = &waiting_param_i1
 ##			rem.dec_nanosec(kernel_timer.dt_nanosec)

@@ -244,6 +244,24 @@ class TaskManager as @noauto
 	func static add_dummy()
 		add_task_user("dummy", _p2i(raw_function_pointer(f_user)), nil)
 
+
+
+	
+	func static send_death_message(out t: Task)
+		for tt in tasks
+			if tt.status == TaskStatus.WAITING
+				if tt.waiting_mode == WaitingMode.TASK_EXIT and tt.waiting_param_i1 == t.pid
+					tt.frame.rax = 0 # return waitpid()
+					tt.page_root_dir.memcpy2task(tt.waiting_param_i2, &t.return_status, 4)
+					tt.activate()
+					
+					t.clean_up_deep()
+	func static die(out t: Task, r: int)
+		t.return_status = r
+		t.clean_up_resources()
+		t.status = TaskStatus.ZOMBIE
+		send_death_message(t)
+
 #int sys_getpid()
 #	asm{
 #		xor, eax, eax

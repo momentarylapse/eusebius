@@ -1,5 +1,3 @@
-#define __FUNCTION_POINTER_AS_CODE__
-
 use lib.std
 use os
 
@@ -69,12 +67,12 @@ class Prompt
 		
 		if c == 0x0a # '\n'
 			print("\n")
-#			jobs.test_all()
+			job_manager.test_all()
 			exec(cur)
 			add_to_history()
 			cur.clear()
-#			if !jobs.fg
-			show()
+			if !job_manager.fg
+				show()
 		else if c == 0x7f # BACKSPACE
 			if len(cur) > 0
 				var s: string
@@ -113,68 +111,68 @@ class VariableSet
 	func show()
 		for v in vars
 			print("{{v.name}} = {{v.value}}\n")
-var vars: VariableSet
+var variable_set: VariableSet
 
-#class Job
-#	var cmd: string
-#	var pid, id: int
-#	var done: bool
-#	var pipe_in, pipe_out: int[2] # from job's point of view
-#	var as_bg: bool
-#	func __init__(out c: string[], _cmd: string)
-#		cmd = _cmd
-#		done = false
-#		pipe_in[0] = -1
-#		pipe_in[1] = -1
-#		pipe_out[0] = -1
-#		pipe_out[1] = -1
-#		pid = -1
-#		
-#		for i in 0:len(c)
-#			if c[i] == ">" or c[i] == ">>"
-#				if i == len(c) - 1
-#					print("filename expected after >")
-#					return
-#				if c[i] == ">"
-#					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY | O_TRUNC)
-#				else
-#					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
-#				c.remove(i+1)
-#				c.remove(i)
-#		for i in 0:len(c)
-#			if c[i] == "<"
-#				if i == len(c) - 1
-#					print("filename expected after <")
-#					return
-#				pipe_in[0] = open(c[i+1], O_RDONLY)
-#				c.remove(i+1)
-#				c.remove(i)
-#
-#
+class Job
+	var cmd: string
+	var pid, id: int
+	var done: bool
+	var pipe_in, pipe_out: int[2] # from job's point of view
+	var as_bg: bool
+	func __init__(out c: string[], _cmd: string)
+		cmd = _cmd
+		done = false
+		pipe_in[0] = -1
+		pipe_in[1] = -1
+		pipe_out[0] = -1
+		pipe_out[1] = -1
+		pid = -1
+		
+		for i in 0:len(c)
+			if c[i] == ">" or c[i] == ">>"
+				if i == len(c) - 1
+					print("filename expected after >")
+					return
+				if c[i] == ">"
+					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY | O_TRUNC)
+				else
+					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
+				c.remove(i+1)
+				c.remove(i)
+		for i in 0:len(c)
+			if c[i] == "<"
+				if i == len(c) - 1
+					print("filename expected after <")
+					return
+				pipe_in[0] = open(c[i+1], O_RDONLY)
+				c.remove(i+1)
+				c.remove(i)
+
+
 ######### FIXME: pipe
 ##		if pipe_in[0] < 0
 ##			pipe(pipe_in)
 ##		if pipe_out[1] < 0
 ##			pipe(pipe_out)
-#		
-#		as_bg = (c[len(c) - 1] == "&")
-#		if as_bg
-#			c.remove(len(c) - 1)
-#		id = -1
-#		#pid = execute(c, stdin, stdout)
-#		pid = execute(c, pipe_in[0], pipe_out[1])
-#		close(pipe_in[0])
-#		close(pipe_out[1])
-#		if as_bg
-#			print("[{{id}}]: ")
-#			#print pid
-#			print("\n")
-#		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
-#	
-#	func __delete__()
-#		close(pipe_in[1])
-#		close(pipe_out[0])
-#	
+		
+		as_bg = (c[len(c) - 1] == "&")
+		if as_bg
+			c.remove(len(c) - 1)
+		id = -1
+		#pid = execute(c, stdin, stdout)
+		pid = execute(c, pipe_in[0], pipe_out[1])
+		close(pipe_in[0])
+		close(pipe_out[1])
+		if as_bg
+			print("[{{id}}]: ")
+			#print pid
+			print("\n")
+		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
+	
+	func __delete__()
+		close(pipe_in[1])
+		close(pipe_out[0])
+	
 #	func test()
 #		var s: string
 #		s.resize(512)
@@ -194,37 +192,36 @@ var vars: VariableSet
 #	#		print("  -- Programm hat was boeses gemacht! --\n")
 #		#print(" status " + status)
 #		done = true
-#
-#class JobManager
-#	var job: Job*[]
-#	var fg: Job*
-#	func __init__()
-#		fg = nil
-#	func get_next_id() -> int
-#		int id = 1
-#		for j in job
-#			if j.id >= id
-#				id = j.id + 1
-#		return id
-#	func get(id: int) -> Job*
-#		if (id == -1) and (len(job) > 0)
-#			return job[len(job) - 1]
-#		for j in job
-#			if j.id == id
-#				return j
-#		return nil
-#	func create(out c: string[], cmd: string) -> Job*
-#		Job *j = new Job(c, cmd)
-#		if j.pid < 0
-#			del j
-#			return nil
-#		j.id = get_next_id()
-#		job.add(j)
-#		if !j.as_bg
-#			fg = j
-#		return j
-#	func test_all()
-#		for j in job
+
+class JobManager
+	var jobs: owned![Job][]
+	var fg: Job*
+	func __init__()
+		fg = nil
+	func get_next_id() -> int
+		var id = 1
+		for j in jobs
+			if j.id >= id
+				id = j.id + 1
+		return id
+	func get(id: int) -> Job*
+		if (id == -1) and (len(jobs) > 0)
+			return jobs[len(jobs) - 1]
+		for j in jobs
+			if j.id == id
+				return j
+		return nil
+	func mut create(out c: string[], cmd: string) -> Job*
+		var j = new Job(c, cmd)
+		if j.pid < 0
+			return nil
+		j.id = get_next_id()
+		if !j.as_bg
+			fg = weak(j)
+		jobs.add(give(j))
+		return weak(jobs[len(jobs) - 1])
+	func test_all()
+#		for j in jobs
 #			j.test()
 #		for i in 0:len(job)
 #			if job[i].done
@@ -234,11 +231,11 @@ var vars: VariableSet
 #				del job[i]
 #				job.remove(i)
 #				i --
-#	func show()
-#		for j in job
-#			print("{{j.id}} - {{j.cmd}}\n")
-#
-#var jobs: JobManager
+	func show()
+		for j in jobs
+			print("{{j.id}} - {{j.cmd}}\n")
+
+var job_manager: JobManager
 
 
 func parse_var_name(cmd: string, pos: int) -> string
@@ -260,7 +257,7 @@ func parse_single(cmd: string, out pos: int*) -> string
 			in_string = ! in_string
 		else if cmd[j] == '$'
 			let var_name = parse_var_name(cmd, j+1)
-			t += vars.get(var_name).value
+			t += variable_set.get(var_name).value
 			j += len(var_name)
 		else
 			t.add(cmd[j])
@@ -281,7 +278,7 @@ func parse(cmd0: string, out c: string[])
 func execute_assign(cmd: string)
 	let a = cmd.explode("=")
 	if len(a) == 2
-		vars.get(a[0]).value = a[1]
+		variable_set.get(a[0]).value = a[1]
 
 #func execute_job(out c: string[], cmd: string) -> bool
 #	Job *j = jobs.create(c, cmd)
@@ -329,9 +326,9 @@ func exec(cmd: string)
 	if cc.find("=", 0) > 0
 		execute_assign(cc)
 	else if cc == "vars"
-		vars.show()
-#	else if cc == "jobs"
-#		jobs.show()
+		variable_set.show()
+	else if cc == "jobs"
+		job_manager.show()
 #	else if cc == "fg"
 #		do_fg(c)
 #	else if cc == "bg"
@@ -376,9 +373,9 @@ func main()
 	init_lib()
 	lib_print_endl = false
 	prompt.__init__()
-	vars.__init__()
-	vars.get("PATH").value = "/bin/"
-#	jobs.__init__()
+	variable_set.__init__()
+	variable_set.get("PATH").value = "/bin/"
+	job_manager.__init__()
 	
 	stdin = open("/dev/tty", O_RDONLY)
 	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)

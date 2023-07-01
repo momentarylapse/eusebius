@@ -96,8 +96,8 @@ class PageRootTable extends PageTable
 			dir_no ++
 			page_no = 0
 
-	func mut map_by_alloc(_vaddr: int, size: int, _flags: PageFlags) -> bool
-		var vaddr = _vaddr & 0xfffff000
+	func mut map_by_alloc(_vaddr: int64, size: int, _flags: PageFlags) -> bool
+		var vaddr = _vaddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
 		let table_flags = PageFlags.PRESENT + PageFlags.WRITABLE + PageFlags.GLOBAL | PageFlags.USER
@@ -125,36 +125,35 @@ class PageRootTable extends PageTable
 			page_no = 0
 		return true
 	
-	func mut unmap(_vaddr: int, size: int, dealloc: bool)
-		panic("TODO: Paging.unmap()")
-		var vaddr = _vaddr & 0xfffff000
+	func mut unmap(_vaddr: int64, size: int, dealloc: bool)
+		var vaddr = _vaddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
-
+		prints("UNMAP")
+		
 		for pdpt in get_sub(0)
 			for pdt in pdpt.get_sub(dirp_no)
 		
+				printi(npages)
 				while npages > 0
-					#var pt = pdt.get_sub(dir_no)
-					#if not pt
-					#	return
-			
-					let pt_pos = e[dir_no] & 0xfffff000
-					var pt = _i2p(pt_pos) as PageTable&
-					let i0 = page_no
-					var i1 = page_no + npages
-					if i1 > PAGE_TABLE_ENTRIES
-						i1 = PAGE_TABLE_ENTRIES
-					for i in i0:i1
-						if pt.e[i] != 0
-							if dealloc
-								Paging.free_physical_page(pt.e[i] & 0xfffff000)
-							pt.e[i] = 0
-					if pt.count_entries() == 0
-						Paging.free_physical_page(pt_pos)
-					npages -= i1-i0
-					dir_no ++
-					page_no = 0
+					for pt in pdt.get_sub(dir_no)
+						let i0 = page_no
+						var i1 = page_no + npages
+						if i1 > PAGE_TABLE_ENTRIES
+							i1 = PAGE_TABLE_ENTRIES
+						for i in i0:i1
+							if pt.e[i] != 0
+								if dealloc
+									Paging.free_physical_page(pt.e[i] & 0xfffffffffffff000)
+								pt.e[i] = 0
+						if pt.count_entries() == 0
+							Paging.free_physical_page(_p2i64(pt))
+						npages -= i1-i0
+						dir_no ++
+						page_no = 0
+				prints(" ")
+				printi(dir_no)
+		prints("   XXX ")
 	
 	# ???
 	func find_free_space(_start: int, size: int) -> int
