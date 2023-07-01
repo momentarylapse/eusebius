@@ -56,6 +56,10 @@ class lib__@DynamicArray
 		data = nil
 		allocated = 0
 		num = 0
+	func mut __mem_forget__()
+		data = nil
+		allocated = 0
+		num = 0
 
 	func mut reserve(size: int)
 		if allocated == 0

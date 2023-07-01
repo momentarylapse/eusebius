@@ -9,11 +9,16 @@ INITFLAGS = --arch x86:gnu --os --code-origin 0x7e00
 #KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 # --remove-unused
-PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x00800000 --variable-offset 0x00880000 --add-entry-point --import-symbols kalib_symbols
+PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x40000000 --variable-offset 0x40080000 --add-entry-point --import-symbols kalib_symbols
+
 LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
+ bin/simple \
+ bin/shell
+ 
+XXXBINS = \
  bin/hello \
  bin/shell \
  bin/cat \
@@ -179,10 +184,8 @@ bin/c: bin/c.kaba $(PDEP)
 bin/cake: bin/cake.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
 
-SPFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x40000000 --variable-offset 0x40080000 --add-entry-point --import-symbols kalib_symbols
-
 bin/simple: bin/simple.kaba $(PDEP)
-	$(KABA) $(SPFLAGS) -o bin/simple bin/simple.kaba
+	$(KABA) $(PFLAGS) -o bin/simple bin/simple.kaba
 
 lib/kalib: lib/kalib.kaba lib/lib_*.kaba
 	$(KABA) $(LIBFLAGS) -o lib/kalib --export-symbols kalib_symbols lib/kalib.kaba
@@ -196,8 +199,7 @@ img.mfs: init kernel/kernel
 	cp kernel/kernel mfs/kernel
 	$(MAKEMFS) `pwd`/img.mfs `pwd`/mfs/
 
-#img.ext2: $(BINS) img.mfs
-img.ext2: bin/simple img.mfs
+img.ext2: $(BINS) img.mfs
 	mkdir -p img-src
 	mkdir -p img-src/dev
 	mkdir -p img-src/bin
@@ -208,8 +210,7 @@ img.ext2: bin/simple img.mfs
 	mkdir -p img-src/images
 	mkdir -p img-src/tmp
 	cp -r home/* img-src/home
-	cp -r bin/simple img-src/bin
-#	cp -r $(BINS) img-src/bin
+	cp -r $(BINS) img-src/bin
 	cp -r $(LIBS) img-src/lib
 	cp -r kernel/*.kaba img-src/src
 	cp data/images/cursor.tga img-src/images

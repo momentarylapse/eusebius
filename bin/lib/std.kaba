@@ -102,7 +102,7 @@ func extern init_lib()
 #var extern stdin, stdout: int
 #var extern lib_error: int
 #var extern lib_mem_debug: bool
-#var extern lib_print_endl: bool
+var extern lib_print_endl: bool
 #
 #func extern cs2s(cs: cstring) -> string
 ##func extern binary(p: void*, num: int) -> string
@@ -125,9 +125,9 @@ func extern stat(filename: Path, out s: StatData) -> bool
 #func extern pipe(h: int[2]) -> bool
 #func extern fcntl(h: int, op: int, param: int) -> int
 #func extern getpid() -> int
-##func extern chdir(dir: Path) -> bool
+func extern chdir(dir: Path) -> bool
 #func extern waitpid(pid: int, status: void&, block: bool) -> int
-#func extern kill(pid: int, signal: int) -> bool
+func extern kill(pid: int, signal: int) -> bool
 #func extern shmget(key: int, size: int, flags: int) -> int
 #func extern shmat(id: int, flags: int) -> void*
 #func extern shmdt(p: void&) -> bool

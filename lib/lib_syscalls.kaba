@@ -162,19 +162,19 @@ func getdents(h: int, buf: void&) -> bool
 #		mov __temp_i3__, eax
 #	}
 #	return __temp_i3__
-#	
-#func kill(pid: int, signal: int) -> bool
-#	__temp_i__ = pid
-#	__temp_i2__ = signal
-#	asm{
-#		mov eax, 0x00000025
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_i2__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
+
+func kill(pid: int, signal: int) -> bool
+	__temp_i__ = pid
+	__temp_i2__ = signal
+	asm{
+		mov eax, 0x00000025
+		mov edi, __temp_i__
+		mov esi, __temp_i2__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
 #func shmget(key: int, size: int, flags: int) -> int
 #	__temp_i__ = key
 #	__temp_i2__ = size

@@ -1,3 +1,5 @@
+#define __FUNCTION_POINTER_AS_CODE__
+
 use lib.std
 use os
 
@@ -9,18 +11,18 @@ class Prompt
 	func __init__()
 		history_pos = 0
 		history.add("")
-	func add(k: int)
+	func mut add(k: int)
 		cur.add(k)
-		string s
+		var s: string
 		s.add(k)
 		print(s)
-	func clear()
-		string s
+	func mut clear()
+		var s: string
 		s.add(0x7f)
 		for i in 0:len(cur)
 			print(s)
 		cur.clear()
-	func add_to_history()
+	func mut add_to_history()
 		if len(history) > 1
 			if history[len(history) - 2] == cur
 				history_pos = len(history) - 1
@@ -28,54 +30,54 @@ class Prompt
 		history[len(history) - 1] = cur
 		history.add("")
 		history_pos = len(history) - 1
-	func history_jump(pos: int)
+	func mut history_jump(pos: int)
 		history[history_pos] = cur
 		history_pos = pos
 		clear()
 		cur = history[history_pos]
 		print(cur)
-	func history_up()
+	func mut history_up()
 		if history_pos > 0
 			history_jump(history_pos - 1)
-	func history_down()
+	func mut history_down()
 		if history_pos < len(history) - 1
 			history_jump(history_pos + 1)
 	func show()
-		print(str(Filesystem.current_directory()) + ": ")
+		print(str(os.fs.current_directory()) + ": ")
 		
-	func process(k: int)
+	func mut process(k: int)
 		if k < 0
 			return
-		int c = k
-		if jobs.fg
-			if c == 0x1a # '^Z'
-				kill(jobs.fg.pid, 19)
-				jobs.fg = nil
-				print("stopped\n")
-				show()
-			else if c == 0x03 # '^C'
-				kill(jobs.fg.pid, 9)
-				jobs.test_all()
-				show()
-			else if c == 0x04 # '^D'
-				close(jobs.fg.pipe_in[1])
-				jobs.test_all()
-				show()
-			else
-				write(jobs.fg.pipe_in[1], &c, 1)
-			return
+		var c = k
+#		for fg in jobs.fg
+#			if c == 0x1a # '^Z'
+#				kill(fg.pid, 19)
+#				jobs.fg = nil
+#				print("stopped\n")
+#				show()
+#			else if c == 0x03 # '^C'
+#				kill(fg.pid, 9)
+#				jobs.test_all()
+#				show()
+#			else if c == 0x04 # '^D'
+#				close(fg.pipe_in[1])
+#				jobs.test_all()
+#				show()
+#			else
+#				write(fg.pipe_in[1], &c, 1)
+#			return
 		
 		if c == 0x0a # '\n'
 			print("\n")
-			jobs.test_all()
+#			jobs.test_all()
 			exec(cur)
 			add_to_history()
 			cur.clear()
-			if !jobs.fg
-				show()
+#			if !jobs.fg
+			show()
 		else if c == 0x7f # BACKSPACE
 			if len(cur) > 0
-				string s
+				var s: string
 				s.add(c)
 				print(s)
 				cur.resize(len(cur) - 1)
@@ -84,11 +86,11 @@ class Prompt
 		else if c == 0x1b5b42 # ^[B down
 			history_down()
 		else if c == 0x1b5b43 # ^[C left
-			nil#print "----left---"
+			pass #print "----left---"
 		else if c == 0x1b5b44 # ^[D right
-			nil#print "----right---"
+			pass #print "----right---"
 		else if c >= 0x20 and c <= 0x7e
-			string s
+			var s: string
 			s.add(c)
 			print(s)
 			cur.add(c)
@@ -97,149 +99,150 @@ class Prompt
 
 var prompt: Prompt
 
-class Variable
+struct Variable
 	var name, value: string
 class VariableSet
-	var var: Variable*[]
+	var vars: Variable[]
 	func __init__()
-	func selfref get(name: string) -> Variable*
-		for v in var
+	func selfref mut get(name: string) -> Variable&
+		for v in vars
 			if v.name == name
 				return v
-		Variable *v = new Variable()
-		v.name = name
-		var.add(v)
-		return v
+		vars.add(Variable(name, ""))
+		return &vars[len(vars) - 1]
 	func show()
-		for v in var
+		for v in vars
 			print("{{v.name}} = {{v.value}}\n")
 var vars: VariableSet
 
-class Job
-	var cmd: string
-	var pid, id: int
-	var done: bool
-	var pipe_in, pipe_out: int[2] # from job's point of view
-	var as_bg: bool
-	func __init__(out c: string[], _cmd: string)
-		cmd = _cmd
-		done = false
-		pipe_in[0] = -1
-		pipe_in[1] = -1
-		pipe_out[0] = -1
-		pipe_out[1] = -1
-		pid = -1
-		
-		for i in 0:len(c)
-			if c[i] == ">" or c[i] == ">>"
-				if i == len(c) - 1
-					print("filename expected after >")
-					return
-				if c[i] == ">"
-					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY | O_TRUNC)
-				else
-					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
-				c.remove(i+1)
-				c.remove(i)
-		for i in 0:len(c)
-			if c[i] == "<"
-				if i == len(c) - 1
-					print("filename expected after <")
-					return
-				pipe_in[0] = open(c[i+1], O_RDONLY)
-				c.remove(i+1)
-				c.remove(i)
-		if pipe_in[0] < 0
-			pipe(pipe_in)
-		if pipe_out[1] < 0
-			pipe(pipe_out)
-		
-		as_bg = (c[len(c) - 1] == "&")
-		if as_bg
-			c.remove(len(c) - 1)
-		id = -1
-		#pid = execute(c, stdin, stdout)
-		pid = execute(c, pipe_in[0], pipe_out[1])
-		close(pipe_in[0])
-		close(pipe_out[1])
-		if as_bg
-			print("[{{id}}]: ")
-			#print pid
-			print("\n")
-		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
-	
-	func __delete__()
-		close(pipe_in[1])
-		close(pipe_out[0])
-	
-	func test()
-		string s
-		s.resize(512)
-		int r = read(pipe_out[0], &s[0], len(s))
-		if r > 0
-			s.resize(r)
-			print(s)
-			return
-		
-		int status
-		if waitpid(pid, &status, false) == -2
-			return
-		vars.get("?").value = str(status)
-		if &self != jobs.fg
-			print("[{{id}}] done: {{cmd}}\n")
-	#	if status < -600#-652
-	#		print("  -- Programm hat was boeses gemacht! --\n")
-		#print(" status " + status)
-		done = true
-
-class JobManager
-	var job: Job*[]
-	var fg: Job*
-	func __init__()
-		fg = nil
-	func get_next_id() -> int
-		int id = 1
-		for j in job
-			if j.id >= id
-				id = j.id + 1
-		return id
-	func get(id: int) -> Job*
-		if (id == -1) and (len(job) > 0)
-			return job[len(job) - 1]
-		for j in job
-			if j.id == id
-				return j
-		return nil
-	func create(out c: string[], cmd: string) -> Job*
-		Job *j = new Job(c, cmd)
-		if j.pid < 0
-			del j
-			return nil
-		j.id = get_next_id()
-		job.add(j)
-		if !j.as_bg
-			fg = j
-		return j
-	func test_all()
-		for j in job
-			j.test()
-		for i in 0:len(job)
-			if job[i].done
-				if job[i] == fg
-					fg = nil
-					prompt.show()
-				del job[i]
-				job.remove(i)
-				i --
-	func show()
-		for j in job
-			print("{{j.id}} - {{j.cmd}}\n")
-
-var jobs: JobManager
+#class Job
+#	var cmd: string
+#	var pid, id: int
+#	var done: bool
+#	var pipe_in, pipe_out: int[2] # from job's point of view
+#	var as_bg: bool
+#	func __init__(out c: string[], _cmd: string)
+#		cmd = _cmd
+#		done = false
+#		pipe_in[0] = -1
+#		pipe_in[1] = -1
+#		pipe_out[0] = -1
+#		pipe_out[1] = -1
+#		pid = -1
+#		
+#		for i in 0:len(c)
+#			if c[i] == ">" or c[i] == ">>"
+#				if i == len(c) - 1
+#					print("filename expected after >")
+#					return
+#				if c[i] == ">"
+#					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY | O_TRUNC)
+#				else
+#					pipe_out[1] = open(c[i+1], O_CREATE | O_WRONLY)
+#				c.remove(i+1)
+#				c.remove(i)
+#		for i in 0:len(c)
+#			if c[i] == "<"
+#				if i == len(c) - 1
+#					print("filename expected after <")
+#					return
+#				pipe_in[0] = open(c[i+1], O_RDONLY)
+#				c.remove(i+1)
+#				c.remove(i)
+#
+#
+######### FIXME: pipe
+##		if pipe_in[0] < 0
+##			pipe(pipe_in)
+##		if pipe_out[1] < 0
+##			pipe(pipe_out)
+#		
+#		as_bg = (c[len(c) - 1] == "&")
+#		if as_bg
+#			c.remove(len(c) - 1)
+#		id = -1
+#		#pid = execute(c, stdin, stdout)
+#		pid = execute(c, pipe_in[0], pipe_out[1])
+#		close(pipe_in[0])
+#		close(pipe_out[1])
+#		if as_bg
+#			print("[{{id}}]: ")
+#			#print pid
+#			print("\n")
+#		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
+#	
+#	func __delete__()
+#		close(pipe_in[1])
+#		close(pipe_out[0])
+#	
+#	func test()
+#		var s: string
+#		s.resize(512)
+#		let r = read(pipe_out[0], &s[0], len(s))
+#		if r > 0
+#			s.resize(r)
+#			print(s)
+#			return
+#		
+#		var status: int
+#		if waitpid(pid, &status, false) == -2
+#			return
+#		vars.get("?").value = str(status)
+#		if &self != jobs.fg
+#			print("[{{id}}] done: {{cmd}}\n")
+#	#	if status < -600#-652
+#	#		print("  -- Programm hat was boeses gemacht! --\n")
+#		#print(" status " + status)
+#		done = true
+#
+#class JobManager
+#	var job: Job*[]
+#	var fg: Job*
+#	func __init__()
+#		fg = nil
+#	func get_next_id() -> int
+#		int id = 1
+#		for j in job
+#			if j.id >= id
+#				id = j.id + 1
+#		return id
+#	func get(id: int) -> Job*
+#		if (id == -1) and (len(job) > 0)
+#			return job[len(job) - 1]
+#		for j in job
+#			if j.id == id
+#				return j
+#		return nil
+#	func create(out c: string[], cmd: string) -> Job*
+#		Job *j = new Job(c, cmd)
+#		if j.pid < 0
+#			del j
+#			return nil
+#		j.id = get_next_id()
+#		job.add(j)
+#		if !j.as_bg
+#			fg = j
+#		return j
+#	func test_all()
+#		for j in job
+#			j.test()
+#		for i in 0:len(job)
+#			if job[i].done
+#				if job[i] == fg
+#					fg = nil
+#					prompt.show()
+#				del job[i]
+#				job.remove(i)
+#				i --
+#	func show()
+#		for j in job
+#			print("{{j.id}} - {{j.cmd}}\n")
+#
+#var jobs: JobManager
 
 
 func parse_var_name(cmd: string, pos: int) -> string
-	string name
+	var name: string
 	for i in pos:len(cmd)
 		if cmd[i] == ' ' or cmd[i] == '"' or cmd[i] == '$' or cmd[i] == '.' or cmd[i] == ':' or cmd[i] == ',' or cmd[i] == '<' or cmd[i] == '>' or cmd[i] == '|'
 			break
@@ -247,8 +250,8 @@ func parse_var_name(cmd: string, pos: int) -> string
 	return name
 
 func parse_single(cmd: string, out pos: int*) -> string
-	string t
-	bool in_string = false
+	var t: string
+	var in_string = false
 	for j in *pos:len(cmd)
 		#if (cmd[j] == ' ' or cmd[j] == '<' or cmd[j] == '>' or cmd[j] == '|') and !in_string
 		if cmd[j] == ' ' and !in_string
@@ -256,7 +259,7 @@ func parse_single(cmd: string, out pos: int*) -> string
 		if cmd[j] == '"'
 			in_string = ! in_string
 		else if cmd[j] == '$'
-			string var_name = parse_var_name(cmd, j+1)
+			let var_name = parse_var_name(cmd, j+1)
 			t += vars.get(var_name).value
 			j += len(var_name)
 		else
@@ -265,105 +268,106 @@ func parse_single(cmd: string, out pos: int*) -> string
 	return t
 
 func parse(cmd0: string, out c: string[])
-	string cmd = cmd0
+	let cmd = cmd0
 	for i in 0:len(cmd)
 		if cmd[i] == ' '
 			continue
-		string t = parse_single(cmd, &i)
+		let t = parse_single(cmd, &i)
 		if len(t) > 0
 			if t[0] == '#'
 				break
 		c.add(t)
 
 func execute_assign(cmd: string)
-	string[] a = cmd.explode("=")
+	let a = cmd.explode("=")
 	if len(a) == 2
 		vars.get(a[0]).value = a[1]
 
-func execute_job(out c: string[], cmd: string) -> bool
-	Job *j = jobs.create(c, cmd)
-	return j
+#func execute_job(out c: string[], cmd: string) -> bool
+#	Job *j = jobs.create(c, cmd)
+#	return j
 
-func do_fg(c: string[])
-	int id = -1
-	if len(c) >= 2
-		id = int(c[1])
-	Job *j = jobs.get(id)
-	if j
-		kill(j.pid, 18)
-		jobs.fg = j
-		print(j.cmd + "\n")
-	else
-		print("no job\n")
-
-func do_bg(c: string[])
-	int id = -1
-	if len(c) >= 2
-		id = int(c[1])
-	Job *j = jobs.get(id)
-	if j
-		kill(j.pid, 18)
-		print("in background: {{j.cmd}}\n")
-	else
-		print("no job\n")
+#func do_fg(c: string[])
+#	int id = -1
+#	if len(c) >= 2
+#		id = int(c[1])
+#	Job *j = jobs.get(id)
+#	if j
+#		kill(j.pid, 18)
+#		jobs.fg = j
+#		print(j.cmd + "\n")
+#	else
+#		print("no job\n")
+#
+#func do_bg(c: string[])
+#	int id = -1
+#	if len(c) >= 2
+#		id = int(c[1])
+#	Job *j = jobs.get(id)
+#	if j
+#		kill(j.pid, 18)
+#		print("in background: {{j.cmd}}\n")
+#	else
+#		print("no job\n")
 
 func do_cd(c: string[])
 	if len(c) > 1
+		#if !os.fs.set_current_directory(c[1])
 		if !chdir(c[1])
 			print("no valid directory: {{c[1]}}\n")
 	else
 		print("directory?\n")
 
 func exec(cmd: string)
-	string cmd0 = cmd
-	string[] c
+	var cmd0 = cmd
+	var c: string[]
 	parse(cmd, c)
 	if len(c) == 0
 		return
 	#print(c.join(" - ")+"|\n")
-	string cc = c[0]
+	let cc = c[0]
 	if cc.find("=", 0) > 0
 		execute_assign(cc)
 	else if cc == "vars"
 		vars.show()
-	else if cc == "jobs"
-		jobs.show()
-	else if cc == "fg"
-		do_fg(c)
-	else if cc == "bg"
-		do_bg(c)
+#	else if cc == "jobs"
+#		jobs.show()
+#	else if cc == "fg"
+#		do_fg(c)
+#	else if cc == "bg"
+#		do_bg(c)
 	else if cc == "cd"
 		do_cd(c)
 	else if cc == "exit"
 		exit(0)
 	else
-		if cc[0] == '/' or cc[0] == '.'
-			if execute_job(c, cmd0)
-				return
-		c[0] = vars.get("PATH").value + c[0]
-		if execute_job(c, cmd0)
-			return
+#		if cc[0] == '/' or cc[0] == '.'
+#			if execute_job(c, cmd0)
+#				return
+#		c[0] = vars.get("PATH").value + c[0]
+#		if execute_job(c, cmd0)
+#			return
 		print("unknown command: {{cc}}\n")
 
 
 func getkey() -> int
-	int buf = 0
-	int key = 0
-	int r = read(stdin, &key, 1)
-	if r <= 0
-		return -1
-	if key != 0x0000001b
-		return key
-	r = read(stdin, &buf, 1)
-	if r <= 0
-		return -1
-	key = (key << 8) + buf
-	if buf != 0x5b
-		return key
-	r = read(stdin, &buf, 1)
-	if r <= 0
-		return -1
-	key = (key << 8) + buf
+	var buf = 0
+	var key = 0
+#	var r = read(stdin, &key, 1)
+#	if r <= 0
+#		return -1
+#	if key != 0x0000001b
+#		return key
+#	r = read(stdin, &buf, 1)
+#	if r <= 0
+#		return -1
+#	key = (key << 8) + buf
+#	if buf != 0x5b
+#		return key
+#	r = read(stdin, &buf, 1)
+#	if r <= 0
+#		return -1
+#	key = (key << 8) + buf
 	return key
 
 func main()
@@ -372,16 +376,16 @@ func main()
 	prompt.__init__()
 	vars.__init__()
 	vars.get("PATH").value = "/bin/"
-	jobs.__init__()
+#	jobs.__init__()
 	
-	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
+#	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	prompt.show()
 	
 	while true
-		usleep(100000)
-		jobs.test_all()
-		int key = getkey()
+#		usleep(100000)
+#		jobs.test_all()
+		let key = getkey()
 		if key != -1
 			prompt.process(key)
 	
