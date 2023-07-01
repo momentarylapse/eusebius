@@ -13,8 +13,8 @@ class UTSName
 func main()
 	init_lib()
 	
-	UTSName u
-	if !uname(&u)
+	var u: UTSName
+	if not uname(&u)
 		print("ERROR")
 		exit(1)
 	print("{{cs2s(u.sysname)}}  {{cs2s(u.nodename)}}  {{cs2s(u.release)}}  {{cs2s(u.version)}}  {{cs2s(u.machine)}}")

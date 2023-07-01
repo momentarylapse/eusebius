@@ -16,7 +16,8 @@ LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
  bin/simple \
- bin/shell
+ bin/shell \
+ bin/uname
  
 XXXBINS = \
  bin/hello \

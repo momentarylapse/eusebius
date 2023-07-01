@@ -7,7 +7,7 @@ use dev.block
 use mem.heap
 use mem.paging
 #use mem.shared
-#use task.task
+use task.task
 use task.manager
 use task.scheduler
 use time.timevalue
@@ -135,8 +135,8 @@ class Syscall
 				return t.sys_open(frame.rdi, O_CREATE | O_WRONLY | O_TRUNC)
 #			else if index == 0x000a # unlink
 #				r = caller.sys_unlink(param1)
-#			else if index == 0x000b # exec
-#				r = caller.sys_execute(param1, param2, param3)
+			else if index == 0x000b # exec
+				return sys_execute(t, frame.rdi, frame.rsi, frame.rdx)
 			else if index == 0x000c # chdir
 				return t.sys_set_cur_dir(frame.rdi)
 				
@@ -226,6 +226,37 @@ class Syscall
 				printi(index)
 		return -1
 
+
+
+func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
+	let h = t.sys_open(faddr, O_RDONLY)
+	if h < 0
+		return -ENOENT
+	for of in t.handles[h]
+		var filename: cstring
+		of.entry.get_path(filename)
+		var addr = TASK_IMAGE_POS # task space...
+		for tt in TaskManager.add_task_user(filename, addr, &t)
+			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+			while true
+				let r = of.read(code, 1024)
+				if r <= 0
+					break
+				code += r
+			t.sys_close(h)
+			
+		#	var of_in = get_handle(fd_in)
+		#	var of_out = get_handle(fd_out)
+		#	tt.add_handle(of_in)
+		#	tt.add_handle(of_out)
+	
+			#tt.activate()
+			return tt.pid
+		else
+			t.sys_close(h)
+			return -ENOMEM
+	t.sys_close(h)
+	return -1
 
 #class SysInfo as @noauto
 #	var uptime: int

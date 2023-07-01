@@ -17,21 +17,21 @@ func _cs2s(cs: cstring, out s: lib__string)
 			return
 		s.add(cs[i])
 
-#func cs2s(cs: cstring) -> lib__string
-#	var s: lib__string
-#	_cs2s(cs, s)
-#	return s
-#
-## ["aa", "bb"] -> "aa\0bb\0\0"
-#func sa2cs(a: string[], out cs: cstring)
-#	var n = 0
-#	for k in 0:a.num
-#		for i in 0:a[k].num
-#			cs[n] = a[k][i]
-#			n ++
-#		cs[n] = 0
-#		n ++
-#	cs[n] = 0
+func cs2s(cs: cstring) -> lib__string
+	var s: lib__string
+	_cs2s(cs, s)
+	return s
+
+# ["aa", "bb"] -> "aa\0bb\0\0"
+func sa2cs(a: string[], out cs: cstring)
+	var n = 0
+	for k in 0:a.num
+		for i in 0:a[k].num
+			cs[n] = a[k][i]
+			n ++
+		cs[n] = 0
+		n ++
+	cs[n] = 0
 
 
 

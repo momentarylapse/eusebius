@@ -405,37 +405,7 @@ class Task
 #		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
 #			return -EFAULT
 #		return kernel_rmdir(filename, cur_dir)
-#	
-#	func mut sys_execute(faddr: int, fd_in: int, fd_out: int) -> int
-#		let h = sys_open(faddr, O_RDONLY)
-#		if h < 0
-#			return -ENOENT
-#		var of = handles[h]
-#		var filename: cstring
-#		of.entry.get_path(filename)
-#		var addr = TASK_IMAGE_POS # task space...
-#		var t = TaskManager.add_task_user(filename, _i2p(addr), &self)
-#		if !t
-#			sys_close(h)
-#			return -ENOMEM
-#		if !page_dir.memcpy2kernel(&t.arg, faddr, sizeof(cstring))
-#			return -EFAULT
-#		while true
-#			#int r = sys_read(caller, h, addr, 1024)
-#			let r = of.read(t.page_dir, addr, 1024)
-#			if r <= 0
-#				break
-#			addr += r
-#		sys_close(h)
-#		
-#		var of_in = get_handle(fd_in)
-#		var of_out = get_handle(fd_out)
-#		t.add_handle(of_in)
-#		t.add_handle(of_out)
-#	
-#		t.activate()
-#		return t.pid
-#
+
 #	func mut sys_exit(r: int)
 #		die(r)
 #

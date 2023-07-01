@@ -8,23 +8,23 @@ use lib_file
 #use lib_image
 
 
-#func execute(arg: string[], fd_in: int, fd_out: int) -> int
-#	var tt_arg: cstring
-#	sa2cs(arg, tt_arg)
-#	__temp_p__ = &tt_arg
-#	__temp_i__ = fd_in
-#	__temp_i2__ = fd_out
-#	asm{
-#		mov eax, 0x0000000b
-#		mov ebx, __temp_p__
-#		mov ecx, __temp_i__
-#		mov edx, __temp_i2__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error
-#
-#
+func execute(arg: string[], fd_in: int, fd_out: int) -> int
+	var tt_arg: cstring
+	sa2cs(arg, tt_arg)
+	__temp_p__ := &tt_arg
+	__temp_i__ = fd_in
+	__temp_i2__ = fd_out
+	asm{
+		mov eax, 0x0000000b
+		mov rdi, __temp_p__
+		mov esi, __temp_i__
+		mov edx, __temp_i2__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error
+
+
 #func get_args(out arg: lib__string@list)
 #	var cs: cstring
 #	__temp_p__ = &cs
