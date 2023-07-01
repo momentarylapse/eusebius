@@ -107,7 +107,7 @@ class VariableSet
 	func selfref mut get(name: string) -> Variable&
 		for v in vars
 			if v.name == name
-				return v
+				return &v
 		vars.add(Variable(name, ""))
 		return &vars[len(vars) - 1]
 	func show()
@@ -353,21 +353,21 @@ func exec(cmd: string)
 func getkey() -> int
 	var buf = 0
 	var key = 0
-#	var r = read(stdin, &key, 1)
-#	if r <= 0
-#		return -1
-#	if key != 0x0000001b
-#		return key
-#	r = read(stdin, &buf, 1)
-#	if r <= 0
-#		return -1
-#	key = (key << 8) + buf
-#	if buf != 0x5b
-#		return key
-#	r = read(stdin, &buf, 1)
-#	if r <= 0
-#		return -1
-#	key = (key << 8) + buf
+	var r = read(stdin, &key, 1)
+	if r <= 0
+		return -1
+	if key != 0x0000001b
+		return key
+	r = read(stdin, &buf, 1)
+	if r <= 0
+		return -1
+	key = (key << 8) + buf
+	if buf != 0x5b
+		return key
+	r = read(stdin, &buf, 1)
+	if r <= 0
+		return -1
+	key = (key << 8) + buf
 	return key
 
 func main()
@@ -378,7 +378,8 @@ func main()
 	vars.get("PATH").value = "/bin/"
 #	jobs.__init__()
 	
-#	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
+	stdin = open("/dev/tty", O_RDONLY)
+	#fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	prompt.show()
 	

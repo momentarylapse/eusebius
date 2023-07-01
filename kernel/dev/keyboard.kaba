@@ -379,7 +379,7 @@ class FileOperationsKey extends FileOperations
 
 	func mut handle_irq()
 		IrqManager.mask(KEYBOARD_IRQ)
-		prints("<key>")
+#		prints("<key>")
 #		asm{
 #			mov rax, rsp
 #			mov __temp_p__, rax

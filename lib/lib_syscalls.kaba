@@ -112,21 +112,21 @@ func getdents(h: int, buf: void&) -> bool
 #		mov lib_error, eax
 #	}
 #	return lib_error == 0
-#
-#func fcntl(h: int, op: int, param: int) -> int
-#	__temp_i__ = h
-#	__temp_i2__ = op
-#	__temp_i3__ = param
-#	asm{
-#		mov eax, 0x00000033
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_i2__
-#		mov edx, __temp_i3__
-#		int 0x80
-#		mov __temp_i__, eax
-#	}
-#	return __temp_i__
-#
+
+func fcntl(h: int, op: int, param: int) -> int
+	__temp_i__ = h
+	__temp_i2__ = op
+	__temp_i3__ = param
+	asm{
+		mov eax, 0x00000033
+		mov edi, __temp_i__
+		mov esi, __temp_i2__
+		mov edx, __temp_i3__
+		syscall
+		mov __temp_i__, eax
+	}
+	return __temp_i__
+
 #func getpid() -> int
 #	asm{
 #		mov eax, 0x00000014

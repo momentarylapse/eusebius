@@ -22,21 +22,22 @@ var lib_mem_debug: bool
 var lib_print_endl: bool
 
 var __temp_i__, __temp_i2__, __temp_i3__: int
+var __temp_i64__: int64
 var __temp_f__: float
 var __temp_p__, __temp_p2__: void&
 
-func _p2i(p: void*) -> int
-	return &p as int&
+func _p2i(p: void*) -> int64
+	return &p as int64&
 
 #class PointerWrapper
 #	void *p
 	
-func _i2p(i: int) -> void&
+func _i2p(i: int64) -> void&
 #	PointerWrapper *p = &i
 #	return p.p
-	__temp_i__ = i
+	__temp_i64__ = i
 	asm{
-		mov eax, __temp_i__
+		mov rax, __temp_i64__
 		mov __temp_p__, rax
 	}
 	return __temp_p__

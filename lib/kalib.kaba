@@ -80,13 +80,13 @@ use lib_file
 func init_lib()
 	lib_print_endl = true
 	_init_memory()
-#	
-#	rand_state = 0
-#	
+	
+	rand_state = 0
+	
 #	sigaction(SIGSEGV, raw_function_pointer(signal_handler_segv))
-#	
-#	stdin = 0
-#	stdout = 1
-#	
-#
-#
+	
+	stdin = 0
+	stdout = 1
+	
+	
+

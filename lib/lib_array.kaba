@@ -45,6 +45,7 @@ class lib__@DynamicArray
 	var num: int
 	var allocated: int
 	var element_size: int
+	var dummy: int
 	func mut __mem_init__(_element_size: int)
 		data = nil
 		num = 0
@@ -277,7 +278,7 @@ class lib__string extends lib__@DynamicArray
 						dd[i] = dd[i - d]
 					resize(num + d)
 
-	func const replace(sub: lib__string, by: lib__string) -> lib__string
+	func replace(sub: lib__string, by: lib__string) -> lib__string
 		var r: lib__string = self
 		var i = r.find(sub, 0)
 		while i >= 0
@@ -285,7 +286,7 @@ class lib__string extends lib__@DynamicArray
 			i = r.find(sub, i + by.num)
 		return r
 
-	func const lower() -> lib__string
+	func lower() -> lib__string
 		var r: lib__string = self
 		for d in r.data
 			for i in 0:num
@@ -293,7 +294,7 @@ class lib__string extends lib__@DynamicArray
 					d[i] += 'a' - 'A'
 		return r
 
-	func const upper() -> lib__string
+	func upper() -> lib__string
 		var r: lib__string = self
 		for d in r.data
 			for i in 0:num
@@ -302,7 +303,7 @@ class lib__string extends lib__@DynamicArray
 		return r
 		
 
-	func const explode(s: lib__string) -> lib__string@list
+	func explode(s: lib__string) -> lib__string@list
 		var r: lib__string@list
 
 		var pos = 0
@@ -318,7 +319,7 @@ class lib__string extends lib__@DynamicArray
 			r.add(substr(pos, num - pos))
 		return r
 		
-	func const hex() -> lib__string
+	func hex() -> lib__string
 		var ttt: lib__string
 		for _data in data
 			for i in 0:num
@@ -340,7 +341,7 @@ class lib__string extends lib__@DynamicArray
 					ttt.add('.')
 		return ttt
 	
-	func const __int__() -> int
+	func __int__() -> int
 		if num == 0
 			return 0
 		for _data in data
@@ -358,7 +359,7 @@ class lib__string extends lib__@DynamicArray
 			return r
 		return 0
 	
-	func const __float__() -> float
+	func __float__() -> float
 		if num == 0
 			return 0.0
 		for _data in data
@@ -382,7 +383,7 @@ class lib__string extends lib__@DynamicArray
 				return -r
 			return r
 		return 0.0
-	func const format(f: lib__string) -> lib__string
+	func format(f: lib__string) -> lib__string
 		let n = int(f)
 		return str_fill(self, n, ' ')
 
@@ -416,17 +417,18 @@ class lib__string@list extends lib__@DynamicArray
 				d[i].__delete__()
 		#clear()
 	func mut resize(size: int)
-		if size < num
+		let num0 = num
+		if size < num0
 			# shrink -> destruct
 			for d in data
-				for i in size:num
+				for i in size:num0
 					d[i].__delete__()
-		else if size > num
+		__mem_resize__(size)
+		if size > num0
 			reserve(size)
 			for d in data
-				for i in num:size
+				for i in num0:size
 					d[i].__init__()
-		num = size
 	func mut add(s: lib__string)
 		resize(num + 1)
 		for d in data
