@@ -122,7 +122,7 @@ class Task
 		frame.ss = 0x1b
 		frame.rax = 0
 		frame.rflags = 0x3200
-		
+
 ##	t.mem_bottom = KERNEL_MEM
 ##	t.mem_size = INITIAL_TASK_MEM
 ##	t.page_dir = paging.create_page_directory()
@@ -320,9 +320,9 @@ class Task
 		else
 			return -EBADF
 
-	func mut sys_getdents(handle: int, addr: int, num: int) -> int
+	func mut sys_getdents(handle: int, addr: int64, num: int) -> int
 		for of in get_handle(handle)
-			return of.getdents(addr, num)
+			return of.getdents(_i642p(addr) as dirent_struct&, num)
 		else
 			return -EBADF
 
@@ -335,7 +335,9 @@ class Task
 
 	func mut sys_close(handle: int) -> int
 		for of in get_handle(handle)
+			prints(" CLOSE")
 			of.unref()
+			prints(" X ")
 			handles[handle] = nil
 			return 0
 		else

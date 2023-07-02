@@ -65,6 +65,7 @@ class Heap as @noauto
 				cur := n
 			else
 				break
+		printi(_size)
 		panic("malloc: fail")
 		return first_free # dummy
 

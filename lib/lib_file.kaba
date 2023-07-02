@@ -186,14 +186,6 @@ class lib__Path
 #class lib__Path@list extends lib__string@list
 # not working because this does not export new functions...
 
-##--------------------------------------------------------------------------
-## dir entry
-#
-#class dirent_struct
-#	var struct_size: int
-#	var size: int
-#	var type: int
-#	var name: cstring
 class lib__Path@list
 	var l: lib__string@list
 	func mut add(p: lib__Path)
@@ -204,49 +196,71 @@ class lib__Path@list
 		l + o.l
 	func mut __assign__(o: lib__Path@list)
 		l = o.l
+		
+
+#--------------------------------------------------------------------------
+# dir entry
+
+class dirent_struct
+	var struct_size: int
+	var size: int
+	var type: int
+	var name: cstring
 #	func __assign__(o: dirent_struct)
 #		pass
-#
-#
-#
-#func lib__Filesystem@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
-#	var list_dirs, list_files: lib__string@list
-#	lib__print("") # ?!?!?!? FIXME
-#	var h = open(dirname, O_RDONLY)
-#	if h < 0
-#		lib_error = -1
-#		return list_files
-#	var d: dirent_struct
-#	while getdents(h, &d)
-#		var s: lib__string
-#		_cs2s(d.name, s)
-#		if d.type == 1
-#			list_dirs.add(s)
-#		else
-#			list_files.add(s)
-#	close(h)
-#	lib_error = 0
-#	
-#	var flag_dir = false
-#	var flag_file = false
-#	for c in options
-#		if c == 'f'
-#			flag_file = true
-#		else if c == 'd'
-#			flag_dir = true
-#	
-#	if flag_dir
-#		for i in 0:list_dirs.num-1
-#			for j in i+1:list_dirs.num
-#				if list_dirs.data[i].compare(list_dirs.data[j]) > 0
-#					list_dirs.swap(i, j)
-#	if flag_file
-#		for i in 0:list_files.num-1
-#			for j in i+1:list_files.num
-#				if list_files.data[i].compare(list_files.data[j]) > 0
-#					list_files.swap(i, j)
-#	return list_dirs + list_files
-#
+
+
+
+func lib__fs@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
+	var list_dirs, list_files: lib__string@list
+	kprinti(99)
+	var h = open(dirname, O_RDONLY)
+	if h < 0
+		lib_error = -1
+		return list_files
+	kprinti(99)
+	var d: dirent_struct
+	while getdents(h, &d)
+		var s: lib__string
+		_cs2s(d.name, s)
+		if d.type == 1
+			list_dirs.add(s)
+		else
+			list_files.add(s)
+		kprinti(9)
+	kprinti(11)
+	close(h)
+	kprinti(0)
+	lib_error = 0
+	kprinti(22)
+	
+	var flag_dir = false
+	var flag_file = false
+	for c in options
+		if c == 'f'
+			flag_file = true
+		else if c == 'd'
+			flag_dir = true
+	kprinti(33)
+	
+	if flag_dir
+		for dd in list_dirs.data
+			for i in 0:list_dirs.num-1
+				for j in i+1:list_dirs.num
+					if dd[i].compare(dd[j]) > 0
+						list_dirs.swap(i, j)
+	kprinti(99)
+	if flag_file
+		for fd in list_files.data
+			for i in 0:list_files.num-1
+				for j in i+1:list_files.num
+					if fd[i].compare(fd[j]) > 0
+						list_files.swap(i, j)
+	kprinti(list_dirs.num)
+	kprint("   ")
+	kprinti(list_files.num)
+	return list_dirs + list_files
+
 #class lib__File
 #	var h: int
 #	var buf_pos: int

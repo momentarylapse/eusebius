@@ -75,9 +75,9 @@ func main()
 		
 		print(s)
 		
-		#for i in 0:100000000
-		#	pass
-		sleep(2)
+		for i in 0:100000000
+			pass
+#		sleep(2)
 		#exit(0)
 		x ++
 		if x > 100

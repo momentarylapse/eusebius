@@ -20,6 +20,7 @@ BINS = \
  bin/echo \
  bin/hd \
  bin/lsblk \
+ bin/ls \
  bin/shell \
  bin/simple \
  bin/top \

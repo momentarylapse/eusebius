@@ -99,31 +99,40 @@ func main()
 	TaskManager.add_idle_task()
 
 #	TaskManager.add_dummy()
-#	
-#	prints("loading dummy process... ")
-#	for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
-#		for t in TaskManager.add_task_user("simple", TASK_MEMORY_OFFSET, nil)
-#			var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-#			let r = of.read(code, 4096)
-#			#printh(code, r)
-#			prints("ok\n")
-#		else
-#			panic("task")
-#	else
-#		panic("can not open /bin/simple")
-
-	prints("loading shell... ")
-	for of in kernel_open("/bin/shell", O_RDONLY, FileSystem.root)
-		for t in TaskManager.add_user_task("shell", TASK_MEMORY_OFFSET, nil)
-			var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-			let r = of.read(code, 65536)
-			#printh(code, r)
-			prints("ok\n")
-		else
-			panic("task")
-	else
-		panic("can not open /bin/shell")
 	
+	if false
+		prints("loading dummy process... ")
+		for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
+			for t in TaskManager.add_user_task("simple", TASK_MEMORY_OFFSET, nil)
+				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+				let r = of.read(code, 4096)
+				#printh(code, r)
+				prints("ok\n")
+			else
+				panic("task")
+		else
+			panic("can not open /bin/simple")
+
+
+	if true
+		prints("loading shell... ")
+		for of in kernel_open("/bin/shell", O_RDONLY, FileSystem.root)
+			for t in TaskManager.add_user_task("shell", TASK_MEMORY_OFFSET, nil)
+				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+				let r = of.read(code, 65536)
+				#printh(code, r)
+				prints("ok\n")
+			else
+				panic("task")
+		else
+			panic("can not open /bin/shell")
+
+#	printi(_p2i(FileSystem.get("/", FileSystem.root)))	
+#	prints("\n")
+#	for e in FileSystem.get("/", FileSystem.root)
+#		prints(e.name)
+#		printi(int(e.type))
+#		prints("\n")
 	
 	KernelTimer.init(raw_function_pointer(Scheduler.int_timer), 50)
 	Scheduler.run()

@@ -1,18 +1,19 @@
 use os
 use lib.std
+use lib.std.file
 
 
 func ftype(path: Path) -> string
-	if Filesystem.is_directory(path)
+	if os.fs.is_directory(path)
 		return "d"
 	else
 		return "f"
 
 func table_widths(list: string[], cols: int, space: int) -> int[]
-	int[] ww
+	var ww: int[]
 	for i in 0:cols
-		int w = 0
-		for s,k in list
+		var w = 0
+		for k=>s in list
 			if (k%cols) == i
 				w = max(w, len(s))
 		if i < cols-1
@@ -21,19 +22,19 @@ func table_widths(list: string[], cols: int, space: int) -> int[]
 	return ww
 
 func optimal_table(list: string[], space: int, max_width: int) -> int[]
-	int cols = len(list)
+	var cols = len(list)
 	while cols > 0
 		var w = table_widths(list, cols, space)
-		if w.sum() <= max_width
+		if sum(w) <= max_width
 			return w
 		cols --
 	return [10]
 
 func print_table(list: string[])
 	var w = optimal_table(list, 2, 80)
-	string o
-	for s,i in list
-		int col = (i % len(w))
+	var o: string
+	for i=>s in list
+		let col = (i % len(w))
 		if col == 0 and i > 0
 			o += "\n"
 		o += s
@@ -42,27 +43,28 @@ func print_table(list: string[])
 	print(o)
 
 func ls(dirname: Path, extended: bool)
-	var list = Filesystem.search(dirname, "", "df")
+	print("SEARCH\n")
+	var list = os.fs.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
 
 	if extended
 		for e in list
-			var path = dirname << e
-			print("{{ftype(path)|-4}} {{Filesystem_size32(path)|8}} {{e}}\n")
+			var path = dirname | e
+			print("{{ftype(path)|-4}} {{os_fs_size32(path)|8}} {{e}}\n")
 	else
-		print_table([for f in list str(f)])
+		print_table([for f in list f.__str__()])
 		print("\n")
 
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
+	var arg: string[]
 	get_args(arg)
 	
-	bool extended = false
+	var extended = false
 
-	Path[] paths
+	var paths: Path[]
 
 	for i in 1:arg.num
 		if arg[i] == "-l"
@@ -72,6 +74,6 @@ func main()
 	for p in paths
 		ls(p, extended)
 	if len(paths) == 0
-		ls(Filesystem.current_directory(), extended)
+		ls(os.fs.current_directory(), extended)
 
 	exit(0)

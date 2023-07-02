@@ -159,7 +159,7 @@ class OpenFileData as @noauto
 		
 		return r
 
-	func getdents(addr: int, num: int) -> int
+	func getdents(r: dirent_struct&, num: int) -> int
 		if !used
 			return -EBADF
 
@@ -175,12 +175,12 @@ class OpenFileData as @noauto
 					e := n
 				else
 					return 0
-			var r: dirent_struct
-			r.struct_size = strlen(e.name) + 13
-			r.size = e.size
-			r.type = e.type
-			strcpy(r.name, e.name)
-			memcpy(_i2p(addr), &r, r.struct_size)
+			var _r: dirent_struct
+			_r.struct_size = strlen(e.name) + 13
+			_r.size = e.size
+			_r.type = e.type
+			strcpy(_r.name, e.name)
+			memcpy(r, &_r, sizeof(_r))
 			offset ++
 			return 1
 		else
@@ -221,19 +221,25 @@ class OpenFileData as @noauto
 			clean_up()
 			
 	func mut clean_up()
+		prints(" CLEAN ")
 			
 		if inode_dirty
+			prints(" ID ")
 			if entry.mount.write_inode(entry) == 0
 				inode_dirty = false
 		if buffer_dirty
+			prints(" BD ")
 			for b in entry.blocks
 				let cl = b[offset / entry.mount.block_size]
 				entry.mount.write_block(cl, buffer)
 				buffer_dirty = false
 		FileSystem.sync()
+		prints(" A ")
 			
 		if buffer
+			prints(" B ")
 			Heap.free(buffer)
+			prints(" BB ")
 		if entry.type == FileType.CHAR
 			for op in entry.op
 				op.close(entry)
@@ -244,6 +250,7 @@ class OpenFileData as @noauto
 			for s in socket
 				s.unref()
 		
+		prints(" X ")
 		used = false
 		#entry = nil
 
@@ -269,7 +276,11 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 	for of in create_handle(flags)
 		of.entry := &e
 		of.offset = 0
-		if of.entry.type == FileType.FILE
+		if of.entry.type == FileType.FILE or of.entry.type == FileType.DIR
+			#prints("OPEN ")
+			#printh(&of.entry.mount, 4)
+			#printi(of.entry.mount.block_size)
+			#prints(" ")
 			of.buffer := Heap.malloc(of.entry.mount.block_size)
 			for b in of.entry.blocks
 				of.entry.mount.read_block(b[0], of.buffer)
