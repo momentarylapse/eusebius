@@ -35,6 +35,7 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
 		of.entry.get_path(filename)
 		var addr = TASK_IMAGE_POS # task space...
 		for tt in TaskManager.add_user_task(filename, addr, &t)
+			memcpy(&tt.arg, _i642p(faddr), sizeof(cstring))
 			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
 			while true
 				let r = of.read(code, 1024)

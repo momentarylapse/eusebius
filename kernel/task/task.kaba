@@ -72,7 +72,7 @@ class Task
 	var sleep_and_wait: bool
 	var parent: Task*
 	var name: cstring
-#	var arg: cstring
+	var arg: cstring
 	var cur_dir: FileEntry*
 	var page_root_dir: PageRootTable&
 	var memory_offset, memory_size: int
@@ -100,6 +100,8 @@ class Task
 		pid = _pid
 
 		strcpy(name, _name)
+		for a in arg
+			a = 0
 		status = TaskStatus.SLEEPING
 		parent = _parent
 		for p in parent

@@ -22,8 +22,8 @@ func show_dev(d: BlockDevice)
 func main()
 	init_lib()
 	lib_print_endl = false
-	var arg: string[]
-	#get_args(arg)
+#	var arg: string[]
+#	get_args(arg)
 	
 	print("Name       Maj:Min        Size    Type\n")
 	for i in 0:16

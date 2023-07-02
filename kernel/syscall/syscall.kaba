@@ -247,8 +247,9 @@ class Syscall
 				prints("  <SYSCALL HI>  ")
 				TextMode.text_color = 0x07
 				return 0
-#			else if index == 0x2001 # getarg
-#				caller.page_dir.memcpy2task(param1, &caller.arg, sizeof(cstring))
+			else if index == 0x2001 # getarg
+				memcpy(_i642p(frame.rdi), &t.arg, sizeof(cstring))
+				return 0
 			else if index == 0x2002 # kprint
 				TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
 				return 0

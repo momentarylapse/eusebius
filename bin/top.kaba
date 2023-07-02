@@ -74,7 +74,7 @@ func main()
 	init_lib()
 	lib_print_endl = false
 	var arg: string[]
-#	get_args(arg)
+	get_args(arg)
 	
 	var allow_irq = false
 	var show_parent = false

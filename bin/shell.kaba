@@ -281,9 +281,9 @@ func execute_assign(cmd: string)
 	if len(a) == 2
 		variable_set.get(a[0]).value = a[1]
 
-#func execute_job(out c: string[], cmd: string) -> bool
-#	Job *j = jobs.create(c, cmd)
-#	return j
+func execute_job(out c: string[], cmd: string) -> bool
+	var j = job_manager.create(c, cmd)
+	return j
 
 #func do_fg(c: string[])
 #	int id = -1
@@ -339,14 +339,14 @@ func exec(cmd: string)
 	else if cc == "exit"
 		exit(0)
 	else
-		if execute(["/bin/" + cc], 0, 1) >= 0
-			return
+##		if execute(["/bin/" + cc], 0, 1) >= 0
+##			return
 #		if cc[0] == '/' or cc[0] == '.'
 #			if execute_job(c, cmd0)
 #				return
-#		c[0] = vars.get("PATH").value + c[0]
-#		if execute_job(c, cmd0)
-#			return
+		c[0] = variable_set.get("PATH").value + c[0]
+		if execute_job(c, cmd0)
+			return
 		print("unknown command: {{cc}}\n")
 
 
