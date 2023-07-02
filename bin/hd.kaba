@@ -1,15 +1,16 @@
 use lib.std
+use lib.std.file
 use os
 
 
 func hd(h: int, _skip: int, _length: int)
-	int skip = _skip
-	int length = _length
-	string s
+	var skip = _skip
+	var length = _length
+	var s: string
 	while skip > 0
 		s.resize(128)
-		int n = min(128, skip)
-		int r = read(h, &s[0], n)
+		let n = min(128, skip)
+		let r = read(h, &s[0], n)
 		if r < 0
 			print("\nerror reading...\n")
 		if r <= 0
@@ -17,8 +18,8 @@ func hd(h: int, _skip: int, _length: int)
 		skip -= r
 	while true
 		s.resize(128)
-		int n = min(128, length)
-		int r = read(h, &s[0], n)
+		let n = min(128, length)
+		let r = read(h, &s[0], n)
 		if r < 0
 			print("\nerror reading...\n")
 		if r <= 0
@@ -32,13 +33,13 @@ func hd(h: int, _skip: int, _length: int)
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
+	var arg: string[]
 	get_args(arg)
 	
-	Path[] files
+	var files: Path[]
 	
-	int length = 2000000000
-	int skip = 0
+	var length = 2000000000
+	var skip = 0
 	
 	for i in 1:len(arg)
 		if arg[i] == "-n"
@@ -56,7 +57,7 @@ func main()
 		hd(stdin, skip, length)
 	
 	for f in files
-		int h = open(f, O_RDONLY)
+		let h = open(f, O_RDONLY)
 		if h < 0
 			print("hd: can not open file: {{f}}\n")
 			exit(-1)

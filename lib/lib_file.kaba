@@ -169,7 +169,7 @@ class lib__Path
 		for d in s.data
 			return d[len(s)-1] == '/'
 		return false
-	func const __lshift__(p: lib__Path) -> lib__string
+	func const __bitor__(p: lib__Path) -> lib__string
 		if is_empty()
 			return p.s
 		if has_dir_ending()
@@ -186,18 +186,6 @@ class lib__Path
 #class lib__Path@list extends lib__string@list
 # not working because this does not export new functions...
 
-#class lib__Path@list
-#	var l: lib__string@list
-#	func mut add(p: lib__Path)
-#		l.add(p.s)
-#	func __add__(o: lib__Path@list) -> lib__string@list
-#		return l + o.l
-#	func mut __iadd__(o: lib__Path@list)
-#		l + o.l
-#	func mut __assign__(o: lib__Path@list)
-#		l = o.l
-#		
-#
 ##--------------------------------------------------------------------------
 ## dir entry
 #
@@ -206,6 +194,16 @@ class lib__Path
 #	var size: int
 #	var type: int
 #	var name: cstring
+class lib__Path@list
+	var l: lib__string@list
+	func mut add(p: lib__Path)
+		l.add(p.s)
+	func __add__(o: lib__Path@list) -> lib__string@list
+		return l + o.l
+	func mut __iadd__(o: lib__Path@list)
+		l + o.l
+	func mut __assign__(o: lib__Path@list)
+		l = o.l
 #	func __assign__(o: dirent_struct)
 #		pass
 #
@@ -378,7 +376,7 @@ func lib__fs@@size(filename: lib__Path) -> int64
 		return d.size
 	return -1
 
-func Filesystem_size32(filename: lib__Path) -> int
+func os_fs_size32(filename: lib__Path) -> int
 	var d: StatData
 	if stat(filename, &d)
 		return d.size

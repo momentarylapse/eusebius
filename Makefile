@@ -15,8 +15,10 @@ LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
+ bin/cat \
  bin/date \
  bin/echo \
+ bin/hd \
  bin/lsblk \
  bin/shell \
  bin/simple \

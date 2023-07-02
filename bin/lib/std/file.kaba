@@ -44,6 +44,6 @@ func extern getpid() -> int
 func extern chdir(dir: Path) -> bool
 
 ## because std lib is 64bit...
-#func extern Filesystem_size32(filename: Path) -> int
+func extern os_fs_size32(filename: Path) -> int
 #
 #

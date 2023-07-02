@@ -525,12 +525,13 @@ class lib__int@list extends lib__@DynamicArray
 						let t = d[i]
 						d[i] = d[j]
 						d[j] = t
-	func sum() -> int
-		var s = 0
-		for d in data
-			for i in 0:num
-				s += d[i]
-		return s
+
+func lib__sum(l: lib__int@list) -> int
+	var s = 0
+	for d in l.data
+		for i in 0:l.num
+			s += d[i]
+	return s
 
 class lib__float@list extends lib__@DynamicArray
 	var override data: float[0]*

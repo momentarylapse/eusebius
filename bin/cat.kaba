@@ -1,11 +1,12 @@
 use lib.std
+use lib.std.file
 
 
 func cat(h: int)
-	string s
+	var s: string
 	while true
 		s.resize(128)
-		int r = read(h, &s[0], 128)
+		let r = read(h, &s[0], 128)
 		if r < 0
 			print("\nerror reading...\n")
 		if r <= 0
@@ -17,14 +18,14 @@ func cat(h: int)
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
+	var arg: string[]
 	get_args(arg)
 	
 	if arg.num == 1
 		cat(stdin)
 	
 	for i in 1:arg.num
-		int h = open(arg[i], O_RDONLY)
+		let h = open(arg[i], O_RDONLY)
 		if h < 0
 			print("cat: can not open file: " + arg[i])
 			exit(-1)
