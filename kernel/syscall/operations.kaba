@@ -87,8 +87,6 @@ class SysInfo as @noauto
 		totalheap = MEM_HEAP_SIZE / mem_unit
 		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
 
-#var _sys_info: SysInfo
-
 class UTSName as @noauto
 	var sysname: cstring
 	var nodename: cstring
@@ -128,19 +126,18 @@ class TaskInfo as @noauto
 			return 0
 		return -1
 
-#class MountInfo as @noauto
-#	var major, minor: int
-#	var dir: cstring
-#	func get(_index: int) -> int
-#		var m = &FileSystem.mounts[_index]
-#		if !m.dev
-#			return -1
-#		major = m.dev.major
-#		minor = m.dev.minor
-#		m.dest.get_path(dir)
-#		return 0
-#
-#var _mount_info: MountInfo
+class MountInfo as @noauto
+	var major, minor: int
+	var dir: cstring
+	func mut get(_index: int) -> int
+		var m = &FileSystem.mounts[_index]
+		for dev in m.dev
+			major = dev.major
+			minor = dev.minor
+			for d in m.dest
+				d.get_path(dir)
+			return 0
+		return -1
 
 
 class StatData as @noauto
@@ -179,75 +176,8 @@ class StatData as @noauto
 ##		prints(" ")
 ##		printi(index)
 ##		prints(" ")
-#	
-#		if index == 1 # exit
-#			caller.sys_exit(param1)
-#		else if index == 2 # fork
-#			r = caller.sys_fork()
 
 
-#		else if index == 14 # mknod
-#			r = caller.sys_mknod(param1, param2)
-#		else if index == 19 # seek
-#			r = caller.sys_seek(param1, param2, param3)
-#		else if index == 20 # getpid
-#			r = Scheduler.running_pid
-#		else if index == 25 # stime
-#			KernelTimer.update()
-#			r = 0
-#			if !caller.page_dir.memcpy2task(param1, &KernelTimer.tv, sizeof(TimeValue))
-#				r = -EFAULT
-#		else if index == 37 # kill
-#			r = caller.sys_kill(param1, param2)
-#		else if index == 39 # mkdir
-#			r = caller.sys_mkdir(param1)
-#		else if index == 40 # rmdir
-#			r = caller.sys_rmdir(param1)
-#		else if index == 41 # dup
-#			r = caller.sys_dup(param1)
-#		else if index == 42 # pipe
-#			r = caller.sys_pipe(param1)
-#		else if index == 45 # brk
-#			r = caller.sys_brk(param1)
-
-
-#		else if index == 0x2002 # kprints
-#			cstring filename
-#			if param2 < sizeof(filename)
-#				caller.page_dir.memcpy2kernel(&filename, param1, param2)
-#				filename[param2] = 0
-#				prints(filename)
-#		else if index == 0x2003 # kprinti
-#			printi(param1)
-#		else if index == 0x2006 # exit_signal
-#			r = caller.sys_exit_signal()
-#			asm {
-#				# don't overwrite eax with return value
-#				jmp __sys_call_return
-#			}
-#		else if index == 0x2007 # map IRQ
-#			r = irq.sys_map_irq(param1, caller, param2)
-#		else if index == 0x2008 # mountinfo
-#			r = _mount_info.get(param1)
-#			if r == 0
-#				caller.page_dir.memcpy2task(param2, &_mount_info, sizeof(_mount_info))
-#		else if index == 0x2009 # blockinfo
-#			r = -1
-#			var d = BlockDevManager.get(param1, param2)
-#			if d
-#				caller.page_dir.memcpy2task(param3, d, sizeof(BlockDevice))
-#				r = 0
-#		else if index == 0x200a # stat
-#			cstring filename
-#			caller.page_dir.memcpy2kernel(&filename, param1, sizeof(cstring))
-#			r = _stat_data.get(filename, caller.cur_dir)
-#			if r == 0
-#				caller.page_dir.memcpy2task(param2, &_stat_data, sizeof(_stat_data))
-#		else if index == 0x200b # addr2phys
-#			int offset
-#			r = caller.page_dir.addr2kernel(param1, &offset)
-#		else
-#			r = -ENOSYS
 #		#TextColor = 4
 ##		prints("<<")
 ##		prints(caller.name)

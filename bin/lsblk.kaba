@@ -1,4 +1,5 @@
 use lib.std
+use lib.std.sys
 
 func fs_type(p: BlockDevice) -> string
 	if p.type == 0x83
@@ -13,7 +14,7 @@ func fs_type(p: BlockDevice) -> string
 		return "ntfs"
 	if p.type == 0x0f
 		return "extended..."
-	return "???"
+	return as_binary(&p.type, 1).hex() + "?"
 
 func show_dev(d: BlockDevice)
 	print(" {{cs2s(d.name)|-10}} {{d.major|2}}:{{d.minor|-2}} {{d.size * d.block_size / 1024|12}} k   {{fs_type(d)|-10}}\n")
@@ -21,12 +22,12 @@ func show_dev(d: BlockDevice)
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
-	get_args(arg)
+	var arg: string[]
+	#get_args(arg)
 	
 	print("Name       Maj:Min        Size    Type\n")
 	for i in 0:16
-		BlockDevice d
+		var d: BlockDevice
 		if blockinfo(0, i, d)
 			show_dev(d)
 	

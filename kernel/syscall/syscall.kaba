@@ -1,6 +1,7 @@
 use common
 use io.text
 use cpu
+use dev.block
 use mem.heap
 use mem.paging
 #use mem.shared
@@ -165,6 +166,8 @@ class Syscall
 			if index == 0x0001 # exit
 				sys_exit(t, frame.rdi)
 				return 0
+#			else if index == 0x0002 # fork
+#				return t.sys_fork()
 			else if index == 0x0003 # read
 				return t.sys_read(frame.rdi, frame.rsi, frame.rdx)
 			else if index == 0x0004 # write
@@ -193,17 +196,16 @@ class Syscall
 				return Scheduler.running_pid
 			else if index == 0x0019 # stime
 				return sys_stime(frame.rdi)
-#			else if index == 37 # kill
+#			else if index == 0x0025 # kill
 #				r = caller.sys_kill(param1, param2)
-#			else if index == 39 # mkdir
+#			else if index == 0x0027 # mkdir
 #				r = caller.sys_mkdir(param1)
-#			else if index == 40 # rmdir
+#			else if index == 0x0028 # rmdir
 #				r = caller.sys_rmdir(param1)
-			else if index == 41 # dup
+			else if index == 0x0029 # dup
 				return t.sys_dup(frame.rdi)
-#			else if index == 42 # pipe
+#			else if index == 0x002a # pipe
 #				return t.sys_pipe(frame.rdi)
-				
 			else if index == 0x002d # brk
 				return t.sys_brk(frame.rdi)
 			else if index == 0x0033 # fcntl
@@ -259,14 +261,34 @@ class Syscall
 			else if index == 0x2005 # taskinfo
 				var ti = _i642p(frame.rsi) as TaskInfo&
 				return ti.get(frame.rdi)
+#			else if index == 0x2006 # exit_signal
+#				r = caller.sys_exit_signal()
+#				asm {
+#					# don't overwrite eax with return value
+#					jmp __sys_call_return
+#				}
+#			else if index == 0x2007 # map IRQ
+#				r = irq.sys_map_irq(param1, caller, param2)
+			else if index == 0x2008 # mountinfo
+				var mi = _i642p(frame.rsi) as MountInfo&
+				return mi.get(frame.rdi)
+			else if index == 0x2009 # blockinfo
+				var bd = _i642p(frame.rdx) as BlockDevice&
+				for d in BlockDevManager.get(frame.rdi, frame.rsi)
+					memcpy(bd as void&, d as void&, sizeof(BlockDevice))
+					return 0
+				return -1
 			else if index == 0x200a # stat
 				var pd = _i2p(frame.rsi) as StatData&
 				var pf = _i2p(frame.rdi) as cstring&
 				for d in t.cur_dir
 					return pd.get(pf, d)
 				return 1
+#			else if index == 0x200b # addr2phys
+#				int offset
+#				r = caller.page_dir.addr2kernel(param1, &offset)
 			else
 				prints("<syscall>")
 				printh(&index, 2)
-		return -1
+		return -ENOSYS
 
