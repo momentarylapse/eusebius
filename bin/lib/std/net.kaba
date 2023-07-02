@@ -1,0 +1,6 @@
+
+func extern socket(type: int) -> int
+func extern bind(fd: int, port: int) -> bool
+func extern connect(fd: int, port: int) -> bool
+func extern listen(fd: int) -> bool
+func extern accept(fd: int) -> int

@@ -45,24 +45,25 @@ func execute(arg: string[], fd_in: int, fd_out: int) -> int
 #			p = i + 1
 #		else
 #			s.add(cs[i])
-#
-#
-#
-#class lib__Exception
-#	var msg: lib__string
-#	func __init__(_msg: lib__string)
-#		msg = _msg
-#	func virtual __str__() -> lib__string
-#		return msg
-#
-#func lib__raise(e: lib__Exception*)
-#	var msg: string* = &e.msg
+
+
+
+class lib__Exception
+	var msg: lib__string
+	func __init__(_msg: lib__string)
+		msg = _msg
+	func virtual __str__() -> lib__string
+		return msg
+
+func lib__raise(e: xfer[lib__Exception])
+#	var msg: string& = &e.msg
 #	lib_print_endl = false
 #	lib__print("\n  EXCEPTION:    ")
 #	lib__print(*msg)
 #	lib__print("\n")
-#	exit(1)	
-#
+	lib__print("\n  EXCEPTION:    ")
+	exit(1)	
+
 ##--------------------------------------------------------------------------
 ## start
 #

@@ -18,6 +18,7 @@ BINS = \
  bin/date \
  bin/simple \
  bin/shell \
+ bin/top \
  bin/uname
  
 XXXBINS = \

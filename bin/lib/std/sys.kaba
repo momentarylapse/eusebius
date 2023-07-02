@@ -1,0 +1,52 @@
+use common
+
+class SysInfo
+	var uptime: int
+	var loads: int[3]
+	var totalram, freeram, sharedram, bufferram: int
+	var totalswap, freeswap: int
+	var procs: int
+	var totalhigh, freehigh: int
+	var mem_unit: int
+	var pad: int[2]
+	var totalheap, freeheap: int
+
+struct TaskInfo
+	var name: cstring
+	var pid, ppid, mode, status: int
+	var mem: int
+	var cpu: int
+	var life: TimeValue
+	func mut __assign__(o: TaskInfo)
+		memcpy(&self, &o, sizeof(TaskInfo))
+
+class MountInfo
+	var major, minor: int
+	var dir: cstring
+
+class BlockDevice
+	var major, minor: int
+	var disk_no: int
+	var offset, size: int
+	var block_size: int
+	var type: char
+	var active: bool
+	var name: cstring
+	var p: void*
+
+var extern malloc_first_free: int&
+#var extern lib_mem_debug: bool
+
+func extern sysinfo(s: SysInfo) -> bool
+func extern taskinfo(pid: int, out t: TaskInfo) -> bool
+func extern mountinfo(index: int, out i: MountInfo) -> bool
+func extern blockinfo(major: int, minor: int, out d: BlockDevice) -> bool
+#func extern sched_yield(pid: int) -> bool
+func extern uname(buf: void&) -> bool
+
+#func extern addr2phys(p: void*) -> int
+#
+#func extern kprint(s: string)
+func extern kprinti(i: int)
+func extern kprintp(p: void*)
+func extern kprintc(s: cstring, l: int)

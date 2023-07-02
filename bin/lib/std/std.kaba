@@ -1,0 +1,52 @@
+#define __FUNCTION_POINTER_AS_CODE__
+use os
+use common
+
+let EXPORT_IMPORTS = true
+
+
+let SIGKILL = 9
+let SIGSEGV = 11
+let SIGCONT = 18
+let SIGSTOP = 19
+let SIGX = 23
+
+
+
+let SHM_ABSOLUTE = 1 << 20
+let SHM_DEST = 1<<11
+let IPC_CREAT = 1<<12
+let IPC_EXCL = 1<<13
+
+
+func extern init_lib()
+#func extern get_args(arg: string[])
+
+var extern stdin, stdout: int
+var extern lib_error: int
+var extern lib_print_endl: bool
+
+func extern cs2s(cs: cstring) -> string
+##func extern binary(p: void*, num: int) -> string
+#
+func extern exit(r: int) -> bool
+func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
+#func extern fork() -> int
+
+
+#func extern waitpid(pid: int, status: void&, block: bool) -> int
+func extern kill(pid: int, signal: int) -> bool
+#func extern shmget(key: int, size: int, flags: int) -> int
+#func extern shmat(id: int, flags: int) -> void*
+#func extern shmdt(p: void&) -> bool
+#func extern waitmsg() -> bool
+#func extern yield(pid: int) -> bool
+#func extern sched_yield(pid: int) -> bool
+func extern time(t: TimeValue) -> bool
+func extern nanosleep(a: TimeValue, b: TimeValue) -> bool
+func extern sleep(sec: int) -> bool
+func extern usleep(usec: int) -> bool
+#func extern sigaction(sig: int, f: void*) -> bool
+#func extern mapirq(irq: int, signal: int) -> bool
+
+

@@ -1,4 +1,7 @@
 use common
+use mem.memory
+use mem.paging
+use mem.heap
 use task.task
 use task.manager
 use fs.fs
@@ -53,37 +56,37 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
 	t.sys_close(h)
 	return -1
 
-#class SysInfo as @noauto
-#	var uptime: int
-#	var loads: int[3]
-#	var totalram, freeram, sharedram, bufferram: int
-#	var totalswap, freeswap: int
-#	var procs: int
-#	var totalhigh, freehigh: int
-#	var mem_unit: int
-#	var pad: int[2]
-#	var totalheap, freeheap: int
-#	func get()
-#		KernelTimer.update()
-#		uptime = KernelTimer.tv.sec
-#		for l in loads
-#			l = 0
-#		mem_unit = 1024 #PAGE_SIZE
-#		totalram = MemorySize / mem_unit
-#		freeram = (MemorySize - Paging.get_used()) / mem_unit
-#		sharedram = SharedMemory.get_used() / mem_unit
-#		bufferram = 0
-#		totalswap = 0
-#		freeswap = 0
-#		procs = 0
-#		for t in TaskManager.tasks
-#			if t.status != TASK_STATUS_UNUSED
-#				procs ++
-#		totalhigh = 0
-#		freehigh = 0
-#		totalheap = MEM_HEAP_SIZE / mem_unit
-#		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
-#
+class SysInfo as @noauto
+	var uptime: int
+	var loads: int[3]
+	var totalram, freeram, sharedram, bufferram: int
+	var totalswap, freeswap: int
+	var procs: int
+	var totalhigh, freehigh: int
+	var mem_unit: int
+	var pad: int[2]
+	var totalheap, freeheap: int
+	func mut get()
+		KernelTimer.update()
+		uptime = KernelTimer.tv.sec
+		for l in loads
+			l = 0
+		mem_unit = 1024 #PAGE_SIZE
+		totalram = memory_size / mem_unit
+		freeram = (memory_size - Paging.get_used()) / mem_unit
+		sharedram = 0 #SharedMemory.get_used() / mem_unit
+		bufferram = 0
+		totalswap = 0
+		freeswap = 0
+		procs = 0
+		for t in TaskManager.tasks
+			if t.status != TaskStatus.UNUSED
+				procs ++
+		totalhigh = 0
+		freehigh = 0
+		totalheap = MEM_HEAP_SIZE / mem_unit
+		freeheap = (MEM_HEAP_SIZE - Heap.allocated) / mem_unit
+
 #var _sys_info: SysInfo
 
 class UTSName as @noauto
@@ -101,32 +104,30 @@ class UTSName as @noauto
 		strcpy(machine, MACHINE_TYPE)
 		strcpy(domainname, "-no domain-")
 
-#class TaskInfo as @noauto
-#	var name: cstring
-#	var pid, ppid, mode, status: int
-#	var mem: int
-#	var cpu: int
-#	var life: TimeValue
-#	func get(_pid: int) -> int
-#		var t = TaskManager.get_task(_pid)
-#		if !t
-#			return -1
-#		strcpy(name, t.name)
-#		pid = t.pid
-#		ppid = -1
-#		if t.parent
-#			ppid = t.parent.pid
-#		status = t.status
-#		mode = 1
-#		if t.kernel_mode
-#			mode = 0
-#		mem = t.pages_alloced()
-#		cpu = t.cpu_load
-#		life = t.time_all
-#		return 0
-#
-#var _task_info: TaskInfo
-#
+class TaskInfo as @noauto
+	var name: cstring
+	var pid, ppid, mode: int
+	var status: TaskStatus
+	var mem: int
+	var cpu: int
+	var life: TimeValue
+	func mut get(_pid: int) -> int
+		for t in TaskManager.get_task(_pid)
+			strcpy(name, t.name)
+			pid = t.pid
+			ppid = -1
+			for p in t.parent
+				ppid = p.pid
+			status = t.status
+			mode = 1
+		#	if t.kernel_mode
+		#		mode = 0
+			mem = 0 #t.pages_alloced()
+			cpu = 0 #t.cpu_load
+			#life = t.time_all
+			return 0
+		return -1
+
 #class MountInfo as @noauto
 #	var major, minor: int
 #	var dir: cstring
@@ -218,10 +219,6 @@ class StatData as @noauto
 #				prints(filename)
 #		else if index == 0x2003 # kprinti
 #			printi(param1)
-#		else if index == 0x2005 # taskinfo
-#			r = _task_info.get(param1)
-#			if r == 0
-#				caller.page_dir.memcpy2task(param2, &_task_info, sizeof(_task_info))
 #		else if index == 0x2006 # exit_signal
 #			r = caller.sys_exit_signal()
 #			asm {

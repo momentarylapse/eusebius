@@ -4,6 +4,15 @@ use io.io
 #use task.task
 use kaba
 
+# stack frame:
+#  ss
+#  rsp
+#  rflags
+#  cs
+#  rip
+#  (error code)
+#  -------------  <- rsp
+
 
 let HARDWARE_IRQ_SHIFT = 32
 let MAX_HW_IRQS = 16

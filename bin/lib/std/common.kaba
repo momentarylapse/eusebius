@@ -1,0 +1,29 @@
+#define __FUNCTION_POINTER_AS_CODE__
+
+
+const EWOULDBLOCK = 128
+const ENOSPC = 127
+const EACCES = 126
+const EEXIST = 125
+const EINVAL = 124
+const ENOENT = 123
+const ENOMEM = 122
+const ESRCH = 121
+const ECHILD = 120
+const EBADF = 119
+const ENFILE = 118
+const EFAULT = 117
+const ENOSYS = 116
+const ENOTDIR = 115
+const EISDIR = 114
+const ENOTEMPTY = 113
+const ENOTSOCK = 112
+const EADDRINUSE = 111
+const ECONNREFUSED = 110
+const ENOTCONN = 109
+
+
+class TimeValue
+	var sec, nanosec: int
+
+func extern memcpy(dest: void&, source: void&, size: int)

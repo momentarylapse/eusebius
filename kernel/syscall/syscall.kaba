@@ -37,8 +37,6 @@ class Syscall
 	class Frame
 		reg8ff: int64[8]
 		rsi, rdi, rbp, rdx, rcx, rbx, rax: int64
-		#rip, cs, rflags, rsp, ss: int64
-#		rsp: int64
 	
 	var static stack: void&
 	var static rsp: void& # kernel/handler
@@ -142,17 +140,15 @@ class Syscall
 		frame.rax = r
 		for t in Scheduler.cur
 			if t.status != TaskStatus.RUNNING
-				leave_task(frame)
-				Scheduler.do_scheduling()
-				enter_task(frame)
+				return_to_idle(frame)
 				#panic("???")
 	
-	func static leave_task(out frame: Frame)
+	func static return_to_idle(out frame: Frame)
+		panic("TODO iret idle")
 		for t in Scheduler.cur
 			memcpy(&t.frame.reg8ff, &frame.reg8ff, sizeof(int64) * (8 + 7))
 			t.syscall_rsp := Syscall.task_rsp as void&
-	
-	func static enter_task(out frame: Frame)
+			
 		for t in Scheduler.cur
 			if t.first_time_running
 				panic("x432")
@@ -160,7 +156,7 @@ class Syscall
 				Syscall.task_rsp = t.syscall_rsp
 				var next_frame = Syscall.task_rsp as Frame&
 				memcpy(&next_frame.reg8ff, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
-		prints("BACK...")
+		prints(">> IDLE...")
 
 
 	func static handle(frame: Frame) -> int64
@@ -218,9 +214,10 @@ class Syscall
 				pass
 #			else if index == 0x0066 # socket
 #				r = caller.sys_socket(param1, param2, param3)
-#			else if index == 0x0074 # sysinfo
-#				_sys_info.get()
-#				caller.page_dir.memcpy2task(param1, &_sys_info, sizeof(_sys_info))
+			else if index == 0x0074 # sysinfo
+				var si = _i642p(frame.rdi) as SysInfo&
+				si.get()
+				return 0
 #			else if index == 0x0075 # ipc
 #				r = caller.sys_ipc(param1, param2, param3, param4)
 			else if index == 0x007a # uname
@@ -259,6 +256,9 @@ class Syscall
 			else if index == 0x2004 # kprintp
 				printh(&frame.rdi, 8)
 				return 0
+			else if index == 0x2005 # taskinfo
+				var ti = _i642p(frame.rsi) as TaskInfo&
+				return ti.get(frame.rdi)
 			else if index == 0x200a # stat
 				var pd = _i2p(frame.rsi) as StatData&
 				var pf = _i2p(frame.rdi) as cstring&
@@ -267,6 +267,6 @@ class Syscall
 				return 1
 			else
 				prints("<syscall>")
-				printi(index)
+				printh(&index, 2)
 		return -1
 

@@ -14,13 +14,13 @@ class TaskManager as @noauto
 	var static stack0: void*
 	var static ist1: void*
 	
-#	func static get_task(pid: int) -> Task*
-#		if pid < 0 or pid >= MAX_TASKS
-#			return nil
-#		var t = &tasks[pid]
-#		if t.status == TaskStatus.UNUSED
-#			return nil
-#		return t
+	func static get_task(pid: int) -> Task*
+		if pid < 0 or pid >= MAX_TASKS
+			return nil
+		var t = &tasks[pid]
+		if t.status == TaskStatus.UNUSED
+			return nil
+		return t
 
 	var static tasks: Task[MAX_TASKS]
 #	var static idle_task: Task*
@@ -253,6 +253,7 @@ class TaskManager as @noauto
 				mov esi, __temp_i__
 				mov eax, 0x00002002
 				syscall
+				#hlt
 			}
 			for i in 0:37000000
 				pass
@@ -264,6 +265,9 @@ class TaskManager as @noauto
 	func static add_idle_task()
 		for t in add_user_task("idle", _p2i(raw_function_pointer(f_idle)), nil)
 			t.status = TaskStatus.IDLE
+			prints("IDLE: ")
+			printi(t.pid)
+			prints("\n")
 
 	
 	func static send_death_message(out t: Task)

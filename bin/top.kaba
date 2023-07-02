@@ -1,29 +1,30 @@
 use lib.std
+use lib.std.sys
 
-enum
-	TASK_STATUS_UNUSED
-	TASK_STATUS_SLEEPING
-	TASK_STATUS_RUNNING
-	TASK_STATUS_WAITING
-	TASK_STATUS_ZOMBIE
-	TASK_STATUS_INTERRUPT
-	#TASK_STATUS_DEAD
+enum TaskStatus
+	UNUSED
+	SLEEPING
+	RUNNING
+	WAITING
+	ZOMBIE
+	INTERRUPT
+	#DEAD
 
 func fill(out s: string, n: int)
 	while len(s) < n
 		s.add(' ')
 
 func i2s2(i: int, n: int) -> string
-	string s2 = str(i)
-	string s1
+	let s2 = str(i)
+	var s1: string
 	fill(s1, n - len(s2))
 	return s1 + s2
 
 func sec2s(_sec: int) -> string
-	int hour = _sec / 3600
-	int min = (_sec / 60) % 60
-	int sec = _sec % 60
-	string s = "  :  "
+	let hour = _sec / 3600
+	let min = (_sec / 60) % 60
+	let sec = _sec % 60
+	var s = "  :  "
 	s[0] = '0' + (min / 10)
 	s[1] = '0' + (min % 10)
 	s[3] = '0' + (sec / 10)
@@ -39,21 +40,22 @@ func task_mode(t: TaskInfo) -> string
 		return "U"
 
 func task_status(t: TaskInfo) -> string
-	if t.status == TASK_STATUS_RUNNING
+	let s = TaskStatus.from_int(t.status)
+	if s == TaskStatus.RUNNING
 		return "R"
-	if t.status == TASK_STATUS_SLEEPING
+	if s == TaskStatus.SLEEPING
 		return "S"
-	if t.status == TASK_STATUS_WAITING
+	if s == TaskStatus.WAITING
 		return "W"
-	if t.status == TASK_STATUS_ZOMBIE
+	if s == TaskStatus.ZOMBIE
 		return "Z"
-	if t.status == TASK_STATUS_INTERRUPT
+	if s == TaskStatus.INTERRUPT
 		return "I"
 	return str(t.status)
 
 func show_task(t: TaskInfo, show_parent: bool)
-	string s = "{{t.pid|3}}   "
-	int d = 0
+	var s = "{{t.pid|3}}   "
+	var d = 0
 	if show_parent
 		s += "{{t.ppid|4}}   "
 		d = 5
@@ -71,18 +73,18 @@ func mem(size: int) -> string
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
-	get_args(arg)
+	var arg: string[]
+#	get_args(arg)
 	
-	bool allow_irq = false
-	bool show_parent = false
+	var allow_irq = false
+	var show_parent = false
 	for a in arg
 		if a == "-a" or a == "--all"
 			allow_irq = true
 		if a == "-p" or a == "--parent"
 			show_parent = true
 	
-	SysInfo s
+	var s: SysInfo
 	if !sysinfo(s)
 		raise(new Exception("sysinfo error"))
 	print("uptime: {{sec2s(s.uptime)}}\n")
@@ -91,11 +93,11 @@ func main()
 	print("heap:     {{mem(s.totalheap * s.mem_unit)|8}} total  {{mem(s.freeheap * s.mem_unit)|8}} free   ")
 	print("{{mem((s.totalheap - s.freeheap) * s.mem_unit)|8}} used\n")
 	
-	TaskInfo[] tasks
-	TaskInfo tt
+	var tasks: TaskInfo[]
+	var tt: TaskInfo
 	for pid in 0:256
 		if taskinfo(pid, tt)
-			if tt.status != TASK_STATUS_INTERRUPT or allow_irq
+			if tt.status != int(TaskStatus.INTERRUPT) or allow_irq
 				tasks.add(tt)
 	
 	print(" Pid  ")

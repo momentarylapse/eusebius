@@ -1,4 +1,5 @@
 use lib.std
+use lib.std.sys
 
 class UTSName
 	var sysname: cstring
