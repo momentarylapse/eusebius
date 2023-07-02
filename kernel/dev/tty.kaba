@@ -6,8 +6,8 @@ use mem.paging
 use irq.irq
 
 class FileOperationsTTY extends FileOperations
-	var key_buf: cstring
-	var key_num: int
+	var static key_buf: cstring
+	var static key_num: int
 	func override read(f: FileEntry, addr: int64, _size: int) -> int
 		var size = _size
 		if key_num == 0
@@ -25,7 +25,7 @@ class FileOperationsTTY extends FileOperations
 		return size
 	
 	func mut add_key(k: int)
-		if k < 0 or key_num >= 64
+		if k < 0 or key_num >= 60
 			return
 		if (k & 0xffffff00) == 0
 			key_buf[key_num] = k
