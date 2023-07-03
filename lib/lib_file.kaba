@@ -213,12 +213,10 @@ class dirent_struct
 
 func lib__fs@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
 	var list_dirs, list_files: lib__string@list
-	kprinti(99)
 	var h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
 		return list_files
-	kprinti(99)
 	var d: dirent_struct
 	while getdents(h, &d)
 		var s: lib__string
@@ -227,12 +225,8 @@ func lib__fs@@search(dirname: lib__Path, filter: string, options: string) -> lib
 			list_dirs.add(s)
 		else
 			list_files.add(s)
-		kprinti(9)
-	kprinti(11)
 	close(h)
-	kprinti(0)
 	lib_error = 0
-	kprinti(22)
 	
 	var flag_dir = false
 	var flag_file = false
@@ -241,24 +235,19 @@ func lib__fs@@search(dirname: lib__Path, filter: string, options: string) -> lib
 			flag_file = true
 		else if c == 'd'
 			flag_dir = true
-	kprinti(33)
 	
 	if flag_dir
 		for dd in list_dirs.data
 			for i in 0:list_dirs.num-1
 				for j in i+1:list_dirs.num
-					if dd[i].compare(dd[j]) > 0
+					if dd[i].compare(dd[j]) < 0
 						list_dirs.swap(i, j)
-	kprinti(99)
 	if flag_file
 		for fd in list_files.data
 			for i in 0:list_files.num-1
 				for j in i+1:list_files.num
-					if fd[i].compare(fd[j]) > 0
+					if fd[i].compare(fd[j]) < 0
 						list_files.swap(i, j)
-	kprinti(list_dirs.num)
-	kprint("   ")
-	kprinti(list_files.num)
 	return list_dirs + list_files
 
 #class lib__File

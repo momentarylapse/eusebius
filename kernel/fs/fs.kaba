@@ -273,7 +273,6 @@ class FileSystem as @noauto
 		dummy_mount.dev_blocks_per_block = 1
 		strcpy(dummy_mount.type, "dummy")
 		let p = &dummy_mount
-		printh(&p, 4)
 		root := create_file_entry("-root-", FileType.DIR, &dummy_mount)
 	
 	func static delete(out e: FileEntry&) -> int

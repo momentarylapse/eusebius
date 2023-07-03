@@ -514,7 +514,7 @@ class lib__int@list extends lib__@DynamicArray
 	func mut __assign__(o: lib__int@list)
 		resize(o.num)
 		for d in data
-			for od in data
+			for od in o.data
 				for i in 0:num
 					d[i] = od[i]
 	func mut sort()
@@ -525,6 +525,8 @@ class lib__int@list extends lib__@DynamicArray
 						let t = d[i]
 						d[i] = d[j]
 						d[j] = t
+	func __str__() -> lib__string
+		return lib__@ia2s(self)
 
 func lib__sum(l: lib__int@list) -> int
 	var s = 0

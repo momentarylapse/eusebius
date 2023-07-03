@@ -170,11 +170,6 @@ class Syscall
 #			printi(t.pid)
 #		prints(" SC")
 #		printh(&index, 2)
-
-		if FileSystem.root.mount.block_size != 1024
-			panic("1024")
-#		if int(FileSystem.root.type) == 264
-#			panic("264")
 		
 		for t in Scheduler.cur
 			if index == 0x0001 # exit
@@ -189,12 +184,7 @@ class Syscall
 			else if index == 0x0005 # open
 				return t.sys_open(frame.rdi, frame.rsi)
 			else if index == 0x0006 # close
-				prints("close ")
-				printi(frame.rdi)
-				let r = t.sys_close(frame.rdi)
-				prints(": ")
-				printi(r)
-				return r
+				return t.sys_close(frame.rdi)
 #			else if index == 0x0007 # waitpid
 #				r = caller.sys_waitpid(param1, param2, param3)
 			else if index == 0x0008 # create

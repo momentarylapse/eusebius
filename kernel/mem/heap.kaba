@@ -6,7 +6,7 @@ use io.text
 # memory "management"
 
 const MEM_HEAP_OFFSET = 0x00280000
-const MEM_HEAP_SIZE   = 0x00480000 # 5.5mb
+const MEM_HEAP_SIZE   = 0x00580000 # 5.5mb
 
 class Heap as @noauto
 

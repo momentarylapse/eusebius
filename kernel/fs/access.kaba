@@ -221,25 +221,18 @@ class OpenFileData as @noauto
 			clean_up()
 			
 	func mut clean_up()
-		prints(" CLEAN ")
-			
 		if inode_dirty
-			prints(" ID ")
 			if entry.mount.write_inode(entry) == 0
 				inode_dirty = false
 		if buffer_dirty
-			prints(" BD ")
 			for b in entry.blocks
 				let cl = b[offset / entry.mount.block_size]
 				entry.mount.write_block(cl, buffer)
 				buffer_dirty = false
 		FileSystem.sync()
-		prints(" A ")
 			
 		if buffer
-			prints(" B ")
 			Heap.free(buffer)
-			prints(" BB ")
 		if entry.type == FileType.CHAR
 			for op in entry.op
 				op.close(entry)
@@ -250,7 +243,6 @@ class OpenFileData as @noauto
 			for s in socket
 				s.unref()
 		
-		prints(" X ")
 		used = false
 		#entry = nil
 

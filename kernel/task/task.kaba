@@ -333,9 +333,7 @@ class Task
 
 	func mut sys_close(handle: int) -> int
 		for of in get_handle(handle)
-			prints(" CLOSE")
 			of.unref()
-			prints(" X ")
 			handles[handle] = nil
 			return 0
 		else

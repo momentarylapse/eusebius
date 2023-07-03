@@ -43,7 +43,6 @@ func print_table(list: string[])
 	print(o)
 
 func ls(dirname: Path, extended: bool)
-	print("SEARCH\n")
 	var list = os.fs.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
