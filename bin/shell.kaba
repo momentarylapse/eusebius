@@ -385,7 +385,7 @@ func main()
 	
 	while true
 #		usleep(100000)
-#		jobs.test_all()
+		job_manager.test_all()
 		let key = getkey()
 		if key != -1
 			prompt.process(key)

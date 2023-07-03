@@ -25,7 +25,7 @@ func execute(arg: string[], fd_in: int, fd_out: int) -> int
 	return lib_error
 
 
-func get_args(out arg: lib__string@list)
+func get_args() -> lib__string@list
 	var cs: cstring
 	__temp_p__ := &cs
 	asm{
@@ -33,18 +33,23 @@ func get_args(out arg: lib__string@list)
 		mov rdi, __temp_p__
 		syscall
 	}
+	var args: lib__string@list
 	var s: lib__string
-	
 	var p = 0
+	var first = true
 	for i in 0:250
 		if cs[i] == 0
 			if s.num == 0
 				break
-			arg.add(s)
+			if first
+				first = false
+			else
+				args.add(s)
 			s.clear()
 			p = i + 1
 		else
 			s.add(cs[i])
+	return args
 
 
 

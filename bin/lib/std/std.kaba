@@ -20,7 +20,7 @@ let IPC_EXCL = 1<<13
 
 
 func extern init_lib()
-func extern get_args(arg: string[])
+func extern get_args() -> string[]
 
 var extern stdin, stdout: int
 var extern lib_error: int

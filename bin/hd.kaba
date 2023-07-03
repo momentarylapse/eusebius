@@ -33,25 +33,24 @@ func hd(h: int, _skip: int, _length: int)
 func main()
 	init_lib()
 	lib_print_endl = false
-	var arg: string[]
-	get_args(arg)
+	let args = get_args()
 	
 	var files: Path[]
 	
 	var length = 2000000000
 	var skip = 0
 	
-	for i in 1:len(arg)
-		if arg[i] == "-n"
+	for i=>a in args
+		if a == "-n"
 			i ++
-			if i < len(arg)
-				length = int(arg[i])
-		else if arg[i] == "-s"
+			if i < len(args)
+				length = int(args[i])
+		else if args[i] == "-s"
 			i ++
-			if i < len(arg)
-				skip = int(arg[i])
+			if i < len(args)
+				skip = int(args[i])
 		else
-			files.add(arg[i])
+			files.add(a)
 	
 	if files.num == 0
 		hd(stdin, skip, length)

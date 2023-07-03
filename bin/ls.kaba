@@ -58,18 +58,17 @@ func ls(dirname: Path, extended: bool)
 func main()
 	init_lib()
 	lib_print_endl = false
-	var arg: string[]
-	get_args(arg)
+	let args = get_args()
 	
 	var extended = false
 
 	var paths: Path[]
 
-	for i in 1:arg.num
-		if arg[i] == "-l"
+	for a in args
+		if a == "-l"
 			extended = true
 		else
-			paths.add(arg[i])
+			paths.add(a)
 	for p in paths
 		ls(p, extended)
 	if len(paths) == 0

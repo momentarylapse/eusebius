@@ -3,12 +3,11 @@ use lib.std
 func main()
 	init_lib()
 	lib_print_endl = false
-	var arg: string[]
-	get_args(arg)
+	let args = get_args()
 	
-	for i in 1:arg.num
-		if i > 1
+	for i=>a in args
+		if i >= 1
 			print(" ")
-		print(arg[i])
+		print(a)
 	print("\n")
 	exit(0)

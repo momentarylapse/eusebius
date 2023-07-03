@@ -18,16 +18,15 @@ func cat(h: int)
 func main()
 	init_lib()
 	lib_print_endl = false
-	var arg: string[]
-	get_args(arg)
+	let args = get_args()
 	
-	if arg.num == 1
+	if args.num == 1
 		cat(stdin)
 	
-	for i in 1:arg.num
-		let h = open(arg[i], O_RDONLY)
+	for a in args
+		let h = open(a, O_RDONLY)
 		if h < 0
-			print("cat: can not open file: " + arg[i])
+			print("cat: can not open file: " + a)
 			exit(-1)
 		cat(h)
 		close(h)

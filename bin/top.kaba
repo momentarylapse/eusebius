@@ -73,12 +73,11 @@ func mem(size: int) -> string
 func main()
 	init_lib()
 	lib_print_endl = false
-	var arg: string[]
-	get_args(arg)
+	let args = get_args()
 	
 	var allow_irq = false
 	var show_parent = false
-	for a in arg
+	for a in args
 		if a == "-a" or a == "--all"
 			allow_irq = true
 		if a == "-p" or a == "--parent"
