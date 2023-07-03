@@ -23,6 +23,7 @@ BINS = \
  bin/ls \
  bin/shell \
  bin/simple \
+ bin/sleep \
  bin/top \
  bin/uname
  
