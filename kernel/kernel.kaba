@@ -22,31 +22,6 @@ use irq.error
 use time.timer
 use syscall
 
-let KALIB_LOCATION = 0x00050000
-
-var _xxx_: int
-
-
-
-func load_kalib()
-	prints("loading kalib... ")
-	
-	for of in kernel_open("/lib/kalib", O_RDONLY, FileSystem.root)
-		var addr = KALIB_LOCATION
-		var size = 0
-		Paging.kernel_root_table.update_flags(KALIB_LOCATION, 0x20000, PageFlags.USER)
-		Paging.kernel_root_table.update_flags(0x00a3f000, 0x800000, PageFlags.USER|PageFlags.WRITABLE)
-		while true
-			let r = of.read(addr, 1024)
-			if r <= 0
-				break
-			size += r
-			addr += r
-		printi(size)
-		prints("b ok\n")
-	else
-		panic("can not read /lib/kalib")
-
 
 func main()
 	read_data_from_init()
@@ -94,47 +69,14 @@ func main()
 
 	Syscall.init()
 
-	load_kalib()
+	TaskManager.load_kalib()
 	
 	#--------- experiments:
 
-	#TaskManager.add_idle_task()
-
+#	TaskManager.add_idle_task()
 #	TaskManager.add_dummy()
-	
-	if false
-		prints("loading dummy process... ")
-		for of in kernel_open("/bin/simple", O_RDONLY, FileSystem.root)
-			for t in TaskManager.add_user_task("simple", TASK_MEMORY_OFFSET, nil)
-				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-				let r = of.read(code, 4096)
-				#printh(code, r)
-				prints("ok\n")
-			else
-				panic("task")
-		else
-			panic("can not open /bin/simple")
-
-
-	if true
-		prints("loading shell... ")
-		for of in kernel_open("/bin/shell", O_RDONLY, FileSystem.root)
-			for t in TaskManager.add_user_task("shell", TASK_MEMORY_OFFSET, nil)
-				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-				let r = of.read(code, 65536)
-				#printh(code, r)
-				prints("ok\n")
-			else
-				panic("task")
-		else
-			panic("can not open /bin/shell")
-
-#	printi(_p2i(FileSystem.get("/", FileSystem.root)))	
-#	prints("\n")
-#	for e in FileSystem.get("/", FileSystem.root)
-#		prints(e.name)
-#		printi(int(e.type))
-#		prints("\n")
+#	TaskManager.load_user_task("/bin/simple")
+	TaskManager.load_user_task("/bin/shell")
 	
 	KernelTimer.init(raw_function_pointer(Scheduler.int_timer), 50)
 	Scheduler.run()

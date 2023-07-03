@@ -6,7 +6,7 @@ func cat(h: int)
 	var s: string
 	while true
 		s.resize(128)
-		let r = read(h, &s[0], 128)
+		let r = read(h, &s[0], len(s))
 		if r < 0
 			print("\nerror reading...\n")
 		if r <= 0

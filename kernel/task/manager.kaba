@@ -1,6 +1,7 @@
 use common
 use io.text
 use fs
+use fs.access
 use mem.heap
 use mem.paging
 use task
@@ -8,6 +9,7 @@ use gdt
 
 let MAX_TASKS = 256
 let IRQ_STACK_SIZE = 2048
+let KALIB_LOCATION = 0x00050000
 
 class TaskManager as @noauto
 	var static gdt: GlobalDescriptorTable
@@ -281,6 +283,42 @@ class TaskManager as @noauto
 		t.clean_up_resources()
 		t.status = TaskStatus.ZOMBIE
 		send_death_message(t)
+
+
+	func static load_kalib()
+		prints("loading kalib... ")
+	
+		for of in kernel_open("/lib/kalib", O_RDONLY, FileSystem.root)
+			var addr = KALIB_LOCATION
+			var size = 0
+			Paging.kernel_root_table.update_flags(KALIB_LOCATION, 0x20000, PageFlags.USER)
+			Paging.kernel_root_table.update_flags(0x00a3f000, 0x800000, PageFlags.USER|PageFlags.WRITABLE)
+			while true
+				let r = of.read(addr, 1024)
+				if r <= 0
+					break
+				size += r
+				addr += r
+			printi(size)
+			prints("b ok\n")
+		else
+			panic("can not read /lib/kalib")
+
+	func static load_user_task(filename: cstring)
+		prints("loading ")
+		prints(filename)
+		prints("... ")
+		for of in kernel_open(filename, O_RDONLY, FileSystem.root)
+			for t in TaskManager.add_user_task(filename, TASK_MEMORY_OFFSET, nil)
+				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+				let r = of.read(code, 65536)
+				#printh(code, r)
+				prints("ok\n")
+			else
+				panic("task")
+		else
+			panic("can not open file")
+
 
 #int sys_getpid()
 #	asm{
