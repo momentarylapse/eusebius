@@ -14,17 +14,16 @@ func show_device(d: PCIDevice)
 		if d.bar[i] != 0
 			print("   bar[{{i}}]=")
 			if (d.bar[i] & 1) == 1
-				int addr = d.bar[i] & 0xfffffffc
+				let addr = d.bar[i] & 0xfffffffc
 				print("0x{{addr|8x}} io\n")
 			else
-				int addr = d.bar[i] & 0xfffffff0
+				let addr = d.bar[i] & 0xfffffff0
 				print("0x{{addr|8x}} mem\n")
 
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
 	var pci = new PCIController()
 	

@@ -84,7 +84,7 @@ class SharedMemory
 			return nil
 		return &blocks[id]
 		
-	func static shm_get(key: int, size: int, flags: int, pid: int) -> int
+	func static shm_get(key: int, size: int, flags: int, pid: int) -> int64
 		for s in get_by_key(key)
 			if (flags & IPC_CREAT) > 0 and (flags & IPC_EXCL) > 0
 				return -EEXIST

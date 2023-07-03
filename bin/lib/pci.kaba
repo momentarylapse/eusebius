@@ -33,7 +33,7 @@ const PCI_CONFIG_ADDRESS = 0x0cf8
 
 
 class PCIDevice
-	var controller: PCIController*
+	var controller: PCIController&
 	var header_type: int
 	var bus, slot, function: int
 	var vendor, device: int
@@ -42,32 +42,32 @@ class PCIDevice
 	var secondary_bus: int
 	var irq: int
 	
-	func const get_secondary_bus() -> int
+	func get_secondary_bus() -> int
 		return -1
 		
 	func __init__(con: PCIController)
-		controller = &con
+		controller := &con
 		for i in 0:6
 			bar[i] = 0
 		irq = -1
 	
-	func const get_mem_addr(index: int) -> int
+	func get_mem_addr(index: int) -> int
 		if (bar[index] & 1) == 0
 			return bar[index] & 0xfffffff0
 		return 0
 	
-	func const get_io_addr(index: int) -> int
+	func get_io_addr(index: int) -> int
 		if (bar[index] & 1) == 1
 			return bar[index] & 0xfffffffc
 		return 0
 	
-	func const __str__() -> string
-		string s = "{{bus}}:{{slot}}:{{function}} {{vendor|4x}}:{{device|4x}} class={{_class}}:{{subclass}}  ht={{header_type}}"
+	func __str__() -> string
+		var s = "{{bus}}:{{slot}}:{{function}} {{vendor|4x}}:{{device|4x}} class={{_class}}:{{subclass}}  ht={{header_type}}"
 		if irq >= 0
 			s += "  irq={{irq}}"
 		return s
 	
-	func const usage() -> string
+	func usage() -> string
 		if _class == CLASS_NET and subclass == SUBCLASS_NET_ETHERNET
 			return "ethernet"
 		if _class == CLASS_DISPLAY and subclass == SUBCLASS_DISPLAY_VGA
@@ -81,42 +81,41 @@ class PCIDevice
 		if _class == CLASS_STORAGE and subclass == SUBCLASS_STORAGE_IDE
 			return "ide"
 		return "?"
-	func read_config(offset: int) -> int
+	func mut read_config(offset: int) -> int
 		return controller.read_config(bus, slot, function, offset)
-	func write_config(offset: int, value: int)
+	func mut write_config(offset: int, value: int)
 		controller.write_config(bus, slot, function, offset, value)
 
 class PCIController
 	func read_config(bus: int, slot: int, _func: int, offset: int) -> int
 		# configuration address
-		int address = ((bus << 16) | (slot << 11) | (_func << 8) | (offset & 0xfc) | (0x80000000))
+		let address = ((bus << 16) | (slot << 11) | (_func << 8) | (offset & 0xfc) | (0x80000000))
 		outportd(PCI_CONFIG_ADDRESS, address)
 		# read in the data 
 		# (offset & 2) * 8) = 0 will choose the first word of the 32 bits register 
 		return inportd(PCI_CONFIG_DATA)
 	func write_config(bus: int, slot: int, _func: int, offset: int, value: int)
 		# configuration address
-		int address = ((bus << 16) | (slot << 11) | (_func << 8) | (offset & 0xfc) | (0x80000000))
+		let address = ((bus << 16) | (slot << 11) | (_func << 8) | (offset & 0xfc) | (0x80000000))
 		outportd(PCI_CONFIG_ADDRESS, address)
 		outportd(PCI_CONFIG_DATA, value)
 
 
-	var devices: PCIDevice*[]
+	var devices: owned![PCIDevice][]
 
-	func check_device(bus: int, slot: int, function: int) -> PCIDevice*
-		var p = getx(bus, slot, function)
-		if p
+	func mut check_device(bus: int, slot: int, function: int) -> PCIDevice*
+		for p in getx(bus, slot, function)
 			return p
 	
-		int a = read_config(bus, slot, function, PCI_VENDOR_ID)
+		let a = read_config(bus, slot, function, PCI_VENDOR_ID)
 	
-		int vendor = a & 0xffff
+		let vendor = a & 0xffff
 		if vendor == 0xffff
 			return nil
 		#int b = read_config(bus, slot, function, 0x04)
-		int c = read_config(bus, slot, function, 0x08)
-		int d = read_config(bus, slot, function, 0x0c)
-		p = new PCIDevice(self)
+		let c = read_config(bus, slot, function, 0x08)
+		let d = read_config(bus, slot, function, 0x0c)
+		var p = new PCIDevice(self)
 		p.header_type = (d >> 16) & 0x7f
 		p.bus = bus
 		p.slot = slot
@@ -132,40 +131,43 @@ class PCIController
 		else if p.header_type == 1
 			p.secondary_bus = (read_config(bus, slot, function, 0x18) >> 16) & 0xff
 			p.irq = read_config(bus, slot, function, 0x3c) & 0x000000ff
-		devices.add(p)
-		return p
+		devices.add(give(p))
+		return devices[len(devices) - 1]
 
-	func __scan()
+	func mut __scan()
 		for bus in 0:256
 			for slot in 0:32
 				for function in 0:8
 					check_device(bus, slot, function)
 	
-	func scan()
-		var d = check_device(0, 0, 0)
-		if !d
-			return
-		if (d.header_type & 0x80) == 0
-			check_bus(0)
+	func mut scan()
+		for d in check_device(0, 0, 0)
+			if (d.header_type & 0x80) == 0
+				check_bus(0)
+			else
+				for function in 0:8
+					if !check_device(0, 0, function)
+						break
+					check_bus(function)
 		else
-			for function in 0:8
-				if !check_device(0, 0, function)
-					break
-				check_bus(function)
+			return
 	
-	func check_bus(bus: int)
+	func mut check_bus(bus: int)
  		for slot in 0:32
  			for function in 0:8
 				check_device(bus, slot, function)
 	
-	func check_function(bus: int, slot: int, function: int)
-		var d = getx(bus, slot, function)
-		if (d._class == 0x06) and (d.subclass == 0x04)
-			check_bus(d.get_secondary_bus())
+	func mut check_function(bus: int, slot: int, function: int)
+		for d in getx(bus, slot, function)
+			if (d._class == 0x06) and (d.subclass == 0x04)
+				check_bus(d.get_secondary_bus())
 	
 	func show()
 		for d in devices
-			print(str(d))
+			# FIXME kaba
+			#print(str(p))
+			let p = weak(d)
+			print(p.__str__())
 
 	func getx(bus: int, slot: int, function: int) -> PCIDevice*
 		for d in devices

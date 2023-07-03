@@ -7,7 +7,7 @@ use mem.paging
 use task
 use gdt
 
-let MAX_TASKS = 256
+let MAX_TASKS = 64#256
 let IRQ_STACK_SIZE = 2048
 let KALIB_LOCATION = 0x00050000
 
