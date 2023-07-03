@@ -23,8 +23,8 @@
 	0x0005 0000:...            kalib code
 	0x000b 8000:...            video memory
 	0x0010 0000:0x0080 0000    kernel variables
-	  0x0028 0000:0x0070 0000    kernel heap (max 4.5m)
-	  0x0070 0000:0x0080 0000    page tables
+	  0x0028 0000:0x0080 0000    kernel heap (max 4.5m)
+	  0x0080 0000:0x00a3 0000    page tables
 	0x00a3 f000:...            kalib variables
 	----------------------------------- user space (randomly mapped)
 	0x4000 0000:0x4007 0000    user task code (max 512k-64k)

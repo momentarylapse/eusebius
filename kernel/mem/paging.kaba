@@ -5,7 +5,7 @@ use mem.heap
 
 let PAGE_SIZE = 4096
 let PAGE_TABLE_ENTRIES = PAGE_SIZE / 8 #512
-let PAGE_TABLES_OFFSET = 0x00700000
+let PAGE_TABLES_OFFSET = 0x00800000
 #let LINEAR_AREA = 0x01000000 # 16mb linearly mapped
 let MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 # 1 mask = 32 pages = 128k

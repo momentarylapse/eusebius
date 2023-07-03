@@ -1,7 +1,6 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
 use lib.std
-use lib.std.sys
 use os
 
 #func @noframe main()
@@ -19,15 +18,12 @@ use os
 #	var i = 13
 #	str(i)
 
-var __temp_i__, __temp_i2__: int
-var __temp_p__: void&
-
 func main()
-#	init_lib()
+	init_lib()
 	
-#	var s = "Hi "
-#	s += "a  "
-#	let a = 20
+	var s = "Hi "
+	s += "a  "
+	let a = 20
 	
 	#let b = 1
 	#let xxx = max(a, b)
@@ -77,29 +73,7 @@ func main()
 #	var x = 0
 	while true
 		
-#		print(s)
-		asm{
-			mov eax, 0x00001234
-			syscall
-			xor rax, rax
-			mov ax, ss
-			mov __temp_i__, eax
-			mov ax, cs
-			mov __temp_i2__, eax
-			mov __temp_p__, rsp
-		#	mov eax, 0x00001234
-		#	syscall
-#			mov eax, 0x00002004
-#			mov rdi, rbp
-#			syscall
-#			mov eax, 0x00002004
-#			mov rdi, rsp
-#			syscall
-		}
-		if __temp_i__ != 27 or __temp_i2__ != 35
-			kprinti(__temp_i__)
-			kprinti(__temp_i2__)
-		kprintp(__temp_p__)
+		print(s)
 		
 		for i in 0:80000000
 			pass

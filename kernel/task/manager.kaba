@@ -7,6 +7,7 @@ use task
 use gdt
 
 let MAX_TASKS = 256
+let IRQ_STACK_SIZE = 2048
 
 class TaskManager as @noauto
 	var static gdt: GlobalDescriptorTable
@@ -139,13 +140,9 @@ class TaskManager as @noauto
 			mov rax, _start_as_task
 			mov __temp_p__, rax
 		}
-		# not sure if this is neccessary
-		#tss.rsp0 = Heap.malloc(2048)#__temp_p__
-#		stack2 = Heap.malloc(1024)
-#		printh(&stack2, 8)
-#		tss.rsp2 = _i2p(_p2i(stack2) + 1000)
-		ist1 = Heap.malloc(1024)
-		tss.ist1 = _i2p(_p2i(ist1) + 1000)
+		# irq stack
+		ist1 = Heap.malloc(IRQ_STACK_SIZE)
+		tss.ist1 = _i2p(_p2i(ist1) + IRQ_STACK_SIZE)
 		prints("ltr...")
 		asm{
 			mov ax, 0x0028

@@ -323,7 +323,7 @@ class FileOperationsKey extends FileOperations
 
 	func static @noframe int_keyboard()
 		asm{
-			cli
+			#cli
 			# general purpose registers
 			push rax
 			push rbx
@@ -374,7 +374,7 @@ class FileOperationsKey extends FileOperations
 			pop rcx
 			pop rbx
 			pop rax
-			sti
+			#sti
 			db 0x48
 			iret
 		}
@@ -385,15 +385,16 @@ class FileOperationsKey extends FileOperations
 			mov rax, rsp
 			mov __temp_p__, rax
 		}
-		var p = __temp_p__
-		prints("<key>")
+#		var p = __temp_p__
+#		prints("<key>")
 #		asm{
 #			mov rax, rsp
 #			mov __temp_p__, rax
 #		}
 #		printh(&__temp_p__, 8)
-		printh(&p, 8)
+#		printh(&p, 8)
 		ps2_try_read()
+#		prints("</key>")
 		IrqManager.eoi(KEYBOARD_IRQ)
 		IrqManager.unmask(KEYBOARD_IRQ)
 
