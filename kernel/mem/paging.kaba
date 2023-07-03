@@ -74,7 +74,7 @@ class PageRootTable extends PageTable
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
 		var table_flags = PageFlags.PRESENT | PageFlags.WRITABLE | PageFlags.GLOBAL | PageFlags.USER
-		let flags = _flags | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
+		let flags = _flags | PageFlags.PRESENT | PageFlags.GLOBAL #| PageFlags.USER
 		
 		var pdpt = get_or_create_sub(0, table_flags)
 		var pdt = pdpt.get_or_create_sub(dirp_no, table_flags)
@@ -154,6 +154,28 @@ class PageRootTable extends PageTable
 				prints(" ")
 				printi(dir_no)
 		prints("   XXX ")
+		
+
+	func mut update_flags(_vaddr: int64, size: int, _flags: PageFlags)
+		let vaddr = _vaddr & 0xfffffffffffff000
+		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
+		var npages = ceil_quot(size, PAGE_SIZE)
+		let flags = _flags | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
+		
+		for pdpt in get_sub(0)
+			for pdt in pdpt.get_sub(dirp_no)
+				while npages > 0
+					for pt in pdt.get_sub(dir_no)
+						# pages
+						var i0 = page_no
+						var i1 = page_no + npages
+						if i1 > PAGE_TABLE_ENTRIES
+							i1 = PAGE_TABLE_ENTRIES
+						for i in i0:i1
+							pt.e[i] = (pt.e[i] & 0xfffffffffffff000) + int(flags)
+						npages -= i1-i0
+						dir_no ++
+						page_no = 0
 	
 	# ???
 	func find_free_space(_start: int, size: int) -> int

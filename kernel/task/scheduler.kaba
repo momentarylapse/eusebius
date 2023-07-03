@@ -169,7 +169,7 @@ class Scheduler
 				frame.rsp = t.frame.rsp
 				frame.rbp = t.frame.rsp
 				frame.cr3 = t.frame.cr3
-				#frame.cr4 = frame.cr4 | 0x200 # sse=1
+				frame.cr4 = frame.cr4 | 0x200 # sse=1
 				frame.rax = t.frame.rax
 				frame.rflags = t.frame.rflags
 				t.first_time_running = false

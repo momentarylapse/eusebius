@@ -351,6 +351,8 @@ class FileOperationsKey extends FileOperations
 			push rax
 			#mov rax, cr8
 			#push rax
+			
+			mov rbp, rsp
 		}
 		dev_key_ops.handle_irq()
 		asm{
@@ -379,12 +381,18 @@ class FileOperationsKey extends FileOperations
 
 	func mut handle_irq()
 		IrqManager.mask(KEYBOARD_IRQ)
-#		prints("<key>")
+		asm{
+			mov rax, rsp
+			mov __temp_p__, rax
+		}
+		var p = __temp_p__
+		prints("<key>")
 #		asm{
 #			mov rax, rsp
 #			mov __temp_p__, rax
 #		}
 #		printh(&__temp_p__, 8)
+		printh(&p, 8)
 		ps2_try_read()
 		IrqManager.eoi(KEYBOARD_IRQ)
 		IrqManager.unmask(KEYBOARD_IRQ)
