@@ -209,7 +209,7 @@ class Task
 	func mut clean_up_deep()
 		clean_up_resources()
 		Paging.free_physical_page(page_root_dir.e[0])
-		Paging.free_physical_page(_p2i64(page_root_dir))
+		Paging.free_physical_page(_p2i(page_root_dir))
 		status = TaskStatus.UNUSED
 		puid = -1
 		#if in_hw_irq >= 0
@@ -322,7 +322,7 @@ class Task
 
 	func mut sys_getdents(handle: int, addr: int64, num: int) -> int
 		for of in get_handle(handle)
-			return of.getdents(_i642p(addr) as dirent_struct&, num)
+			return of.getdents(_i2p(addr) as dirent_struct&, num)
 		else
 			return -EBADF
 

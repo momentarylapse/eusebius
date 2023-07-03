@@ -10,14 +10,14 @@ use time.timevalue
 use time.timer
 
 func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int
-	var tv = _i642p(p1) as TimeValue&
+	var tv = _i2p(p1) as TimeValue&
 	tv.add(KernelTimer.tv)
 	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
 	return 0
 
 func sys_stime(addr: int64) -> int
 	KernelTimer.update()
-	var tv = _i642p(addr) as TimeValue&
+	var tv = _i2p(addr) as TimeValue&
 	tv = KernelTimer.tv
 	#return -EFAULT
 	return 0
@@ -35,7 +35,7 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
 		of.entry.get_path(filename)
 		var addr = TASK_IMAGE_POS # task space...
 		for tt in TaskManager.add_user_task(filename, addr, &t)
-			memcpy(&tt.arg, _i642p(faddr), sizeof(cstring))
+			memcpy(&tt.arg, _i2p(faddr), sizeof(cstring))
 			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
 			while true
 				let r = of.read(code, 1024)

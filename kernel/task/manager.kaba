@@ -58,7 +58,7 @@ class TaskManager as @noauto
 		t.memory_offset = TASK_MEMORY_OFFSET
 		t.memory_size = TASK_INITIAL_MEMORY_SIZE
 		t.page_root_dir := create_page_root_table_for_task()
-		t.frame.cr3 = _p2i64(t.page_root_dir)
+		t.frame.cr3 = _p2i(t.page_root_dir)
 
 		t.status = TaskStatus.RUNNING
 
@@ -70,7 +70,7 @@ class TaskManager as @noauto
 
 		var rt = Paging.create_root_table()
 		var pdpt = rt.get_or_create_sub(0, table_flags)
-		var kernel_pdpt = _i642p(Paging.kernel_root_table.e[0] & 0xfffffffffffff000) as PageTable&
+		var kernel_pdpt = _i2p(Paging.kernel_root_table.e[0] & 0xfffffffffffff000) as PageTable&
 		# reuse 1g from kernel
 		pdpt.e[0] = kernel_pdpt.e[0]
 		
@@ -185,10 +185,10 @@ class TaskManager as @noauto
 
 		for t in tasks
 			t.status = TaskStatus.UNUSED
-#			for h in t.handles
-#				h = nil
-#			for sm in t.shmem
-#				sm.s = nil
+			for h in t.handles
+				h = nil
+			for sm in t.shmem
+				sm.s = nil
 
 		next_pid_to_assign = 0
 		next_puid_to_assign = 0
@@ -269,20 +269,23 @@ class TaskManager as @noauto
 			prints("\n")
 
 	
-	func static send_death_message(out t: Task)
+	func static send_death_message(t: Task) -> bool
+		var sent = false
 		for tt in tasks
 			if tt.status == TaskStatus.WAITING
 				if tt.waiting_mode == WaitingMode.TASK_EXIT and tt.waiting_param_i1 == t.pid
 					tt.frame.rax = 0 # return waitpid()
 					tt.page_root_dir.memcpy2task(tt.waiting_param_i2, &t.return_status, 4)
 					tt.activate()
-					
-					t.clean_up_deep()
+					sent = true
+		return sent
+
 	func static die(out t: Task, r: int)
 		t.return_status = r
 		t.clean_up_resources()
 		t.status = TaskStatus.ZOMBIE
-		send_death_message(t)
+		if send_death_message(t)
+			t.clean_up_deep()
 
 
 	func static load_kalib()

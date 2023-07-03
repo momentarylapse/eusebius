@@ -226,13 +226,13 @@ class Syscall
 #			else if index == 0x0066 # socket
 #				r = caller.sys_socket(param1, param2, param3)
 			else if index == 0x0074 # sysinfo
-				var si = _i642p(frame.rdi) as SysInfo&
+				var si = _i2p(frame.rdi) as SysInfo&
 				si.get()
 				return 0
 #			else if index == 0x0075 # ipc
 #				r = caller.sys_ipc(param1, param2, param3, param4)
 			else if index == 0x007a # uname
-				var un = _i642p(frame.rdi) as UTSName&
+				var un = _i2p(frame.rdi) as UTSName&
 				un.get()
 				return 0
 			else if index == 0x008d # getdents
@@ -257,7 +257,7 @@ class Syscall
 				TextMode.text_color = 0x07
 				return 0
 			else if index == 0x2001 # getarg
-				memcpy(_i642p(frame.rdi), &t.arg, sizeof(cstring))
+				memcpy(_i2p(frame.rdi), &t.arg, sizeof(cstring))
 				return 0
 			else if index == 0x2002 # kprint
 				TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
@@ -269,7 +269,7 @@ class Syscall
 				printh(&frame.rdi, 8)
 				return 0
 			else if index == 0x2005 # taskinfo
-				var ti = _i642p(frame.rsi) as TaskInfo&
+				var ti = _i2p(frame.rsi) as TaskInfo&
 				return ti.get(frame.rdi)
 #			else if index == 0x2006 # exit_signal
 #				r = caller.sys_exit_signal()
@@ -280,10 +280,10 @@ class Syscall
 #			else if index == 0x2007 # map IRQ
 #				r = irq.sys_map_irq(param1, caller, param2)
 			else if index == 0x2008 # mountinfo
-				var mi = _i642p(frame.rsi) as MountInfo&
+				var mi = _i2p(frame.rsi) as MountInfo&
 				return mi.get(frame.rdi)
 			else if index == 0x2009 # blockinfo
-				var bd = _i642p(frame.rdx) as BlockDevice&
+				var bd = _i2p(frame.rdx) as BlockDevice&
 				for d in BlockDevManager.get(frame.rdi, frame.rsi)
 					memcpy(bd as void&, d as void&, sizeof(BlockDevice))
 					return 0

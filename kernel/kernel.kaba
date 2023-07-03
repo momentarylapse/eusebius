@@ -73,7 +73,7 @@ func main()
 	
 	#--------- experiments:
 
-#	TaskManager.add_idle_task()
+	TaskManager.add_idle_task()
 #	TaskManager.add_dummy()
 #	TaskManager.load_user_task("/bin/simple")
 	TaskManager.load_user_task("/bin/shell")
