@@ -1,4 +1,5 @@
 use common
+use common.macros
 use io.text
 use cpu
 use dev.block
@@ -33,7 +34,6 @@ use fs # experiment
 #  rip = rcx
 
 
-
 class Syscall
 	let STACK_SIZE = 4096
 	
@@ -44,14 +44,14 @@ class Syscall
 	var static stack: void&
 	var static rsp: void& # kernel/handler
 	
-	var static task_rsp: void*
+	var static task_frame_rsp: void* # task stack + pushed frame
 	
 	func static init()
 		stack := Heap.malloc(STACK_SIZE)
 		rsp := _i2p(_p2i(stack) + STACK_SIZE)
 		
 		Cpu.enable_syscall()
-		Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000)
+		Cpu.write_msr(Cpu.MSR.STAR, 0x0010000800000000) # segments
 		Cpu.write_msr(Cpu.MSR.LSTAR, _p2i(raw_function_pointer(syscall_handler)))
 		Cpu.write_msr(Cpu.MSR.SF_MASK, (1 << 9) + (1 << 10)) # mask irq + direction flag
 #		let x = Cpu.read_msr(Cpu.MSR.STAR)
@@ -70,30 +70,16 @@ class Syscall
 	func static @noframe syscall_handler()
 		asm {
 			cli
-			# general purpose registers
-			push rax
-			push rbx
-			push rcx # < task rip
-			push rdx
-			push rbp
-			push rdi
-			push rsi
-			push r8
-			push r9
-			push r10
-			push r11 # < task rflags
-			push r12
-			push r13
-			push r14
-			push r15
 		}
+		# save frame on task's stack
+		push_general_purpose_registers()
 	
 		# switch to kernel/syscall stack
 		asm {
 			mov rax, rsp
 			mov __temp_p__, rax
 		}
-		Syscall.task_rsp = __temp_p__
+		Syscall.task_frame_rsp = __temp_p__
 		__temp_p__ = Syscall.rsp
 		asm {
 			mov rsp, __temp_p__
@@ -102,32 +88,17 @@ class Syscall
 	
 		# no local variables allowed! (rbp still from task-frame)
 #		__temp_i64__ = Syscall.handle(__temp_p__ as Syscall.Frame&)
-		Syscall.handle_meta(Syscall.task_rsp as Syscall.Frame&)
+		Syscall.handle_meta(Syscall.task_frame_rsp as Syscall.Frame&)
 
 		# switch to task stack
-		__temp_p__ = Syscall.task_rsp
+		__temp_p__ = Syscall.task_frame_rsp
 		asm {
 			mov rax, __temp_p__
 			mov rsp, rax
 		}
 	
+		pop_general_purpose_registers()
 		asm {
-			# general purpose registers
-			pop r15
-			pop r14
-			pop r13
-			pop r12
-			pop r11
-			pop r10
-			pop r9
-			pop r8
-			pop rsi
-			pop rdi
-			pop rbp
-			pop rdx
-			pop rcx
-			pop rbx
-			pop rax
 			#mov rax, __temp_i64__ # return value -> rax
 			#add rsp, 0x08
 		
@@ -139,25 +110,53 @@ class Syscall
 
 
 	func static handle_meta(out frame: Frame)
+		TextMode.text_color = 0x02
+		prints("  <sc ")
+		printh(&frame.rax, 2)
+		prints(">  ")
+		TextMode.text_color = 0x07
 		let r = handle(frame)
 		frame.rax = r
 		for t in Scheduler.cur
-			if t.status != TaskStatus.RUNNING
+			if t.status != TaskStatus.RUNNING and t.status != TaskStatus.IDLE
 				return_to_idle(frame)
 				#panic("???")
+		TextMode.text_color = 0x02
+		prints("  <sc ret>  ")
+		TextMode.text_color = 0x07
+		for t in Scheduler.cur
+			if t.pid == 0
+				printh(&frame, sizeof(Frame))
+				#panic("x")
 	
 	func static return_to_idle(out frame: Frame)
-		panic("TODO iret idle")
+		TextMode.text_color = 0x02
+		prints("  <sc ret idle>  ")
+		TextMode.text_color = 0x07
+		
+		# prepare current task to be awoken by returning from a timer interrupt
 		for t in Scheduler.cur
 			memcpy(&t.frame.reg8ff, &frame.reg8ff, sizeof(int64) * (8 + 7))
-			t.syscall_rsp := Syscall.task_rsp as void&
-			
+			#t.syscall_rsp
+			t.frame.rsp = _p2i(Syscall.task_frame_rsp) + sizeof(Frame)
+			t.frame.rip = frame.rcx
+			t.frame.rflags = frame.reg8ff[3] # r11
+		
+		Scheduler.cur = nil
+		
+		# wait for timer interrupt
+		prints(">> IDLE...")
+		asm {
+			sti
+			jmp $
+		}	
+		panic("TODO iret idle")
 		for t in Scheduler.cur
 			if t.first_time_running
 				panic("x432")
 			else
-				Syscall.task_rsp = t.syscall_rsp
-				var next_frame = Syscall.task_rsp as Frame&
+				Syscall.task_frame_rsp = t.syscall_rsp
+				var next_frame = Syscall.task_frame_rsp as Frame&
 				memcpy(&next_frame.reg8ff, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
 		prints(">> IDLE...")
 

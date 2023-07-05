@@ -40,7 +40,20 @@ class ErrorManager as @noauto
 		if i==12
 			strcat(s, ": stack error")
 		if i==13
-			strcat(s, ": general protection fault")
+			strcat(s, ": general protection fault 8-P\n cs=")
+			asm {
+				xor eax, eax
+				mov ax, cs
+				mov __temp_i__, eax
+				mov ax, ss
+				mov __temp_i2__, eax
+			}
+			_i2s(__temp_i__, nn)
+			strcat(s, nn)
+			strcat(s, " ss=")
+			_i2s(__temp_i2__, nn)
+			strcat(s, nn)
+			return
 		if i==14
 			strcat(s, ": page fault")
 		if i==16

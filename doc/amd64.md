@@ -90,3 +90,11 @@
 
 == Interrupt
 
+    stack frame:
+     ss
+     rsp
+     rflags
+     cs
+     rip
+     (error code)
+     -------------  <- rsp'

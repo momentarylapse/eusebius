@@ -1,0 +1,66 @@
+
+macro push_general_purpose_registers()
+	asm {
+		push rax
+		push rbx
+		push rcx
+		push rdx
+		push rbp
+		push rdi
+		push rsi
+		push r8
+		push r9
+		push r10
+		push r11
+		push r12
+		push r13
+		push r14
+		push r15
+	}
+
+macro pop_general_purpose_registers()
+	asm {
+		pop r15
+		pop r14
+		pop r13
+		pop r12
+		pop r11
+		pop r10
+		pop r9
+		pop r8
+		pop rsi
+		pop rdi
+		pop rbp
+		pop rdx
+		pop rcx
+		pop rbx
+		pop rax
+	}
+
+macro push_control_registers()
+	asm {
+		# control registers 4*8b=32b
+		mov eax, cr0
+		push rax
+		mov eax, cr2
+		push rax
+		mov eax, cr3
+		push rax
+		mov eax, cr4
+		push rax
+		#mov rax, cr8
+		#push rax
+	}
+
+macro pop_control_registers()
+	asm {
+		#add rsp, 0x20
+		pop rax
+		mov cr4, eax
+		pop rax
+		mov cr3, eax
+		pop rax
+		mov cr2, eax
+		pop rax
+		mov cr0, eax
+	}

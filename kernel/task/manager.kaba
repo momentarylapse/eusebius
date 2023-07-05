@@ -241,7 +241,7 @@ class TaskManager as @noauto
 				pass
 
 	# needs to be able to randomly "restart"
-	func static @noframe f_idle()
+	func static @noframe f_idle_a()
 		var s: cstring
 		strcpy(s, ".")
 		while true
@@ -256,14 +256,25 @@ class TaskManager as @noauto
 			}
 			for i in 0:37000000
 				pass
+	func static @noframe f_idle()
+		asm {
+			_idle_loop:
+			mov eax, 0x00001234
+			syscall
+			hlt
+			jmp _idle_loop
+		}
 
 	func static add_dummy()
 		add_user_task("dummy", _p2i(raw_function_pointer(f_user)), nil)
 
 
 	func static add_idle_task()
-		for t in add_user_task("idle", _p2i(raw_function_pointer(f_idle)), nil)
+		for t in add_user_task("idle", TASK_MEMORY_OFFSET, nil)
+			#_p2i(raw_function_pointer(f_idle)), nil)
 			t.status = TaskStatus.IDLE
+			var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+			memcpy(_i2p(code), raw_function_pointer(f_idle) as void&, 64)
 			prints("IDLE: ")
 			printi(t.pid)
 			prints("\n")
