@@ -9,6 +9,8 @@ use fs.access
 use time.timevalue
 use time.timer
 
+use io.text
+
 
 func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int
 	var tv = _i2p(p1) as TimeValue&
@@ -25,6 +27,24 @@ func sys_stime(addr: int64) -> int
 
 func sys_exit(out t: Task, r: int)
 	TaskManager.die(t, r)
+
+func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> int
+	for o in TaskManager.get_task(_pid)
+		# already (un-) dead?
+		if o.status == TaskStatus.ZOMBIE
+			var p = _i2p(status_addr) as int&
+			p = o.return_status
+			o.clean_up_deep()
+			t.activate()
+			return 0
+		
+		# don't block?
+		if (options & 1) > 0
+			return -2
+
+		t.set_wait(WaitingMode.TASK_EXIT, _pid, status_addr, 0)
+		return 0
+	return -ECHILD
 
 
 func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int

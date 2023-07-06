@@ -129,18 +129,18 @@ class PageRootTable extends PageTable
 		var vaddr = _vaddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
-		prints("UNMAP")
+#		prints("UNMAP")
 		
 		for pdpt in get_sub(0)
 			for pdt in pdpt.get_sub(dirp_no)
 		
-				printi(npages)
+#				printi(npages)
 				while npages > 0
+					let i0 = page_no
+					var i1 = page_no + npages
+					if i1 > PAGE_TABLE_ENTRIES
+						i1 = PAGE_TABLE_ENTRIES
 					for pt in pdt.get_sub(dir_no)
-						let i0 = page_no
-						var i1 = page_no + npages
-						if i1 > PAGE_TABLE_ENTRIES
-							i1 = PAGE_TABLE_ENTRIES
 						for i in i0:i1
 							if pt.e[i] != 0
 								if dealloc
@@ -148,12 +148,13 @@ class PageRootTable extends PageTable
 								pt.e[i] = 0
 						if pt.count_entries() == 0
 							Paging.free_physical_page(_p2i(pt))
-						npages -= i1-i0
-						dir_no ++
-						page_no = 0
-				prints(" ")
-				printi(dir_no)
-		prints("   XXX ")
+							pdt.e[dir_no] = 0
+					npages -= i1-i0
+					dir_no ++
+#					page_no = 0
+#				prints(" ")
+#				printi(dir_no)
+#		prints("   XXX ")
 		
 
 	func mut update_flags(_vaddr: int64, size: int, _flags: PageFlags)
@@ -395,9 +396,9 @@ class Paging as @noauto
 					return pos
 		return -1
 	
-	func static free_physical_page(paddr: int)
+	func static free_physical_page(paddr: int64)
 		let page_no = paddr / PAGE_SIZE
-		let mask_no = page_no / 32
+		let mask_no = int(page_no / 32)
 		if mask_no > num_physical_masks or mask_no < 0
 			return
 		let offset = page_no & 0x0000001f # % 32
@@ -406,12 +407,12 @@ class Paging as @noauto
 			pages_allocated ++
 			physical_mask[mask_no] -= m
 		else
-			prints("  -e-  ")
+			prints("  -e-  pm:")
 			printh(&physical_mask[mask_no], 4)
-			prints("  ")
+			prints("  m:")
 			printh(&m, 4)
-			prints("  ")
-			printi(paddr)
+			prints("  adr:")
+			printh(&paddr, 8)
 			prints(" ")
 			printi(mask_no)
 			prints(" ")

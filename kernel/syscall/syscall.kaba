@@ -239,8 +239,8 @@ class Syscall
 				return t.sys_open(frame.rdi, frame.rsi)
 			else if index == 0x0006 # close
 				return t.sys_close(frame.rdi)
-#			else if index == 0x0007 # waitpid
-#				r = caller.sys_waitpid(param1, param2, param3)
+			else if index == 0x0007 # waitpid
+				return sys_waitpid(t, frame.rdi, frame.rsi, frame.rdx)
 			else if index == 0x0008 # create
 				return t.sys_open(frame.rdi, O_CREATE | O_WRONLY | O_TRUNC)
 #			else if index == 0x000a # unlink

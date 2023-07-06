@@ -34,7 +34,7 @@ func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
 #func extern fork() -> int
 
 
-#func extern waitpid(pid: int, status: void&, block: bool) -> int
+func extern waitpid(pid: int, status: void&, block: bool) -> int
 func extern kill(pid: int, signal: int) -> bool
 #func extern shmget(key: int, size: int, flags: int) -> int
 #func extern shmat(id: int, flags: int) -> void*

@@ -75,8 +75,8 @@ func main()
 
 	TaskManager.add_idle_task()
 #	TaskManager.add_dummy()
-	TaskManager.load_user_task("/bin/simple")
-#	TaskManager.load_user_task("/bin/shell")
+#	TaskManager.load_user_task("/bin/simple")
+	TaskManager.load_user_task("/bin/shell")
 	
 	KernelTimer.init(raw_function_pointer(Scheduler.interrupt_handler), 50)
 	Scheduler.run()

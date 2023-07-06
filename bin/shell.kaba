@@ -174,25 +174,30 @@ class Job
 		close(pipe_in[1])
 		close(pipe_out[0])
 	
-#	func test()
-#		var s: string
-#		s.resize(512)
-#		let r = read(pipe_out[0], &s[0], len(s))
-#		if r > 0
-#			s.resize(r)
-#			print(s)
-#			return
-#		
-#		var status: int
-#		if waitpid(pid, &status, false) == -2
-#			return
-#		vars.get("?").value = str(status)
-#		if &self != jobs.fg
-#			print("[{{id}}] done: {{cmd}}\n")
-#	#	if status < -600#-652
-#	#		print("  -- Programm hat was boeses gemacht! --\n")
-#		#print(" status " + status)
-#		done = true
+	func mut test()
+		var s: string
+		s.resize(512)
+		let r = read(pipe_out[0], &s[0], len(s))
+		if r > 0
+			s.resize(r)
+			print(s)
+			return
+		
+		var status: int
+		#if waitpid(pid, &status, false) == -2
+		let rr = waitpid(pid, &status, false)
+		print(rr)
+		if rr == -2
+			return
+		print("RR ")
+		print(status)
+		variable_set.get("?").value = str(status)
+		if &self != job_manager.fg
+			print("[{{id}}] done: {{cmd}}\n")
+	#	if status < -600#-652
+	#		print("  -- Programm hat was boeses gemacht! --\n")
+		#print(" status " + status)
+		done = true
 
 class JobManager
 	var jobs: owned![Job][]
@@ -221,17 +226,16 @@ class JobManager
 			fg = weak(j)
 		jobs.add(give(j))
 		return weak(jobs[len(jobs) - 1])
-	func test_all()
-#		for j in jobs
-#			j.test()
-#		for i in 0:len(job)
-#			if job[i].done
-#				if job[i] == fg
-#					fg = nil
-#					prompt.show()
-#				del job[i]
-#				job.remove(i)
-#				i --
+	func mut test_all()
+		for j in jobs
+			j.test()
+		for i=>j in jobs
+			if j.done
+				if j == fg
+					fg = nil
+					prompt.show()
+				jobs.remove(i)
+				i --
 	func show()
 		for j in jobs
 			print("{{j.id}} - {{j.cmd}}\n")
@@ -285,28 +289,26 @@ func execute_job(out c: string[], cmd: string) -> bool
 	var j = job_manager.create(c, cmd)
 	return j
 
-#func do_fg(c: string[])
-#	int id = -1
-#	if len(c) >= 2
-#		id = int(c[1])
-#	Job *j = jobs.get(id)
-#	if j
-#		kill(j.pid, 18)
-#		jobs.fg = j
-#		print(j.cmd + "\n")
-#	else
-#		print("no job\n")
-#
-#func do_bg(c: string[])
-#	int id = -1
-#	if len(c) >= 2
-#		id = int(c[1])
-#	Job *j = jobs.get(id)
-#	if j
-#		kill(j.pid, 18)
-#		print("in background: {{j.cmd}}\n")
-#	else
-#		print("no job\n")
+func do_fg(c: string[])
+	var id = -1
+	if len(c) >= 2
+		id = int(c[1])
+	for j in job_manager.get(id)
+		kill(j.pid, 18)
+		job_manager.fg = j
+		print(j.cmd + "\n")
+	else
+		print("no job\n")
+
+func do_bg(c: string[])
+	var id = -1
+	if len(c) >= 2
+		id = int(c[1])
+	for j in job_manager.get(id)
+		kill(j.pid, 18)
+		print("in background: {{j.cmd}}\n")
+	else
+		print("no job\n")
 
 func do_cd(c: string[])
 	if len(c) > 1
@@ -330,10 +332,10 @@ func exec(cmd: string)
 		variable_set.show()
 	else if cc == "jobs"
 		job_manager.show()
-#	else if cc == "fg"
-#		do_fg(c)
-#	else if cc == "bg"
-#		do_bg(c)
+	else if cc == "fg"
+		do_fg(c)
+	else if cc == "bg"
+		do_bg(c)
 	else if cc == "cd"
 		do_cd(c)
 	else if cc == "exit"
@@ -341,9 +343,9 @@ func exec(cmd: string)
 	else
 ##		if execute(["/bin/" + cc], 0, 1) >= 0
 ##			return
-#		if cc[0] == '/' or cc[0] == '.'
-#			if execute_job(c, cmd0)
-#				return
+		if cc[0] == '/' or cc[0] == '.'
+			if execute_job(c, cmd0)
+				return
 		c[0] = variable_set.get("PATH").value + c[0]
 		if execute_job(c, cmd0)
 			return

@@ -146,22 +146,22 @@ func getpid() -> int
 #		mov lib_error, eax
 #	}
 #	return lib_error == 0
-#	
-#func waitpid(pid: int, status: void&, block: bool) -> int
-#	__temp_i__ = pid
-#	__temp_p__ := status
-#	__temp_i2__ = 0
-#	if !block
-#		__temp_i2__ = 1
-#	asm{
-#		mov eax, 0x00000007
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_p__
-#		mov edx, __temp_i2__
-#		int 0x80
-#		mov __temp_i3__, eax
-#	}
-#	return __temp_i3__
+	
+func waitpid(pid: int, status: void&, block: bool) -> int
+	__temp_i__ = pid
+	__temp_p__ := status
+	__temp_i2__ = 0
+	if !block
+		__temp_i2__ = 1
+	asm {
+		mov eax, 0x00000007
+		mov edi, __temp_i__
+		mov rsi, __temp_p__
+		mov edx, __temp_i2__
+		syscall
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
 
 func kill(pid: int, signal: int) -> bool
 	__temp_i__ = pid

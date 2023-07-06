@@ -397,20 +397,6 @@ class Task
 #			return -EFAULT
 #		return kernel_rmdir(filename, cur_dir)
 
-#	func mut sys_waitpid(_pid: int, status_addr: int, options: int) -> int
-#		var t = TaskManager.get_task(_pid)
-#		if !t
-#			return -ECHILD
-#		if t.status == TaskStatus.ZOMBIE
-#			page_dir.memcpy2task(status_addr, &t.return_status, 4)
-#			t.clean_up_deep()
-#			activate()
-#			return 0
-#		if (options & 1) > 0
-#			return -2
-#		set_wait(WaitingMode.TASK_EXIT, _pid, status_addr, 0)
-#		return 0
-#
 #	func sys_kill(_pid: int, signal: int) -> int
 #		var t = TaskManager.get_task(_pid)
 #		if !t
