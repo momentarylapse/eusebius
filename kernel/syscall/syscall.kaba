@@ -113,9 +113,9 @@ class Syscall
 
 	func static handle_meta(out frame: Frame)
 		TextMode.text_color = 0x02
-		prints("  <sc ")
-		printh(&frame.rax, 2)
-		prints(">  ")
+#		prints("  <sc ")
+#		printh(&frame.rax, 2)
+#		prints(">  ")
 		TextMode.text_color = 0x07
 		let r = handle(frame)
 		frame.rax = r
@@ -123,18 +123,19 @@ class Syscall
 			if t.status != TaskStatus.RUNNING and t.status != TaskStatus.IDLE
 				return_to_idle(frame)
 				#panic("???")
-		TextMode.text_color = 0x02
-		prints("  <sc ret>  ")
-		TextMode.text_color = 0x07
+#		TextMode.text_color = 0x02
+#		prints("  <sc ret>  ")
+#		TextMode.text_color = 0x07
+
 #		for t in Scheduler.cur
 #			if t.pid == 0
 #				printh(&frame, sizeof(Frame))
 				#panic("x")
 	
 	func static return_to_idle(out frame: Frame)
-		TextMode.text_color = 0x02
-		prints("  <sc ret idle>  ")
-		TextMode.text_color = 0x07
+#		TextMode.text_color = 0x02
+#		prints("  <sc ret idle>  ")
+#		TextMode.text_color = 0x07
 		
 		# prepare current task to be awoken by returning from a timer interrupt
 		for t in Scheduler.cur

@@ -259,8 +259,8 @@ class TaskManager as @noauto
 	func static @noframe f_idle()
 		asm {
 			_idle_loop:
-			mov eax, 0x00001234
-			syscall
+		#	mov eax, 0x00001234
+		#	syscall
 			#hlt
 			
 			mov eax, 0x40080000

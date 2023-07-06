@@ -7,24 +7,32 @@ use irq.irq
 let TIMER_IRQ = 0
 
 class KernelTimer as @noauto
-	var static state: int[2]
+	var static state: int64
 	var static tv: TimeValue
 	
 	func static update_state()
 		asm{
 			db 0x0f # RDTSC eax:edx
 			db 0x31
-			mov __temp_i__, eax
+			mov __temp_i64__, rax
 			mov __temp_i2__, edx
 		}
-		state[0] = __temp_i2__
-		state[1] = __temp_i__
+		# (O__O)  int64 arithmetic...
+		# also bug in constant system 0x00000000ffffffff = -1
+		__temp_i64__ = (__temp_i64__ << 32) >> 32
+		state = int64(__temp_i2__)<<32
+		state += __temp_i64__
 	
 	func static update()
 		update_state()
 		# TODO: precise formula   :P
-		tv.sec = (state[0] << 8) + (state[1] >> 24)
-		tv.nanosec = (state[1] << 6) & 0x3fffffff
+		tv.sec = (state >> 31)
+		tv.nanosec = 0#(state[1] << 6) & 0x3fffffff
+#		prints("\n")
+#		printi(tv.sec)
+#		prints(" ")
+#		printh(&state, 8)
+#		prints("  ")
 
 	func static init(F: void*, dt_ms: int)
 		# read year from CMOS
