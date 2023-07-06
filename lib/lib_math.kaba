@@ -228,10 +228,10 @@ func _complex2s(c: lib__complex) -> lib__string
 #			data[i] = o.data[i]
 #
 #
-#func lib__p2s(p: void*) -> lib__string
-#	var r: lib__string
-#	var i: int* = &p
-#	r.add('0')
-#	r.add('x')
-#	return r + lib__int.hex(*i, 8)
-#	
+func lib__p2s(p: void*) -> lib__string
+	var r: lib__string
+	#var i = &p as int64*
+	r.add('0')
+	r.add('x')
+	return r + lib__as_binary(&p, 8).hex()#lib__int.hex(*i, 8)
+	

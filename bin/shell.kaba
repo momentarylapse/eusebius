@@ -47,6 +47,9 @@ class Prompt
 	func mut process(k: int)
 		if k < 0
 			return
+		if lib_print_endl
+			lib_print_endl = false
+			print(" <ENDL?!?> ")
 		var c = k
 #		for fg in jobs.fg
 #			if c == 0x1a # '^Z'
@@ -184,13 +187,8 @@ class Job
 			return
 		
 		var status: int
-		#if waitpid(pid, &status, false) == -2
-		let rr = waitpid(pid, &status, false)
-		print(rr)
-		if rr == -2
+		if waitpid(pid, &status, false) == -2
 			return
-		print("RR ")
-		print(status)
 		variable_set.get("?").value = str(status)
 		if &self != job_manager.fg
 			print("[{{id}}] done: {{cmd}}\n")
@@ -231,7 +229,7 @@ class JobManager
 			j.test()
 		for i=>j in jobs
 			if j.done
-				if j == fg
+				if weak(j) == fg
 					fg = nil
 					prompt.show()
 				jobs.remove(i)
