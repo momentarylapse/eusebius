@@ -261,7 +261,18 @@ class TaskManager as @noauto
 			_idle_loop:
 			mov eax, 0x00001234
 			syscall
-			hlt
+			#hlt
+			
+			mov eax, 0x40080000
+			#mov rsp, rax
+			mov rbp, rax
+			mov eax, 0x40000000
+			_idle_wait_loop:
+			dec eax
+			cmp eax, 0x00000000
+			jnz _idle_wait_loop
+		}
+		asm {
 			jmp _idle_loop
 		}
 

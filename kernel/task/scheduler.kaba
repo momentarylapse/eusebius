@@ -105,6 +105,9 @@ class Scheduler
 		IrqManager.unmask(TIMER_IRQ)
 	
 	func static leave_task(out frame: InterruptFrame)
+		TextMode.text_color = 0x05
+		prints(" <irq> ")
+		TextMode.text_color = 0x07
 		for t in cur
 			memcpy(&t.frame, &frame, sizeof(InterruptFrame))
 
@@ -115,23 +118,15 @@ class Scheduler
 		cur = &TaskManager.tasks[next_pid]
 		
 	func static enter_task(out frame: InterruptFrame)
-		prints(" <IENTER> ")
+		TextMode.text_color = 0x05
+		prints(" </irq> ")
+		TextMode.text_color = 0x07
 		for t in cur
 			if t.first_time_running
 				prints(" <FIRST> ")
 				printi(t.pid)
-				frame.cs = t.frame.cs
-				frame.ss = t.frame.ss
-				frame.rip = t.frame.rip
-				frame.rsp = t.frame.rsp
-				frame.rbp = t.frame.rsp
-				frame.cr3 = t.frame.cr3
-				frame.cr4 = t.frame.cr4
-				frame.rax = t.frame.rax
-				frame.rflags = t.frame.rflags
 				t.first_time_running = false
-			else
-				memcpy(&frame, &t.frame, sizeof(InterruptFrame))
+			memcpy(&frame, &t.frame, sizeof(InterruptFrame))
 
 
 	# Scheduler

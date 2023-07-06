@@ -74,12 +74,14 @@ class Syscall
 		# save frame on task's stack
 		push_general_purpose_registers()
 	
-		# switch to kernel/syscall stack
+		# save task stack pointer
 		asm {
 			mov rax, rsp
 			mov __temp_p__, rax
 		}
 		Syscall.task_frame_rsp = __temp_p__
+		
+		# switch to kernel/syscall stack
 		__temp_p__ = Syscall.rsp
 		asm {
 			mov rsp, __temp_p__
@@ -124,9 +126,9 @@ class Syscall
 		TextMode.text_color = 0x02
 		prints("  <sc ret>  ")
 		TextMode.text_color = 0x07
-		for t in Scheduler.cur
-			if t.pid == 0
-				printh(&frame, sizeof(Frame))
+#		for t in Scheduler.cur
+#			if t.pid == 0
+#				printh(&frame, sizeof(Frame))
 				#panic("x")
 	
 	func static return_to_idle(out frame: Frame)
@@ -144,13 +146,65 @@ class Syscall
 		
 		Scheduler.cur = nil
 		
-		# wait for timer interrupt
-		prints(">> IDLE...")
+#		# wait for timer interrupt
+#		prints(">> IDLE...")
+#		asm {
+#			sti
+#			jmp $
+#		}	
+
+#		panic("TODO iret idle")
+		Scheduler.cur = &TaskManager.tasks[0]
+		
+		for t in Scheduler.cur
+			__temp_p__ = t.page_root_dir
+			asm {
+				mov rax, __temp_p__
+				mov cr3, eax
+				jmp _flush_aaa
+				_flush_aaa:
+			}
+			
+			__temp_i64__ = t.frame.rip
+			__temp_p__ = _i2p(t.frame.rsp)
+			asm{
+				#cli
+				#sti
+				push 0x0000001b #0x1b # ss + ring3
+				mov rax, __temp_p__
+				push rax # rsp
+				push 0x00003200 # flags: iopl=3, iterrupts=1
+				#push 0x00003000#0x202 # flags: iopl=3, iterrupts=1
+				push 0x00000023 #0x23 # cs + ring3
+				mov rax, __temp_i64__
+				push rax # rip
+			#	jmp $
+				db 0x48
+				iret
+			}
+			
+			
+			Syscall.task_frame_rsp = _i2p(t.frame.rsp - sizeof(Frame))
+			var next_frame = Syscall.task_frame_rsp as Frame&
+			memcpy(&next_frame.reg8ff, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
+		
+		
+		# switch to task stack
+		__temp_p__ = Syscall.task_frame_rsp
 		asm {
-			sti
-			jmp $
-		}	
-		panic("TODO iret idle")
+			mov rax, __temp_p__
+			mov rsp, rax
+		}
+	
+		pop_general_purpose_registers()
+		asm {
+			#mov rax, __temp_i64__ # return value -> rax
+			#add rsp, 0x08
+		
+			db 0x48
+			sysret
+		}
+		
 		for t in Scheduler.cur
 			if t.first_time_running
 				panic("x432")

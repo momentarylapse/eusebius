@@ -117,10 +117,13 @@ class Task
 	
 		stack := _i2p(TASK_STACK_POS)
 		frame.rsp = _p2i(stack) + TASK_STACK_SIZE
+		frame.rbp = frame.rsp
 		frame.rip = F
 		frame.cs = 0x20 + 3
 		frame.ss = 0x18 + 3
 		frame.rax = 0
+		frame.cr0 = 0x80000013 # paging + extension + coprocesor + protected
+		frame.cr3 = _p2i(page_root_dir)
 		frame.cr4 = 0x00000220 # sse=1 + ...
 		frame.rflags = 0x3200 # iopl=3 + interrupts=1
 
