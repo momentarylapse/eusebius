@@ -10,28 +10,16 @@ enum TaskStatus
 	INTERRUPT
 	#DEAD
 
-func fill(out s: string, n: int)
-	while len(s) < n
-		s.add(' ')
-
-func i2s2(i: int, n: int) -> string
-	let s2 = str(i)
-	var s1: string
-	fill(s1, n - len(s2))
-	return s1 + s2
-
 func sec2s(_sec: int) -> string
 	let hour = _sec / 3600
 	let min = (_sec / 60) % 60
 	let sec = _sec % 60
-	var s = "  :  "
-	s[0] = '0' + (min / 10)
-	s[1] = '0' + (min % 10)
-	s[3] = '0' + (sec / 10)
-	s[4] = '0' + (sec % 10)
+	var s = "{{min|02}}:{{sec|02}}"
 	if hour > 0
 		return "{{hour|3}}:{{s}}"
 	return "   " + s
+func tv2s(t: TimeValue) -> string
+	return sec2s(t.sec) + ".{{t.nanosec/1000000|03}}"
 
 func task_mode(t: TaskInfo) -> string
 	if t.mode == 0
@@ -59,7 +47,7 @@ func show_task(t: TaskInfo, show_parent: bool)
 	if show_parent
 		s += "{{t.ppid|4}}   "
 		d = 5
-	s += "{{cs2s(t.name)|-22}} {{task_mode(t)}} {{task_status(t)}}    {{t.cpu/10|3}}% {{mem(t.mem*4096)|9}}  {{sec2s(t.life.sec)}}"
+	s += "{{cs2s(t.name)|-22}} {{task_mode(t)}} {{task_status(t)}}    {{t.cpu/10|3}}% {{mem(t.mem*4096)|9}}  {{tv2s(t.life)}}"
 	print(s)
 	print("\n")
 

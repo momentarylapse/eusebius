@@ -77,9 +77,9 @@ class Task
 	var page_root_dir: PageRootTable&
 	var memory_offset, memory_size: int
 	
-#	var time_all, time_temp: TimeValue
-#	var cpu_load: int
-#	
+	var time_all, time_temp: TimeValue
+	var cpu_load: int
+	
 #	var kernel_mode: bool
 	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
 	var shmem: TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK]
@@ -135,10 +135,10 @@ class Task
 ##		panic("incomplete page dir") # ...
 ##	t.tss.set(t.get_initial_stack_pos(), 3, 4, 3, t.page_dir, func)
 ##	GlobalDescriptorTable[t.desc].set_task(t)
-#	
-#		time_all.clear()
-#		cpu_load = 0
-#		time_temp.clear()
+
+		time_all.clear()
+		cpu_load = 0
+		time_temp.clear()
 
 	func mut activate()
 		if sleep_and_wait
@@ -230,12 +230,12 @@ class Task
 		waiting_param_i2 = param_i2
 		waiting_param_i3 = param_i3
 	
-#	func pages_alloced() -> int
-#		var n = mem_size / PAGE_SIZE
-#		n += page_dir.count_entries() # all page tables
-#		n ++ # page_dir itself
-#		return n
-	
+	func pages_alloced() -> int
+		var n = memory_size / PAGE_SIZE
+		n += page_root_dir.count_entries() # all page tables
+		n ++ # page_dir itself
+		return n
+
 		
 #	func get_prev_pid() -> int
 #		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES

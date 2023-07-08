@@ -142,9 +142,9 @@ class TaskInfo as @noauto
 			mode = 1
 		#	if t.kernel_mode
 		#		mode = 0
-			mem = 0 #t.pages_alloced()
-			cpu = 0 #t.cpu_load
-			#life = t.time_all
+			mem = t.pages_alloced()
+			cpu = t.cpu_load
+			life = t.time_all
 			return 0
 		return -1
 

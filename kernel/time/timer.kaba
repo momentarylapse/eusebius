@@ -23,13 +23,17 @@ class KernelTimer as @noauto
 		state = int64(__temp_i2__)<<32
 		state += __temp_i64__
 	
+	# seems non-monotonic
 	func static update()
 		update_state()
 		# TODO: precise formula   :P
 		tv.sec = (state >> 31)
-		tv.nanosec = 0#(state[1] << 6) & 0x3fffffff
+		tv.nanosec = (state >> 1) & 0x3fffffff
 #		prints("\n")
+#		printh(&tv, 8)
 #		printi(tv.sec)
+#		prints(" ")
+#		printi(tv.nanosec)
 #		prints(" ")
 #		printh(&state, 8)
 #		prints("  ")

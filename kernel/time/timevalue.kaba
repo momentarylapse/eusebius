@@ -34,3 +34,8 @@ struct TimeValue
 	func mut add(t: TimeValue)
 		sec += t.sec
 		inc_nanosec(t.nanosec)
+
+	func mut sub(t: TimeValue)
+		# assume t < self
+		sec -= t.sec
+		dec_nanosec(t.nanosec)

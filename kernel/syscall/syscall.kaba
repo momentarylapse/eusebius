@@ -9,6 +9,7 @@ use mem.paging
 use task.task
 use task.manager
 use task.scheduler
+use time.timer
 use syscall.operations
 #use irq.irq
 
@@ -136,6 +137,8 @@ class Syscall
 #		TextMode.text_color = 0x02
 #		prints("  <sc ret idle>  ")
 #		TextMode.text_color = 0x07
+
+		Scheduler.update_time()
 		
 		# prepare current task to be awoken by returning from a timer interrupt
 		for t in Scheduler.cur
@@ -256,7 +259,9 @@ class Syscall
 			else if index == 0x0013 # seek
 				return t.sys_seek(frame.rdi, frame.rsi, frame.rdx)
 			else if index == 0x0014 # getpid
-				return Scheduler.running_pid
+				for _t in Scheduler.cur
+					return _t.pid
+				return -1
 			else if index == 0x0019 # stime
 				return sys_stime(frame.rdi)
 #			else if index == 0x0025 # kill

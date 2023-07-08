@@ -20,7 +20,9 @@ class Scheduler
 #	var static scheduler_task: Task*
 #
 	var static next_perf_calc: TimeValue
-	var static running_pid: int
+#	var static running_pid: int
+	var static prev_pid: int
+	var static t_prev: TimeValue
 
 #	func static int_timer()
 #		while true
@@ -52,11 +54,18 @@ class Scheduler
 	var static next: Task*
 	
 	func static run()
-		running_pid = 0
+		prev_pid = 0
+#		running_pid = -1
 		prints("starting scheduler\n")
 		
-		next = nil#&TaskManager.tasks[0]
+		next = nil
 		cur = nil
+		
+		KernelTimer.update()
+		next_perf_calc = KernelTimer.tv
+		next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
+		
+		t_prev = KernelTimer.tv
 
 		KernelTimer.start()
 		IrqManager.enable()
@@ -69,12 +78,10 @@ class Scheduler
 #		scheduler_task = TaskManager.add_task_kernel("scheduler", int_timer, SCHEDULER_STACK_SIZE, kernel_task)
 #	
 #		KernelTimer.init_interrupt(scheduler_task, TASK_SWITCH_DT)
-#		next_perf_calc = KernelTimer.tv
-#		next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
 #		scheduler_task.run_forced()
 
 	func static @noframe interrupt_handler()
-		asm{
+		asm {
 			cli
 		}
 		push_general_purpose_registers()
@@ -86,7 +93,7 @@ class Scheduler
 		handle_irq(__temp_p__ as InterruptFrame*)
 		pop_control_registers()
 		pop_general_purpose_registers()
-		asm{
+		asm {
 			#sti
 			db 0x48
 			iret
@@ -95,10 +102,10 @@ class Scheduler
 	func static handle_irq(_frame: InterruptFrame*)
 		IrqManager.mask(TIMER_IRQ)
 		#prints("<timer>")
+		update_time()
 		
 		for frame in _frame
 			leave_task(frame)
-			KernelTimer.update()
 			process_waiting_tasks()
 			do_scheduling()
 			enter_task(frame)
@@ -112,12 +119,26 @@ class Scheduler
 #		TextMode.text_color = 0x07
 		for t in cur
 			memcpy(&t.frame, &frame, sizeof(InterruptFrame))
+	
+	func static update_time()
+		KernelTimer.update()
+		if KernelTimer.tv.is_before(t_prev)
+			t_prev = KernelTimer.tv	
+			return
+		update_times()
+		var dt = KernelTimer.tv
+		dt.sub(t_prev)
+		for t in cur
+			t.time_all.add(dt)
+			t.time_temp.add(dt)
+		t_prev = KernelTimer.tv	
 
 	func static do_scheduling()
 		let next_pid = get_next_task()
 		if next_pid < 0
 			panic("no running tasks")
 		cur = &TaskManager.tasks[next_pid]
+		prev_pid = next_pid
 		
 	func static enter_task(out frame: InterruptFrame)
 #		TextMode.text_color = 0x05
@@ -135,13 +156,12 @@ class Scheduler
 
 	# Scheduler
 	func static get_next_task() -> int
-		var pid0 = 0
-		for c in cur
-			pid0 = c.pid
-		for i in pid0 + 1:MAX_TASKS
+		for i in prev_pid + 1:MAX_TASKS
 			if TaskManager.tasks[i].status == TaskStatus.RUNNING
+	#			if pid0 == 0
+	#				prints(" <<IDLE -> TASK>> ")
 				return i
-		for i in 0:pid0+1
+		for i in 0:prev_pid+1
 			if TaskManager.tasks[i].status == TaskStatus.RUNNING
 				return i
 #		prints(" => NEXT=IDLE ")
@@ -152,10 +172,10 @@ class Scheduler
 			if t.status == TaskStatus.WAITING
 				if t.waiting_mode == WaitingMode.TIME
 					var tv = &t.waiting_param_i1 as TimeValue&
-#					printi(tv.sec)
+#					printh(tv, 8)
 #					prints(":")
-#					printi(KernelTimer.tv.sec)
-#					prints(" ")
+#					printh(&KernelTimer.tv, 8)
+#					prints("\n")
 					if tv.is_before(KernelTimer.tv)
 #						prints("W")
 						t.frame.rax = 0 # return 0
@@ -173,14 +193,11 @@ class Scheduler
 #		#prints("<rec ")
 #	#	printi pid_next
 #	#	prints(">")
-#
-#	func static update_times()
-#		TaskManager.tasks[running_pid].time_all.inc_nanosec(KernelTimer.dt_nanosec)
-#		TaskManager.tasks[running_pid].time_temp.inc_nanosec(KernelTimer.dt_nanosec)
-#	
-#		if !KernelTimer.tv.is_before(next_perf_calc)
-#			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
-#			for t in TaskManager.tasks
-#				t.cpu_load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
-#				t.time_temp.clear()
-#
+
+	func static update_times()
+		if !KernelTimer.tv.is_before(next_perf_calc)
+			#prints("<PERF>")
+			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
+			for t in TaskManager.tasks
+				t.cpu_load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
+				t.time_temp.clear()
