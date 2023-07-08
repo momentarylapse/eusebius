@@ -1,0 +1,19 @@
+use lib.std
+use lib.std.sys
+use lib.vesa
+
+func main()
+	init_lib()
+	
+	vesa_init()
+	
+	bga_set_video_mode(1024, 768, 32)
+	
+	for x in 100:200
+		for y in 100:200
+			set_pixel(x, y, 0xffffffff)
+	
+	while true
+		pass
+	
+	exit(0)

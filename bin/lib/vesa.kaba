@@ -1,73 +1,71 @@
 use lib.std
-use lib.std.sys
 use lib.io
 use lib.pci
 
-func extern _p2i(p: void*) -> int
-func extern _i2p(i: int) -> void*
+func extern _p2i(p: void*) -> int64
+func extern _i2p(i: int64) -> void*
 
-const VBE_DISPI_IOPORT_INDEX = 0x01ce
-const VBE_DISPI_IOPORT_DATA = 0x01cf
+let VBE_DISPI_IOPORT_INDEX = 0x01ce
+let VBE_DISPI_IOPORT_DATA = 0x01cf
 
-const VBE_DISPI_ID5 = 0xb0c5
-const VBE_DISPI_ID4 = 0xb0c4
+let VBE_DISPI_ID5 = 0xb0c5
+let VBE_DISPI_ID4 = 0xb0c4
 
-const VBE_DISPI_DISABLED = 0
-const VBE_DISPI_ENABLED = 0x01
-const VBE_DISPI_LFB_ENABLED = 0x40
-const VBE_DISPI_NOCLEARMEM = 0x80
+let VBE_DISPI_DISABLED = 0
+let VBE_DISPI_ENABLED = 0x01
+let VBE_DISPI_LFB_ENABLED = 0x40
+let VBE_DISPI_NOCLEARMEM = 0x80
 
-const VBE_DISPI_INDEX_ID = 0
-const VBE_DISPI_INDEX_XRES = 1
-const VBE_DISPI_INDEX_YRES = 2
-const VBE_DISPI_INDEX_BPP = 3
-const VBE_DISPI_INDEX_ENABLE = 4
-const VBE_DISPI_INDEX_BANK = 5
-const VBE_DISPI_INDEX_VIRT_WIDTH = 6
-const VBE_DISPI_INDEX_VIRT_HEIGHT = 7
-const VBE_DISPI_INDEX_X_OFFSET = 8
-const VBE_DISPI_INDEX_Y_OFFSET = 9
+enum VbeIndex
+	ID = 0
+	XRES = 1
+	YRES = 2
+	BPP = 3
+	ENABLE = 4
+	BANK = 5
+	VIRT_WIDTH = 6
+	VIRT_HEIGHT = 7
+	X_OFFSET = 8
+	Y_OFFSET = 9
 
 var pci: owned![PCIController]
 
-func bga_write_register(index: int, value: int)
-	outportw(VBE_DISPI_IOPORT_INDEX, index)
+func bga_write_register(index: VbeIndex, value: int)
+	outportw(VBE_DISPI_IOPORT_INDEX, int(index))
 	outportw(VBE_DISPI_IOPORT_DATA, value)
  
-func bga_read_register(index: int) -> int
-	outportw(VBE_DISPI_IOPORT_INDEX, index)
+func bga_read_register(index: VbeIndex) -> int
+	outportw(VBE_DISPI_IOPORT_INDEX, int(index))
 	return inportw(VBE_DISPI_IOPORT_DATA)
 
 
  
 func bga_is_available() -> bool
-	return bga_read_register(VBE_DISPI_INDEX_ID) == VBE_DISPI_ID5
+	return bga_read_register(VbeIndex.ID) == VBE_DISPI_ID5
 
 var graphics_enabled: bool
 var screen_width, screen_height: int
 var cur_bank: int
 var vga_mem: int[0]*
-var vga_mem2: int[0]*
  
 func bga_set_video_mode(width: int, height: int, depth: int)
 	var use_linear_framebuffer = false
-	if vga_mem2
+	if vga_mem
 		use_linear_framebuffer = true
 	var clear_video_memory = false
 	screen_width = width
 	screen_height = height
 	cur_bank = -1
-	vga_mem = _i2p(0xa0000)
-	bga_write_register(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED)
-	bga_write_register(VBE_DISPI_INDEX_XRES, width)
-	bga_write_register(VBE_DISPI_INDEX_YRES, height)
-	bga_write_register(VBE_DISPI_INDEX_BPP, depth)
+	bga_write_register(VbeIndex.ENABLE, VBE_DISPI_DISABLED)
+	bga_write_register(VbeIndex.XRES, width)
+	bga_write_register(VbeIndex.YRES, height)
+	bga_write_register(VbeIndex.BPP, depth)
 	var x = VBE_DISPI_ENABLED
 	if use_linear_framebuffer
 		x = x | VBE_DISPI_LFB_ENABLED
 	if clear_video_memory
 		x = x | VBE_DISPI_NOCLEARMEM
-	bga_write_register(VBE_DISPI_INDEX_ENABLE, x)
+	bga_write_register(VbeIndex.ENABLE, x)
 	graphics_enabled = true
 	
 	
@@ -81,47 +79,33 @@ func bga_set_video_mode(width: int, height: int, depth: int)
 #	print _p2i(vga_mem2)
  
 func bga_set_bank(bank: int)
-	bga_write_register(VBE_DISPI_INDEX_BANK, bank)
+	bga_write_register(VbeIndex.BANK, bank)
 	cur_bank = bank
 	for i in 0:1000
-		nil
-
-func set_pixel(x: int, y: int, col: int)
-	if !graphics_enabled
-		return
-	let p = x + y * screen_width
-	for m2 in vga_mem2
-		m2[p] = col
-	else
-		let b = p >> 14
-		let off = p & 0x3fff
-		if b != cur_bank
-			bga_set_bank(b)
-		for m in vga_mem
-			m[off] = col
+		pass
 
 func set_pixels(x: int, y: int, cc: int*, n: int)
 	if !graphics_enabled
 		return
-	var col = cc as int[0]&
+	let col = cc as int[0]&
 	var p = x + y * screen_width
-	for m2 in vga_mem2
+	for m2 in vga_mem
 		for i in 0:n
 			m2[p] = col[i]
 			p ++
 	else
 		pass
 
-func set_pixel2(x: int, y: int, col: int)
+func set_pixel(x: int, y: int, col: int)
 	let p = x + y * screen_width
-	for m2 in vga_mem2
+	for m2 in vga_mem
 		m2[p] = col
 
 func vesa_init()
 	screen_width = 800
 	screen_height = 600
 	graphics_enabled = false
-	vga_mem2 = nil
+	vga_mem = nil
 	
 	
 	pci = new PCIController()
@@ -129,13 +113,14 @@ func vesa_init()
 	for dev in pci.get(0x1234, 0x1111)
 		
 		let addr = dev.get_mem_addr(0)
-		print("pci dev found, mem=0x{{addr|8x}}\n")
+		print("pci dev found, mem=0x{{addr|8x}} (physical)\n")
 
 		# 3mb... enough for 1024*768*32
 		let id = shmget(dev.get_mem_addr(0), 0x00300000, IPC_CREAT | SHM_ABSOLUTE)
 		if id >= 0
-			vga_mem2 = shmat(id, 0)
+			vga_mem = shmat(id, 0)
+			print("mapped to {{p2s(vga_mem)}} (virtual)\n")
 		else
-			kprint(" ...ERROR: can not map\n")
+			raise(new Exception("can not map"))
 	else
 		raise(new Exception("pci dev not found"))

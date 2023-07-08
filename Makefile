@@ -31,7 +31,8 @@ BINS = \
  bin/simple \
  bin/sleep \
  bin/top \
- bin/uname
+ bin/uname \
+ bin/vt
  
 XXXBINS = \
  bin/hello \
@@ -192,6 +193,9 @@ bin/cake: bin/cake.kaba $(PDEP)
 
 bin/simple: bin/simple.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/simple bin/simple.kaba
+
+bin/vt: bin/vt.kaba $(PDEP)
+	$(KABA) $(PFLAGS) -o bin/vt bin/vt.kaba
 
 lib/kalib: lib/kalib.kaba lib/lib_*.kaba
 	$(KABA) $(LIBFLAGS) -o lib/kalib --export-symbols kalib_symbols lib/kalib.kaba

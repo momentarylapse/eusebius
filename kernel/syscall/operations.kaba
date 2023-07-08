@@ -104,7 +104,6 @@ func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
 	if cmd == SHMGET
 		return SharedMemory.shm_get(p1, p2, p3, t.pid)
 	else if cmd == SHMAT
-#		prints("<SHMAT>")
 		for r in t.shmem
 			if !r.s
 				r.s = SharedMemory.get(p1)
@@ -114,6 +113,7 @@ func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
 						return -ENOMEM
 					s.refcount ++
 					t.page_root_dir.map_linear(r.vaddr, s.physical_addr, s.size, PageFlags.WRITABLE | PageFlags.USER)
+					
 					var o = _i2p(p2) as int64&
 					o = r.vaddr
 #					if !t.page_root_dir.memcpy2task(p2, &r.dest, 4)
@@ -122,7 +122,6 @@ func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
 				return -ENOENT
 		return -1
 	else if cmd == SHMDT
-#		prints("<SHMDT>")
 		for r in t.shmem
 			for s in r.s
 				if r.vaddr == p1
@@ -140,7 +139,6 @@ func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
 			t.set_wait(WaitingMode.TIME, 0, 0, 0)
 			return 0
 		return -1
-#	prints("<SHM???>")
 	return -EINVAL
 
 func sys_blockinfo(major: int, minor: int, addr: int64) -> int64

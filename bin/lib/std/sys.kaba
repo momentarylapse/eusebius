@@ -46,7 +46,7 @@ func extern uname(buf: void&) -> bool
 
 #func extern addr2phys(p: void*) -> int
 #
-#func extern kprint(s: string)
+func extern kprint(s: string)
 func extern kprinti(i: int)
 func extern kprintp(p: void*)
 func extern kprintc(s: cstring, l: int)

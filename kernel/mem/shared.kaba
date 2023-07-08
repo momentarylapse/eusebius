@@ -53,9 +53,10 @@ class SharedMemory
 				# :P
 				b.physical_addr = key
 			else if absolute
-				if !Paging.reserve_physical_chunk(key, size, true)
+				let paddr = int64(key) & 0x00000000ffffffff
+				if !Paging.reserve_physical_chunk(paddr, size, true)
 					return -ENOMEM
-				b.physical_addr = key
+				b.physical_addr = paddr
 			else
 				b.physical_addr = Paging.find_and_reserve_physical_chunk(size)
 				if b.physical_addr == -1
