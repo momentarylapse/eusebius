@@ -5,12 +5,12 @@ func main()
 	init_lib()
 	lib_print_endl = false
 	print("shmget: ")
-	int id = shmget(13, 1024, IPC_CREAT)
+	let id = shmget(13, 1024, IPC_CREAT)
 	print(id)
 	print("\n")
 	
 	print("shmat: ")
-	void *p = shmat(id, 0)
+	var p = shmat(id, 0) as int[0]*
 	print(p2s(p))
 	print("\n")
 	
@@ -24,15 +24,17 @@ func main()
 	print(p2s(p))
 	print("\n")
 	
-	int[0]* ip = p
+	for ip in p
 	
-	print("read: ")
-	print(ip[0])
-	print("\n")
+		print("read: ")
+		print(ip[0])
+		print("\n")
 	
-	print("write: ")
-	ip[0] = 13
-	print("ok\n")
+		print("write: ")
+		ip[0] = 13
+		print("ok\n")
+	else
+		print("ERROR\n")
 	
 	
 	exit(0)

@@ -4,6 +4,6 @@ use os
 func main()
 	init_lib()
 	#lib_print_endl = false
-	print(Filesystem.current_directory())
+	print(os.fs.current_directory())
 	#print("\n")
 	exit(0)

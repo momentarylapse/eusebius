@@ -21,15 +21,15 @@ func cpuid(n: int, out o: int[4])
 	o[3] = temp4
 
 func show_cpu()
-	int[4] o
+	var o: int[4]
 	cpuid(0, o)
 	
-	print("cpu: {{binary(&o[1], 4) + binary(&o[3], 4) + binary(&o[2], 4)}}\n")
+	print("cpu: {{as_binary(&o[1], 4).hex() + as_binary(&o[3], 4).hex() + as_binary(&o[2], 4).hex()}}\n")
 	
 	#cpuid(0x8000000, o)
 	cpuid(1, o)
 	
-	string[] caps
+	var caps: string[]
 	if (o[3] & 1<<25) != 0
 		caps.add("sse")
 	if (o[3] & 1<<26) != 0
@@ -56,16 +56,14 @@ func show_cpu()
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
 	var pci = new PCIController()
 	pci.scan()
 	
-	var dev = pci.get(0x8029, 0x10ec)
-	if dev
+	for dev in pci.get(0x8029, 0x10ec)
 		print(dev)
-		int addr = dev.get_io_addr(0)
+		let addr = dev.get_io_addr(0)
 		print("0x{{addr|8x}}\n")
 	
 	show_cpu()

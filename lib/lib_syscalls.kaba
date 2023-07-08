@@ -175,51 +175,51 @@ func kill(pid: int, signal: int) -> bool
 	}
 	return lib_error == 0
 
-#func shmget(key: int, size: int, flags: int) -> int
-#	__temp_i__ = key
-#	__temp_i2__ = size
-#	__temp_i3__ = flags
-#	asm {
-#		mov edi, 0x0000000b
-#		mov esi, __temp_i__
-#		mov edx, __temp_i2__
-#		mov eax, __temp_i3__
-#		mov r10, rax
-#		mov eax, 0x00000075 # ipc
-#		syscall
-#		mov __temp_i3__, eax
-#	}
-#	return __temp_i3__
-#
-#func shmat(id: int, flags: int) -> void*
-#	var p: void*
-#	__temp_i__ = id
-#	__temp_p__ := &p
-#	__temp_i2__ = flags
-#	asm {
-#		mov edi, 0x00000009
-#		mov esi, __temp_i__
-#		mov rdx, __temp_p__
-#		mov eax, __temp_i2__
-#		mov r10, rax
-#		mov eax, 0x00000075 # ipc
-#		syscall
-#		mov lib_error, eax
-#	}
-#	if lib_error < 0 and lib_error > - 1024
-#		return nil
-#	return p
-#	
-#func shmdt(addr: void&) -> bool
-#	__temp_p__ := addr
-#	asm {
-#		mov eax, 0x00000075 # ipc
-#		mov edi, 0x0000000a
-#		mov rsi, __temp_p__
-#		syscall
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
+func shmget(key: int, size: int, flags: int) -> int
+	__temp_i__ = key
+	__temp_i2__ = size
+	__temp_i3__ = flags
+	asm {
+		mov edi, 0x0000000b
+		mov esi, __temp_i__
+		mov edx, __temp_i2__
+		mov eax, __temp_i3__
+		mov r10, rax
+		mov eax, 0x00000075 # ipc
+		syscall
+		mov __temp_i3__, eax
+	}
+	return __temp_i3__
+
+func shmat(id: int, flags: int) -> void*
+	var p: void*
+	__temp_i__ = id
+	__temp_p__ := &p
+	__temp_i2__ = flags
+	asm {
+		mov edi, 0x00000009
+		mov esi, __temp_i__
+		mov rdx, __temp_p__
+		mov eax, __temp_i2__
+		mov r10, rax
+		mov eax, 0x00000075 # ipc
+		syscall
+		mov lib_error, eax
+	}
+	if lib_error < 0 and lib_error > - 1024
+		return nil
+	return p
+	
+func shmdt(addr: void&) -> bool
+	__temp_p__ := addr
+	asm {
+		mov eax, 0x00000075 # ipc
+		mov edi, 0x0000000a
+		mov rsi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
 	
 #func waitmsg() -> bool
 #	asm{
@@ -347,15 +347,15 @@ func usleep(usec: int) -> bool
 	tv.nanosec = (usec % 1000000) * 1000
 	return nanosleep(tv, tv0)
 
-#func sched_yield(pid: int) -> bool
-#	__temp_i__ = pid
-#	asm{
-#		mov eax, 0x0000009e
-#		mov ebx, __temp_i__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
+func sched_yield(pid: int) -> bool
+	__temp_i__ = pid
+	asm {
+		mov eax, 0x0000009e
+		mov edi, __temp_i__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
 
 func kprint(s: string)
 	__temp_p__ := &s[0]

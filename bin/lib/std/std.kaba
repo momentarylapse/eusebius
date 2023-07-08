@@ -27,7 +27,6 @@ var extern lib_error: int
 var extern lib_print_endl: bool
 
 func extern cs2s(cs: cstring) -> string
-##func extern binary(p: void*, num: int) -> string
 #
 func extern exit(r: int) -> bool
 func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
@@ -36,9 +35,9 @@ func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
 
 func extern waitpid(pid: int, status: void&, block: bool) -> int
 func extern kill(pid: int, signal: int) -> bool
-#func extern shmget(key: int, size: int, flags: int) -> int
-#func extern shmat(id: int, flags: int) -> void*
-#func extern shmdt(p: void&) -> bool
+func extern shmget(key: int, size: int, flags: int) -> int
+func extern shmat(id: int, flags: int) -> void*
+func extern shmdt(p: void&) -> bool
 #func extern waitmsg() -> bool
 #func extern yield(pid: int) -> bool
 #func extern sched_yield(pid: int) -> bool

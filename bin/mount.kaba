@@ -1,8 +1,9 @@
 use lib.std
+use lib.std.sys
 
 
 func show_mount(m: MountInfo)
-	BlockDevice d
+	var d: BlockDevice
 	if blockinfo(m.major, m.minor, d)
 		print(" {{cs2s(d.name)|-10}} {{fs_type(d)|-8}} {{cs2s(m.dir)}}\n")
 	else
@@ -27,12 +28,11 @@ func fs_type(p: BlockDevice) -> string
 func main()
 	init_lib()
 	lib_print_endl = false
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
 	print("Device     Type     Mount point\n")
 	for i in 0:16
-		MountInfo m
+		var m: MountInfo
 		if mountinfo(i, m)
 			show_mount(m)
 	

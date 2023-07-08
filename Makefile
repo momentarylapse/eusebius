@@ -16,13 +16,18 @@ LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
  bin/cat \
+ bin/cpuid \
  bin/date \
  bin/echo \
+ bin/error \
  bin/hd \
+ bin/ls \
  bin/lsblk \
  bin/lspci \
- bin/ls \
+ bin/mount \
+ bin/pwd \
  bin/shell \
+ bin/shmem \
  bin/simple \
  bin/sleep \
  bin/top \
@@ -30,26 +35,17 @@ BINS = \
  
 XXXBINS = \
  bin/hello \
- bin/shell \
- bin/cat \
  bin/cmp \
- bin/cpuid \
- bin/echo \
  bin/kill \
- bin/top \
- bin/mount \
- bin/lsblk \
- bin/ls \
- bin/hd \
  bin/touch \
  bin/mkdir \
  bin/tr \
  bin/mkfifo \
  bin/less \
  bin/x \
- bin/shmem bin/date bin/sleep bin/uname bin/client \
- bin/lspci bin/sock bin/net bin/sound bin/error \
- bin/k bin/rm bin/rmdir bin/pwd bin/cake bin/c \
+ bin/client \
+ bin/sock bin/net bin/sound \
+ bin/k bin/rm bin/rmdir bin/cake bin/c \
  bin/xterm \
  bin/xtest \
  bin/xedit \
