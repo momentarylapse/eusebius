@@ -57,7 +57,7 @@ enum WaitingMode as @noauto
 
 class TaskSharedMemoryRef as @noauto
 	var s: SharedMemory.Block*
-	var dest: int
+	var vaddr: int64
 
 class Task
 	var stack: void&
@@ -454,43 +454,6 @@ class Task
 #	
 #		t.activate()
 #		return t.pid
-
-	func mut sys_ipc(cmd: int, p1: int, p2: int, p3: int) -> int64
-		if cmd == SHMGET
-			return SharedMemory.shm_get(p1, p2, p3, pid)
-#		else if cmd == SHMAT
-#			for r in shmem
-#				if !r.s
-#					r.s = SharedMemory.get(p1)
-#					for s in r.s
-#						r.dest = page_root_dir.find_free_space(0xe0000000, s.size) #0xa0000000
-#						if r.dest == -1
-#							return -ENOMEM
-#						s.refcount ++
-#						page_root_dir.map_linear(r.dest, s.p, s.size, true)
-#						if !page_root_dir.memcpy2task(p2, &r.dest, 4)
-#							return -EFAULT
-#						return 0
-#					return -ENOENT
-#			return -1
-#		else if cmd == SHMDT
-#			for r in shmem
-#				if r.s and r.dest == p1
-#					page_dir.unmap(r.dest, r.s.size, false)
-#					r.s.unref()
-#					r.s = nil
-#					return 0
-#			return -1
-#		else if cmd == 1001 # wait-for-message
-#			set_wait(WaitingMode.MESSAGE, 0, 0, 0)
-#			return 0
-#		else if cmd == 1002 # yield / wake-up
-#			var t = TaskManager.get_task(p1)
-#			if t
-#				t.activate()
-#			set_wait(WaitingMode.TIME, 0, 0, 0)
-#			return 0
-		return -EINVAL
 	
 #	func mut sys_socket(cmd: int, p1: int, p2: int) -> int
 #		if cmd == SYS_SOCKET

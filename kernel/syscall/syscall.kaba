@@ -39,7 +39,7 @@ class Syscall
 	let STACK_SIZE = 4096
 	
 	class Frame
-		reg8ff: int64[8]
+		r15, r14, r13, r12, r11, r10, r9, r8: int64
 		rsi, rdi, rbp, rdx, rcx, rbx, rax: int64
 	
 	var static stack: void&
@@ -142,11 +142,11 @@ class Syscall
 		
 		# prepare current task to be awoken by returning from a timer interrupt
 		for t in Scheduler.cur
-			memcpy(&t.frame.reg8ff, &frame.reg8ff, sizeof(int64) * (8 + 7))
+			memcpy(&t.frame.reg8ff, &frame, sizeof(int64) * (8 + 7))
 			#t.syscall_rsp
 			t.frame.rsp = _p2i(Syscall.task_frame_rsp) + sizeof(Frame)
 			t.frame.rip = frame.rcx
-			t.frame.rflags = frame.reg8ff[3] # r11
+			t.frame.rflags = frame.r11
 		
 		Scheduler.cur = nil
 		
@@ -190,7 +190,7 @@ class Syscall
 			
 			Syscall.task_frame_rsp = _i2p(t.frame.rsp - sizeof(Frame))
 			var next_frame = Syscall.task_frame_rsp as Frame&
-			memcpy(&next_frame.reg8ff, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
+			memcpy(next_frame, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
 		
 		
 		# switch to task stack
@@ -215,9 +215,8 @@ class Syscall
 			else
 				Syscall.task_frame_rsp = t.syscall_rsp
 				var next_frame = Syscall.task_frame_rsp as Frame&
-				memcpy(&next_frame.reg8ff, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
+				memcpy(next_frame, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
 		prints(">> IDLE...")
-
 
 	func static handle(frame: Frame) -> int64
 		let index = int(frame.rax)
@@ -232,132 +231,111 @@ class Syscall
 			if index == 0x0001 # exit
 				sys_exit(t, frame.rdi)
 				return 0
-#			else if index == 0x0002 # fork
+#			if index == 0x0002 # fork
 #				return t.sys_fork()
-			else if index == 0x0003 # read
+			if index == 0x0003 # read
 				return t.sys_read(frame.rdi, frame.rsi, frame.rdx)
-			else if index == 0x0004 # write
+			if index == 0x0004 # write
 				return t.sys_write(frame.rdi, frame.rsi, frame.rdx)
-			else if index == 0x0005 # open
+			if index == 0x0005 # open
 				return t.sys_open(frame.rdi, frame.rsi)
-			else if index == 0x0006 # close
+			if index == 0x0006 # close
 				return t.sys_close(frame.rdi)
-			else if index == 0x0007 # waitpid
+			if index == 0x0007 # waitpid
 				return sys_waitpid(t, frame.rdi, frame.rsi, frame.rdx)
-			else if index == 0x0008 # create
+			if index == 0x0008 # create
 				return t.sys_open(frame.rdi, O_CREATE | O_WRONLY | O_TRUNC)
-#			else if index == 0x000a # unlink
+#			if index == 0x000a # unlink
 #				r = caller.sys_unlink(param1)
-			else if index == 0x000b # exec
+			if index == 0x000b # exec
 				return sys_execute(t, frame.rdi, frame.rsi, frame.rdx)
-			else if index == 0x000c # chdir
+			if index == 0x000c # chdir
 				return t.sys_set_cur_dir(frame.rdi)
-				
-				
-#			else if index == 0x000e # mknod
+#			if index == 0x000e # mknod
 #				r = caller.sys_mknod(param1, param2)
-			else if index == 0x0013 # seek
+			if index == 0x0013 # seek
 				return t.sys_seek(frame.rdi, frame.rsi, frame.rdx)
-			else if index == 0x0014 # getpid
-				for _t in Scheduler.cur
-					return _t.pid
-				return -1
-			else if index == 0x0019 # stime
+			if index == 0x0014 # getpid
+				return t.pid
+			if index == 0x0019 # stime
 				return sys_stime(frame.rdi)
-#			else if index == 0x0025 # kill
+#			if index == 0x0025 # kill
 #				r = caller.sys_kill(param1, param2)
-#			else if index == 0x0027 # mkdir
+#			if index == 0x0027 # mkdir
 #				r = caller.sys_mkdir(param1)
-#			else if index == 0x0028 # rmdir
+#			if index == 0x0028 # rmdir
 #				r = caller.sys_rmdir(param1)
-			else if index == 0x0029 # dup
+			if index == 0x0029 # dup
 				return t.sys_dup(frame.rdi)
-#			else if index == 0x002a # pipe
+#			if index == 0x002a # pipe
 #				return t.sys_pipe(frame.rdi)
-			else if index == 0x002d # brk
+			if index == 0x002d # brk
 				return t.sys_brk(frame.rdi)
-			else if index == 0x0033 # fcntl
+			if index == 0x0033 # fcntl
 				return t.sys_fcntl(frame.rdi, frame.rsi, frame.rdx)
-#			else if index == 0x0043 # sigaction
+#			if index == 0x0043 # sigaction
 #				r = caller.sys_sigaction(param1, param2)
-			else if index == 0x0058 # reboot
-				pass
-#			else if index == 0x0066 # socket
+			if index == 0x0058 # reboot
+				return -1
+#			if index == 0x0066 # socket
 #				r = caller.sys_socket(param1, param2, param3)
-			else if index == 0x0074 # sysinfo
+			if index == 0x0074 # sysinfo
 				var si = _i2p(frame.rdi) as SysInfo&
 				si.get()
 				return 0
-#			else if index == 0x0075 # ipc
-#				r = caller.sys_ipc(param1, param2, param3, param4)
-			else if index == 0x007a # uname
+			if index == 0x0075 # ipc
+				return sys_ipc(t, frame.rdi, frame.rsi, frame.rdx, frame.r10)
+			if index == 0x007a # uname
 				var un = _i2p(frame.rdi) as UTSName&
 				un.get()
 				return 0
-			else if index == 0x008d # getdents
+			if index == 0x008d # getdents
 				return t.sys_getdents(frame.rdi, frame.rsi, frame.rdx)
-#			else if index == 0x009e # sched_yield
+#			if index == 0x009e # sched_yield
 #				int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
 #				Scheduler.reconnect_tasks(pid_next, sys_call_task)
-			else if index == 0x00a2 # nanosleep
-				sys_nanosleep(t, frame.rdi, frame.rsi)
+			if index == 0x00a2 # nanosleep
 				# p1 = &duration
 				# p2 = &duration_more
-				return 0
-			else if index == 0x00b7 # getcwd
-				var pf = _i2p(frame.rdi) as cstring&
-				for d in t.cur_dir
-					d.get_path(pf)
-					return 0
-				return -EFAULT
-			else if index == 0x1234 # print hi
-				TextMode.text_color = 0x04
-				prints("  <SYSCALL HI>  ")
-				TextMode.text_color = 0x07
-				return 0
-			else if index == 0x2001 # getarg
+				return sys_nanosleep(t, frame.rdi, frame.rsi)
+			if index == 0x00b7 # getcwd
+				return sys_getcwd(t, frame.rdi)
+			if index == 0x1234 # print hi
+				return sys_hi()
+			if index == 0x2001 # getarg
 				memcpy(_i2p(frame.rdi), &t.arg, sizeof(cstring))
 				return 0
-			else if index == 0x2002 # kprint
+			if index == 0x2002 # kprint
 				TextMode.prints_low(_i2p(frame.rdi) as cstring&, frame.rsi)
 				return 0
-			else if index == 0x2003 # kprinti
+			if index == 0x2003 # kprinti
 				printi(frame.rdi)
 				return 0
-			else if index == 0x2004 # kprintp
+			if index == 0x2004 # kprintp
 				printh(&frame.rdi, 8)
 				return 0
-			else if index == 0x2005 # taskinfo
+			if index == 0x2005 # taskinfo
 				var ti = _i2p(frame.rsi) as TaskInfo&
 				return ti.get(frame.rdi)
-#			else if index == 0x2006 # exit_signal
+#			if index == 0x2006 # exit_signal
 #				r = caller.sys_exit_signal()
 #				asm {
 #					# don't overwrite eax with return value
 #					jmp __sys_call_return
 #				}
-#			else if index == 0x2007 # map IRQ
+#			if index == 0x2007 # map IRQ
 #				r = irq.sys_map_irq(param1, caller, param2)
-			else if index == 0x2008 # mountinfo
+			if index == 0x2008 # mountinfo
 				var mi = _i2p(frame.rsi) as MountInfo&
 				return mi.get(frame.rdi)
-			else if index == 0x2009 # blockinfo
-				var bd = _i2p(frame.rdx) as BlockDevice&
-				for d in BlockDevManager.get(frame.rdi, frame.rsi)
-					memcpy(bd as void&, d as void&, sizeof(BlockDevice))
-					return 0
-				return -1
-			else if index == 0x200a # stat
-				var pd = _i2p(frame.rsi) as StatData&
-				var pf = _i2p(frame.rdi) as cstring&
-				for d in t.cur_dir
-					return pd.get(pf, d)
-				return 1
-#			else if index == 0x200b # addr2phys
+			if index == 0x2009 # blockinfo
+				return sys_blockinfo(frame.rdi, frame.rsi, frame.rdx)
+			if index == 0x200a # stat
+				return sys_stat(t, frame.rdi, frame.rsi)
+#			if index == 0x200b # addr2phys
 #				int offset
 #				r = caller.page_dir.addr2kernel(param1, &offset)
-			else
-				prints("<syscall>")
-				printh(&index, 2)
+		prints("<syscall>")
+		printh(&index, 2)
 		return -ENOSYS
 

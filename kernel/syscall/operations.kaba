@@ -1,7 +1,9 @@
 use common
+use dev.block
 use mem.memory
 use mem.paging
 use mem.heap
+use mem.shared
 use task.task
 use task.manager
 use fs.fs
@@ -12,13 +14,26 @@ use time.timer
 use io.text
 
 
-func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int
+func sys_stat(out t: Task, fn: int64, addr: int64) -> int64
+	var pd = _i2p(addr) as StatData&
+	var pf = _i2p(fn) as cstring&
+	for d in t.cur_dir
+		return pd.get(pf, d)
+	return 1
+
+func sys_hi() -> int64
+	TextMode.text_color = 0x04
+	prints("  <SYSCALL HI>  ")
+	TextMode.text_color = 0x07
+	return 0
+
+func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int64
 	var tv = _i2p(p1) as TimeValue&
 	tv.add(KernelTimer.tv)
 	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
 	return 0
 
-func sys_stime(addr: int64) -> int
+func sys_stime(addr: int64) -> int64
 	KernelTimer.update()
 	var tv = _i2p(addr) as TimeValue&
 	tv = KernelTimer.tv
@@ -28,7 +43,7 @@ func sys_stime(addr: int64) -> int
 func sys_exit(out t: Task, r: int)
 	TaskManager.die(t, r)
 
-func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> int
+func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> int64
 	for o in TaskManager.get_task(_pid)
 		# already (un-) dead?
 		if o.status == TaskStatus.ZOMBIE
@@ -47,7 +62,7 @@ func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> in
 	return -ECHILD
 
 
-func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
+func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
 	let h = t.sys_open(faddr, O_RDONLY)
 	if h < 0
 		return -ENOENT
@@ -78,6 +93,63 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int
 	t.sys_close(h)
 	return -1
 
+func sys_getcwd(out t: Task, addr: int64) -> int64
+	var pf = _i2p(addr) as cstring&
+	for d in t.cur_dir
+		d.get_path(pf)
+		return 0
+	return -EFAULT
+
+func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
+	if cmd == SHMGET
+		return SharedMemory.shm_get(p1, p2, p3, t.pid)
+	else if cmd == SHMAT
+#		prints("<SHMAT>")
+		for r in t.shmem
+			if !r.s
+				r.s = SharedMemory.get(p1)
+				for s in r.s
+					r.vaddr = t.page_root_dir.find_unmapped_space(0x00000000e0000000, s.size) #0xa0000000
+					if r.vaddr == -1
+						return -ENOMEM
+					s.refcount ++
+					t.page_root_dir.map_linear(r.vaddr, s.physical_addr, s.size, PageFlags.WRITABLE | PageFlags.USER)
+					var o = _i2p(p2) as int64&
+					o = r.vaddr
+#					if !t.page_root_dir.memcpy2task(p2, &r.dest, 4)
+#						return -EFAULT
+					return 0
+				return -ENOENT
+		return -1
+	else if cmd == SHMDT
+#		prints("<SHMDT>")
+		for r in t.shmem
+			for s in r.s
+				if r.vaddr == p1
+					t.page_root_dir.unmap(r.vaddr, s.size, false)
+					s.unref()
+					r.s = nil
+					return 0
+		return -1
+	else if cmd == 1001 # wait-for-message
+		t.set_wait(WaitingMode.MESSAGE, 0, 0, 0)
+		return 0
+	else if cmd == 1002 # yield / wake-up
+		for tt in TaskManager.get_task(p1)
+			tt.activate()
+			t.set_wait(WaitingMode.TIME, 0, 0, 0)
+			return 0
+		return -1
+#	prints("<SHM???>")
+	return -EINVAL
+
+func sys_blockinfo(major: int, minor: int, addr: int64) -> int64
+	var bd = _i2p(addr) as BlockDevice&
+	for d in BlockDevManager.get(major, minor)
+		memcpy(bd as void&, d as void&, sizeof(BlockDevice))
+		return 0
+	return -1
+
 class SysInfo as @noauto
 	var uptime: int
 	var loads: int[3]
@@ -96,7 +168,7 @@ class SysInfo as @noauto
 		mem_unit = 1024 #PAGE_SIZE
 		totalram = memory_size / mem_unit
 		freeram = (memory_size - Paging.get_used()) / mem_unit
-		sharedram = 0 #SharedMemory.get_used() / mem_unit
+		sharedram = SharedMemory.get_used() / mem_unit
 		bufferram = 0
 		totalswap = 0
 		freeswap = 0

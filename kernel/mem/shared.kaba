@@ -13,7 +13,7 @@ class SharedMemory
 		var key: int
 		var pid: int
 		var size: int
-		var p: int
+		var physical_addr: int64
 		var refcount: int
 		var flags: int
 	
@@ -26,7 +26,7 @@ class SharedMemory
 				panic("SharedMem.refcount < 0")
 	
 		func mut clean_up()
-			Paging.free_chunk(p, size)
+			Paging.free_chunk(physical_addr, size)
 			key = -1
 	var static blocks: Block[MAX_SHARED_MEMORY_BLOCKS]
 	
@@ -51,14 +51,14 @@ class SharedMemory
 				continue
 			if absolute and key == 0x00700000
 				# :P
-				b.p = key
+				b.physical_addr = key
 			else if absolute
 				if !Paging.reserve_physical_chunk(key, size, true)
 					return -ENOMEM
-				b.p = key
+				b.physical_addr = key
 			else
-				b.p = Paging.find_and_reserve_chunk(size)
-				if b.p == -1
+				b.physical_addr = Paging.find_and_reserve_physical_chunk(size)
+				if b.physical_addr == -1
 					return -ENOMEM
 			b.size = ceil_quot(size, PAGE_SIZE) * PAGE_SIZE
 			b.key = key

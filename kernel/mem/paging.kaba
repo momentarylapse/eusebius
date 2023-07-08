@@ -178,37 +178,47 @@ class PageRootTable extends PageTable
 						dir_no ++
 						page_no = 0
 	
-	# ???
-	func find_free_space(_start: int, size: int) -> int
-		panic("TODO: Paging.find_free_space()")
-		var start = (_start & 0xfffff000)
-		var (dirp_no, dir_no, page_no, offset) = page_params(start)
+	func find_unmapped_space(vaddr_start: int64, size: int) -> int64
+		var start = (vaddr_start & 0xfffffffffffff000)
 		let npages = ceil_quot(size, PAGE_SIZE)
+		var (dirp_no, _dir_no, _page_no, offset) = page_params(start)
+		var dir_no = _dir_no
+		var page_no = _page_no
+		
+		## assuming <start> to be at the beginning of some table...
+
+		var vaddr = start
+		var vaddr_cur_page = start
 		var still_need = npages
-		var pos = start
-		while page_no < PAGE_TABLE_ENTRIES
-			let pt_pos = e[dir_no] & 0xfffff000
-			var pt = _i2p(pt_pos) as PageTable&
-			let i0 = page_no
-			if pt
-				for i in i0:PAGE_TABLE_ENTRIES
-					if pt.e[i] == 0
-						still_need --
-						if still_need == 0
-							return start
-					else
-						# restart search
-						still_need = npages
-						start = pos + PAGE_SIZE
-					pos += PAGE_SIZE
-			else
-				let n = PAGE_TABLE_ENTRIES - i0
-				still_need -= n
-				pos += n * PAGE_SIZE
-				if still_need <= 0
-					return start
-			dir_no ++
-			page_no = 0
+		for pdpt in get_sub(0)
+			while dirp_no < PAGE_TABLE_ENTRIES
+				for pdt in pdpt.get_sub(dirp_no)
+					while dir_no < PAGE_TABLE_ENTRIES
+						for pd in pdt.get_sub(dir_no)
+							while page_no < PAGE_TABLE_ENTRIES
+								for p in pd.get_sub(page_no)
+									# restart search
+									still_need = npages
+									vaddr = vaddr_cur_page + PAGE_SIZE
+								else
+									still_need --
+									if still_need <= 0
+										return vaddr
+								page_no ++
+								vaddr_cur_page += PAGE_SIZE
+							page_no = 0
+						else
+							still_need -= (PAGE_TABLE_ENTRIES)# - dir_no)
+							if still_need <= 0
+								return vaddr
+						dir_no ++
+						page_no = 0
+				else
+					#still_need -= ...
+					#if still_need <= 0
+					return vaddr
+				dirp_no ++
+				dir_no = 0
 		return -1
 
 	func virtual_to_physical(addr: int64) -> int64
@@ -418,8 +428,8 @@ class Paging as @noauto
 			prints(" ")
 			printi(offset)
 			panic("invalid free page")
-			
-	func static find_and_reserve_chunk(size: int) -> int
+
+	func static find_and_reserve_physical_chunk(size: int) -> int
 		let num_pages_req = ceil_quot(size, PAGE_SIZE)
 		let num_masks_req = ceil_quot(num_pages_req, 32)
 		for i in 0:num_physical_masks - num_masks_req
@@ -433,7 +443,7 @@ class Paging as @noauto
 					physical_mask[i+j] = 0xffffffff
 				return i * PAGE_SIZE * 32
 		return 0
-	
+
 	func static reserve_physical_chunk(paddr: int, size: int, test_free: bool) -> bool
 		if (paddr & 0x00000fff) != 0
 			return false
