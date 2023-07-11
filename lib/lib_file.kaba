@@ -40,56 +40,56 @@ func create(filename: lib__Path) -> int
 #		var p: lib__Path* = &"/dev/tty"
 #		stdout = open(*p, O_RDONLY)
 #	return __temp_i__
-#
-#func mkdir(filename: lib__Path) -> bool
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x00000027
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#func rmdir(filename: lib__Path) -> bool
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x00000028
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#
-#func mkfifo(filename: lib__Path) -> bool
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x0000000e
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
-#func unlink(filename: lib__Path) -> bool
-#	var tt: cstring
-#	_s2cs(filename.s, tt)
-#	__temp_p__ = &tt
-#	asm{
-#		mov eax, 0x0000000a
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
-#
+
+func mkdir(filename: lib__Path) -> bool
+	var tt: cstring
+	_s2cs(filename.s, tt)
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x00000027
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+func rmdir(filename: lib__Path) -> bool
+	var tt: cstring
+	_s2cs(filename.s, tt)
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x00000028
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+
+func mkfifo(filename: lib__Path) -> bool
+	var tt: cstring
+	_s2cs(filename.s, tt)
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x0000000e
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
+func unlink(filename: lib__Path) -> bool
+	var tt: cstring
+	_s2cs(filename.s, tt)
+	__temp_p__ := &tt
+	asm{
+		mov eax, 0x0000000a
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
+
 func chdir(dir: lib__Path) -> bool
 	var tt: cstring
 	_s2cs(dir.s, tt)

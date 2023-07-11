@@ -1,4 +1,5 @@
 use lib.std
+use lib.std.file
 use os
 
 
@@ -10,10 +11,9 @@ func _mkdir(path: Path)
 
 func main()
 	init_lib()
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
-	for i in 1:arg.num
-		_mkdir(arg[i])
+	for a in args
+		_mkdir(a)
 	
 	exit(0)

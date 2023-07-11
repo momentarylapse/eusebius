@@ -52,12 +52,12 @@ func main()
 			sleep(4)
 			print("client: sending...\n")
 			let t = "hello"
-			if write(s, &t[0], len(t)) == len(t)
-				print("client: sent\n")
-				while true
-					pass
-			else
-				print("can not send!\n")
+#			if write(s, &t[0], len(t)) == len(t)
+#				print("client: sent\n")
+#				while true
+#					pass
+#			else
+#				print("can not send!\n")
 		else
 			print("can not connect!\n")
 		

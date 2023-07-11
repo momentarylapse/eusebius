@@ -1,4 +1,5 @@
 use lib.std
+use lib.std.file
 
 
 func _mkfifo(filename: string)
@@ -9,10 +10,9 @@ func _mkfifo(filename: string)
 
 func main()
 	init_lib()
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
-	for i in 1:arg.num
-		_mkfifo(arg[i])
+	for a in args
+		_mkfifo(a)
 	
 	exit(0)

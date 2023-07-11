@@ -32,13 +32,13 @@ func extern close(h: int) -> bool
 func extern read(h: int, buf: void&, size: int) -> int
 func extern write(h: int, buf: void&, size: int) -> int
 func extern seek(h: int, offset: int, mode: int) -> int
-#func extern mkdir(filename: Path) -> bool
-#func extern rmdir(filename: Path) -> bool
-#func extern mkfifo(filename: Path) -> bool
-#func extern unlink(filename: Path) -> bool
+func extern mkdir(filename: Path) -> bool
+func extern rmdir(filename: Path) -> bool
+func extern mkfifo(filename: Path) -> bool
+func extern unlink(filename: Path) -> bool
 func extern stat(filename: Path, out s: StatData) -> bool
 func extern dup(h: int) -> int
-#func extern pipe(h: int[2]) -> bool
+func extern pipe(out h: int[2]) -> bool
 func extern fcntl(h: int, op: int, param: int) -> int
 func extern getpid() -> int
 func extern chdir(dir: Path) -> bool

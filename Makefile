@@ -21,9 +21,12 @@ BINS = \
  bin/echo \
  bin/error \
  bin/hd \
+ bin/kill \
  bin/ls \
  bin/lsblk \
  bin/lspci \
+ bin/mkdir \
+ bin/mkfifo \
  bin/mount \
  bin/pwd \
  bin/shell \
@@ -39,10 +42,7 @@ BINS = \
 XXXBINS = \
  bin/hello \
  bin/cmp \
- bin/kill \
- bin/mkdir \
  bin/tr \
- bin/mkfifo \
  bin/less \
  bin/x \
  bin/client \

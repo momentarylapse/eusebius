@@ -1,7 +1,8 @@
 use common
+use common.macros
 use io.text
-#use task.task
-#use task.scheduler
+use task.task
+use task.scheduler
 use irq.irq
 use kaba
 
@@ -53,6 +54,10 @@ class ErrorManager as @noauto
 			strcat(s, " ss=")
 			_i2s(__temp_i2__, nn)
 			strcat(s, nn)
+			for t in Scheduler.cur
+				t.status = TaskStatus.ZOMBIE
+				printi(t.pid)
+				panic("TASK GPF")
 			return
 		if i==14
 			strcat(s, ": page fault")
@@ -162,6 +167,30 @@ class ErrorManager as @noauto
 #			asm {
 #				iret
 #			}
+	func static handle_gpf(_frame: InterruptFrame*)
+		for t in Scheduler.cur
+			t.status = TaskStatus.ZOMBIE
+			prints("<TASK GPF>")
+		else
+			panic("General protection fault in kernel!")
+		for frame in _frame
+			#Scheduler.leave_task(frame)
+			#TaskManager.process_waiting_tasks(KernelTimer.tv)
+			Scheduler.do_scheduling()
+			Scheduler.enter_task(frame)
+		
+	func static handle_page_fault(_frame: InterruptFrame*)
+		for t in Scheduler.cur
+			t.status = TaskStatus.ZOMBIE
+			prints("<TASK PAGE FAULT>")
+		else
+			panic("Page fault in kernel!")
+		for frame in _frame
+			#Scheduler.leave_task(frame)
+			#TaskManager.process_waiting_tasks(KernelTimer.tv)
+			Scheduler.do_scheduling()
+			Scheduler.enter_task(frame)
+		
 #
 	func static @noframe int_00()
 		int_handler(0)
@@ -196,9 +225,35 @@ class ErrorManager as @noauto
 	func static @noframe int_12()
 		int_handler(12)
 	func static @noframe int_13()
-		int_handler(13)
+		push_general_purpose_registers()
+		push_control_registers()
+		asm {
+			mov rax, rsp
+			mov __temp_p__, rax
+		}
+		handle_gpf(__temp_p__ as InterruptFrame*)
+		pop_control_registers()
+		pop_general_purpose_registers()
+		asm {
+			#sti
+			db 0x48
+			iret
+		}
 	func static @noframe int_14()
-		int_handler(14)
+		push_general_purpose_registers()
+		push_control_registers()
+		asm {
+			mov rax, rsp
+			mov __temp_p__, rax
+		}
+		handle_page_fault(__temp_p__ as InterruptFrame*)
+		pop_control_registers()
+		pop_general_purpose_registers()
+		asm {
+			#sti
+			db 0x48
+			iret
+		}
 	func static @noframe int_15()
 		int_handler(15)
 	func static @noframe int_16()

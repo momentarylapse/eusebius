@@ -2,15 +2,14 @@ use lib.std
 
 func main()
 	init_lib()
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
-	int signal = SIGKILL
-	int[] pid
+	var signal = SIGKILL
+	var pid: int[]
 	
-	if len(arg) > 1
-		for i in 1:len(arg)
-			int n = int(arg[i])
+	if len(args) > 0
+		for a in args
+			let n = int(a)
 			if n < 0
 				signal = -n
 			else
