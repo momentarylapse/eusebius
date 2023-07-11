@@ -2,6 +2,9 @@ use common
 use task
 use mem.paging
 use task.manager
+use time.timevalue
+use time.timer
+use op_fs
 
 
 func sys_set_cur_dir(out t: Task, faddr: int64) -> int
@@ -24,6 +27,71 @@ func sys_kill(_pid: int, signal: int) -> int
 #	for t in TaskManager.get_task(_pid)
 #		return t.handle_signal_link_iret(signal)
 	return -ESRCH
+
+func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int64
+	var tv = _i2p(p1) as TimeValue&
+	tv.add(KernelTimer.tv)
+	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
+	return 0
+
+func sys_exit(out t: Task, r: int)
+	TaskManager.die(t, r)
+
+func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> int64
+	for o in TaskManager.get_task(_pid)
+		# already (un-) dead?
+		if o.status == TaskStatus.ZOMBIE
+			var p = _i2p(status_addr) as int&
+			p = o.return_status
+			o.clean_up_deep()
+			t.activate()
+			return 0
+		
+		# don't block?
+		if (options & 1) > 0
+			return -2
+
+		t.set_wait(WaitingMode.TASK_EXIT, _pid, status_addr, 0)
+		return 0
+	return -ECHILD
+
+
+func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
+	let h = sys_open(t, faddr, O_RDONLY)
+	if h < 0
+		return -ENOENT
+	for of in t.handles[h]
+		var filename: cstring
+		of.entry.get_path(filename)
+		var addr = TASK_IMAGE_POS # task space...
+		for tt in TaskManager.add_user_task(filename, addr, &t)
+			memcpy(&tt.arg, _i2p(faddr), sizeof(cstring))
+			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+			while true
+				let r = of.read(code, 1024)
+				if r <= 0
+					break
+				code += r
+			sys_close(t, h)
+			
+			for of_in in t.get_handle(fd_in)
+				tt.add_handle(of_in)
+			for of_out in t.get_handle(fd_out)
+				tt.add_handle(of_out)
+	
+			#tt.activate()
+			return tt.pid
+		else
+			sys_close(t, h)
+			return -ENOMEM
+	sys_close(t, h)
+	return -1
+
+func sys_getcwd(out t: Task, addr: int64) -> int64
+	var pf = _i2p(addr) as cstring&
+	t.cur_dir.get_path(pf)
+	return 0
+#	return -EFAULT
 
 #	func mut sys_fork() -> int
 #		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)

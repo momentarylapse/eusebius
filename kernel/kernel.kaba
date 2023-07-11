@@ -82,8 +82,8 @@ func main()
 	Scheduler.run()
 	
 
-##	int stdin = kernel_task.open("/dev/tty", O_RDONLY)
-##	int stdout = kernel_task.open("/dev/tty", O_WRONLY)
+#	let stdin = kernel_task.open("/dev/tty", O_RDONLY)
+#	let stdout = kernel_task.open("/dev/tty", O_WRONLY)
 ##	
 ##	if kernel_task.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
 ##		panic("can not read file /bin/shell!")
