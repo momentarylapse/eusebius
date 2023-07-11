@@ -10,7 +10,8 @@ use task.task
 use task.manager
 use task.scheduler
 use time.timer
-use syscall.operations
+use syscall.op_fs
+use syscall.op_sys
 #use irq.irq
 
 use fs # experiment

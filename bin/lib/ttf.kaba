@@ -1,50 +1,51 @@
 use lib.std
 use os
 
-func hex(p: char[0]*, size: int) -> string
-	string s
+func hex(p: void&, size: int) -> string
+	#return as_binary(p, size).hex()
+	var s: string
 	for i in 0:size
-		s.add(p[i])
+		s.add((p as char[0]&)[i])
 	return s.hex()
 func i2h(i: int) -> string
 	return hex(&i, 4)
 
 class BEUShort
 	var c: char[2]
-	func int() -> int
-		int a = c[0]
-		int b = c[1]
+	func __int__() -> int
+		let a = int(c[0])
+		let b = int(c[1])
 		return (a << 8) + b
 class BESShort
 	var c: char[2]
-	func int() -> int
-		int a = c[0]
-		int b = c[1]
-		int r = (a << 8) + b
+	func __int__() -> int
+		let a = int(c[0])
+		let b = int(c[1])
+		var r = (a << 8) + b
 		if (r & 0x8000) != 0
 			r -= 1<<16
 		return r
 class BELong
 	var x: char[4]
-	func int() -> int
-		int a = x[0]
-		int b = x[1]
-		int c = x[2]
-		int d = x[3]
+	func __int__() -> int
+		let a = int(x[0])
+		let b = int(x[1])
+		let c = int(x[2])
+		let d = int(x[3])
 		return (a << 24) + (b << 16) + (c << 8) + d
 
 class Fixed
-	BEUShort a, b
+	var a, b: BEUShort
 
 class F214
 	var t: BESShort
-	func float() -> float
-		return t.int() / 16384.0
+	func __float__() -> float
+		return int(t) / 16384.0
 
-func _read(*f: File, p: char[0]*, size: int)
-	string s = f.read(size)
-	for i in 0:size
-		p[i] = s[i]
+#func _read(f: File*, p: char[0]*, size: int)
+#	string s = f.read(size)
+#	for i in 0:size
+#		p[i] = s[i]
 
 class TTFTableDirectory
 	var version: Fixed
@@ -54,9 +55,9 @@ class TTFTableDirectory
 	var range_shift: BEUShort
 
 class TTFTableDirectoryEntry
-	BELong tag, chksum, offset, length
+	var tag, chksum, offset, length: BELong
 	func name() -> string
-		string s
+		var s: string
 		s.add(tag.x[0])
 		s.add(tag.x[1])
 		s.add(tag.x[2])
@@ -64,10 +65,10 @@ class TTFTableDirectoryEntry
 		return s
 
 class TTFMapHeader
-	BEUShort version, num_tables
+	var version, num_tables: BEUShort
 
 class TTFMapTable
-	int platform, encoding
+	var platform, encoding: int
 	var offset: int
 	var format: int
 	
@@ -99,7 +100,7 @@ class TTFContour
 	
 
 class TTFGlyph
-	int xmin, ymin, xmax, ymax
+	var xmin, ymin, xmax, ymax: int
 	var contours: TTFContour*[]
 
 class TTF
@@ -110,17 +111,17 @@ class TTF
 	var map_tables: TTFMapTable[]
 	var glyphs: TTFGlyph*[]
 	
-	var *f: File
+#	var f: File*
 	
 	func readL() -> int
-		BELong t
+		var t: BELong
 		_read(f, &t, 4)
-		return t.int()
+		return int(t)
 
 	func readUS() -> int
 		BEUShort t
 		_read(f, &t, 2)
-		return t.int()
+		return int(t)
 
 	func readSS() -> int
 		BESShort t
@@ -237,7 +238,7 @@ class TTF
 		
 		return true
 	
-	func read_glyph(*g: TTFGlyph) -> bool
+	func read_glyph(out g: TTFGlyph) -> bool
 		#print "glyph\n"
 		#print i2h(f.getPos())
 		int num_contours = readSS()
@@ -260,7 +261,7 @@ class TTF
 			return read_glyph_compound(g)
 		return read_glyph_simple(g, num_contours)
 	
-	func read_glyph_compound(*g: TTFGlyph) -> bool
+	func read_glyph_compound(out g: TTFGlyph) -> bool
 		#print "---compound\n"
 		int n = 0
 		int flags
@@ -305,7 +306,7 @@ class TTF
 			
 		return true
 	
-	func read_glyph_simple(*g: TTFGlyph, num_contours: int) -> bool
+	func read_glyph_simple(out g: TTFGlyph, num_contours: int) -> bool
 		#print "---simple\n"
 		
 		# endpoints

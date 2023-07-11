@@ -1,0 +1,39 @@
+use common
+use dev.block
+use mem.memory
+use mem.paging
+use mem.heap
+use mem.shared
+use task.task
+use task.manager
+use fs.fs
+use fs.access
+use time.timevalue
+use time.timer
+
+use io.text
+
+class StatData as @noauto
+	var name: cstring
+	var type: int
+	var size: int
+	var inode: int
+	var mp_inode: int
+	var time: int
+	func mut get(filename: cstring, cur_dir: FileEntry) -> int
+		for e in FileSystem.get(filename, cur_dir)
+			strcpy(name, e.name)
+			type = int(e.type)
+			size = e.size
+			inode = e.inode
+			return 0
+		#panic(filename)
+		return 1
+
+func sys_stat(out t: Task, fn: int64, addr: int64) -> int64
+	var pd = _i2p(addr) as StatData&
+	var pf = _i2p(fn) as cstring&
+	for d in t.cur_dir
+		return pd.get(pf, d)
+	return 1
+

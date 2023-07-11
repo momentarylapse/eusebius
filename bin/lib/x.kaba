@@ -1,4 +1,5 @@
 use lib.std
+use lib.std.sys
 
 const XCMD_KILL = 666
 const XCMD_NEW_WINDOW = 1024
@@ -39,14 +40,14 @@ class XWindow
 	var x, y, w, h: int
 	var id: int
 	var buf: int[0]*
-	var con: XConnection*
+	var con: XConnection&
 	
 	var active: bool
 	var lbut, mbut, rbut: bool
 	var mx, my: int
 	
-	func __init__(out c: XConnection*, x: int, y: int, w: int, h: int)
-		con = c
+	func __init__(out c: XConnection&, x: int, y: int, w: int, h: int)
+		con := c
 		buf = nil
 		self.x = x
 		self.y = y
@@ -60,50 +61,50 @@ class XWindow
 		active = false
 		c._create_win(&self, x, y, w, h)
 	func virtual __delete__()
-		if buf
-			shmdt(buf)
-		for w,i in con.windows
+		for b in buf
+			shmdt(b)
+		for i=>w in con.windows
 			if w == &self
 				con.windows.remove(i)
 				break
-	func create_buf(_id: int, key: int)
+	func mut create_buf(_id: int, key: int)
 		id = _id
-		int mem_id = shmget(key, 0, 0)
+		let mem_id = shmget(key, 0, 0)
 		buf = shmat(mem_id, 0)
 		if !buf
 			kprint("  -- client: konnte Fenster-Puffer nicht anlegen --\n")
-	func invalidate(x0: int, y0: int, x1: int, y1: int)
+	func mut invalidate(x0: int, y0: int, x1: int, y1: int)
 		print("inval...")
 		con.send(XCMD_WINDOW_INVALIDATE, id, x0, y0, x1, y1)
-	func invalidate_all()
+	func mut invalidate_all()
 		print("inval all...")
 		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
-	func move(x: int, y: int)
+	func mut move(x: int, y: int)
 		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
-	func get_size(out w: int*, out h: int*)
+	func mut get_size(out w: int*, out h: int*)
 		con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
 		con.wait_recv(XCMD_WINDOW_GET_SIZE)
 		*w = con.buf[2]
 		*h = con.buf[3]
-	func activate()
+	func mut activate()
 		con.send(XCMD_WINDOW_ACTIVATE, id, 0, 0, 0, 0)
-	func drag_start()
+	func mut drag_start()
 		con.just_send(XCMD_WINDOW_DRAG_START, id, 0, 0, 0, 0)
-	func drag_stop()
+	func mut drag_stop()
 		con.just_send(XCMD_WINDOW_DRAG_STOP, id, 0, 0, 0, 0)
-	func close()
+	func mut close()
 		con.just_send(XCMD_DEL_WINDOW, id, 0, 0, 0, 0)
-	func virtual on_key(key: int)
+	func virtual mut on_key(key: int)
 		#print("c-win: key " + key + "\n")
-	func virtual on_mouse_move()
-	func virtual on_mouse_left_button_down()
-	func virtual on_mouse_left_button_up()
-	func virtual on_mouse_middle_button_down()
-	func virtual on_mouse_middle_button_up()
-	func virtual on_mouse_right_button_down()
-	func virtual on_mouse_right_button_up()
+	func virtual mut on_mouse_move()
+	func virtual mut on_mouse_left_button_down()
+	func virtual mut on_mouse_left_button_up()
+	func virtual mut on_mouse_middle_button_down()
+	func virtual mut on_mouse_middle_button_up()
+	func virtual mut on_mouse_right_button_down()
+	func virtual mut on_mouse_right_button_up()
 		#print("c-win: mouse " + x + "/" + y + "   " + flags + "\n")
-	func virtual handle_activate()
+	func virtual mut handle_activate()
 		
 
 class XConnection
@@ -137,7 +138,7 @@ class XConnection
 		send_exit()
 		close(sock)
 	
-	func just_send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
+	func mut just_send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
 		kprint(" c:send ")
 		buf[0] = cmd
 		buf[1] = p1
@@ -149,14 +150,14 @@ class XConnection
 		kprint(str(r))
 		kprint(" c:/send ")
 	
-	func send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
+	func mut send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
 		just_send(cmd, p1, p2, p3, p4, p5)
 	
-	func send_string(s: string)
+	func mut send_string(s: string)
 		write(sock, &s.num, 4)
 		write(sock, &s[0], s.num)
 	
-	func wait_recv(cmd: int)
+	func mut wait_recv(cmd: int)
 		kprint(" WAIT ")
 		while true
 			if poll()
@@ -165,10 +166,10 @@ class XConnection
 			usleep(100)
 		kprint(" /WAIT ")
 
-	func send_exit()
+	func mut send_exit()
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
-	func _create_win(out win: XWindow*, x: int, y: int, w: int, h: int) -> bool
+	func mut _create_win(out win: XWindow*, x: int, y: int, w: int, h: int) -> bool
 		kprint("client: send new win\n")
 		just_send(XCMD_NEW_WINDOW, x, y, w, h, 0)
 		
@@ -178,8 +179,8 @@ class XConnection
 			kprint("   -- client: no new window --\n")
 			return false
 		kprint("ok")
-		int win_id = buf[1]
-		int win_key = buf[2]
+		let win_id = buf[1]
+		let win_key = buf[2]
 		win.create_buf(win_id, win_key)
 		if !win.buf
 			return false
@@ -199,7 +200,7 @@ class XConnection
 #				return w
 #		return nil
 	
-	func execute(cmd: string[]) -> int
+	func mut execute(cmd: string[]) -> int
 		just_send(XCMD_EXECUTE, cmd.num, 0, 0, 0, 0)
 		for c in cmd
 			send_string(c)
@@ -207,17 +208,17 @@ class XConnection
 		wait_recv(XCMD_EXECUTE)
 		return buf[1]
 	
-	func poll() -> bool
-		int n = read(sock, &buf, 4*8)
+	func mut poll() -> bool
+		let n = read(sock, &buf, 4*8)
 		if n < 32
 			return false
 		#kprint("  c:poll  ")
 		if buf[0] == XCMD_EVENT_MOUSE
 			#kprint("client: mouse\n")
-			int x = buf[1]
-			int y = buf[2]
-			int flags = buf[3]
-			int win_id = buf[4]
+			let x = buf[1]
+			let y = buf[2]
+			let flags = buf[3]
+			let win_id = buf[4]
 			cursor_win = nil
 			for w in windows
 				if w.id == win_id
@@ -225,9 +226,9 @@ class XConnection
 			#kprint("MM " + x)
 #			kprint("/" + y)
 #			kprint(" - " + flags + "\n")
-			bool new_lbut = (flags & 1) > 0
-			bool new_mbut = (flags & 2) > 0
-			bool new_rbut = (flags & 4) > 0
+			let new_lbut = (flags & 1) > 0
+			let new_mbut = (flags & 2) > 0
+			let new_rbut = (flags & 4) > 0
 			for w in windows
 				if w != cursor_win
 					continue
@@ -256,7 +257,7 @@ class XConnection
 			#kprint(" /MM ")
 		else if buf[0] == XCMD_EVENT_KEY
 			#kprint("client: key\n")
-			int key = buf[1]
+			let key = buf[1]
 			for w in windows
 				if w.active
 					w.on_key(key)
@@ -265,16 +266,16 @@ class XConnection
 			pass
 		else if buf[0] == XCMD_WINDOW_MOVE
 			#kprint("client: move\n")
-			int id = buf[1]
+			let id = buf[1]
 			for w in windows
 				if w.id == id
 					w.x = buf[2]
 					w.y = buf[3]
 		else if buf[0] == XCMD_WINDOW_ACTIVATE
 			#kprint(" activate  ")
-			int id = buf[1]
+			let id = buf[1]
 			for w in windows
-				bool old_active = w.active
+				let old_active = w.active
 				w.active = (w.id == id)
 				if w.active != old_active
 					w.handle_activate()
@@ -282,7 +283,7 @@ class XConnection
 		#kprint("  c:/poll  ")
 		return true
 	
-	func run()
+	func mut run()
 		while true
 			poll()
 			usleep(5000)

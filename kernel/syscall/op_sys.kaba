@@ -13,14 +13,6 @@ use time.timer
 
 use io.text
 
-
-func sys_stat(out t: Task, fn: int64, addr: int64) -> int64
-	var pd = _i2p(addr) as StatData&
-	var pf = _i2p(fn) as cstring&
-	for d in t.cur_dir
-		return pd.get(pf, d)
-	return 1
-
 func sys_hi() -> int64
 	TextMode.text_color = 0x04
 	prints("  <SYSCALL HI>  ")
@@ -232,72 +224,3 @@ class MountInfo as @noauto
 		return -1
 
 
-class StatData as @noauto
-	var name: cstring
-	var type: int
-	var size: int
-	var inode: int
-	var mp_inode: int
-	var time: int
-	func mut get(filename: cstring, cur_dir: FileEntry) -> int
-		for e in FileSystem.get(filename, cur_dir)
-			strcpy(name, e.name)
-			type = int(e.type)
-			size = e.size
-			inode = e.inode
-			return 0
-		#panic(filename)
-		return 1
-
-#var _stat_data: StatData
-#
-#func int_syscall()
-#	while true
-#		#show_pvl()
-#		int r = 0
-#		
-#		#int pid = (SysCallTask.tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
-#		var caller = &TaskManager.tasks[Scheduler.running_pid]
-#		#printi(pid)
-#		int index = caller.tss.eax
-#		int param1 = caller.tss.ebx
-#		int param2 = caller.tss.ecx
-#		int param3 = caller.tss.edx
-#		int param4 = caller.tss.esi
-#		#printi(RunningPid)
-##		prints(" ")
-##		printi(index)
-##		prints(" ")
-
-
-#		#TextColor = 4
-##		prints("<<")
-##		prints(caller.name)
-##		prints(":")
-##		printi(index)
-##		prints(">>")
-##		TextColor = 7
-#		#while true
-#		#	nil
-#		
-#		if TaskManager.ack_hw_irq >= 0
-#			#prints(" <ACK> ")
-#			irq.end_of_interrupt(TaskManager.ack_hw_irq)
-#			TaskManager.ack_hw_irq = -1
-#		
-#		# task switch?
-#		if caller.status != TASK_STATUS_RUNNING
-#			#prints("S")
-#			int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
-#			Scheduler.reconnect_tasks(pid_next, sys_call_task)
-#			#printi(pid_next)
-#
-#		# back
-#		caller.tss.eax = r
-#		
-#		#prints(">")
-#		asm {
-#		__sys_call_return:
-#			iret
-#		}
-#		#prints("<")

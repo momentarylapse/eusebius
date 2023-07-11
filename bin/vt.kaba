@@ -9,9 +9,9 @@ func main()
 	
 	bga_set_video_mode(1024, 768, 32)
 	
-	for x in 100:200
-		for y in 100:200
-			set_pixel(x, y, 0xffffffff)
+	for x in 0:1024#100:200
+		for y in 0:768#100:200
+			set_pixel(x, y, x*y*120)#0xffffffff)
 	
 	while true
 		pass
