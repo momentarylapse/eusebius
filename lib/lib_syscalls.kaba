@@ -103,15 +103,15 @@ func dup(h: int) -> int
 	}
 	return __temp_i__
 
-#func pipe(h: int[2]) -> bool
-#	__temp_p__ := &h
-#	asm{
-#		mov eax, 0x0000002a
-#		mov ebx, __temp_p__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error == 0
+func pipe(out h: int[2]) -> bool
+	__temp_p__ := &h
+	asm{
+		mov eax, 0x0000002a
+		mov rdi, __temp_p__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error == 0
 
 func fcntl(h: int, op: int, param: int) -> int
 	__temp_i__ = h
@@ -409,38 +409,38 @@ func lib__print(s: string)
 #		mov lib_error, eax
 #	}
 #	return lib_error == 0
-#
-#
-#func sys_socket(cmd: int, p1: int, p2: int) -> int
-#	__temp_i__ = cmd
-#	__temp_i2__ = p1
-#	__temp_i3__ = p2
-#	asm{
-#		mov eax, 0x00000066
-#		mov ebx, __temp_i__
-#		mov ecx, __temp_i2__
-#		mov edx, __temp_i3__
-#		int 0x80
-#		mov lib_error, eax
-#	}
-#	return lib_error
-#
-#
-#func socket(type: int) -> int
-#	return sys_socket(1, type, 0)
-#
-#func bind(fd: int, port: int) -> bool
-#	return sys_socket(2, fd, port) == 0
-#
-#func connect(fd: int, port: int) -> bool
-#	return sys_socket(3, fd, port) == 0
-#
-#func listen(fd: int) -> bool
-#	return sys_socket(4, fd, 0) == 0
-#
-#func accept(fd: int) -> int
-#	return sys_socket(5, fd, 0)
-#
+
+
+func sys_socket(cmd: int, p1: int, p2: int) -> int
+	__temp_i__ = cmd
+	__temp_i2__ = p1
+	__temp_i3__ = p2
+	asm {
+		mov eax, 0x00000066
+		mov edi, __temp_i__
+		mov esi, __temp_i2__
+		mov edx, __temp_i3__
+		syscall
+		mov lib_error, eax
+	}
+	return lib_error
+
+
+func socket(type: int) -> int
+	return sys_socket(1, type, 0)
+
+func bind(fd: int, port: int) -> bool
+	return sys_socket(2, fd, port) == 0
+
+func connect(fd: int, port: int) -> bool
+	return sys_socket(3, fd, port) == 0
+
+func listen(fd: int) -> bool
+	return sys_socket(4, fd, 0) == 0
+
+func accept(fd: int) -> int
+	return sys_socket(5, fd, 0)
+
 
 
 

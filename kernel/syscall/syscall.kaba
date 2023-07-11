@@ -12,6 +12,7 @@ use task.scheduler
 use time.timer
 use syscall.op_fs
 use syscall.op_sys
+use syscall.op_task
 #use irq.irq
 
 use fs # experiment
@@ -233,29 +234,29 @@ class Syscall
 				sys_exit(t, frame.rdi)
 				return 0
 #			if index == 0x0002 # fork
-#				return t.sys_fork()
+#				return sys_fork(t)
 			if index == 0x0003 # read
-				return t.sys_read(frame.rdi, frame.rsi, frame.rdx)
+				return sys_read(t, frame.rdi, frame.rsi, frame.rdx)
 			if index == 0x0004 # write
-				return t.sys_write(frame.rdi, frame.rsi, frame.rdx)
+				return sys_write(t, frame.rdi, frame.rsi, frame.rdx)
 			if index == 0x0005 # open
-				return t.sys_open(frame.rdi, frame.rsi)
+				return sys_open(t, frame.rdi, frame.rsi)
 			if index == 0x0006 # close
-				return t.sys_close(frame.rdi)
+				return sys_close(t, frame.rdi)
 			if index == 0x0007 # waitpid
 				return sys_waitpid(t, frame.rdi, frame.rsi, frame.rdx)
 			if index == 0x0008 # create
-				return t.sys_open(frame.rdi, O_CREATE | O_WRONLY | O_TRUNC)
+				return sys_open(t, frame.rdi, O_CREATE | O_WRONLY | O_TRUNC)
 #			if index == 0x000a # unlink
-#				r = caller.sys_unlink(param1)
+#				r = sys_unlink(t, param1)
 			if index == 0x000b # exec
 				return sys_execute(t, frame.rdi, frame.rsi, frame.rdx)
 			if index == 0x000c # chdir
-				return t.sys_set_cur_dir(frame.rdi)
+				return sys_set_cur_dir(t, frame.rdi)
 #			if index == 0x000e # mknod
-#				r = caller.sys_mknod(param1, param2)
+#				r = sys_mknod(t, param1, param2)
 			if index == 0x0013 # seek
-				return t.sys_seek(frame.rdi, frame.rsi, frame.rdx)
+				return sys_seek(t, frame.rdi, frame.rsi, frame.rdx)
 			if index == 0x0014 # getpid
 				return t.pid
 			if index == 0x0019 # stime
@@ -267,19 +268,19 @@ class Syscall
 #			if index == 0x0028 # rmdir
 #				r = caller.sys_rmdir(param1)
 			if index == 0x0029 # dup
-				return t.sys_dup(frame.rdi)
-#			if index == 0x002a # pipe
-#				return t.sys_pipe(frame.rdi)
+				return sys_dup(t, frame.rdi)
+			if index == 0x002a # pipe
+				return sys_pipe(t, frame.rdi)
 			if index == 0x002d # brk
-				return t.sys_brk(frame.rdi)
+				return sys_brk(t, frame.rdi)
 			if index == 0x0033 # fcntl
-				return t.sys_fcntl(frame.rdi, frame.rsi, frame.rdx)
+				return sys_fcntl(t, frame.rdi, frame.rsi, frame.rdx)
 #			if index == 0x0043 # sigaction
 #				r = caller.sys_sigaction(param1, param2)
 			if index == 0x0058 # reboot
 				return -1
-#			if index == 0x0066 # socket
-#				r = caller.sys_socket(param1, param2, param3)
+			if index == 0x0066 # socket
+				return sys_socket(t, frame.rdi, frame.rsi, frame.rdx)
 			if index == 0x0074 # sysinfo
 				var si = _i2p(frame.rdi) as SysInfo&
 				si.get()
@@ -291,7 +292,7 @@ class Syscall
 				un.get()
 				return 0
 			if index == 0x008d # getdents
-				return t.sys_getdents(frame.rdi, frame.rsi, frame.rdx)
+				return sys_getdents(t, frame.rdi, frame.rsi, frame.rdx)
 #			if index == 0x009e # sched_yield
 #				int pid_next = Scheduler.get_next_task(Scheduler.running_pid)
 #				Scheduler.reconnect_tasks(pid_next, sys_call_task)

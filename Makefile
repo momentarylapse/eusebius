@@ -30,7 +30,9 @@ BINS = \
  bin/shmem \
  bin/simple \
  bin/sleep \
+ bin/sock \
  bin/top \
+ bin/touch \
  bin/uname \
  bin/vt
  
@@ -38,14 +40,13 @@ XXXBINS = \
  bin/hello \
  bin/cmp \
  bin/kill \
- bin/touch \
  bin/mkdir \
  bin/tr \
  bin/mkfifo \
  bin/less \
  bin/x \
  bin/client \
- bin/sock bin/net bin/sound \
+ bin/net bin/sound \
  bin/k bin/rm bin/rmdir bin/cake bin/c \
  bin/xterm \
  bin/xtest \

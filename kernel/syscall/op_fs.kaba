@@ -4,14 +4,109 @@ use mem.memory
 use mem.paging
 use mem.heap
 use mem.shared
+use net.socket
+use fs.pipe
 use task.task
-use task.manager
+#use task.manager
 use fs.fs
 use fs.access
 use time.timevalue
 use time.timer
 
 use io.text
+
+
+func sys_open(out t: Task, addr: int64, flags: int) -> int
+	var filename = _i2p(addr) as cstring&
+	return t.open(filename, flags)
+
+
+func sys_read(out t: Task, handle: int, addr: int64, size: int) -> int
+	for of in t.get_handle(handle)
+		let r = of.read(addr, size)
+		if r == -EWOULDBLOCK and of.blocking
+			t.set_wait(WaitingMode.FILE_READ, handle, addr, size)
+		return r
+	else
+		return -EBADF
+
+func sys_write(out t: Task, handle: int, addr: int, size: int) -> int
+	for of in t.get_handle(handle)
+		let r = of.write(addr, size)
+		if r == -EWOULDBLOCK and of.blocking
+			t.set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
+		return r
+	else
+		return -EBADF
+
+func sys_getdents(out t: Task, handle: int, addr: int64, num: int) -> int
+	for of in t.get_handle(handle)
+		return of.getdents(_i2p(addr) as dirent_struct&, num)
+	else
+		return -EBADF
+
+
+func sys_seek(out t: Task, handle: int, offset: int, mode: int) -> int
+	for of in t.get_handle(handle)
+		return of.seek(offset, mode)
+	else
+		return -EBADF
+
+func sys_close(out t: Task, handle: int) -> int
+	for of in t.get_handle(handle)
+		of.unref()
+		t.handles[handle] = nil
+		return 0
+	else
+		return -EBADF
+
+func sys_dup(out t: Task, fd: int) -> int
+	for of in t.get_handle(fd)
+		return t.add_handle(of)
+	return -EBADF
+	
+func sys_pipe(out t: Task, addr: int64) -> int
+	var e = create_file_entry(":pipe:", FileType.PIPE, &FileSystem.dummy_mount)
+	if !PipeManager.create(e)
+		return -3
+	for of_in in kernel_open_entry(e, O_RDONLY)
+		for of_out in kernel_open_entry(e, O_WRONLY)
+			var fd = _i2p(addr) as int[2]&
+			fd[0] = t.add_handle(of_in)
+			fd[1] = t.add_handle(of_out)
+			if fd[0] < 0 or fd[1] < 0
+				return -2
+#	if !page_dir.memcpy2task(addr, &fd, 8)
+#		return -EFAULT
+	return 0
+	#return -ENFILE
+	
+#	func mut sys_mkdir(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_mkdir(filename, cur_dir)
+#
+#	func mut sys_mknod(faddr: int, flags: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_mknod(filename, flags, cur_dir)
+#		
+#	func mut sys_unlink(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_unlink(filename, cur_dir)
+#		
+#	func mut sys_rmdir(faddr: int) -> int
+#		var filename: cstring
+#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#			return -EFAULT
+#		return kernel_rmdir(filename, cur_dir)
+
+
+
 
 class StatData as @noauto
 	var name: cstring
@@ -37,3 +132,71 @@ func sys_stat(out t: Task, fn: int64, addr: int64) -> int64
 		return pd.get(pf, d)
 	return 1
 
+
+func sys_fcntl(out t: Task, fd: int, op: int, param: int) -> int
+	for of in t.get_handle(fd)
+		if op == F_GETFL
+			return of.get_flags()
+		if op == F_SETFL
+			of.set_flags(param)
+			return 0
+		return -EINVAL
+	return -EBADF
+
+
+func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
+	if cmd == SYS_SOCKET
+		var e = create_file_entry(":sock:", FileType.SOCKET, &FileSystem.dummy_mount)
+		if !e
+			return -ENFILE
+		if !SocketManager.create(e, p1)
+			return -3
+		for of in kernel_open_entry(e, O_RDWR)
+			return t.add_handle(of)
+	else if cmd == SYS_BIND
+		for of in t.get_handle(p1)
+			if of.entry.type != FileType.SOCKET
+				return -ENOTSOCK
+			for s in of.socket
+				return s.bind(p2)
+		return -EBADF
+	else if cmd == SYS_CONNECT
+		for of in t.get_handle(p1)
+			if of.entry.type != FileType.SOCKET
+				return -ENOTSOCK
+			for s in of.socket
+				let e = s.connect(p2)
+				if e != -EWOULDBLOCK
+					return e
+				t.set_wait(WaitingMode.SOCKET_CONNECT, s.port, 0, 0)
+				return 0
+		return -EBADF
+	else if cmd == SYS_LISTEN
+		for of in t.get_handle(p1)
+			if of.entry.type != FileType.SOCKET
+				return -ENOTSOCK
+			for s in of.socket
+				return s.listen()
+		return -EBADF
+	else if cmd == SYS_ACCEPT
+		for of in t.get_handle(p1)
+			if of.entry.type != FileType.SOCKET
+				return -ENOTSOCK
+			for s in of.socket
+				let e = s.accept()
+				if e == -EWOULDBLOCK
+					if s.blocking
+						t.set_wait(WaitingMode.SOCKET_ACCEPT, s.port, 0, 0)
+						return 0
+					else
+						return e
+				if e < 0
+					return e
+				# port
+				for ss in SocketManager.get_by_port(e)
+					for _of in kernel_open_entry(ss.e, O_RDWR)
+						return t.add_handle(_of)
+				return -1
+		return -EBADF
+	return -EINVAL
+	

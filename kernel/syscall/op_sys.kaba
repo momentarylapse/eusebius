@@ -11,6 +11,7 @@ use fs.access
 use time.timevalue
 use time.timer
 
+use op_fs
 use io.text
 
 func sys_hi() -> int64
@@ -55,7 +56,7 @@ func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> in
 
 
 func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
-	let h = t.sys_open(faddr, O_RDONLY)
+	let h = sys_open(t, faddr, O_RDONLY)
 	if h < 0
 		return -ENOENT
 	for of in t.handles[h]
@@ -70,7 +71,7 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
 				if r <= 0
 					break
 				code += r
-			t.sys_close(h)
+			sys_close(t, h)
 			
 		#	var of_in = get_handle(fd_in)
 		#	var of_out = get_handle(fd_out)
@@ -80,9 +81,9 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
 			#tt.activate()
 			return tt.pid
 		else
-			t.sys_close(h)
+			sys_close(t, h)
 			return -ENOMEM
-	t.sys_close(h)
+	sys_close(t, h)
 	return -1
 
 func sys_getcwd(out t: Task, addr: int64) -> int64

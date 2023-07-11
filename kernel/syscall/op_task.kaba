@@ -1,0 +1,78 @@
+use common
+use task
+use mem.paging
+
+
+func sys_set_cur_dir(out t: Task, faddr: int64) -> int
+	var filename = _i2p(faddr) as cstring&
+#	if !memcpy2kernel(&filename, faddr, sizeof(cstring))
+#		return -EFAULT
+	return t.set_cur_dir(filename)
+#		
+func mut sys_brk(out t: Task, _new_top: int) -> int
+	let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
+	let cur_top = t.memory_offset + t.memory_size
+	if new_top <= cur_top
+		return cur_top
+	if !t.page_root_dir.map_by_alloc(cur_top, new_top - cur_top, PageFlags.WRITABLE | PageFlags.USER)
+		return -ENOMEM
+	t.memory_size = new_top - t.memory_offset
+	return new_top
+	
+#	func sys_kill(_pid: int, signal: int) -> int
+#		var t = TaskManager.get_task(_pid)
+#		if !t
+#			return -ESRCH
+#		return t.handle_signal_link_iret(signal)
+
+#	func mut sys_fork() -> int
+#		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
+#		if !t
+#			return -ENOMEM
+#		
+#		# copy "normal" memory
+#		t.sys_brk(mem_bottom + mem_size)
+#		page_dir.copy_pages_to(t.page_dir, mem_bottom, mem_bottom, mem_size)
+#		
+#		# link shared memory
+#		for i=>r in shmem
+#			if !r.s
+#				t.shmem[i].s = r.s
+#				t.shmem[i].dest = r.dest
+#				r.s.refcount ++
+#				t.page_dir.map_lin(r.dest, r.s.p, r.s.size, true)
+#		
+#		# open files...
+#		# TODO
+#		
+#		# data
+#		memcpy(&t.arg, &arg, sizeof(cstring))
+#		strcpy(t.name, name)
+#		t.cur_dir = cur_dir
+#		t.parent = &self
+#		t.tss = tss
+#		t.tss.cr3 = t.page_dir
+#		t.tss.eax = 0 # fork() return for child
+#	
+#		t.activate()
+#		return t.pid
+
+#	func mut sys_sigaction(sig: int, addr: int) -> int
+#		if sig < 0 or sig >= MAX_SIGNALS or sig == SIGSTOP or sig == SIGKILL
+#			return -EINVAL
+#		#prints(" SIGAC ")
+#		#printh(&addr, 4)
+#		signal_handlers[sig] = addr # task address space!
+#		return 0
+#		
+#	func mut sys_exit_signal() -> int
+#		if !in_signal
+#			return -1
+#		
+#		#prints(" EXSIG ")
+#		in_signal = false
+#		if in_hw_irq >= 0
+#			TaskManager.ack_hw_irq = in_hw_irq
+#			in_hw_irq = -1
+#		memcpy(&tss, &signal_reg_buf, sizeof(TaskStateSegment))
+#		return 0

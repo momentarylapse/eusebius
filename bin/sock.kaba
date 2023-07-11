@@ -1,4 +1,6 @@
 use lib.std
+use lib.std.file
+use lib.std.net
 
 # socket test program
 
@@ -6,34 +8,33 @@ func main()
 	init_lib()
 	lib_print_endl = false
 	
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
 	#if fork() > 0
 #		print("server")
 #	else
 #		print("client")
 	
-	if arg.num > 1
-		int s = socket(0)
+	if len(args) > 0
+		let s = socket(0)
 		bind(s, 123)
 		listen(s)
 		fcntl(s, F_SETFL, O_RDWR | O_NONBLOCK)
 		print("server running\n")
 		while true
 			print(".")
-			int ss = accept(s)
+			let ss = accept(s)
 			if ss < 0
 				sleep(1)
 				continue
 			fcntl(ss, F_SETFL, O_RDWR | O_NONBLOCK)
 			print("client!\nread ")
-			string t
+			var t: string
 			t.resize(10)
 			
 			while true
 				print("-")
-				int n = read(ss, &t[0], t.num)
+				let n = read(ss, &t[0], t.num)
 				if n > 0
 					t.resize(n)
 					print(t)
@@ -41,10 +42,10 @@ func main()
 					break
 				sleep(1)
 	else
-		int s = socket(0)
+		let s = socket(0)
 		if connect(s, 123)
 			sleep(4)
-			string t = "hello"
+			let t = "hello"
 			if write(s, &t[0], t.num) < 0
 				print("can not send!\n")
 		else

@@ -7,6 +7,9 @@ use mem.paging
 use task
 use gdt
 
+use syscall.op_fs
+use net.socket
+
 let MAX_TASKS = 64#256
 let IRQ_STACK_SIZE = 2048
 let KALIB_LOCATION = 0x00050000
@@ -345,12 +348,46 @@ class TaskManager as @noauto
 			panic("can not open file")
 
 
-#int sys_getpid()
-#	asm{
-#		xor, eax, eax
-#		str ax
-#		mov __temp_i__, eax
-#	}
-#	int pid = (__temp_i__ >> 3) - NUM_PRE_GDT_ENTRIES
+	func static do_task_wait_update(out t: Task)
+		if t.waiting_mode == WaitingMode.FILE_READ
+			let r = sys_read(t, t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
+			if r >= 0
+				t.frame.rax = r # return r
+				t.activate()
+		else if t.waiting_mode == WaitingMode.FILE_WRITE
+			let r = sys_write(t, t.waiting_param_i1, t.waiting_param_i2, t.waiting_param_i3)
+			if r >= 0
+				t.frame.rax = r # return r
+				t.activate()
+#		#else if waiting_mode == WaitingMode.TIME
+##			TimeValue *rem = &waiting_param_i1
+##			rem.dec_nanosec(kernel_timer.dt_nanosec)
+##			if rem.sec < 0
+##				tss.eax = 0 # return 0
+##				activate()
+		else if t.waiting_mode == WaitingMode.SOCKET_ACCEPT
+			for s in SocketManager.get_by_port(t.waiting_param_i1)
+				if s.state == SocketState.WAIT_ACCEPT
+					let e = s.accept()
+					if e == -EWOULDBLOCK
+						return
+					if e < 0
+						t.frame.rax = e # return e
+					else
+						t.frame.rax = -2  # return -2
+						for ss in SocketManager.get_by_port(e)
+							for of in kernel_open_entry(ss.e, O_RDWR)
+								t.frame.rax = t.add_handle(of) # return 0
+					t.activate()
+			else
+				t.frame.rax = -EINVAL # return ...
+				t.activate()
+		else if t.waiting_mode == WaitingMode.SOCKET_CONNECT
+			for s in SocketManager.get_by_port(t.waiting_param_i1)
+				if s.state != SocketState.CONNECTING
+					t.frame.rax = 0 # return 0
+					t.activate()
+			else
+				t.frame.rax = -EINVAL # return ...
+				t.activate()
 
-			

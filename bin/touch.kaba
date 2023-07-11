@@ -1,8 +1,9 @@
 use lib.std
+use lib.std.file
 
 
 func touch(filename: string)
-	int h = create(filename)
+	let h = create(filename)
 	if h < 0
 		print("touch: can not create file: " + filename)
 		exit(h)
@@ -11,10 +12,9 @@ func touch(filename: string)
 
 func main()
 	init_lib()
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
-	for i in 1:arg.num
-		touch(arg[i])
+	for a in args
+		touch(a)
 	
 	exit(0)
