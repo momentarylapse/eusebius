@@ -9,6 +9,7 @@ use gdt
 
 use syscall.op_fs
 use net.socket
+use time.timevalue
 
 let MAX_TASKS = 64#256
 let IRQ_STACK_SIZE = 2048
@@ -347,6 +348,21 @@ class TaskManager as @noauto
 		else
 			panic("can not open file")
 
+	func static process_waiting_tasks(now: TimeValue)
+		for t in TaskManager.tasks
+			if t.status == TaskStatus.WAITING
+				if t.waiting_mode == WaitingMode.TIME
+					var tv = &t.waiting_param_i1 as TimeValue&
+#					printh(tv, 8)
+#					prints(":")
+#					printh(&KernelTimer.tv, 8)
+#					prints("\n")
+					if tv.is_before(now)
+#						prints("W")
+						t.frame.rax = 0 # return 0
+						t.activate()
+				else
+					do_task_wait_update(t)
 
 	func static do_task_wait_update(out t: Task)
 		if t.waiting_mode == WaitingMode.FILE_READ

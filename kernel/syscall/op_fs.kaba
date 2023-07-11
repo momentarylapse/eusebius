@@ -146,6 +146,7 @@ func sys_fcntl(out t: Task, fd: int, op: int, param: int) -> int
 
 func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 	if cmd == SYS_SOCKET
+		prints("<SOCKET>")
 		var e = create_file_entry(":sock:", FileType.SOCKET, &FileSystem.dummy_mount)
 		if !e
 			return -ENFILE
@@ -154,6 +155,7 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 		for of in kernel_open_entry(e, O_RDWR)
 			return t.add_handle(of)
 	else if cmd == SYS_BIND
+		prints("<BIND>")
 		for of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
@@ -161,6 +163,7 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 				return s.bind(p2)
 		return -EBADF
 	else if cmd == SYS_CONNECT
+		prints("<CONNECT>")
 		for of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
@@ -168,10 +171,12 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 				let e = s.connect(p2)
 				if e != -EWOULDBLOCK
 					return e
+				prints("<CON WAIT!!!>")
 				t.set_wait(WaitingMode.SOCKET_CONNECT, s.port, 0, 0)
 				return 0
 		return -EBADF
 	else if cmd == SYS_LISTEN
+		prints("<LISTEN>")
 		for of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
@@ -179,6 +184,7 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 				return s.listen()
 		return -EBADF
 	else if cmd == SYS_ACCEPT
+		prints("<ACCEPT>")
 		for of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK

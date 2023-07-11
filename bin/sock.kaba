@@ -4,6 +4,8 @@ use lib.std.net
 
 # socket test program
 
+let PORT = 123
+
 func main()
 	init_lib()
 	lib_print_endl = false
@@ -17,7 +19,7 @@ func main()
 	
 	if len(args) > 0
 		let s = socket(0)
-		bind(s, 123)
+		bind(s, PORT)
 		listen(s)
 		fcntl(s, F_SETFL, O_RDWR | O_NONBLOCK)
 		print("server running\n")
@@ -28,13 +30,14 @@ func main()
 				sleep(1)
 				continue
 			fcntl(ss, F_SETFL, O_RDWR | O_NONBLOCK)
-			print("client!\nread ")
+			print("server: client!\nserver: read ")
 			var t: string
 			t.resize(10)
 			
 			while true
 				print("-")
 				let n = read(ss, &t[0], t.num)
+				print(n)
 				if n > 0
 					t.resize(n)
 					print(t)
@@ -43,10 +46,17 @@ func main()
 				sleep(1)
 	else
 		let s = socket(0)
-		if connect(s, 123)
+		print("CLIENT\n")
+		if connect(s, PORT)
+			print("client: connected\n")
 			sleep(4)
+			print("client: sending...\n")
 			let t = "hello"
-			if write(s, &t[0], t.num) < 0
+			if write(s, &t[0], len(t)) == len(t)
+				print("client: sent\n")
+				while true
+					pass
+			else
 				print("can not send!\n")
 		else
 			print("can not connect!\n")

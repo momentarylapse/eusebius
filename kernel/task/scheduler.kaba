@@ -106,7 +106,7 @@ class Scheduler
 		
 		for frame in _frame
 			leave_task(frame)
-			process_waiting_tasks()
+			TaskManager.process_waiting_tasks(KernelTimer.tv)
 			do_scheduling()
 			enter_task(frame)
 			
@@ -167,21 +167,6 @@ class Scheduler
 #		prints(" => NEXT=IDLE ")
 		return 0 #TaskManager.idle_task.pid
 
-	func static process_waiting_tasks()
-		for t in TaskManager.tasks
-			if t.status == TaskStatus.WAITING
-				if t.waiting_mode == WaitingMode.TIME
-					var tv = &t.waiting_param_i1 as TimeValue&
-#					printh(tv, 8)
-#					prints(":")
-#					printh(&KernelTimer.tv, 8)
-#					prints("\n")
-					if tv.is_before(KernelTimer.tv)
-#						prints("W")
-						t.frame.rax = 0 # return 0
-						t.activate()
-#				else
-#					t.do_wait_update()
 
 
 #	func static reconnect_tasks(pid_next: int, out irq_task: Task)
