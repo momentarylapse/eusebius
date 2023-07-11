@@ -73,7 +73,7 @@ class Task
 	var parent: Task*
 	var name: cstring
 	var arg: cstring
-	var cur_dir: FileEntry*
+	var cur_dir: FileEntry&
 	var page_root_dir: PageRootTable&
 	var memory_offset, memory_size: int
 	
@@ -107,9 +107,9 @@ class Task
 		status = TaskStatus.SLEEPING
 		parent = _parent
 		for p in parent
-			cur_dir = p.cur_dir
+			cur_dir := p.cur_dir
 		else
-			cur_dir = FileSystem.root
+			cur_dir := FileSystem.root
 #		kernel_mode = false
 		
 		in_signal = false
@@ -178,14 +178,12 @@ class Task
 		for e in get_file(dir)
 			if e.type != FileType.DIR
 				return -2
-			cur_dir = e
+			cur_dir := e
 			return 0
 		return -1
 		
 	func get_file(path: cstring) -> FileEntry*
-		for d in cur_dir
-			return FileSystem.get(path, d)
-		return nil
+		return FileSystem.get(path, cur_dir)
 		
 	func mut add_handle(oh: OpenFileData) -> int
 		for i=>h in handles
@@ -292,12 +290,11 @@ class Task
 		return handles[handle]
 
 	func mut open(filename: cstring, flags: int) -> int
-		for d in cur_dir
-			for of in kernel_open(filename, flags, d)
-				let index = add_handle(of)
-				if index < 0
-					of.unref()
-				return index
+		for of in kernel_open(filename, flags, cur_dir)
+			let index = add_handle(of)
+			if index < 0
+				of.unref()
+			return index
 		return -ENOENT
 
 

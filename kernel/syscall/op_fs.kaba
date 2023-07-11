@@ -81,29 +81,29 @@ func sys_pipe(out t: Task, addr: int64) -> int
 	return 0
 	#return -ENFILE
 	
-#	func mut sys_mkdir(faddr: int) -> int
-#		var filename: cstring
-#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-#			return -EFAULT
-#		return kernel_mkdir(filename, cur_dir)
-#
-#	func mut sys_mknod(faddr: int, flags: int) -> int
-#		var filename: cstring
-#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-#			return -EFAULT
-#		return kernel_mknod(filename, flags, cur_dir)
-#		
-#	func mut sys_unlink(faddr: int) -> int
-#		var filename: cstring
-#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-#			return -EFAULT
-#		return kernel_unlink(filename, cur_dir)
-#		
-#	func mut sys_rmdir(faddr: int) -> int
-#		var filename: cstring
-#		if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
-#			return -EFAULT
-#		return kernel_rmdir(filename, cur_dir)
+func sys_mkdir(out t: Task, faddr: int) -> int
+	var filename = _i2p(faddr) as cstring&
+#	if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#		return -EFAULT
+	return kernel_mkdir(filename, t.cur_dir)
+
+func sys_mknod(out t: Task, faddr: int, flags: int) -> int
+	var filename = _i2p(faddr) as cstring&
+#	if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#		return -EFAULT
+	return kernel_mknod(filename, flags, t.cur_dir)
+		
+func sys_unlink(out t: Task, faddr: int) -> int
+	var filename = _i2p(faddr) as cstring&
+#	if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#		return -EFAULT
+	return kernel_unlink(filename, t.cur_dir)
+		
+func sys_rmdir(out t: Task, faddr: int) -> int
+	var filename = _i2p(faddr) as cstring&
+#	if !page_dir.memcpy2kernel(&filename, faddr, sizeof(cstring))
+#		return -EFAULT
+	return kernel_rmdir(filename, t.cur_dir)
 
 
 
@@ -128,9 +128,7 @@ class StatData as @noauto
 func sys_stat(out t: Task, fn: int64, addr: int64) -> int64
 	var pd = _i2p(addr) as StatData&
 	var pf = _i2p(fn) as cstring&
-	for d in t.cur_dir
-		return pd.get(pf, d)
-	return 1
+	return pd.get(pf, t.cur_dir)
 
 
 func sys_fcntl(out t: Task, fd: int, op: int, param: int) -> int

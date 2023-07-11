@@ -88,10 +88,9 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
 
 func sys_getcwd(out t: Task, addr: int64) -> int64
 	var pf = _i2p(addr) as cstring&
-	for d in t.cur_dir
-		d.get_path(pf)
-		return 0
-	return -EFAULT
+	t.cur_dir.get_path(pf)
+	return 0
+#	return -EFAULT
 
 func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
 	if cmd == SHMGET

@@ -1,6 +1,7 @@
 use common
 use task
 use mem.paging
+use task.manager
 
 
 func sys_set_cur_dir(out t: Task, faddr: int64) -> int
@@ -9,7 +10,7 @@ func sys_set_cur_dir(out t: Task, faddr: int64) -> int
 #		return -EFAULT
 	return t.set_cur_dir(filename)
 #		
-func mut sys_brk(out t: Task, _new_top: int) -> int
+func sys_brk(out t: Task, _new_top: int) -> int
 	let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
 	let cur_top = t.memory_offset + t.memory_size
 	if new_top <= cur_top
@@ -19,11 +20,10 @@ func mut sys_brk(out t: Task, _new_top: int) -> int
 	t.memory_size = new_top - t.memory_offset
 	return new_top
 	
-#	func sys_kill(_pid: int, signal: int) -> int
-#		var t = TaskManager.get_task(_pid)
-#		if !t
-#			return -ESRCH
+func sys_kill(_pid: int, signal: int) -> int
+#	for t in TaskManager.get_task(_pid)
 #		return t.handle_signal_link_iret(signal)
+	return -ESRCH
 
 #	func mut sys_fork() -> int
 #		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
