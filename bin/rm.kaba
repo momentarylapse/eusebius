@@ -1,24 +1,24 @@
 use lib.std
+use lib.std.file
 
 
 func _rm(filename: string)
 	if unlink(filename)
 		return
 	if lib_error == -ENOENT
-		print("rm: " + filename + " does not exist")
+		print("rm: {{filename}} does not exist")
 	else if lib_error == -EISDIR
-		print("rm: " + filename + " is a directory")
+		print("rm: {{filename}} is a directory")
 	else
-		print("rm: can not delete file: " + filename)
+		print("rm: can not delete file: {{filename}}")
 	exit(lib_error)
 
 
 func main()
 	init_lib()
-	string[] arg
-	get_args(arg)
+	let args = get_args()
 	
-	for i in 1:arg.num
-		_rm(arg[i])
+	for a in args
+		_rm(a)
 	
 	exit(0)

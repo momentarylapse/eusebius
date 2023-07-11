@@ -4,7 +4,7 @@ use lib.std.file
 
 func _mkfifo(filename: string)
 	if !mkfifo(filename)
-		print("mkfifo: can not create FIFO: " + filename)
+		print("mkfifo: can not create FIFO: {{filename}}")
 		exit(lib_error)
 
 

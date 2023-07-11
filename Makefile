@@ -29,6 +29,8 @@ BINS = \
  bin/mkfifo \
  bin/mount \
  bin/pwd \
+ bin/rm \
+ bin/rmdir \
  bin/shell \
  bin/shmem \
  bin/simple \

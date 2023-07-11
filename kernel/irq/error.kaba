@@ -170,7 +170,9 @@ class ErrorManager as @noauto
 	func static handle_gpf(_frame: InterruptFrame*)
 		for t in Scheduler.cur
 			t.status = TaskStatus.ZOMBIE
+			TextMode.text_color = 5
 			prints("<TASK GPF>")
+			TextMode.text_color = 7
 		else
 			panic("General protection fault in kernel!")
 		for frame in _frame
@@ -182,7 +184,9 @@ class ErrorManager as @noauto
 	func static handle_page_fault(_frame: InterruptFrame*)
 		for t in Scheduler.cur
 			t.status = TaskStatus.ZOMBIE
+			TextMode.text_color = 5
 			prints("<TASK PAGE FAULT>")
+			TextMode.text_color = 7
 		else
 			panic("Page fault in kernel!")
 		for frame in _frame
