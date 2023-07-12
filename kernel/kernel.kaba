@@ -72,18 +72,19 @@ func main()
 	TaskManager.load_kalib()
 	
 	#--------- experiments:
+	prints("==== std ")
+	var stdin = kernel_open("/dev/tty", O_RDONLY, &FileSystem.root)
+	var stdout = kernel_open("/dev/tty", O_WRONLY, &FileSystem.root)
 
 	TaskManager.add_idle_task()
 #	TaskManager.add_dummy()
-#	TaskManager.load_user_task("/bin/simple")
-	TaskManager.load_user_task("/bin/shell")
+#	TaskManager.load_user_task("/bin/simple", stdin, stdout)
+	TaskManager.load_user_task_checked("/bin/shell", stdin, stdout)
 	
 	KernelTimer.init(raw_function_pointer(Scheduler.interrupt_handler), 5)
 	Scheduler.run()
 	
 
-#	let stdin = kernel_task.open("/dev/tty", O_RDONLY)
-#	let stdout = kernel_task.open("/dev/tty", O_WRONLY)
 ##	
 ##	if kernel_task.sys_execute(_p2i(&"/bin/shell"), stdin, stdout) < 0
 ##		panic("can not read file /bin/shell!")

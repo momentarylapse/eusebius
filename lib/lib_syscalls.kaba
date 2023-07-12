@@ -393,10 +393,10 @@ func kprintc(s: cstring, l: int)
 		syscall
 	}
 
-func lib__print(s: string)
-	kprint(s)
-	if lib_print_endl
-		kprint("\n")
+#func lib__print(s: string)
+#	kprint(s)
+#	if lib_print_endl
+#		kprint("\n")
 
 #func mapirq(irq: int, signal: int) -> bool
 #	__temp_i__ = irq
@@ -453,16 +453,16 @@ func accept(fd: int) -> int
 #	}
 
 
-#func lib__print(s: string)
-#	var done = 0
-#	while done < s.num
-#		let r = write(stdout, &s[done], s.num - done)
-#		if r == -EWOULDBLOCK
-#			continue
-#		if r > 0
-#			done += r
-#	if lib_print_endl
-#		let r = write(stdout, &0x0000000a, 1)
+func lib__print(s: string)
+	var done = 0
+	while done < s.num
+		let r = write(stdout, &s[done], s.num - done)
+		if r == -EWOULDBLOCK
+			continue
+		if r > 0
+			done += r
+	if lib_print_endl
+		let r = write(stdout, &0x0000000a, 1)
 
 
 	

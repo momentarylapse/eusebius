@@ -6,6 +6,8 @@ use time.timevalue
 use time.timer
 use op_fs
 
+use io.text
+
 
 func sys_set_cur_dir(out t: Task, faddr: int64) -> int
 	var filename = _i2p(faddr) as cstring&
@@ -57,35 +59,41 @@ func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> in
 
 
 func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
-	let h = sys_open(t, faddr, O_RDONLY)
-	if h < 0
-		return -ENOENT
-	for of in t.handles[h]
-		var filename: cstring
-		of.entry.get_path(filename)
-		var addr = TASK_IMAGE_POS # task space...
-		for tt in TaskManager.add_user_task(filename, addr, &t)
-			memcpy(&tt.arg, _i2p(faddr), sizeof(cstring))
-			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-			while true
-				let r = of.read(code, 1024)
-				if r <= 0
-					break
-				code += r
-			sys_close(t, h)
-			
-			for of_in in t.get_handle(fd_in)
-				tt.add_handle(of_in)
-			for of_out in t.get_handle(fd_out)
-				tt.add_handle(of_out)
-	
-			#tt.activate()
-			return tt.pid
-		else
-			sys_close(t, h)
-			return -ENOMEM
-	sys_close(t, h)
+	var filename = _i2p(faddr) as cstring&
+	#for tt in TaskManager.execute_user_task(filename, nil,nil)
+	for tt in TaskManager.execute_user_task(filename, t.get_handle(fd_in), t.get_handle(fd_out))
+		return tt.pid
 	return -1
+#
+#	let h = sys_open(t, faddr, O_RDONLY)
+#	if h < 0
+#		return -ENOENT
+#	for of in t.handles[h]
+#		var filename: cstring
+#		of.entry.get_path(filename)
+#		var addr = TASK_IMAGE_POS # task space...
+#		for tt in TaskManager.add_user_task(filename, addr, &t)
+#			memcpy(&tt.arg, _i2p(faddr), sizeof(cstring))
+#			var code = tt.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
+#			while true
+#				let r = of.read(code, 1024)
+#				if r <= 0
+#					break
+#				code += r
+#			sys_close(t, h)
+#			
+##			for of_in in t.get_handle(fd_in)
+##				tt.add_handle(of_in)
+##			for of_out in t.get_handle(fd_out)
+##				tt.add_handle(of_out)
+#	
+#			tt.activate()
+#			return tt.pid
+#		else
+#			sys_close(t, h)
+#			return -ENOMEM
+#	sys_close(t, h)
+#	return -1
 
 func sys_getcwd(out t: Task, addr: int64) -> int64
 	var pf = _i2p(addr) as cstring&

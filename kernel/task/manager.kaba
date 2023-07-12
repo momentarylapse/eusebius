@@ -64,8 +64,6 @@ class TaskManager as @noauto
 		t.page_root_dir := create_page_root_table_for_task()
 		t.frame.cr3 = _p2i(t.page_root_dir)
 
-		t.status = TaskStatus.RUNNING
-
 		return t
 		
 	func static create_page_root_table_for_task() -> PageRootTable&
@@ -189,10 +187,6 @@ class TaskManager as @noauto
 
 		for t in tasks
 			t.status = TaskStatus.UNUSED
-			for h in t.handles
-				h = nil
-			for sm in t.shmem
-				sm.s = nil
 
 		next_pid_to_assign = 0
 		next_puid_to_assign = 0
@@ -333,20 +327,39 @@ class TaskManager as @noauto
 		else
 			panic("can not read /lib/kalib")
 
-	func static load_user_task(filename: cstring)
-		prints("loading ")
-		prints(filename)
-		prints("... ")
+	func static load_user_task(filename: cstring) -> Task*
 		for of in kernel_open(filename, O_RDONLY, FileSystem.root)
 			for t in TaskManager.add_user_task(filename, TASK_MEMORY_OFFSET, nil)
 				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
-				let r = of.read(code, 65536)
-				#printh(code, r)
-				prints("ok\n")
-			else
-				panic("task")
-		else
-			panic("can not open file")
+				while true
+					let r = of.read(code, 1024)
+					if r <= 0
+						break
+					code += r
+				of.clean_up()
+				return &t
+		return nil
+		
+	func static execute_user_task(filename: cstring, fin: OpenFileData*, fout: OpenFileData*) -> Task*
+		for t in load_user_task(filename)
+			memcpy(&t.arg, &filename, sizeof(cstring))
+			for of in fin
+				t.add_handle(of)
+			for of in fout
+				t.add_handle(of)
+			t.status = TaskStatus.RUNNING
+			return &t
+		return nil
+
+	func static load_user_task_checked(filename: cstring, fin: OpenFileData*, fout: OpenFileData*) -> Task*
+		prints("loading ")
+		prints(filename)
+		prints("... ")
+		for t in execute_user_task(filename, fin, fout)
+			prints("ok\n")
+			return &t
+		panic("can not open file")
+		return nil
 
 	func static process_waiting_tasks(now: TimeValue)
 		for t in TaskManager.tasks

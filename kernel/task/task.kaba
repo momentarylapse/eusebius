@@ -92,6 +92,8 @@ class Task
 	var first_time_running: bool
 	
 	func mut init(_pid: int, _name: cstring, F: int64, _parent: Task*)
+		for h in handles
+			h = nil
 		for s in shmem
 			s.s = nil
 		for s in signal_handlers
@@ -185,10 +187,10 @@ class Task
 	func get_file(path: cstring) -> FileEntry*
 		return FileSystem.get(path, cur_dir)
 		
-	func mut add_handle(oh: OpenFileData) -> int
+	func mut add_handle(oh: OpenFileData&) -> int
 		for i=>h in handles
 			if !h
-				h = &oh
+				handles[i] = oh
 				oh.ref_count ++
 				return i
 		return -1
@@ -296,30 +298,6 @@ class Task
 				of.unref()
 			return index
 		return -ENOENT
-
-
-#class GlobalDescriptorData
-#	var a, b: int
-#	func mut set_base(base: int, limit: int, gran: bool)
-#		a = (base << 16) + (limit & 0xffff) # base[15..0] limit[15..0]
-#		b = (base & 0xff000000) + (limit & 0x0f0000) + ((base >> 16) & 0xff)  # base[31..24],..limit[19..16] not busy, base[23..16]
-#		b += 0x00008000 # present
-#		if gran
-#			b += 0x00800000
-#	func mut set_data(base: int, limit: int, executable: bool, pvl: int)
-#		set_base(base, limit >> 12, true)
-#		b += 0x00401200
-#		if executable
-#			b += 0x00000800
-#		b += 0x00002000 * pvl
-##	func mut set_task(t: Task)
-##		set_base(_p2i(&t.tss), 103, false)
-##		b += 0x00000900 # not busy
-#	func mut set_busy(busy: bool)
-#		if busy
-#			b = b | 0x200
-#		else
-#			b = b & 0xfffffdff
 
 
 

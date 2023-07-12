@@ -154,17 +154,19 @@ class Job
 
 
 ######### FIXME: pipe
-##		if pipe_in[0] < 0
-##			pipe(pipe_in)
-##		if pipe_out[1] < 0
-##			pipe(pipe_out)
+	#	if pipe_in[0] < 0
+	#		pipe(pipe_in)
+	#	if pipe_out[1] < 0
+	#		pipe(pipe_out)
 		
 		as_bg = (c[len(c) - 1] == "&")
 		if as_bg
 			c.remove(len(c) - 1)
 		id = -1
-		#pid = execute(c, stdin, stdout)
-		pid = execute(c, pipe_in[0], pipe_out[1])
+		print(pipe_in[0])
+		print(pipe_out[1])
+		pid = execute(c, stdin, stdout)
+		#pid = execute(c, pipe_in[0], pipe_out[1])
 		close(pipe_in[0])
 		close(pipe_out[1])
 		if as_bg
@@ -172,6 +174,8 @@ class Job
 			#print pid
 			print("\n")
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
+#		while true
+#			pass
 	
 	func __delete__()
 		close(pipe_in[1])
@@ -378,7 +382,7 @@ func main()
 	variable_set.get("PATH").value = "/bin/"
 	job_manager.__init__()
 	
-	stdin = open("/dev/tty", O_RDONLY)
+	#stdin = open("/dev/tty", O_RDONLY)
 	fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
 	
 	prompt.show()

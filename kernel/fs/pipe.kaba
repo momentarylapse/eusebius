@@ -23,7 +23,8 @@ class Pipe as @noauto
 #			return -EWOULDBLOCK
 #		page_root.memcpy2kernel(&buffer[buffer_used], addr, size)
 #		buffer_used += size
-		return size
+#		return size
+		return 0
 	func mut read(addr: int64, _size: int) -> int
 		var size = _size
 #		if buffer_used == 0
@@ -38,7 +39,8 @@ class Pipe as @noauto
 #		buffer_used -= size
 #		for i in 0:buffer_used
 #			buffer[i] = buffer[i + size]
-		return size
+#		return size
+		return 0
 	#void show()
 #		prints("  ")
 #		printi(_p2i(&self))
