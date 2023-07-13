@@ -60,12 +60,11 @@ class Heap as @noauto
 					hh.prev = nil
 				
 					allocated += size
-					memcheck()
 #					prints(" ")
 #					let xx = hh.payload()
 #					printh(&xx, 4)
 #					prints("> ")
-					memcheck()
+#					memcheck()
 					return hh.payload()
 				cur := n
 			else
@@ -97,8 +96,8 @@ class Heap as @noauto
 		#prints(" FREE ")
 		for p in _p
 			let ip = _p2i(_p)
-			if ip < MEM_HEAP_OFFSET or ip > MEM_HEAP_OFFSET + MEM_HEAP_SIZE
-				panic("not from heap")
+#			if ip < MEM_HEAP_OFFSET or ip > MEM_HEAP_OFFSET + MEM_HEAP_SIZE
+#				panic("not from heap")
 			#prints "---free"
 #			prints("<-")
 			#printi(ip)
@@ -132,7 +131,7 @@ class Heap as @noauto
 						hh.prev = cur
 						cur.next = hh
 				
-					#	try_to_merge_consecutive_free_blocks(hh)
+						try_to_merge_consecutive_free_blocks(hh)
 						memcheck()
 		#				prints(">")
 						return

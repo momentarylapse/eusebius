@@ -303,22 +303,14 @@ class FileSystem as @noauto
 			return 0
 	
 	func static clean_up(out e: FileEntry&)
-		return
-		prints("C")
 		var p = e.parent
 		e.shrink_block_list(0)
-		prints("D")
-		printi(e.mp_inode)
 		if e.mp_inode > 0
 			e.mount.free_inode(e.mp_inode)
-		prints("E")
 		for _p in p
 			_p.mount.write_inode(_p)
 			_p.mount.sync()
-		prints("F")
-		printh(&e, 8)
 		Heap.free(e)
-		prints("G")
 	
 	func static get(path: cstring, cur_dir: FileEntry) -> FileEntry*
 		var ppos = 0
