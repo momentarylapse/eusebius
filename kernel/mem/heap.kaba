@@ -5,8 +5,9 @@ use io.text
 #--------------------------------------------------------------
 # memory "management"
 
-const MEM_HEAP_OFFSET = 0x00280000
-const MEM_HEAP_SIZE   = 0x00580000 # 5.5mb
+let MEM_HEAP_OFFSET = 0x00280000
+let MEM_HEAP_SIZE   = 0x00580000 # 5.5mb
+let MEM_HEAP_MAGIC = 0x12345678
 
 class Heap as @noauto
 
@@ -14,7 +15,8 @@ class Heap as @noauto
 
 
 	class MallocHeader as @noauto
-		var size: int
+		var size: int # including header
+		var magic: int
 		var next: MallocHeader*
 		var prev: MallocHeader*
 		func after() -> void&
@@ -34,8 +36,9 @@ class Heap as @noauto
 
 	func static malloc(_size: int) -> void&
 		var size = ceil_quot(_size, 8) << 3
-		#prints("<+")
-		#printi(size)
+#		prints("<+")
+#		printi(size)
+		memcheck()
 		
 		# account for the allocation header
 		size += sizeof(MallocHeader)
@@ -52,15 +55,17 @@ class Heap as @noauto
 					# create allocated block at (former) end of free block
 					var hh = cur.after() as MallocHeader&
 					hh.size = size
+					hh.magic = MEM_HEAP_MAGIC
 					hh.next = nil
 					hh.prev = nil
 				
 					allocated += size
 					memcheck()
-					#prints(" ")
-					#let xx = hh.payload()
-					#printh(&xx, 4)
-					#prints("> ")
+#					prints(" ")
+#					let xx = hh.payload()
+#					printh(&xx, 4)
+#					prints("> ")
+					memcheck()
 					return hh.payload()
 				cur := n
 			else
@@ -69,7 +74,7 @@ class Heap as @noauto
 		panic("malloc: fail")
 		return first_free # dummy
 
-	func static _cleanup(_h: MallocHeader&)
+	func static try_to_merge_consecutive_free_blocks(_h: MallocHeader&)
 		var h = _h
 		if &(h.after()) == h.next
 			allocated -= sizeof(MallocHeader)
@@ -89,15 +94,21 @@ class Heap as @noauto
 				p.next = h.next
 
 	func static free(_p: void*)
+		#prints(" FREE ")
 		for p in _p
-			let ip = _p2i(p)
+			let ip = _p2i(_p)
+			if ip < MEM_HEAP_OFFSET or ip > MEM_HEAP_OFFSET + MEM_HEAP_SIZE
+				panic("not from heap")
 			#prints "---free"
-			#prints("<-")
+#			prints("<-")
 			#printi(ip)
+#			printh(&_p, 4)
 		
 			var hh = _i2p(ip - sizeof(MallocHeader)) as MallocHeader&
-			#prints(" ")
-			#printi(hh.size)
+		#	prints(" ")
+		#	printi(hh.size)
+			
+			memcheck()
 		
 			# find last free window before p
 			var cur = first_free
@@ -121,9 +132,9 @@ class Heap as @noauto
 						hh.prev = cur
 						cur.next = hh
 				
-						_cleanup(hh)
+					#	try_to_merge_consecutive_free_blocks(hh)
 						memcheck()
-						#prints(">")
+		#				prints(">")
 						return
 					cur := next
 				else
@@ -135,8 +146,14 @@ class Heap as @noauto
 	func static memcheck()
 		var h = first_free
 		while true
+			if h.magic != MEM_HEAP_MAGIC
+				panic("memcheck: h.magic")
 			for next in h.next
 				if _p2i(next) < _p2i(h) + h.size
+					prints(" h=")
+					printh(&h, 4)
+					prints(" h.next=")
+					printh(&h.next, 4)
 					panic("memcheck: h.next<h+size")
 				if h != next.prev
 					panic("memcheck: h!=h.next.prev")
@@ -157,9 +174,11 @@ class Heap as @noauto
 		# intentionally leave a 8b gap to prevent merging
 		allocated = sizeof(MallocHeader)*2 - 8
 		first_free := _i2p(MEM_HEAP_OFFSET) as MallocHeader&
+		first_free.magic = MEM_HEAP_MAGIC
 		first_free.size = MEM_HEAP_SIZE - sizeof(MallocHeader) - 8
 		first_free.prev = nil
 		end_marker := _i2p(MEM_HEAP_OFFSET + MEM_HEAP_SIZE - sizeof(MallocHeader)) as MallocHeader&
+		end_marker.magic = MEM_HEAP_MAGIC
 		end_marker.size = sizeof(MallocHeader)
 		end_marker.next = nil
 		end_marker.prev = first_free

@@ -154,17 +154,15 @@ class Job
 
 
 ######### FIXME: pipe
-	#	if pipe_in[0] < 0
-	#		pipe(pipe_in)
-	#	if pipe_out[1] < 0
-	#		pipe(pipe_out)
+		if pipe_in[0] < 0
+			pipe(pipe_in)
+		if pipe_out[1] < 0
+			pipe(pipe_out)
 		
 		as_bg = (c[len(c) - 1] == "&")
 		if as_bg
 			c.remove(len(c) - 1)
 		id = -1
-		print(pipe_in[0])
-		print(pipe_out[1])
 		pid = execute(c, stdin, stdout)
 		#pid = execute(c, pipe_in[0], pipe_out[1])
 		close(pipe_in[0])

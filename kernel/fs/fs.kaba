@@ -102,6 +102,8 @@ class FileEntry as @noauto
 	
 func create_file_entry(name: cstring, type: FileType, mount: MountPoint&) -> FileEntry&
 	var e = Heap.malloc(sizeof(FileEntry)) as FileEntry&
+#	prints(" +++")
+#	printh(&e, 4)
 	e.inode = 0
 	e.mp_inode = 0
 	e.num_blocks = 0
@@ -276,8 +278,8 @@ class FileSystem as @noauto
 		root := create_file_entry("-root-", FileType.DIR, &dummy_mount)
 	
 	func static delete(out e: FileEntry&) -> int
-		#prints("[del]")
-		#prints e.name
+#		prints("[del]")
+#		prints(e.name)
 		if e.first_sub
 			return -1
 		for p in e.parent
@@ -301,14 +303,22 @@ class FileSystem as @noauto
 			return 0
 	
 	func static clean_up(out e: FileEntry&)
+		return
+		prints("C")
 		var p = e.parent
 		e.shrink_block_list(0)
-		if e.mount
+		prints("D")
+		printi(e.mp_inode)
+		if e.mp_inode > 0
 			e.mount.free_inode(e.mp_inode)
-		Heap.free(e)
+		prints("E")
 		for _p in p
 			_p.mount.write_inode(_p)
 			_p.mount.sync()
+		prints("F")
+		printh(&e, 8)
+		Heap.free(e)
+		prints("G")
 	
 	func static get(path: cstring, cur_dir: FileEntry) -> FileEntry*
 		var ppos = 0

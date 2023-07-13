@@ -71,7 +71,6 @@ func sys_pipe(out t: Task, addr: int64) -> int
 		return -3
 	for of_in in kernel_open_entry(e, O_RDONLY)
 		for of_out in kernel_open_entry(e, O_WRONLY)
-			prints(" <PIPE> ")
 			var fd = _i2p(addr) as int[2]&
 			fd[0] = t.add_handle(of_in)
 			fd[1] = t.add_handle(of_out)

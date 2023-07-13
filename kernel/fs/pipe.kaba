@@ -87,13 +87,13 @@ class PipeManager as @noauto
 				p.write_ref_count = 0
 				p.buffer_used = 0
 				p.buffer := Heap.malloc(PIPE_BUFFER_SIZE)
-				return &p
+				return p
 		return nil
 
 	func static get(e: FileEntry) -> Pipe*
 		for p in pipes
 			if p.used and p.e == &e
-				return &p
+				return p
 		return nil
 
 

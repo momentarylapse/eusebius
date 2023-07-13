@@ -214,13 +214,20 @@ class OpenFileData as @noauto
 	func mut unref()
 		if !used
 			return
+#		prints(" <H.unref ")
+#		var p = &self
+#		printh(&p, 2)
 		ref_count --
 		if ref_count < 0
 			panic("OpenFileData.ref_count < 0")
 		if ref_count == 0
 			clean_up()
+#		prints("> ")
 			
 	func mut clean_up()
+#		prints(" XXX ")
+#		var pp = &self
+#		printh(&pp, 2)
 		if inode_dirty
 			if entry.mount.write_inode(entry) == 0
 				inode_dirty = false
@@ -230,9 +237,10 @@ class OpenFileData as @noauto
 				entry.mount.write_block(cl, buffer)
 				buffer_dirty = false
 		FileSystem.sync()
-			
-		if buffer
+
+		if buffer != &_dummy_buffer
 			Heap.free(buffer)
+			buffer := &_dummy_buffer
 		if entry.type == FileType.CHAR
 			for op in entry.op
 				op.close(entry)
@@ -248,17 +256,22 @@ class OpenFileData as @noauto
 
 
 var OpenFiles: OpenFileData[MAX_OPEN_FILES]
+var _dummy_buffer: char[8]
 
 func create_handle(flags: int) -> OpenFileData*
 	for o in OpenFiles
 		if !o.used
+#			prints(" <+HANDLE ")
+#			#var p = &o
+#			printh(&o, 2)
+#			prints("> ")
 			o.used = true
 			o.set_flags(flags)
-	##		o.buffer = nil
+			o.buffer := &_dummy_buffer
 			o.ref_count = 0
 			o.buffer_dirty = false
 			o.inode_dirty = false
-			return &o
+			return o
 	return nil
 
 
@@ -289,7 +302,7 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 				return nil
 			of.pipe = PipeManager.get(of.entry)
 			for p in of.pipe
-				prints(" PIPE+ ")
+#				prints(" PIPE+ ")
 				if of.reading
 					p.read_ref_count ++
 				else

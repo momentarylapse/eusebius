@@ -29,16 +29,18 @@ func main()
 	for i in 0:NUM_BINS
 		p[i] = nil
 	
-	for k in 0:1000000
+	for k in 0:10000
 		let i = _rand(NUM_BINS)
-#		prints("\n")
-#		printi(i)
-#		prints("   ")
+		prints("\n")
+		printi(i)
+		prints("   ")
 		for q in p[i]
 			Heap.free(q)
 			p[i] = nil
 		else
 			p[i] = Heap.malloc(4 + _rand(1000))
+		prints("    ")
+		printi(Heap.allocated)
 	
 	prints("\nOK\n")
 	

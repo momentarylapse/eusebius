@@ -12,7 +12,7 @@ use net.socket
 use time.timevalue
 
 let MAX_TASKS = 64#256
-let IRQ_STACK_SIZE = 2048
+let IRQ_STACK_SIZE = 2048*4
 let KALIB_LOCATION = 0x00050000
 
 class TaskManager as @noauto
@@ -337,7 +337,7 @@ class TaskManager as @noauto
 						break
 					code += r
 				of.clean_up()
-				return &t
+				return t
 		return nil
 		
 	func static execute_user_task(filename: cstring, fin: OpenFileData*, fout: OpenFileData*) -> Task*
@@ -348,7 +348,7 @@ class TaskManager as @noauto
 			for of in fout
 				t.add_handle(of)
 			t.status = TaskStatus.RUNNING
-			return &t
+			return t
 		return nil
 
 	func static load_user_task_checked(filename: cstring, fin: OpenFileData*, fout: OpenFileData*) -> Task*
@@ -357,7 +357,7 @@ class TaskManager as @noauto
 		prints("... ")
 		for t in execute_user_task(filename, fin, fout)
 			prints("ok\n")
-			return &t
+			return t
 		panic("can not open file")
 		return nil
 
