@@ -33,19 +33,19 @@ class KSocket as @noauto
 	
 	var _accept_wait_port: int
 	
-	func mut write(page_dir: PageRootTable, addr: int, size: int) -> int
+	func mut write(data: void&, size: int) -> int
 		if peer_port < 0
 			return -ENOTCONN
 		for s in SocketManager.get_by_port(peer_port)
 			if s.buffer_used + size > SOCKET_BUFFER_SIZE
 				return -EWOULDBLOCK
-			page_dir.memcpy2kernel(&s.buffer[s.buffer_used], addr, size)
+			memcpy(&s.buffer[s.buffer_used], data, size)
 			s.buffer_used += size
 			return size
 		else
 			return -ENOTCONN
 	
-	func mut read(page_dir: PageRootTable, addr: int, _size: int) -> int
+	func mut read(data: void&, _size: int) -> int
 		var size = _size
 		if buffer_used == 0
 			if peer_port < 0
@@ -54,7 +54,7 @@ class KSocket as @noauto
 			return -EWOULDBLOCK
 		if size > buffer_used
 			size = buffer_used
-		page_dir.memcpy2task(addr, buffer, size)
+		memcpy(data, buffer, size)
 		buffer_used -= size
 		for i in 0:buffer_used
 			buffer[i] = buffer[i + size]

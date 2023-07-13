@@ -56,9 +56,9 @@ class OpenFileData as @noauto
 		else if entry.type == FileType.PIPE
 			for p in pipe
 				return p.read(_i2p(addr), size)
-#		else if entry.type == FileType.SOCKET
-#			for s in socket
-#				return s.read(addr, size)
+		else if entry.type == FileType.SOCKET
+			for s in socket
+				return s.read(_i2p(addr), size)
 		
 		let block_size = entry.mount.block_size
 		var pos_in_block = offset % block_size
@@ -116,9 +116,9 @@ class OpenFileData as @noauto
 		else if entry.type == FileType.PIPE
 			for p in pipe
 				return p.write(_i2p(addr), size)
-#		else if entry.type == FileType.SOCKET
-#			for s in socket
-#				return s.write(addr, size)
+		else if entry.type == FileType.SOCKET
+			for s in socket
+				return s.write(_i2p(addr), size)
 		
 		let block_size = entry.mount.block_size
 		var pos_in_block = offset % block_size
