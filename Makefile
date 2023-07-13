@@ -39,7 +39,8 @@ BINS = \
  bin/top \
  bin/touch \
  bin/uname \
- bin/vt
+ bin/vt \
+ bin/x
  
 XXXBINS = \
  bin/hello \

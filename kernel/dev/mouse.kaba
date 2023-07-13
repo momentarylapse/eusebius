@@ -33,7 +33,7 @@ class FileOperationsMouse extends FileOperations
 		
 	func static register()
 		prints(" MOUSE REG ")
-		IrqManager.disable()
+#		IrqManager.disable()
 		IrqManager.set_func(MOUSE_IRQ + 32, raw_function_pointer(int_mouse))
 		IrqManager.unmask(MOUSE_IRQ)
 	
@@ -65,7 +65,7 @@ class FileOperationsMouse extends FileOperations
 		mouse_read() # acknowledge
 		
 		
-		IrqManager.enable()
+		#IrqManager.enable()
 
 
 	func static mouse_wait_data()

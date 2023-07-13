@@ -5,7 +5,7 @@ use lib_mem
 use lib_array
 use lib_math
 use lib_file
-#use lib_image
+use lib_image
 
 
 func execute(arg: string[], fd_in: int, fd_out: int) -> int

@@ -1,5 +1,6 @@
 use lib_base
 use lib_array
+use lib_mem
 use lib_syscalls
 use lib_file
 use image
@@ -22,48 +23,52 @@ class lib__Image
 		error = false
 		data.resize(w * h)
 		var ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
-		for i in 0:len(data)
-			data.data[i] = ic
+		for d in data.data
+			for i in 0:len(data)
+				d[i] = ic
 
-	func static load(filename: lib__Path) -> lib__Image*
+	func static load(filename: lib__Path) -> xfer[lib__Image]
 		var temp: lib__string
 		var h = open(filename, O_RDONLY)
 		if h < 0
-			return nil
+			return nil as xfer[lib__Image]
 		temp.resize(32)
-		var r = read(h, &temp.data[0], 18)
-		if r < 0
-			close(h)
-			return nil
-		var im: lib__Image* = lib__@malloc(sizeof(Image))
-		var offset: int = temp.data[0]
-		var ww: int = temp.data[13]
-		var width: int = temp.data[12]
-		width += (ww*256)
-		var hh: int = temp.data[15]
-		var height: int = temp.data[14]
-		height += (hh*256)
+		for t in temp.data
+			var r = read(h, &t[0], 18)
+			if r < 0
+				close(h)
+				return nil as xfer[lib__Image]
+			var im = lib__@malloc(sizeof(Image)) as lib__Image&
+			var offset: int = t[0]
+			var ww: int = t[13]
+			var width: int = t[12]
+			width += (ww*256)
+			var hh: int = t[15]
+			var height: int = t[14]
+			height += (hh*256)
 	
-		var c: color
-		c.r = 1
-		c.g = 0
-		c.b = 0
-		im.__init__(width, height, c)#color.RED)
+			var c: color
+			c.r = 1
+			c.g = 0
+			c.b = 0
+			im.__init__(width, height, c)#color.RED)
 	
-		for i in 0:offset
-			read(h, &temp.data[0], 1)
+			for i in 0:offset
+				read(h, &t[0], 1)
 	
-		for y in 0:height
-			read(h, &im.data.data[y * width], 4*width)
+			for id in im.data.data
+				for y in 0:height
+					read(h, &id[y * width], 4*width)
 				
-		#for y in 0:height
-#			for x in 0:width
-#				int c
-#				if read(h, &c, 4) == 4
-#					im.data.data[x + y * width] = c
-#				else
-#					im.data.data[x + y * width] = 0xffff0000
-			
-		close(h)
-		return im
+			#for y in 0:height
+#				for x in 0:width
+#					int c
+#					if read(h, &c, 4) == 4
+#						im.data.data[x + y * width] = c
+#					else
+#						im.data.data[x + y * width] = 0xffff0000
+				
+			close(h)
+			return im as xfer[lib__Image]
+		return nil as xfer[lib__Image]
 

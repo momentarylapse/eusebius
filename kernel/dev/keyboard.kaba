@@ -1,4 +1,5 @@
 use common
+use common.macros
 use io.text
 use io.io
 use fs.fs
@@ -43,10 +44,8 @@ class FileOperationsKey extends FileOperations
 	
 	func static register()
 		prints(" KEYB REG ")
-		IrqManager.disable()
 		IrqManager.set_func(KEYBOARD_IRQ + 32, raw_function_pointer(int_keyboard))
 		IrqManager.unmask(KEYBOARD_IRQ)
-		IrqManager.enable()
 		
 
 	func getchar(k: int) -> int
@@ -322,59 +321,15 @@ class FileOperationsKey extends FileOperations
 
 
 	func static @noframe int_keyboard()
-		asm{
-			#cli
-			# general purpose registers
-			push rax
-			push rbx
-			push rcx
-			push rdx
-			push rbp
-			push rdi
-			push rsi
-			push r8
-			push r9
-			push r10
-			push r11
-			push r12
-			push r13
-			push r14
-			push r15
-			# control registers 4*8b=32b
-			mov eax, cr0
-			push rax
-			mov eax, cr2
-			push rax
-			mov eax, cr3
-			push rax
-			mov eax, cr4
-			push rax
-			#mov rax, cr8
-			#push rax
-			
+		push_general_purpose_registers()
+		push_control_registers()
+		asm {
 			mov rbp, rsp
 		}
 		dev_key_ops.handle_irq()
-		asm{
-			# control registers
-			add rsp, 0x20
-			# general purpose registers
-			pop r15
-			pop r14
-			pop r13
-			pop r12
-			pop r11
-			pop r10
-			pop r9
-			pop r8
-			pop rsi
-			pop rdi
-			pop rbp
-			pop rdx
-			pop rcx
-			pop rbx
-			pop rax
-			#sti
+		pop_control_registers()
+		pop_general_purpose_registers()
+		asm {
 			db 0x48
 			iret
 		}
