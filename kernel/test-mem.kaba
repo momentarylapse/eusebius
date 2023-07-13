@@ -3,8 +3,16 @@
 
 use common
 use io.text
+use mem.memory
 use mem.paging
 use mem.heap
+
+var rand_state: int64
+func _rand(max: int) -> int
+	rand_state = (rand_state * 3546323434 + 6322682374) % 53468623
+	return int(rand_state) % max
+
+let NUM_BINS = 100
 
 func main()
 
@@ -15,26 +23,47 @@ func main()
 	Paging.init()
 	Heap.init()
 	
-	var p = Heap.malloc(1024)
-	printh(&p, 8)
-	prints("\n")
-	var p2 = Heap.malloc(1024)
-	printh(&p2, 8)
-	prints("\n")
-	printi(Heap.allocated)
-	prints("  ")
-	Heap.free(p)
-	Heap.free(p2)
-	printi(Heap.allocated)
-	prints("\n")
-	p := Heap.malloc(1024)
-	p2 := Heap.malloc(1024)
-	printh(&p, 8)
-	prints("\n")
-	printh(&p2, 8)
-	prints("\n")
-	printi(Heap.allocated)
-	prints("  ")
+	rand_state = 6432728
+	
+	var p: void*[NUM_BINS]
+	for i in 0:NUM_BINS
+		p[i] = nil
+	
+	for k in 0:1000000
+		let i = _rand(NUM_BINS)
+#		prints("\n")
+#		printi(i)
+#		prints("   ")
+		for q in p[i]
+			Heap.free(q)
+			p[i] = nil
+		else
+			p[i] = Heap.malloc(4 + _rand(1000))
+	
+	prints("\nOK\n")
+	
+	
+	
+#	var p = Heap.malloc(1024)
+#	printh(&p, 8)
+#	prints("\n")
+#	var p2 = Heap.malloc(1024)
+#	printh(&p2, 8)
+#	prints("\n")
+#	printi(Heap.allocated)
+#	prints("  ")
+#	Heap.free(p)
+#	Heap.free(p2)
+#	printi(Heap.allocated)
+#	prints("\n")
+#	p := Heap.malloc(1024)
+#	p2 := Heap.malloc(1024)
+#	printh(&p, 8)
+#	prints("\n")
+#	printh(&p2, 8)
+#	prints("\n")
+#	printi(Heap.allocated)
+#	prints("  ")
 
 	while true
 		pass
