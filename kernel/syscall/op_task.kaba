@@ -61,7 +61,7 @@ func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> in
 func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
 	var filename = _i2p(faddr) as cstring&
 	#for tt in TaskManager.execute_user_task(filename, nil,nil)
-	for tt in TaskManager.execute_user_task(filename, t.get_handle(fd_in), t.get_handle(fd_out))
+	for tt in TaskManager.execute_user_task(filename, &t, t.get_handle(fd_in), t.get_handle(fd_out))
 		return tt.pid
 	return -1
 #

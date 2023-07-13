@@ -153,7 +153,6 @@ class Job
 				c.remove(i)
 
 
-######### FIXME: pipe
 		if pipe_in[0] < 0
 			pipe(pipe_in)
 		if pipe_out[1] < 0
@@ -172,8 +171,6 @@ class Job
 			#print pid
 			print("\n")
 		fcntl(pipe_out[0], F_SETFL, O_RDONLY | O_NONBLOCK)
-#		while true
-#			pass
 	
 	func __delete__()
 		close(pipe_in[1])

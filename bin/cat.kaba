@@ -20,7 +20,7 @@ func main()
 	lib_print_endl = false
 	let args = get_args()
 	
-	if args.num == 1
+	if len(args) == 0
 		cat(stdin)
 	
 	for a in args

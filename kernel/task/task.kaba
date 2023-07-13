@@ -291,13 +291,4 @@ class Task
 			return nil
 		return handles[handle]
 
-	func mut open(filename: cstring, flags: int) -> int
-		for of in kernel_open(filename, flags, cur_dir)
-			let index = add_handle(of)
-			if index < 0
-				of.unref()
-			return index
-		return -ENOENT
-
-
 

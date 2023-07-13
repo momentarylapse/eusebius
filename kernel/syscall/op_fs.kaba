@@ -18,7 +18,12 @@ use io.text
 
 func sys_open(out t: Task, addr: int64, flags: int) -> int
 	var filename = _i2p(addr) as cstring&
-	return t.open(filename, flags)
+	for of in kernel_open(filename, flags, t.cur_dir)
+		let index = t.add_handle(of)
+		if index < 0
+			of.unref()
+		return index
+	return -ENOENT
 
 
 func sys_read(out t: Task, handle: int, addr: int64, size: int) -> int

@@ -327,9 +327,9 @@ class TaskManager as @noauto
 		else
 			panic("can not read /lib/kalib")
 
-	func static load_user_task(filename: cstring) -> Task*
+	func static load_user_task(filename: cstring, parent: Task*) -> Task*
 		for of in kernel_open(filename, O_RDONLY, FileSystem.root)
-			for t in TaskManager.add_user_task(filename, TASK_MEMORY_OFFSET, nil)
+			for t in TaskManager.add_user_task(filename, TASK_MEMORY_OFFSET, parent)
 				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
 				while true
 					let r = of.read(code, 1024)
@@ -340,8 +340,8 @@ class TaskManager as @noauto
 				return t
 		return nil
 		
-	func static execute_user_task(filename: cstring, fin: OpenFileData*, fout: OpenFileData*) -> Task*
-		for t in load_user_task(filename)
+	func static execute_user_task(filename: cstring, parent: Task*, fin: OpenFileData*, fout: OpenFileData*) -> Task*
+		for t in load_user_task(filename, parent)
 			memcpy(&t.arg, &filename, sizeof(cstring))
 			for of in fin
 				t.add_handle(of)
@@ -351,11 +351,11 @@ class TaskManager as @noauto
 			return t
 		return nil
 
-	func static load_user_task_checked(filename: cstring, fin: OpenFileData*, fout: OpenFileData*) -> Task*
+	func static load_user_task_checked(filename: cstring, parent: Task*, fin: OpenFileData*, fout: OpenFileData*) -> Task*
 		prints("loading ")
 		prints(filename)
 		prints("... ")
-		for t in execute_user_task(filename, fin, fout)
+		for t in execute_user_task(filename, parent, fin, fout)
 			prints("ok\n")
 			return t
 		panic("can not open file")

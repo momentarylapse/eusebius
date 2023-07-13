@@ -38,7 +38,7 @@ class Heap as @noauto
 		var size = ceil_quot(_size, 8) << 3
 #		prints("<+")
 #		printi(size)
-		memcheck()
+#		memcheck()
 		
 		# account for the allocation header
 		size += sizeof(MallocHeader)
@@ -107,7 +107,7 @@ class Heap as @noauto
 		#	prints(" ")
 		#	printi(hh.size)
 			
-			memcheck()
+#			memcheck()
 		
 			# find last free window before p
 			var cur = first_free
@@ -132,7 +132,7 @@ class Heap as @noauto
 						cur.next = hh
 				
 						try_to_merge_consecutive_free_blocks(hh)
-						memcheck()
+#						memcheck()
 		#				prints(">")
 						return
 					cur := next
