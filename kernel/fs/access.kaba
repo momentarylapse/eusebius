@@ -55,7 +55,7 @@ class OpenFileData as @noauto
 				return op.read(entry, addr, size)
 		else if entry.type == FileType.PIPE
 			for p in pipe
-				return p.read(addr, size)
+				return p.read(_i2p(addr), size)
 #		else if entry.type == FileType.SOCKET
 #			for s in socket
 #				return s.read(addr, size)
@@ -115,7 +115,7 @@ class OpenFileData as @noauto
 				return op.write(entry, addr, size)
 		else if entry.type == FileType.PIPE
 			for p in pipe
-				return p.write(addr, size)
+				return p.write(_i2p(addr), size)
 #		else if entry.type == FileType.SOCKET
 #			for s in socket
 #				return s.write(addr, size)

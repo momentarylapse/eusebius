@@ -163,8 +163,8 @@ class Job
 		if as_bg
 			c.remove(len(c) - 1)
 		id = -1
-		pid = execute(c, stdin, stdout)
-		#pid = execute(c, pipe_in[0], pipe_out[1])
+		#pid = execute(c, stdin, stdout)
+		pid = execute(c, pipe_in[0], pipe_out[1])
 		close(pipe_in[0])
 		close(pipe_out[1])
 		if as_bg

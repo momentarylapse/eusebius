@@ -18,29 +18,27 @@ class Pipe as @noauto
 	var write_ref_count: int
 	var buffer: char[0]&
 	var buffer_used: int
-	func mut write(addr: int64, size: int) -> int
-#		if buffer_used + size > PIPE_BUFFER_SIZE
-#			return -EWOULDBLOCK
-#		page_root.memcpy2kernel(&buffer[buffer_used], addr, size)
-#		buffer_used += size
-#		return size
-		return 0
-	func mut read(addr: int64, _size: int) -> int
+	func mut write(data: void&, size: int) -> int
+		if buffer_used + size > PIPE_BUFFER_SIZE
+			return -EWOULDBLOCK
+		memcpy(&buffer[buffer_used], data, size)
+		buffer_used += size
+		return size
+	func mut read(data: void&, _size: int) -> int
 		var size = _size
-#		if buffer_used == 0
-#			# no data... block if we have a writer
-#			if write_ref_count > 0
-#				return -EWOULDBLOCK
-#			# else "empty"
-#			return 0
-#		if size > buffer_used
-#			size = buffer_used
-#		page_root.memcpy2task(addr, buffer, size)
-#		buffer_used -= size
-#		for i in 0:buffer_used
-#			buffer[i] = buffer[i + size]
-#		return size
-		return 0
+		if buffer_used == 0
+			# no data... block if we have a writer
+			if write_ref_count > 0
+				return -EWOULDBLOCK
+			# else "empty"
+			return 0
+		if size > buffer_used
+			size = buffer_used
+		memcpy(data, buffer, size)
+		buffer_used -= size
+		for i in 0:buffer_used
+			buffer[i] = buffer[i + size]
+		return size
 	#void show()
 #		prints("  ")
 #		printi(_p2i(&self))
@@ -75,8 +73,6 @@ class Pipe as @noauto
 
 class PipeManager as @noauto
 	var static pipes: Pipe[MAX_PIPES]
-
-
 
 	func static create(e: FileEntry) -> Pipe*
 		for p in pipes
