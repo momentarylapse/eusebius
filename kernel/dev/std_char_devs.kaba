@@ -5,8 +5,7 @@ use fs.fs
 use mem.paging
 use irq.irq
 use task.task
-use keyboard
-use mouse
+use ps2
 use tty
 
 
@@ -60,15 +59,16 @@ class StdCharDevs
 			add(dev, "random", dev_rand_ops)
 		
 			dev_key_ops.__init__()
-			dev_key_ops.register()
 			add(dev, "keyboard", dev_key_ops)
+		
+			dev_mouse_ops.__init__()
+			add(dev, "mouse", dev_mouse_ops)
+			
+			ps2_driver.__init__()
+			ps2_driver.register()
 		
 			dev_tty_ops.__init__()
 			add(dev, "tty", dev_tty_ops)
-		
-			dev_mouse_ops.__init__()
-			#dev_mouse_ops.register()
-			add(dev, "mouse", dev_mouse_ops)
 		
 			#var key_task = TaskManager.add_task_kernel("irq-key", int_key, 1024, kernel_task)
 			#var mouse_task = TaskManager.add_task_kernel("irq-mouse", int_mouse, 1024, kernel_task)
