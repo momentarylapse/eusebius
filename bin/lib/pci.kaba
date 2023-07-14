@@ -38,7 +38,7 @@ class PCIDevice
 	var header_type: int
 	var bus, slot, function: int
 	var vendor, device: int
-	var _class, subclass: int
+	var _class, subclass, _interface: int
 	var bar: int[6]
 	var secondary_bus: int
 	var irq: int
@@ -101,7 +101,13 @@ class PCIDevice
 			return "bridge?"
 		if _class == CLASS_SERIAL_BUS
 			if subclass == SUBCLASS_SERIAL_BUS_USB
-				return "USB"
+				if _interface == 0x00 or _interface == 0x10
+					return "USB1"
+				if _interface == 0x20
+					return "USB2.0"
+				if _interface == 0x30 # ???
+					return "USB3.0"
+				return "USB?"
 			return "serial?"
 		return "?"
 	func mut read_config(offset: int) -> int
@@ -147,6 +153,7 @@ class PCIController
 		p.device = (a >> 16) & 0xffff
 		p._class = c >> 24
 		p.subclass = (c >> 16) & 0xff
+		p._interface = (c >> 8) & 0xff
 		if p.header_type == 0
 			for i in 0:6
 				p.bar[i] = read_config(bus, slot, function, 0x10 + 4*i)

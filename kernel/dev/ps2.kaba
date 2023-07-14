@@ -72,7 +72,7 @@ class Ps2Driver
 	var mouse_temp: int[4]
 	var mouse_temp_no = 0
 	
-	func __init__()
+	#func __init__()
 
 	func register()
 		prints(" PS2 REG ")
@@ -177,6 +177,7 @@ class Ps2Driver
 			return
 		let d = inportb(0x60)
 		if (k & 0x20) > 0
+			prints("MM")
 			read_mouse(d)
 		else
 			read_key(d)
@@ -246,7 +247,7 @@ class Ps2Driver
 
 	func mut handle_irq_mouse()
 		IrqManager.mask(MOUSE_IRQ)
-		prints("<mouse>")
+		panic("<mouse>")
 		ps2_try_read()
 		IrqManager.eoi(MOUSE_IRQ)
 		IrqManager.unmask(MOUSE_IRQ)
