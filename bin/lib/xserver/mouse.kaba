@@ -1,0 +1,90 @@
+use lib.vesa
+use lib.std.file
+use image
+use controller
+use windows
+
+
+class MouseController
+	var xx, yy: float
+	var scale: float
+	var x, y, flags: int
+	var cursor: owned![XWindow]
+	var drag_win: XWindow*
+	
+	var dev: int
+	var sending: bool
+	
+	func __init__()
+		scale = 1.0 #3.5
+	
+		x = screen_width / 2
+		y = screen_height / 2
+		xx = x * scale
+		yy = y * scale
+		dev = open("/dev/mouse", O_RDONLY | O_NONBLOCK)
+		#fcntl(dev, F_SETFL, O_RDONLY | O_NONBLOCK)
+		
+		drag_win = nil
+		sending = false
+	
+	func mut set(x: int, y: int)
+		self.x = x
+		self.y = y
+		xx = x * scale
+		yy = y * scale
+		
+	func mut create()
+
+		var im = Image.load("/images/cursor.tga")
+		# FIXME should return xfer?[]...
+	
+#		if weak(im)
+#			cursor = new XWindow(nil, x - im.width/2, y - im.height/2, im.width, im.height, WF_TRANSPARENT | 7)
+#			cursor.fill_image(0, 0, im)
+#		else
+#			cursor = new XWindow(nil, x-16, y-16, 32, 32, WF_TRANSPARENT | 7)
+#			cursor.fill(0xffc0c0c0)
+
+	func mut poll_single() -> bool
+		var m: int[4]
+		if read(dev, &m, 4*4) < 16
+			return false
+		print("M")
+		flags = m[0]
+		xx += m[1]
+		yy -= m[2]
+		let max_x = float(screen_width - 1) * scale
+		let max_y = float(screen_height - 1) * scale
+		if xx < 0
+			xx = 0
+		if xx > max_x
+			xx = max_x
+		if yy < 0
+			yy = 0
+		if yy > max_y
+			yy = max_y
+		x = xx / scale
+		y = yy / scale
+	
+		return true
+
+	func mut poll()
+#		var x0 = x
+#		var y0 = y
+#		var need_update = false
+#		for i in 0:8
+#			if !poll_single()
+#				break
+#			need_update = true
+#		if need_update
+#			if !sending
+#				sending = true
+#				for c in cmds.clients
+#					c.send_mouse()
+#				sending = false
+#			cursor.move(x - cursor.r.w()/2, y - cursor.r.h()/2)
+#			for w in drag_win
+#				w.move(w.r.x0 + x - x0, w.r.y0 + y - y0)
+
+var mouse: owned![MouseController]

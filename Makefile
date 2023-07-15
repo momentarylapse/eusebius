@@ -47,7 +47,6 @@ XXXBINS = \
  bin/cmp \
  bin/tr \
  bin/less \
- bin/x \
  bin/client \
  bin/net bin/sound \
  bin/k bin/rm bin/rmdir bin/cake bin/c \
@@ -57,7 +56,8 @@ XXXBINS = \
  bin/ximage \
  bin/xfiles \
  bin/xdesktop
-PDEP = lib/*.kaba kalib_symbols bin/lib/*.kaba bin/lib/*/*.kaba
+PDEP = kalib_symbols bin/lib/std/*.kaba
+PDEPX = $(PDEP) bin/lib/x.kaba bin/lib/ttfx.kaba bin/lib/draw.kaba
 LIBS = lib/kalib
 
 all : bochs/c.img
@@ -129,25 +129,25 @@ bin/touch: bin/touch.kaba $(PDEP)
 bin/tr: bin/tr.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/tr bin/tr.kaba
 
-bin/x: bin/x.kaba $(PDEP)
+bin/x: bin/x.kaba $(PDEP) bin/lib/xserver/*.kaba bin/lib/vesa.kaba bin/lib/pci.kaba
 	$(KABA) $(PFLAGS) -o bin/x bin/x.kaba
 
-bin/xterm: bin/xterm.kaba $(PDEP)
+bin/xterm: bin/xterm.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/xterm bin/xterm.kaba
 
-bin/xtest: bin/xtest.kaba $(PDEP)
+bin/xtest: bin/xtest.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/xtest bin/xtest.kaba
 
-bin/xedit: bin/xedit.kaba $(PDEP)
+bin/xedit: bin/xedit.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/xedit bin/xedit.kaba
 
-bin/ximage: bin/ximage.kaba $(PDEP)
+bin/ximage: bin/ximage.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/ximage bin/ximage.kaba
 
-bin/xfiles: bin/xfiles.kaba $(PDEP)
+bin/xfiles: bin/xfiles.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/xfiles bin/xfiles.kaba
 
-bin/xdesktop: bin/xdesktop.kaba $(PDEP)
+bin/xdesktop: bin/xdesktop.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/xdesktop bin/xdesktop.kaba
 
 bin/shmem: bin/shmem.kaba $(PDEP)
@@ -162,16 +162,16 @@ bin/sleep: bin/sleep.kaba $(PDEP)
 bin/uname: bin/uname.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/uname bin/uname.kaba
 
-bin/client: bin/client.kaba $(PDEP)
+bin/client: bin/client.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/client bin/client.kaba
 
-bin/lspci: bin/lspci.kaba $(PDEP)
+bin/lspci: bin/lspci.kaba $(PDEP) bin/lib/pci.kaba
 	$(KABA) $(PFLAGS) -o bin/lspci bin/lspci.kaba
 
 bin/net: bin/net.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/net bin/net.kaba
 
-bin/sound: bin/sound.kaba $(PDEP)
+bin/sound: bin/sound.kaba $(PDEP) bin/lib/pci.kaba
 	$(KABA) $(PFLAGS) -o bin/sound bin/sound.kaba
 
 bin/sock: bin/sock.kaba $(PDEP)
@@ -189,16 +189,16 @@ bin/error: bin/error.kaba $(PDEP)
 bin/k: bin/k.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/k bin/k.kaba
 
-bin/c: bin/c.kaba $(PDEP)
+bin/c: bin/c.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/c bin/c.kaba
 
-bin/cake: bin/cake.kaba $(PDEP)
+bin/cake: bin/cake.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
 
 bin/simple: bin/simple.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/simple bin/simple.kaba
 
-bin/vt: bin/vt.kaba $(PDEP)
+bin/vt: bin/vt.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/vt bin/vt.kaba
 
 lib/kalib: lib/kalib.kaba lib/lib_*.kaba

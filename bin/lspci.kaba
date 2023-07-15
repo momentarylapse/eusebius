@@ -1,6 +1,5 @@
 use lib.std
 use lib.pci
-use lib.io
 
 
 func show_device(d: PCIDevice)

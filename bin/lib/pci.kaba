@@ -1,5 +1,5 @@
 use lib.std
-use lib.io
+use lib.std.io
 
 const CLASS_STORAGE = 1
 const SUBCLASS_STORAGE_IDE = 1

@@ -1,0 +1,199 @@
+use lib.std.sys
+use lib.std
+use lib.vesa
+use image
+
+let WF_TRANSPARENT = 1024
+let WF_DONT_INVALIDATE = 2048
+
+
+struct XRect
+	var x0, y0, x1, y1: int
+	func w() -> int
+		return x1 - x0
+	func h() -> int
+		return y1 - y0
+	func inside(x: int, y: int) -> bool
+		return x >= x0 and x < x1 and y >= y0 and y < y1
+
+
+class XWindow
+	#var client: Client*
+	var client: void*
+	var id: int
+	var r: XRect
+	var shm_key: int
+	var shm_id: int
+	var buf: int[0]&
+	var transparent: bool
+	var level: int
+	
+	func __init__(client: void*, _x: int, _y: int, w: int, h: int, flags: int)
+		kprint("x: new win\n")
+		self.client = client
+		var x = _x
+		var y = _y
+		if x < 0
+			x = 0#rand(screen_width - w)
+		if y < 0
+			y = 0#rand(screen_height - h)
+		r.x0 = x
+		r.y0 = y
+		r.x1 = x + w
+		r.y1 = y + h
+		level = flags & 0xf
+		transparent = ((flags & WF_TRANSPARENT) > 0)
+		id = next_window_id
+		next_window_id ++
+		shm_key = next_window_id + 0x0f810000 # randi()
+		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
+		if shm_id < 0
+			print("x: ERROR can't create shared memory for window")
+			# TODO clean-up
+		else
+			for b in shmat(shm_id, 0)
+				buf := b
+			windows.add(&self)
+			sort_windows()
+			if (flags & WF_DONT_INVALIDATE) == 0
+				invalidated.add(r)
+		
+	func __delete__()
+		kprint("x: del win\n")
+		for b in buf
+			invalidated.add(r)
+			shmdt(b)
+		for n=>ww in windows
+			if ww == &self
+				windows_r.remove(len(windows) - n - 1)
+				windows.remove(n)
+	
+	func mut move(x: int, y: int)
+		let r0 = r
+		r.x1 += x - r.x0
+		r.y1 += y - r.y0
+		r.x0 = x
+		r.y0 = y
+		invalidated.add(r)
+		invalidated.add(r0)
+#		for c in client
+#			c.send(XCMD_WINDOW_MOVE, id, r.x0, r.y0, 0, 0)
+	
+	#void draw_rect(int x, int y, int w, int h, int c)
+	func mut fill(c: int)
+		let n = r.w() * r.h()
+		for i in 0:n
+			buf[i] = c
+	func mut fill_image(dx: int, dy: int, im: Image&)
+		#int x1 = dx
+#		if x1 < 0
+#			x1 = 0
+#			
+#		for y in y1:y2
+#			for x in x1:x2
+		let w = r.w()
+		let h = r.h()
+		for y in 0:h
+			for x in 0:w
+				buf[x + y*w] = im.data[x + y*w]
+
+var next_window_id: int
+var windows, windows_r: XWindow&[]
+var desktop: owned![XWindow]
+var active_window: XWindow*
+
+func sort_windows()
+	for i in 0:len(windows)
+		for j in i+1:len(windows)
+			if windows[i].level > windows[j].level
+				var t = windows[i]
+				windows[i] := windows[j]
+				windows[j] := t
+	windows_r.resize(len(windows))
+	for i=>w in windows
+		windows_r[len(windows) - i - 1] := w
+
+var invalidated: XRect[]
+
+func find_top_most_window(x: int, y: int) -> XWindow*
+	for w in windows_r
+		if w.level != 2
+			continue
+		if w.r.inside(x, y)
+			return w
+	return nil
+
+func activate_window(win: XWindow*)
+	if active_window == win
+		return
+#	for a in active_window
+#		for c in a.client
+#			c.send(XCMD_WINDOW_ACTIVATE, -1, 0, 0, 0, 0)
+#	active_window = win
+#	for a in active_window
+#		for c in a.client
+#			c.send(XCMD_WINDOW_ACTIVATE, a.id, 0, 0, 0, 0)
+
+func draw(rr: XRect)
+	var r = rr
+	if r.x0 < 0
+		r.x0 = 0
+	if r.x1 >= screen_width
+		r.x1 = screen_width-1
+	if r.y0 < 0
+		r.y0 = 0
+	if r.y1 >= screen_height
+		r.y1 = screen_height-1
+	for y in r.y0:r.y1
+		var xs = r.x0
+		while xs < r.x1
+			var xe = r.x1
+			
+			# find the top most window at (x1,y)
+			var ww: XWindow* = nil
+			for i=>w in windows_r
+				if w.r.inside(xs, y)
+					ww = w
+					if w.r.x1 < xe
+						xe = w.r.x1
+					# test for overlap in [y]*[xs:xe]
+					for j in 0:i
+						var v = windows_r[j]
+						if y < v.r.y0 or y >= v.r.y1
+							continue
+						if xe <= v.r.x0 or xs >= v.r.x1
+							continue
+						xe = v.r.x0
+					break
+			for _ww in ww
+				if _ww.transparent
+					# brute force :P
+					for x in xs:xe
+						for w in windows_r
+							if w.r.inside(x, y)
+								let dx = x-w.r.x0
+								let dy = y-w.r.y0
+								let c = w.buf[dx + dy*w.r.w()]
+								if w.transparent
+									if (c & 0xff000000) != 0
+										set_pixel(x, y, c)
+										break
+								else
+									set_pixel(x, y, c)
+									break
+				else
+					let dy = y - _ww.r.y0
+					let dx = xs - _ww.r.x0
+					let index = dx + dy*_ww.r.w()
+					set_pixels(xs, y, &_ww.buf[index], xe-xs)
+					#for x in xs:xe
+#						set_pixel(x, y, ww.buf[index])
+#						index ++
+			xs = xe
+	
+
+func draw_invalidated()
+	print("di ")
+	for r in invalidated
+		draw(r)
+	invalidated.clear()

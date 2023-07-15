@@ -1,0 +1,170 @@
+use lib.std.file
+use controller
+use hui
+
+class KeyboardController
+	var key: int
+	var handle: int
+	var control, shift, altgr: bool
+	var escaped: bool
+	func __init__()
+		handle = open("/dev/keyboard", O_RDONLY | O_NONBLOCK)
+#		fcntl(stdin, F_SETFL, O_RDONLY | O_NONBLOCK)
+		control = false
+		shift = false
+		altgr = false
+		escaped = false
+	func mut digest(_k: int)
+		var k = _k
+		if k == 0xe0
+			escaped = true
+			return
+
+		if escaped
+			k += 0xe000
+		escaped = false
+	
+		if (k & 0x80) > 0
+			if k == 0xaa or k == 0xb6
+				shift = false
+			if k == 0x9d or k == 0xe09d
+				control = false
+			if k == 0xe0b8
+				altgr = false
+		if k == 0x2a or k == 0x36
+			shift = true
+		if k == 0x1d or k == 0xe01d
+			control = true
+		if k == 0xe038
+			altgr = true
+		
+		key = getkey(k)
+		if key < 0
+			return
+		if shift
+			key += KEY_SHIFT
+		if control
+			key += KEY_CONTROL
+		if altgr
+			key += KEY_ALT
+		
+#		for cc in cmds.clients
+#			cc.send_key()
+
+	func getkey(k: int) -> int
+		if k == 0x1c
+			return KEY_RETURN
+		if k == 0x39
+			return KEY_SPACE
+		if k == 0x0e
+			return KEY_BACKSPACE
+		if k == 0xe053
+			return KEY_DELETE
+		if k == 0xe048
+			return KEY_UP
+		if k == 0xe050
+			return KEY_DOWN
+		if k == 0xe04b
+			return KEY_LEFT
+		if k == 0xe04d
+			return KEY_RIGHT
+		if k == 0x0b
+			return KEY_0
+		if k == 0x02
+			return KEY_1
+		if k == 0x03
+			return KEY_2
+		if k == 0x04
+			return KEY_3
+		if k == 0x05
+			return KEY_4
+		if k == 0x06
+			return KEY_5
+		if k == 0x07
+			return KEY_6
+		if k == 0x08
+			return KEY_7
+		if k == 0x09
+			return KEY_8
+		if k == 0x0a
+			return KEY_9
+		if k == 0x35
+			return KEY_MINUS
+		if k == 0x34
+			return KEY_DOT
+		if k == 0x33
+			return KEY_COMMA
+		if k == 0x56
+			return KEY_LESS
+		if k == 0x2b
+			return KEY_FENCE
+		if k == 0x1b
+			return KEY_PLUS
+		if k == 0x29
+			return -1 # '^'
+		if k == 0x0c
+			return KEY_SZ
+		if k == 0x0d
+			return -1 # '´'
+			
+		if k == 0x1e
+			return KEY_A
+		if k == 0x30
+			return KEY_B
+		if k == 0x2e
+			return KEY_C
+		if k == 0x20
+			return KEY_D
+		if k == 0x12
+			return KEY_E
+		if k == 0x21
+			return KEY_F
+		if k == 0x22
+			return KEY_G
+		if k == 0x23
+			return KEY_H
+		if k == 0x17
+			return KEY_I
+		if k == 0x24
+			return KEY_J
+		if k == 0x25
+			return KEY_K
+		if k == 0x26
+			return KEY_L
+		if k == 0x32
+			return KEY_M
+		if k == 0x31
+			return KEY_N
+		if k == 0x18
+			return KEY_O
+		if k == 0x19
+			return KEY_P
+		if k == 0x10
+			return KEY_Q
+		if k == 0x13
+			return KEY_R
+		if k == 0x1f
+			return KEY_S
+		if k == 0x14
+			return KEY_T
+		if k == 0x16
+			return KEY_U
+		if k == 0x2f
+			return KEY_V
+		if k == 0x11
+			return KEY_W
+		if k == 0x2d
+			return KEY_X
+		if k == 0x2c
+			return KEY_Y
+		if k == 0x15
+			return KEY_Z
+		return -1
+
+	func mut poll()
+		var k = 0
+		let r = read(handle, &k, 1)
+		if r > 0
+			digest(k)
+
+var keyboard: owned![KeyboardController]
