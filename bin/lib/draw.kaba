@@ -1,38 +1,38 @@
 use image
 use lib.std
 use lib.x
-use lib.ttfx
+#use lib.ttfx
 
 func col2i(c: color) -> int
-	int ir = c.r * 255.0
-	int ig = c.g * 255.0
-	int ib = c.b * 255.0
-	int ia = c.a * 255.0
+	let ir = int(c.r * 255.0)
+	let ig = int(c.g * 255.0)
+	let ib = int(c.b * 255.0)
+	let ia = int(c.a * 255.0)
 	return ib + (ig << 8) + (ir << 16) + (ia << 24)
 
 func i2col(out c: color, i: int)
-	int ir = (i >> 16) & 255
-	int ig = (i >> 8) & 255
-	int ib = i & 255
-	int ia = i >> 24
+	let ir = (i >> 16) & 255
+	let ig = (i >> 8) & 255
+	let ib = i & 255
+	let ia = i >> 24
 	c = color(float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0, float(ia) / 255.0)
 
 func add_blend(i1: int, i2: int, t: float) -> int
-	float s = 1 - t
-	color c1, c2
+	let s = 1 - t
+	var c1, c2: color
 	i2col(c1, i1)
 	i2col(c2, i2)
 	return col2i(color(s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b, 1))
 
-class XCircle
-	var m: complex
+struct XCircle
+	var m: vec2
 	var r: float
 
-class XLine
-	var a, b: complex
+struct XLine
+	var a, b: vec2
 
 class XPainter
-	var buf: int[0]*
+	var buf: int[0]&
 	var width, height: int
 	var buf_width: int
 	var buf_x, buf_y: int
@@ -40,7 +40,7 @@ class XPainter
 	var error: bool
 	
 	var cur_color: int
-	var pos: complex
+	var pos: vec2
 	
 	var rects: rect[]
 	var circles: XCircle[]
@@ -48,13 +48,14 @@ class XPainter
 	var last_path_start: int
 	
 	var line_width: float
-	var win: XWindow*
-	var font: FontDescriptor*
+	var win: XWindow&
+#	var font: FontDescriptor*
 	
-	func __init__(_win: XWindow*)
-		win = _win
+	func __init__(_win: XWindow&)
+		win := _win
 		error = true
-		buf = win.buf
+		for b in win.buf
+			buf := b
 		width = win.w
 		height = win.h
 		#win.get_size(&width, &height)
@@ -66,63 +67,63 @@ class XPainter
 		buf_y = 0
 		error = false
 		
-		font = nil
+#		font = nil
 		set_color([0,0,0, 1]) #color.BLACK)
 		all = rect(0, width, 0, height)
-		pos = complex(0, 0)
+		pos = [0, 0]
 		line_width = 1.0
 		last_path_start = 0
 	
-	func set_as_ref(p: XPainter*, x: int, y: int, w: int, h: int)
+	func mut set_as_ref(p: XPainter&, x: int, y: int, w: int, h: int)
 		buf_width = p.buf_width
 		buf_x = x
 		buf_y = y
-		buf = &p.buf[x + y * buf_width]
+		buf := &p.buf[x + y * buf_width]
 		width = w
 		height = h
 		
 		#font = p.font
 		#line_width = p.line_width
 	
-	func set_color(c: color)
+	func mut set_color(c: color)
 		cur_color = col2i(c)
 	
-	func rectangle(r: rect)
+	func mut rectangle(r: rect)
 		rects.add(r)
 	
-	func draw_pixel(x: int, y: int)
+	func mut draw_pixel(x: int, y: int)
 		if x < 0 or x >= width
 			return
 		if y < 0 or y >= height
 			return
-		int index = x + y * buf_width
+		let index = x + y * buf_width
 		buf[index] = cur_color
 	
-	func draw_rect(r: rect)
-		int x0 = max(r.x1, 0)
-		int y0 = max(r.y1, 0)
-		int x1 = min(r.x2, width)
-		int y1 = min(r.y2, height)
+	func mut draw_rect(r: rect)
+		let x0 = max(int(r.x1), 0)
+		let y0 = max(int(r.y1), 0)
+		let x1 = min(int(r.x2), width)
+		let y1 = min(int(r.y2), height)
 		for y in y0:y1
-			int index = x0 + y * buf_width
+			let index = x0 + y * buf_width
 			for x in x0:x1
 				buf[index] = cur_color
 				index ++
 	
-	func draw_circle(mx: float, my: float, _r: float)
-		float r = _r + 0.5
-		int x0 = max(mx - r, 0)
-		int y0 = max(my - r, 0)
-		int x1 = min(mx + r, width)
-		int y1 = min(my + r, height)
-		float rr_i = sqr(r - 1)
-		float rr_o = sqr(r)
+	func mut draw_circle(m: vec2, _r: float)
+		let r = _r + 0.5
+		let x0 = max(int(m.x - r), 0)
+		let y0 = max(int(m.y - r), 0)
+		let x1 = min(int(m.x + r), width)
+		let y1 = min(int(m.y + r), height)
+		let rr_i = sqr(r - 1)
+		let rr_o = sqr(r)
 		for y in y0:y1
-			int index = x0 + y * buf_width
-			float dy = y - my
-			float dx = x0 - mx
+			let index = x0 + y * buf_width
+			let dy = y - m.y
+			var dx = x0 - m.x
 			for x in x0:x1
-				float dd = dx*dx+dy*dy
+				let dd = dx*dx+dy*dy
 				if dd < rr_i
 					buf[index] = cur_color
 				else if dd < rr_o
@@ -130,26 +131,26 @@ class XPainter
 				dx += 1.0
 				index ++
 	
-	func draw_line(a: complex, b: complex)
-		float r = line_width * 1.5
-		int x0 = max(min(a.x, b.x)-r, 0)
-		int y0 = max(min(a.y, b.y)-r, 0)
-		int x1 = min(max(a.x, b.x)+r, width)
-		int y1 = min(max(a.y, b.y)+r, height)
-		complex l = b - a
-		float ll = (l.x*l.x + l.y*l.y)
-		complex n = complex(l.y, -l.x)
-		float f1_i = ll * sqr(line_width - 0.5) / 2
-		float f1_o = ll * sqr(line_width + 0.5) / 2
-		float f2 = ll * ll
+	func mut draw_line(a: vec2, b: vec2)
+		let r = line_width * 1.5
+		let x0 = max(int(min(a.x, b.x)-r), 0)
+		let y0 = max(int(min(a.y, b.y)-r), 0)
+		let x1 = min(int(max(a.x, b.x)+r), width)
+		let y1 = min(int(max(a.y, b.y)+r), height)
+		let l = b - a
+		let ll = (l.x*l.x + l.y*l.y)
+		let n = vec2(l.y, -l.x)
+		let f1_i = ll * sqr(line_width - 0.5) / 2
+		let f1_o = ll * sqr(line_width + 0.5) / 2
+		let f2 = ll * ll
 		
 		for y in y0:y1
-			int index = x0 + y * buf_width
-			float dy = y - a.y
-			float dx = x0 - a.x
+			let index = x0 + y * buf_width
+			let dy = y - a.y
+			var dx = x0 - a.x
 			for x in x0:x1
-				float dn = n.x*dx + n.y*dy
-				float dl = l.x*dx + l.y*dy
+				let dn = n.x*dx + n.y*dy
+				let dl = l.x*dx + l.y*dy
 				if dl >= 0 and dl*dl < f2
 					if dn*dn < f1_i
 						buf[index] = cur_color
@@ -158,140 +159,140 @@ class XPainter
 				dx += 1.0
 				index ++
 	
-	func draw_spline(a: complex, b: complex, c: complex)
-		int n = 12
-		complex z1 = a
-		complex z2
+	func mut draw_spline(a: vec2, b: vec2, c: vec2)
+		let n = 12
+		var z1 = a
+		var z2: vec2
 		for i in 1:n
-			float t = float(i) / n
-			float s = 1 - t
+			let t = float(i) / n
+			let s = 1 - t
 			z2 = a * (s*s) + b * (s*t*2.0) + c * (t*t)
 			draw_line(z1, z2)
 			z1 = z2
 		draw_line(z2, c)
 	
-	func fill_polygon()
-		int[][] hit
+	func mut fill_polygon()
+		var hit: int[][]
 		hit.resize(height)
 		
 		for l in path
 			if l.a.y == l.b.y
 				continue
-			int y1 = l.a.y
-			int y2 = l.b.y
-			float m = (l.a.x - l.b.x) / (l.a.y - l.b.y)
-			float a = l.a.x - l.a.y*m
+			var y1 = int(l.a.y)
+			var y2 = int(l.b.y)
+			let m = (l.a.x - l.b.x) / (l.a.y - l.b.y)
+			let a = l.a.x - l.a.y*m
 			if y2 > y1
 				y1 = max(y1, 0)
 				y2 = min(y2, height)
 				for y in y1:y2
-					float hx = y*m + a
+					let hx = y*m + a
 					hit[y].add(hx)
 			else
 				y1 = min(y1, height)
 				y2 = max(y2, 0)
 				for y in y2:y1
-					int hx = y*m + a
+					let hx = y*m + a
 					hit[y].add(hx)
 		
 		for y in 0:height
 			if (hit[y].num & 1) != 0
 				continue
-			hit[y].sort()
+			hit[y] = hit[y] |> sort
 			for i in 0:hit[y].num:2
-				int x0 = max(hit[y][i], 0)
-				int x1 = min(hit[y][i+1], width)
-				int index = x0 + y * buf_width
+				let x0 = max(hit[y][i], 0)
+				let x1 = min(hit[y][i+1], width)
+				let index = x0 + y * buf_width
 				for x in x0:x1
 					buf[index] = cur_color
 					index ++
 	
-	func fill()
+	func mut fill()
 		for r in rects
 			draw_rect(r)
 		for c in circles
-			draw_circle(c.m.x, c.m.y, c.r)
+			draw_circle(c.m, c.r)
 		fill_polygon()
 		clear_data()
 	
-	func move_to(x: float, y: float)
-		pos = complex(x, y)
+	func mut move_to(p: vec2)
+		pos = p
 		last_path_start = path.num
 	
-	func line_to(x: float, y: float)
-		XLine l
+	func mut line_to(p: vec2)
+		var l: XLine
 		l.a = pos
-		l.b = complex(x, y)
+		l.b = p
 		path.add(l)
 		pos = l.b
 	
-	func path_close()
+	func mut path_close()
 		if path.num > last_path_start
-			complex z = path[last_path_start].a
-			line_to(z.x, z.y)
+			let z = path[last_path_start].a
+			line_to(z)
 			last_path_start = path.num
 			pos = z
 	
-	func clear_data()
+	func mut clear_data()
 		rects.clear()
 		path.clear()
 		circles.clear()
 		last_path_start = 0
 	
-	func strike()
+	func mut strike()
 		for r in rects
-			float d = line_width / 2
-			draw_line(complex(r.x1, r.y1 - d), complex(r.x1, r.y2 + d))
-			draw_line(complex(r.x1 - d, r.y2), complex(r.x2 + d, r.y2))
-			draw_line(complex(r.x2, r.y2 + d), complex(r.x2, r.y1 - d))
-			draw_line(complex(r.x2 + d, r.y1), complex(r.x1 - d, r.y1))
+			let d = line_width / 2
+			draw_line(vec2(r.x1, r.y1 - d), vec2(r.x1, r.y2 + d))
+			draw_line(vec2(r.x1 - d, r.y2), vec2(r.x2 + d, r.y2))
+			draw_line(vec2(r.x2, r.y2 + d), vec2(r.x2, r.y1 - d))
+			draw_line(vec2(r.x2 + d, r.y1), vec2(r.x1 - d, r.y1))
 		for l in path
 			draw_line(l.a, l.b)
 		clear_data()
 	
-	func draw_glyph(x: float, _y: float, g: TTFGlyph*, scale: float)
-		if !font
-			return
+#	func draw_glyph(x: float, _y: float, g: TTFGlyph*, scale: float)
+#		if !font
+#			return
+#	
+#		TTFFont* f = font.font
+#		float y = _y - scale * 0.2
+#		for c in g.contours
+#			move_to(x + f.points[c.start].x * scale, y + (1.0 - f.points[c.start].y) * scale)
+#			for i in c.start+1:c.start+c.num
+#				line_to(x + f.points[i].x * scale, y + (1.0 - f.points[i].y) * scale)
+#			path_close()
+#		strike()
+#		#fill()
+
+	func draw_str(_p: vec2, text: string)
+#		float scale = font.size
+#		float x = _x
+#		for c,i in text
+#			int code = int(c) & 0x000000ff
+#			
+#			if code == 9
+#				x += scale * 0.5 * 4
+#				continue
+#				
+#			TTFGlyph* g = font.font.get(code)
+#			if code != 32
+#				draw_glyph(x, y, g, scale)
+#			x += scale * g.width
 	
-		TTFFont* f = font.font
-		float y = _y - scale * 0.2
-		for c in g.contours
-			move_to(x + f.points[c.start].x * scale, y + (1.0 - f.points[c.start].y) * scale)
-			for i in c.start+1:c.start+c.num
-				line_to(x + f.points[i].x * scale, y + (1.0 - f.points[i].y) * scale)
-			path_close()
-		strike()
-		#fill()
-	
-	func draw_str(_x: float, y: float, text: string)
-		float scale = font.size
-		float x = _x
-		for c,i in text
-			int code = int(c) & 0x000000ff
-			
-			if code == 9
-				x += scale * 0.5 * 4
-				continue
-				
-			TTFGlyph* g = font.font.get(code)
-			if code != 32
-				draw_glyph(x, y, g, scale)
-			x += scale * g.width
-	
-	func draw_image(_x: int, _y: int, im: Image*)
-		int x0 = max(_x, 0)
-		int y0 = max(_y, 0)
-		int x1 = min(_x+im.width, width)
-		int y1 = min(_y+im.height, height)
+	func mut draw_image(_x: int, _y: int, im: Image&)
+		let x0 = max(_x, 0)
+		let y0 = max(_y, 0)
+		let x1 = min(_x+im.width, width)
+		let y1 = min(_y+im.height, height)
 		for y in y0:y1
-			int index = x0 + y * buf_width
-			int _index = x0 - _x + (y - _y) * im.width
+			var index = x0 + y * buf_width
+			var _index = x0 - _x + (y - _y) * im.width
 			for x in x0:x1
 				buf[index] = im.data[_index]
 				index ++
 				_index ++
 		
-	func end()
+	func mut end()
 		#win.invalidate_all()
 		win.invalidate(buf_x, buf_y, buf_x + width, buf_y + height)
 		

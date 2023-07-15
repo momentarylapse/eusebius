@@ -41,6 +41,7 @@ func extern shmdt(p: void&) -> bool
 #func extern waitmsg() -> bool
 #func extern yield(pid: int) -> bool
 #func extern sched_yield(pid: int) -> bool
+func extern getpid() -> int
 func extern time(t: TimeValue) -> bool
 func extern nanosleep(a: TimeValue, b: TimeValue) -> bool
 func extern sleep(sec: int) -> bool

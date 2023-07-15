@@ -1,5 +1,7 @@
 use lib.std
 use lib.std.sys
+use lib.std.net
+use lib.std.file
 
 const XCMD_KILL = 666
 const XCMD_NEW_WINDOW = 1024
@@ -111,7 +113,7 @@ class XConnection
 	var sock: int
 	var buf: int[8]
 	var error: bool
-	var windows: XWindow*[]
+	var windows: XWindow&[]
 	var mx, my: int
 	var lbut, mbut, rbut: bool
 	var cursor_win: XWindow*
@@ -169,7 +171,7 @@ class XConnection
 	func mut send_exit()
 		send(XCMD_KILL, 0, 0, 0, 0, 0)
 
-	func mut _create_win(out win: XWindow*, x: int, y: int, w: int, h: int) -> bool
+	func mut _create_win(out win: XWindow&, x: int, y: int, w: int, h: int) -> bool
 		kprint("client: send new win\n")
 		just_send(XCMD_NEW_WINDOW, x, y, w, h, 0)
 		

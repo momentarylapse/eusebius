@@ -75,13 +75,13 @@ func main()
 	var ww = new XWindow(nil, 100, 100, 100, 100, 1)
 	ww.fill(0xffff0000)
 	
-	mouse.create()
+	mouse.create_cursor()
 	
 	draw_invalidated()
 	
 #	execute(["/bin/xdesktop"], -1, -1)
 	#execute(["/bin/xtest"], -1, -1)
-	#execute(["/bin/c"], -1, -1)
+	execute(["/bin/c"], stdin, stdout)
 	#execute(["/bin/xterm"], -1, -1)
 	
 	print("x: running")

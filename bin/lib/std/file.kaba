@@ -40,7 +40,6 @@ func extern stat(filename: Path, out s: StatData) -> bool
 func extern dup(h: int) -> int
 func extern pipe(out h: int[2]) -> bool
 func extern fcntl(h: int, op: int, param: int) -> int
-func extern getpid() -> int
 func extern chdir(dir: Path) -> bool
 
 ## because std lib is 64bit...

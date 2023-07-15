@@ -15,6 +15,7 @@ LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
+ bin/c \
  bin/cat \
  bin/cpuid \
  bin/date \
@@ -56,7 +57,7 @@ XXXBINS = \
  bin/ximage \
  bin/xfiles \
  bin/xdesktop
-PDEP = kalib_symbols bin/lib/std/*.kaba
+PDEP = kalib_symbols lib/*.kaba bin/lib/std/*.kaba
 PDEPX = $(PDEP) bin/lib/x.kaba bin/lib/ttfx.kaba bin/lib/draw.kaba
 LIBS = lib/kalib
 

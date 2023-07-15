@@ -11,11 +11,14 @@ func rand_next() -> int
 func lib__rand_seed(s: int)
 	rand_state = s
 
-func lib__rand(m: float) -> float
+func rand_u(m: float) -> float
 	return rand_next() * m / float(0x01000000)
 
-func lib__randi(m: int) -> int
-	return lib__rand(m)
+func lib__rand(m: float) -> float
+	return rand_u(m)
+
+func lib__rand(m: int) -> int
+	return rand_u(m)
 
 func hex_nibble(i: int) -> char
 	if i >= 10

@@ -1,6 +1,7 @@
 use lib_base
 use lib_mem
-#use lib_syscalls
+use lib_syscalls
+use kaba
 
 
 
@@ -88,12 +89,13 @@ class lib__@DynamicArray
 				d[i] = d[i+element_size]
 		__mem_resize__(num - 1)
 		
-	func mut __assign__(a: lib__@DynamicArray)
-		__mem_resize__(a.num)
-		for d in data
-			for ad in a.data
-				memcpy(d, ad, num * element_size)
-		num = 0
+#	func mut __assign__(a: lib__@DynamicArray)
+#		__mem_init__(a.element_size)
+#		__mem_resize__(a.num)
+#		for d in data
+#			for ad in a.data
+#				memcpy(d, ad, num * element_size)
+#		num = 0
 
 class lib__string extends lib__@DynamicArray
 	var override data: char[0]*
@@ -676,3 +678,20 @@ func lib__@fa2s(a: lib__float@list) -> lib__string
 			r += f2s(d[i], 6)
 	r.add(']')
 	return r
+
+# FIXME OMG \(O_O)/
+func lib__@sorted(_a: void*, t: kaba.Class*, x: string) -> lib__int@list # lib__@DynamicArray
+	if t == int or true
+		var pa = _a as lib__int@list*
+		for a in pa
+			var o = a
+			o.sort()
+			return o
+#	if t == float
+#		kprint("sort float")
+#		var pa = _a as lib__float@list*
+#		for a in pa
+#			var o = a
+#			o.sort()
+#			return o
+	kprint("NOPE, can't sort")
