@@ -15,6 +15,8 @@ struct XRect
 		return y1 - y0
 	func inside(x: int, y: int) -> bool
 		return x >= x0 and x < x1 and y >= y0 and y < y1
+	func __str__() -> string
+		return "({{x0}}:{{x1}}, {{y0}}:{{y1}})"
 
 
 class XWindow
@@ -29,7 +31,7 @@ class XWindow
 	var level: int
 	
 	func __init__(client: void*, _x: int, _y: int, w: int, h: int, flags: int)
-		kprint("x: new win\n")
+		#kprint("x: new win\n")
 		self.client = client
 		var x = _x
 		var y = _y
@@ -41,6 +43,8 @@ class XWindow
 		r.y0 = y
 		r.x1 = x + w
 		r.y1 = y + h
+		print("x: new windows {{r}}")
+		print(p2s(&self))
 		level = flags & 0xf
 		transparent = ((flags & WF_TRANSPARENT) > 0)
 		id = next_window_id
@@ -111,7 +115,8 @@ func sort_windows()
 				windows[j] := t
 	windows_r.resize(len(windows))
 	for i=>w in windows
-		windows_r[len(windows) - i - 1] := w
+		windows_r[len(windows) - i - 1] := windows[i]
+		# FIXME: kaba... := w assigns &w
 
 var invalidated: XRect[]
 
@@ -193,7 +198,6 @@ func draw(rr: XRect)
 	
 
 func draw_invalidated()
-	print("di ")
 	for r in invalidated
 		draw(r)
 	invalidated.clear()

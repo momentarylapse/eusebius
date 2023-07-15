@@ -70,6 +70,10 @@ func main()
 	desktop.fill(0xff242040)
 #	else
 #		desktop.fill(0xff000000)
+
+
+	var ww = new XWindow(nil, 100, 100, 100, 100, 1)
+	ww.fill(0xffff0000)
 	
 	mouse.create()
 	
@@ -88,5 +92,7 @@ func main()
 		keyboard.poll()
 		draw_invalidated()
 		usleep(5000)
+		
+		ww.move((ww.r.x0 + 1) % screen_width, (ww.r.y0 + 1) % screen_height)
 		
 	XExit()
