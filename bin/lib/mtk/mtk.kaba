@@ -1,16 +1,16 @@
 use lib.std
 use lib.x
 use lib.draw
-use lib.ttfx
+#use lib.ttfx
 use hui
 
-const FRAME_BAR = 30
-const FRAME_WIDTH = 2
-const WIDGET_FRAME_WIDTH = 2.0
-const GRID_MARGIN = 10
-const FONT_SIZE = 15.0
-const FONT_SIZE_BAR = 17.0
-const FONT_NAME = "Cantarell"
+let FRAME_BAR = 30
+let FRAME_WIDTH = 2
+let WIDGET_FRAME_WIDTH = 2.0
+let GRID_MARGIN = 10
+let FONT_SIZE = 15.0
+let FONT_SIZE_BAR = 17.0
+let FONT_NAME = "Cantarell"
 
 var col_window_frame: color
 var col_text: color
@@ -125,7 +125,7 @@ func key_to_str(_key: int) -> string
 		if key == KEY_Q
 			return "@"
 
-class MtkSizeNegotiationData
+struct MtkSizeNegotiationData
 	var min_width: int
 	var min_height: int
 	var expand_x: bool
@@ -139,11 +139,11 @@ class MtkSizeNegotiationData
 
 class MtkWidget
 	var win: MtkWindow*
-	var p: XPainter*
+	var p: owned[XPainter]
 	var r: XRect # relative to window
 	var mx, my: int
 	var snd: MtkSizeNegotiationData
-	var font: FontDescriptor*
+#	var font: FontDescriptor*
 	
 	func __init__()
 		win = nil
@@ -151,27 +151,32 @@ class MtkWidget
 		mx = 0
 		my = 0
 		snd = MtkSizeNegotiationData(10, 10, true, true)
-		font = default_font
+#		font = default_font
 	
-	func virtual __delete__()
-		if p
-			del p
+#	func virtual __delete__()
+#		if p
+#			del p
 	
 	func virtual can_grab_input() -> bool
 		return false
 	
 	func has_input() -> bool
-		return win.active and (&self == win.input_widget)
+		for w in win
+			return w.active and (&self == w.input_widget)
+		return false
 	
-	func set_win(out win: MtkWindow*, x: int, y: int, w: int, h: int)
+	func mut set_win(win: MtkWindow&, x: int, y: int, w: int, h: int)
 		self.win = win
-		win.widgets.add(&self)
-		p = new XPainter(win)
-		p.font = font
-		resize(x, y, w, h)
+		for _w in self.win
+			_w.widgets.add(&self)
+			p = new XPainter(_w)
+#			p.font = font
+			resize(x, y, w, h)
 	
-	func resize(x: int, y: int, w: int, h: int)
-		p.set_as_ref(win.p, x, y, w, h)
+	func mut resize(x: int, y: int, w: int, h: int)
+		for _w in win
+			for _p in p
+				_p.set_as_ref(_p, x, y, w, h)
 		r.x0 = x
 		r.y0 = y
 		r.x1 = x + w
@@ -179,10 +184,10 @@ class MtkWidget
 	
 		on_resize()
 		
-	func set_font(f: FontDescriptor*)
-		font = f
-		if p
-			p.font = f
+#	func set_font(f: FontDescriptor*)
+#		font = f
+#		if p
+#			p.font = f
 	
 	func virtual on_resize()
 	func virtual draw()
@@ -324,17 +329,17 @@ class MtkGrid extends MtkWidget
 				var j = ci / nx
 				c.resize(child_x[i], child_y[j], child_w[i], child_h[j])
 
-enum
-	BUTTON_STATE_DEFAULT
-	BUTTON_STATE_HOVER
-	BUTTON_STATE_CLICK
+enum ButtonState
+	DEFAULT
+	HOVER
+	CLICK
 
 class MtkButton extends MtkWidget
 	var text: string
-	var state: int
+	var state: ButtonState
 	func __init__(text: string)
 		self.text = text
-		state = BUTTON_STATE_DEFAULT
+		state = ButtonState.DEFAULT
 		snd = MtkSizeNegotiationData(default_font.get_str_width(text)+30, 30, true, false)
 	
 	func override can_grab_input() -> bool
@@ -686,9 +691,9 @@ class MtkIdle
 
 var xcon: XConnection*
 var idles: MtkIdle*[]
-var default_font: FontDescriptor*
-var title_font: FontDescriptor*
-var font_db: FontDB*
+#var default_font: FontDescriptor*
+#var title_font: FontDescriptor*
+#var font_db: FontDB*
 var mtk_windows: MtkWindow*[]
 
 func mtk_init()

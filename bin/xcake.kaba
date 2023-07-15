@@ -1,0 +1,85 @@
+use lib.std
+use lib.x
+use lib.draw
+#use lib.ttfx
+
+
+var bg: color
+
+var xcon: owned![XConnection]
+
+
+func draw_candle(out p: XPainter, x: float, y: float)
+	p.set_color(bg)
+	#p.rectangle(rect(x-12, x+12, y-60, y))
+	p.draw_circle([x, y-30], 20)
+	#p.fill()
+	
+	p.set_color([1,1,1, 1]) #color.WHITE)
+	p.move_to([x-10, y])
+	p.line_to([x-10, y-60])
+	p.line_to([x+10, y-60])
+	p.line_to([x+10, y])
+	p.strike()
+	
+	p.draw_spline(vec2(x, y-60), vec2(x, y-80), vec2(x-10, y-90))
+	p.draw_spline(vec2(x-10, y-90), vec2(x-15, y-100), vec2(x-5,y-115))
+	p.draw_spline(vec2(x-5,y-115), vec2(x+5,y-95), vec2(x+12, y-90))
+	p.draw_spline(vec2(x+12, y-90), vec2(x+10, y-75), vec2(x+2, y-60))
+
+func main()
+	init_lib()
+	
+	rand_seed(getpid())
+	
+	xcon = new XConnection()
+	if xcon.error
+		print("client: kann nicht mit x verbinden\n")
+		exit(-1)
+	
+	var win = new XWindow(xcon, 10 + rand(200), 10 + rand(200), 300, 300)
+	if !win.buf
+		print("client: kann kein Fenster erstellen\n")
+		exit(-2)
+		
+	var p = new XPainter(win)
+	#FontDB* font_db = new FontDB()
+	#p.font = font_db.get("Cantarell", 30)
+
+	bg = color(0.1765, 0.1608, 0.4706, 1)
+	p.set_color(bg)
+	p.rectangle(p.all)
+	p.fill()
+	
+	p.set_color([1,1,1, 1]) #color.WHITE)
+	p.draw_str([10, 30], "Herzlichen")
+	p.draw_str([20, 65], "Glueckwunsch")
+	
+	p.draw_spline(vec2( 50, 200), vec2( 50, 170), vec2(150, 170))
+	p.draw_spline(vec2(150, 170), vec2(250, 170), vec2(250, 200))
+	
+	p.draw_spline(vec2( 50, 200), vec2( 50, 230), vec2(150, 230))
+	p.draw_spline(vec2(150, 230), vec2(250, 230), vec2(250, 200))
+	
+	p.draw_spline(vec2( 50, 250), vec2( 50, 280), vec2(150, 280))
+	p.draw_spline(vec2(150, 280), vec2(250, 280), vec2(250, 250))
+	
+	p.draw_line(vec2( 50.0, 200.0), vec2( 50.0, 250.0))
+	p.draw_line(vec2(250.0, 200.0), vec2(250.0, 250.0))
+	
+	draw_candle(p, 100, 195)
+	draw_candle(p, 170, 210)
+	draw_candle(p, 220, 199)
+	
+	#p.draw_circle(60, 60, 10)
+	#p.draw_spline(complex(0,0), complex(100, 0), complex(100, 100))*/
+	p.end()
+	
+	while true
+		sleep(5)
+		
+		win.move(rand(300), rand(200))
+	
+	xcon = nil
+	
+	exit(0)

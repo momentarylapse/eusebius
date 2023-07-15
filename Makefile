@@ -41,6 +41,7 @@ BINS = \
  bin/uname \
  bin/vt \
  bin/x \
+ bin/xcake \
  bin/xclient \
  bin/xclient2
  
@@ -50,7 +51,7 @@ XXXBINS = \
  bin/tr \
  bin/less \
  bin/net bin/sound \
- bin/k bin/cake \
+ bin/k \
  bin/xterm \
  bin/xtest \
  bin/xedit \
@@ -193,8 +194,8 @@ bin/k: bin/k.kaba $(PDEP)
 bin/xclient2: bin/xclient2.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/xclient2 bin/xclient2.kaba
 
-bin/cake: bin/cake.kaba $(PDEPX)
-	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
+bin/xcake: bin/xcake.kaba $(PDEPX)
+	$(KABA) $(PFLAGS) -o bin/xcake bin/xcake.kaba
 
 bin/simple: bin/simple.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/simple bin/simple.kaba
