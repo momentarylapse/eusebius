@@ -124,10 +124,10 @@ func lib__@malloc(_size: int) -> void&
 	cur_break_value = r
 	
 	# get the pointer now... we might overwrite the end marker...
-	var last_before_end_old = malloc_end_marker.prev as MallocHeader&
-	last_before_end_old.next = last_before_end_new
-	last_before_end_new.prev = last_before_end_old
-	last_before_end_new.magic = MALLOC_MAGIC
+	for last_before_end_old in malloc_end_marker.prev
+		last_before_end_old.next = last_before_end_new
+		last_before_end_new.prev = last_before_end_old
+		last_before_end_new.magic = MALLOC_MAGIC
 	
 	
 	# add allocated block

@@ -84,7 +84,7 @@ func bga_set_bank(bank: int)
 	for i in 0:1000
 		pass
 
-func set_pixels(x: int, y: int, cc: int*, n: int)
+func set_pixels(x: int, y: int, cc: int&, n: int)
 	if !graphics_enabled
 		return
 	let col = cc as int[0]&

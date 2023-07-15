@@ -311,35 +311,31 @@ class XWindow
 	var transparent: bool
 	var level: int
 	
-#	func __init__(client: Client*, _x: int, _y: int, w: int, h: int, flags: int)
-#		kprint("x: new win\n")
-#		self.client = client
-#		var x = _x
-#		var y = _y
-#		if x < 0
-#			x = rand(screen_width - w)
-#		if y < 0
-#			y = rand(screen_height - h)
-#		r.x0 = x
-#		r.y0 = y
-#		r.x1 = x + w
-#		r.y1 = y + h
-#		level = flags & 0xf
-#		transparent = ((flags & WF_TRANSPARENT) > 0)
-#		id = next_window_id
-#		next_window_id ++
-#		shm_key = next_window_id + 0x0f810000 # randi()
-#		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
-#		if shm_id < 0
-#			print("x: ERROR can't create shared memory for window")
-#			# TODO clean-up
-#		else
-#			for b in shmat(shm_id, 0)
-#				buf := b
-#			windows.add(&self)
-#			sort_windows()
-#			if (flags & WF_DONT_INVALIDATE) == 0
-#				invalidated.add(r)
+	func __init__(client: Client*, w: int, h: int, flags: int)
+		kprint("x: new win\n")
+		self.client = client
+		let x = 0#rand(screen_width - w)
+		let y = 0#rand(screen_height - h)
+		r.x0 = x
+		r.y0 = y
+		r.x1 = x + w
+		r.y1 = y + h
+		level = flags & 0xf
+		transparent = ((flags & WF_TRANSPARENT) > 0)
+		id = next_window_id
+		next_window_id ++
+		shm_key = next_window_id + 0x0f810000 # randi()
+		shm_id = shmget(shm_key, w*h*4, SHM_DEST | IPC_CREAT)
+		if shm_id < 0
+			print("x: ERROR can't create shared memory for window")
+			# TODO clean-up
+		else
+			for b in shmat(shm_id, 0)
+				buf := b
+			windows.add(&self)
+			sort_windows()
+			if (flags & WF_DONT_INVALIDATE) == 0
+				invalidated.add(r)
 		
 	func __delete__()
 		kprint("x: del win\n")
@@ -352,7 +348,7 @@ class XWindow
 				windows.remove(n)
 	
 	func mut move(x: int, y: int)
-		var r0 = r
+		let r0 = r
 		r.x1 += x - r.x0
 		r.y1 += y - r.y0
 		r.x0 = x
@@ -534,12 +530,13 @@ class Client
 		kprint("x: recv\n")
 		if buf[0] == XCMD_KILL
 			kill_me = true
-#		else if buf[0] == XCMD_NEW_WINDOW
-#			var ww = new XWindow(&self, buf[1], buf[2], buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
+		else if buf[0] == XCMD_NEW_WINDOW
+			var ww = new XWindow(&self, buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
+			ww.move(buf[1], buf[2])
 #			send(XCMD_NEW_WINDOW, ww.id, ww.shm_key, ww.r.x0, ww.r.y0, 0)
-#			kprint("x: c.sock={{sock}} w.key={{ww.shm_key}}\n")
-#			activate_window(weak(ww))
-#			win.add(give(ww))
+			kprint("x: c.sock={{sock}} w.key={{ww.shm_key}}\n")
+			activate_window(weak(ww))
+			win.add(give(ww))
 		else if buf[0] == XCMD_WINDOW_INVALIDATE
 			for w in win
 				if w.id == buf[1]

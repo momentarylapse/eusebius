@@ -131,6 +131,7 @@ func ceil_quot(n: int64, m: int64) -> int64
 var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int
 var __temp_i64__: int64
 var __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__: void*
+var __temp_r__: void&
 func _p2i(p: void*) -> int64
 	return &p as int64&
 

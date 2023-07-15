@@ -25,6 +25,7 @@ var __temp_i__, __temp_i2__, __temp_i3__: int
 var __temp_i64__: int64
 var __temp_f__: float
 var __temp_p__, __temp_p2__: void&
+var __temp_pn__: void*
 
 func _p2i(p: void*) -> int64
 	return &p as int64&

@@ -376,9 +376,9 @@ func kprinti(i: int)
 	}
 	
 func kprintp(p: void*)
-	__temp_p__ := p as void&
+	__temp_pn__ = p
 	asm{
-		mov rdi, __temp_p__
+		mov rdi, __temp_pn__
 		mov eax, 0x00002004
 		syscall
 	}

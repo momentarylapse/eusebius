@@ -47,7 +47,7 @@ class Syscall
 	var static stack: void&
 	var static rsp: void& # kernel/handler
 	
-	var static task_frame_rsp: void* # task stack + pushed frame
+	var static task_frame_rsp: void& # task stack + pushed frame
 	
 	func static init()
 		stack := Heap.malloc(STACK_SIZE)
@@ -80,9 +80,9 @@ class Syscall
 		# save task stack pointer
 		asm {
 			mov rax, rsp
-			mov __temp_p__, rax
+			mov __temp_r__, rax
 		}
-		Syscall.task_frame_rsp = __temp_p__
+		Syscall.task_frame_rsp := __temp_r__
 		
 		# switch to kernel/syscall stack
 		__temp_p__ = Syscall.rsp
@@ -190,7 +190,7 @@ class Syscall
 			}
 			
 			
-			Syscall.task_frame_rsp = _i2p(t.frame.rsp - sizeof(Frame))
+			Syscall.task_frame_rsp := _i2p(t.frame.rsp - sizeof(Frame))
 			var next_frame = Syscall.task_frame_rsp as Frame&
 			memcpy(next_frame, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
 		
@@ -215,7 +215,7 @@ class Syscall
 			if t.first_time_running
 				panic("x432")
 			else
-				Syscall.task_frame_rsp = t.syscall_rsp
+				Syscall.task_frame_rsp := t.syscall_rsp
 				var next_frame = Syscall.task_frame_rsp as Frame&
 				memcpy(next_frame, &t.frame.reg8ff, sizeof(int64) * (8 + 7))
 		prints(">> IDLE...")
