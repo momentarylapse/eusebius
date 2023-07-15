@@ -15,7 +15,6 @@ LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
- bin/c \
  bin/cat \
  bin/cpuid \
  bin/date \
@@ -41,16 +40,17 @@ BINS = \
  bin/touch \
  bin/uname \
  bin/vt \
- bin/x
+ bin/x \
+ bin/xclient \
+ bin/xclient2
  
 XXXBINS = \
  bin/hello \
  bin/cmp \
  bin/tr \
  bin/less \
- bin/client \
  bin/net bin/sound \
- bin/k bin/rm bin/rmdir bin/cake bin/c \
+ bin/k bin/cake \
  bin/xterm \
  bin/xtest \
  bin/xedit \
@@ -163,8 +163,8 @@ bin/sleep: bin/sleep.kaba $(PDEP)
 bin/uname: bin/uname.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/uname bin/uname.kaba
 
-bin/client: bin/client.kaba $(PDEPX)
-	$(KABA) $(PFLAGS) -o bin/client bin/client.kaba
+bin/xclient: bin/xclient.kaba $(PDEPX)
+	$(KABA) $(PFLAGS) -o bin/xclient bin/xclient.kaba
 
 bin/lspci: bin/lspci.kaba $(PDEP) bin/lib/pci.kaba
 	$(KABA) $(PFLAGS) -o bin/lspci bin/lspci.kaba
@@ -190,8 +190,8 @@ bin/error: bin/error.kaba $(PDEP)
 bin/k: bin/k.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/k bin/k.kaba
 
-bin/c: bin/c.kaba $(PDEPX)
-	$(KABA) $(PFLAGS) -o bin/c bin/c.kaba
+bin/xclient2: bin/xclient2.kaba $(PDEPX)
+	$(KABA) $(PFLAGS) -o bin/xclient2 bin/xclient2.kaba
 
 bin/cake: bin/cake.kaba $(PDEPX)
 	$(KABA) $(PFLAGS) -o bin/cake bin/cake.kaba
