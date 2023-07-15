@@ -311,11 +311,15 @@ class XWindow
 	var transparent: bool
 	var level: int
 	
-	func __init__(client: Client*, w: int, h: int, flags: int)
+	func __init__(client: Client*, _x: int, _y: int, w: int, h: int, flags: int)
 		kprint("x: new win\n")
 		self.client = client
-		let x = 0#rand(screen_width - w)
-		let y = 0#rand(screen_height - h)
+		var x = _x
+		var y = _y
+		if x < 0
+			x = 0#rand(screen_width - w)
+		if y < 0
+			y = 0#rand(screen_height - h)
 		r.x0 = x
 		r.y0 = y
 		r.x1 = x + w
@@ -355,8 +359,8 @@ class XWindow
 		r.y0 = y
 		invalidated.add(r)
 		invalidated.add(r0)
-#		for c in client
-#			c.send(XCMD_WINDOW_MOVE, id, r.x0, r.y0, 0, 0)
+		for c in client
+			c.send(XCMD_WINDOW_MOVE, id, r.x0, r.y0, 0, 0)
 	
 	#void draw_rect(int x, int y, int w, int h, int c)
 	func mut fill(c: int)
@@ -405,13 +409,13 @@ func find_top_most_window(x: int, y: int) -> XWindow*
 func activate_window(win: XWindow*)
 	if active_window == win
 		return
-#	for a in active_window
-#		for c in a.client
-#			c.send(XCMD_WINDOW_ACTIVATE, -1, 0, 0, 0, 0)
-#	active_window = win
-#	for a in active_window
-#		for c in a.client
-#			c.send(XCMD_WINDOW_ACTIVATE, a.id, 0, 0, 0, 0)
+	for a in active_window
+		for c in a.client
+			c.send(XCMD_WINDOW_ACTIVATE, -1, 0, 0, 0, 0)
+	active_window = win
+	for a in active_window
+		for c in a.client
+			c.send(XCMD_WINDOW_ACTIVATE, a.id, 0, 0, 0, 0)
 
 func draw(rr: XRect)
 	var r = rr
@@ -495,18 +499,18 @@ class Client
 		#	del w
 		close(sock)
 	
-#	func mut send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
-#		kprint(" x:send ")
-#		buf[0] = cmd
-#		buf[1] = p1
-#		buf[2] = p2
-#		buf[3] = p3
-#		buf[4] = p4
-#		buf[5] = p5
-#		var r = write(sock, &buf[0], 4*8)
-#		kprint(str(r))
-#		#return buf[32]
-#		kprint(" x:/send ")
+	func mut send(cmd: int, p1: int, p2: int, p3: int, p4: int, p5: int)
+		kprint(" x:send ")
+		buf[0] = cmd
+		buf[1] = p1
+		buf[2] = p2
+		buf[3] = p3
+		buf[4] = p4
+		buf[5] = p5
+		var r = write(sock, &buf[0], 4*8)
+		kprint(str(r))
+		#return buf[32]
+		kprint(" x:/send ")
 	
 	func mut send_mouse()
 		kprint("x: send mouse\n")
@@ -514,11 +518,11 @@ class Client
 		var id = -1
 		for _w in w
 			id = _w.id
-#		send(XCMD_EVENT_MOUSE, mouse.x, mouse.y, mouse.flags, id, 0)
+		send(XCMD_EVENT_MOUSE, mouse.x, mouse.y, mouse.flags, id, 0)
 	
 	func mut send_key()
 		kprint("x: send key\n")
-#		send(XCMD_EVENT_KEY, keyboard.key, 0, 0, 0, 0)
+		send(XCMD_EVENT_KEY, keyboard.key, 0, 0, 0, 0)
 	
 	func mut poll()
 		let n = read(sock, &buf[0], 4*8)
@@ -531,9 +535,8 @@ class Client
 		if buf[0] == XCMD_KILL
 			kill_me = true
 		else if buf[0] == XCMD_NEW_WINDOW
-			var ww = new XWindow(&self, buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
-			ww.move(buf[1], buf[2])
-#			send(XCMD_NEW_WINDOW, ww.id, ww.shm_key, ww.r.x0, ww.r.y0, 0)
+			var ww = new XWindow(&self, buf[1], buf[2], buf[3], buf[4], 2 | WF_DONT_INVALIDATE)
+			send(XCMD_NEW_WINDOW, ww.id, ww.shm_key, ww.r.x0, ww.r.y0, 0)
 			kprint("x: c.sock={{sock}} w.key={{ww.shm_key}}\n")
 			activate_window(weak(ww))
 			win.add(give(ww))
@@ -548,12 +551,12 @@ class Client
 		else if buf[0] == XCMD_WINDOW_GET_POS
 			for w in win
 				if w.id == buf[1]
-#					send(XCMD_WINDOW_GET_POS, w.id, w.r.x0, w.r.y0, 0, 0)
+					send(XCMD_WINDOW_GET_POS, w.id, w.r.x0, w.r.y0, 0, 0)
 					break
 		else if buf[0] == XCMD_WINDOW_GET_SIZE
 			for w in win
 				if w.id == buf[1]
-#					send(XCMD_WINDOW_GET_SIZE, w.id, w.r.w(), w.r.h(), 0, 0)
+					send(XCMD_WINDOW_GET_SIZE, w.id, w.r.w(), w.r.h(), 0, 0)
 					break
 		else if buf[0] == XCMD_WINDOW_DRAG_START
 			for w in win
@@ -579,18 +582,18 @@ class Client
 				if w.id == buf[1]
 					win.remove(i)
 					break
-#		else if buf[0] == XCMD_POINTER_GET_WINDOW
-#			for w in find_top_most_window(mouse.x, mouse.y)
-#				send(XCMD_POINTER_GET_WINDOW, w.id, 0, 0, 0, 0)
-#			else
-#				send(XCMD_POINTER_GET_WINDOW, -1, 0, 0, 0, 0)
-#		else if buf[0] == XCMD_EXECUTE
-#			var cmd: string[]
-#			for i in 0:buf[1]
-#				cmd.add(read_string())
-#			#print("EXE  " + cmd[0] + "  ---")
-#			let r = pm.run(cmd)
-#			send(XCMD_EXECUTE, r, 0, 0, 0, 0)
+		else if buf[0] == XCMD_POINTER_GET_WINDOW
+			for w in find_top_most_window(mouse.x, mouse.y)
+				send(XCMD_POINTER_GET_WINDOW, w.id, 0, 0, 0, 0)
+			else
+				send(XCMD_POINTER_GET_WINDOW, -1, 0, 0, 0, 0)
+		else if buf[0] == XCMD_EXECUTE
+			var cmd: string[]
+			for i in 0:buf[1]
+				cmd.add(read_string())
+			#print("EXE  " + cmd[0] + "  ---")
+			let r = pm.run(cmd)
+			send(XCMD_EXECUTE, r, 0, 0, 0, 0)
 	
 	func read_string() -> string
 		var num: int
@@ -679,9 +682,9 @@ func main()
 		bga_set_video_mode(1024, 768, 32)
 		mouse.set(screen_width / 2, screen_height / 2)
 	
-#	desktop = new XWindow(nil, 0, 0, screen_width, screen_height, 1)
+	desktop = new XWindow(nil, 0, 0, screen_width, screen_height, 1)
 #	if vga_mem2
-#	desktop.fill(0xff242040)
+	desktop.fill(0xff242040)
 #	else
 #		desktop.fill(0xff000000)
 	
