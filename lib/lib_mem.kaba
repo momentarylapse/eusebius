@@ -69,7 +69,7 @@ func _init_memory()
 func lib__@malloc(_size: int) -> void&
 	if _size <= MALLOC_SMALL_SIZE
 		for ppp in small_malloc()
-			return ppp
+			return &ppp
 
 	var size = _align8_(_size)
 	if lib_mem_debug
@@ -105,7 +105,7 @@ func lib__@malloc(_size: int) -> void&
 #				kprinti(_p2i(hh.payload()))
 			return hh.payload()
 		for n in cur.next
-			cur := n
+			cur := &n
 
 	
 	var last_before_end_new = _i2p(cur_break_value - sizeof(MallocHeader) - MALLOC_STOPPER) as MallocHeader&
@@ -126,7 +126,7 @@ func lib__@malloc(_size: int) -> void&
 	# get the pointer now... we might overwrite the end marker...
 	for last_before_end_old in malloc_end_marker.prev
 		last_before_end_old.next = last_before_end_new
-		last_before_end_new.prev = last_before_end_old
+		last_before_end_new.prev = &last_before_end_old
 		last_before_end_new.magic = MALLOC_MAGIC
 	
 	
@@ -165,16 +165,16 @@ func _cleanup(out h: MallocHeader&)
 				kprint(" merge before ")
 			prev.size += h.size
 			for next in h.next
-				next.prev = prev
+				next.prev = &prev
 			prev.next = h.next
 
 func lib__@free(_p: void*)
 	for p in _p
-		let index = small_malloc_no(p)
+		let index = small_malloc_no(&p)
 		if index >= 0
 			small_free(index)
 			return
-		let ip = _p2i(p)
+		let ip = _p2i(_p)
 		if lib_mem_debug
 			kprint(" free ")
 			kprinti(ip)
@@ -222,7 +222,7 @@ func lib__@free(_p: void*)
 					kprint(">")
 				return
 			for n in cur.next
-				cur := n
+				cur := &n
 		__lib_fatal__( "invalid call to free()")
 
 
@@ -231,11 +231,11 @@ func memcheck()
 	var h = malloc_first_free
 	while h.next
 		for n in h.next
-			if _p2i(n) < _p2i(h) + h.size
+			if _p2i(&n) < _p2i(&h) + h.size
 				__lib_fatal__("memcheck: h.next<h+size")
 			if h != n.prev
 				__lib_fatal__("memcheck: h!=h.next.prev")
-			h := n
+			h := &n
 
 #void* realloc(void* po, int old_size, int new_size)
 #	void *pn = malloc(new_size)

@@ -32,7 +32,7 @@ class lib__Image
 	func static _create_dummy() -> xfer[lib__Image]
 		for im in lib__@malloc(sizeof(lib__Image)) as lib__Image*
 			im.__init__(0, 0, color(0,0,0,0))
-			return im as xfer[lib__Image]
+			return &im as xfer[lib__Image]
 
 	# TODO this should return xfer?[]
 	func static load(filename: lib__Path) -> xfer[lib__Image]
@@ -77,7 +77,7 @@ class lib__Image
 #							im.data.data[x + y * width] = 0xffff0000
 				
 				close(h)
-				return im as xfer[lib__Image]
+				return &im as xfer[lib__Image]
 		close(h)
 		return _create_dummy()
 

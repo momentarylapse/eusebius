@@ -292,7 +292,7 @@ func do_fg(c: string[])
 		id = int(c[1])
 	for j in job_manager.get(id)
 		kill(j.pid, 18)
-		job_manager.fg = j
+		job_manager.fg = &j
 		print(j.cmd + "\n")
 	else
 		print("no job\n")

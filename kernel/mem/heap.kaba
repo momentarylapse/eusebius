@@ -47,6 +47,9 @@ class Heap as @noauto
 		var cur = first_free #as MallocHeader&
 		while true
 			for n in cur.next
+#				printi(size)
+#				prints(" ")
+#				printi(cur.size)
 				if size <= cur.size - sizeof(MallocHeader)
 			
 					# shrink free block
@@ -67,6 +70,8 @@ class Heap as @noauto
 					memcheck()
 					return hh.payload()
 				cur := &n
+#				printp(cur)
+#				panic("x")
 			else
 				break
 		printi(_size)
@@ -89,7 +94,7 @@ class Heap as @noauto
 				#prints(" merge before ")
 				p.size += h.size
 				for n in h.next
-					n.prev = &p
+					n.prev = h.prev#&p
 				p.next = h.next
 
 	func static free(_p: void*)
@@ -148,11 +153,11 @@ class Heap as @noauto
 			if h.magic != MEM_HEAP_MAGIC
 				panic("memcheck: h.magic")
 			for next in h.next
-				if _p2i(h.next) < _p2i(h) + h.size
+				if _p2i(&next) < _p2i(h) + h.size
 					prints(" h=")
 					printp(h)
 					prints(" h.next=")
-					printp(h.next)
+					printp(&next)
 					panic("memcheck: h.next<h+size")
 				if h != next.prev
 					panic("memcheck: h!=h.next.prev")

@@ -64,7 +64,7 @@ class XWindow
 		c._create_win(&self, x, y, w, h)
 	func virtual __delete__()
 		for b in buf
-			shmdt(b)
+			shmdt(&b)
 		for i=>w in con.windows
 			if w == &self
 				con.windows.remove(i)

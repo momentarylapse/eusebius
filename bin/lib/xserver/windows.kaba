@@ -56,7 +56,7 @@ class XWindow
 			# TODO clean-up
 		else
 			for b in shmat(shm_id, 0)
-				buf := b
+				buf := &b
 			windows.add(&self)
 			sort_windows()
 			if (flags & WF_DONT_INVALIDATE) == 0
@@ -64,9 +64,9 @@ class XWindow
 		
 	func __delete__()
 		kprint("x: del win\n")
-		for b in buf
-			invalidated.add(r)
-			shmdt(b)
+		#for b in buf
+		invalidated.add(r)
+		shmdt(buf)
 		for n=>ww in windows
 			if ww == &self
 				windows_r.remove(len(windows) - n - 1)

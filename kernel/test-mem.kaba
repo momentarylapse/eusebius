@@ -12,7 +12,7 @@ func _rand(max: int) -> int
 	rand_state = (rand_state * 3546323434 + 6322682374) % 53468623
 	return int(rand_state) % max
 
-let NUM_BINS = 100
+let NUM_BINS = 1
 
 func main()
 
@@ -40,7 +40,7 @@ func main()
 			p[i] = nil
 		else
 			prints("+ ")
-			p[i] = Heap.malloc(4 + _rand(1000))
+			p[i] = Heap.malloc(4 + _rand(100) * (1 + _rand(40)))
 		printi(Heap.allocated)
 		
 	

@@ -134,7 +134,7 @@ class PCIController
 
 	func mut check_device(bus: int, slot: int, function: int) -> PCIDevice*
 		for p in getx(bus, slot, function)
-			return p
+			return &p
 	
 		let a = read_config(bus, slot, function, PCI_VENDOR_ID)
 	

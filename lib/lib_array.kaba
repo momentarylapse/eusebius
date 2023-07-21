@@ -71,7 +71,7 @@ class lib__@DynamicArray
 		else if size * element_size > allocated
 			allocated = size * element_size * 2
 			for d in data
-				data = lib__@realloc(d, allocated)
+				data = lib__@realloc(&d, allocated)
 		else if size == 0
 			__mem_clear__()
 
@@ -122,13 +122,13 @@ class lib__string extends lib__@DynamicArray
 		__mem_resize__(o.num)
 		for d in data
 			for od in o.data
-				memcpy(d, od, num)
+				memcpy(&d, &od, num)
 	func mut __iadd__(o: lib__string)
 		let n0 = num
 		__mem_resize__(num + o.num)
 		for d in data
 			for od in o.data
-				memcpy(&d[n0], od, o.num)
+				memcpy(&d[n0], &od, o.num)
 	func __add__(o: lib__string) -> lib__string
 		var r: lib__string
 		r = self
@@ -154,7 +154,7 @@ class lib__string extends lib__@DynamicArray
 			r.resize(length)
 			for d in data
 				for rd in r.data
-					memcpy(rd, &d[start], length)
+					memcpy(&rd, &d[start], length)
 		return r
 
 	func head(size: int) -> lib__string
@@ -274,7 +274,7 @@ class lib__string extends lib__@DynamicArray
 					while j >= start + length
 						dd[j] = dd[j - d]
 						j --
-				memcpy(&dd[start], sd, s.num)
+				memcpy(&dd[start], &sd, s.num)
 				if d < 0
 					for i in start + s.num : num + d
 						dd[i] = dd[i - d]

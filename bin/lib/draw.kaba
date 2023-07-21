@@ -55,7 +55,7 @@ class XPainter
 		win := _win
 		error = true
 		for b in win.buf
-			buf := b
+			buf := &b
 		width = win.w
 		height = win.h
 		#win.get_size(&width, &height)
