@@ -5,7 +5,8 @@ func main()
 	
 	print("dying...")
 	var p: int* = nil
-	*p = 13
+	trust_me
+		*p = 13
 	print("should be dead already???...")
 	
 	exit(0)
