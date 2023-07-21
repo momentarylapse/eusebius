@@ -120,6 +120,9 @@ func printh(_data: void&, size: int)
 		ttt[3] = 0
 		prints(ttt)
 
+func printp(p: void*)
+	printh(&p, 8)
+
 #void WasteTime()
 #	int x
 #	for x, 0, 100000

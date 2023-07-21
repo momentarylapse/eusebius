@@ -38,7 +38,7 @@ class Heap as @noauto
 		var size = ceil_quot(_size, 8) << 3
 #		prints("<+")
 #		printi(size)
-#		memcheck()
+		memcheck()
 		
 		# account for the allocation header
 		size += sizeof(MallocHeader)
@@ -64,9 +64,9 @@ class Heap as @noauto
 #					let xx = hh.payload()
 #					printh(&xx, 4)
 #					prints("> ")
-#					memcheck()
+					memcheck()
 					return hh.payload()
-				cur := n
+				cur := &n
 			else
 				break
 		printi(_size)
@@ -89,7 +89,7 @@ class Heap as @noauto
 				#prints(" merge before ")
 				p.size += h.size
 				for n in h.next
-					n.prev = p
+					n.prev = &p
 				p.next = h.next
 
 	func static free(_p: void*)
@@ -107,7 +107,7 @@ class Heap as @noauto
 		#	prints(" ")
 		#	printi(hh.size)
 			
-#			memcheck()
+			memcheck()
 		
 			# find last free window before p
 			var cur = first_free
@@ -119,7 +119,7 @@ class Heap as @noauto
 						prints("  ")
 						printi(cur.size)
 						panic("double free")
-					if ip < _p2i(next)
+					if ip < _p2i(cur.next)
 						# turn allocated block into a free one
 				
 						#printi(hh.size)
@@ -132,10 +132,10 @@ class Heap as @noauto
 						cur.next = hh
 				
 						try_to_merge_consecutive_free_blocks(hh)
-#						memcheck()
+						memcheck()
 		#				prints(">")
 						return
-					cur := next
+					cur := &next
 				else
 					break
 			panic("free: fail")
@@ -148,15 +148,15 @@ class Heap as @noauto
 			if h.magic != MEM_HEAP_MAGIC
 				panic("memcheck: h.magic")
 			for next in h.next
-				if _p2i(next) < _p2i(h) + h.size
+				if _p2i(h.next) < _p2i(h) + h.size
 					prints(" h=")
-					printh(&h, 4)
+					printp(h)
 					prints(" h.next=")
-					printh(&h.next, 4)
+					printp(h.next)
 					panic("memcheck: h.next<h+size")
 				if h != next.prev
 					panic("memcheck: h!=h.next.prev")
-				h := next
+				h := &next
 			else
 				break
 
@@ -182,3 +182,5 @@ class Heap as @noauto
 		end_marker.next = nil
 		end_marker.prev = first_free
 		first_free.next = end_marker
+		memcheck()
+		

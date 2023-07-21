@@ -50,10 +50,10 @@ class FileEntry as @noauto
 	func mut add_child(out e: FileEntry)
 		e.parent = &self
 		for f in first_sub
-			var i = f
+			var i = &f
 			while i.next
 				for n in i.next
-					i := n
+					i := &n
 			i.next = &e
 		else
 			first_sub = &e
@@ -85,7 +85,7 @@ class FileEntry as @noauto
 	func mut add_block(b: int)
 		if (num_blocks & 0x0f) == 0
 			for _b in blocks
-				blocks = Heap.realloc(_b, num_blocks * 4, (num_blocks + 16) * 4)
+				blocks = Heap.realloc(&_b, num_blocks * 4, (num_blocks + 16) * 4)
 			else
 				blocks = Heap.malloc(16 * 4) as int[0]*
 		for _b in blocks
@@ -336,7 +336,7 @@ class FileSystem as @noauto
 					break
 				name[i] = sub[i]
 			for x in e.get_sub(name)
-				e := x
+				e := &x
 			else
 				return nil
 		return e
@@ -358,10 +358,10 @@ class FileSystem as @noauto
 
 			# hahaha, we are evil :D
 			if strcmp(fs_name, "michifs") == 0
-				var mp_michi = mp as MountPointMichiFS&
+				var mp_michi = &mp as MountPointMichiFS&
 				mp_michi.__init__()
 			else if strcmp(fs_name, "ext2") == 0
-				var mp_ext2 = mp as MountPointExt2&
+				var mp_ext2 = &mp as MountPointExt2&
 				mp_ext2.__init__()
 			# better to register a list of (stateless) fs drivers?
 			
@@ -370,7 +370,7 @@ class FileSystem as @noauto
 			mp.dirty = false
 			strcpy(mp.type, fs_name)
 			mp.mount()
-			dir.mount := mp
+			dir.mount := &mp
 			prints(" ok\n")
 			return 0
 		else

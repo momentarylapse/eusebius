@@ -170,16 +170,17 @@ class OpenFileData as @noauto
 			return -3
 	
 		for e in entry.first_sub
+			var ee = &e
 			for i in 0:offset
 				for n in e.next
-					e := n
+					ee := &n
 				else
 					return 0
 			var _r: dirent_struct
-			_r.struct_size = strlen(e.name) + 13
-			_r.size = e.size
-			_r.type = e.type
-			strcpy(_r.name, e.name)
+			_r.struct_size = strlen(ee.name) + 13
+			_r.size = ee.size
+			_r.type = ee.type
+			strcpy(_r.name, ee.name)
 			memcpy(r, &_r, sizeof(_r))
 			offset ++
 			return 1
@@ -271,7 +272,7 @@ func create_handle(flags: int) -> OpenFileData*
 			o.ref_count = 0
 			o.buffer_dirty = false
 			o.inode_dirty = false
-			return o
+			return &o
 	return nil
 
 
@@ -320,7 +321,7 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 		else if of.entry.type == FileType.CHAR
 			for op in of.entry.op
 				op.open(of.entry)
-		return of
+		return &of
 	else
 		return nil
 
@@ -331,11 +332,11 @@ func kernel_open(filename: cstring, flags: int, out cur_dir: FileEntry) -> OpenF
 	else
 		if creating
 			#prints("kernel Warnung: neue Datei...\n")
-			e := cur_dir.create_child(filename, FileType.FILE, cur_dir.mount)
-			e.add_block(cur_dir.mount.alloc_block())
-			e.mp_inode = cur_dir.mount.alloc_inode()
+			var ee = cur_dir.create_child(filename, FileType.FILE, cur_dir.mount)
+			ee.add_block(cur_dir.mount.alloc_block())
+			ee.mp_inode = cur_dir.mount.alloc_inode()
 			cur_dir.mount.write_inode(cur_dir)
-			return kernel_open_entry(e, flags)
+			return kernel_open_entry(ee, flags)
 		else
 			return nil
 
@@ -365,7 +366,7 @@ func kernel_unlink(filename: cstring, cur_dir: FileEntry) -> int
 	for e in FileSystem.get(filename, cur_dir)
 		if e.type == FileType.DIR
 			return -EISDIR
-		return FileSystem.delete(e)
+		return FileSystem.delete(&e)
 	else
 		return -ENOENT
 	
@@ -376,7 +377,7 @@ func kernel_rmdir(filename: cstring, cur_dir: FileEntry) -> int
 			return -ENOTDIR
 		if e.first_sub
 			return -ENOTEMPTY
-		return FileSystem.delete(e)
+		return FileSystem.delete(&e)
 	else
 		return -ENOENT
 

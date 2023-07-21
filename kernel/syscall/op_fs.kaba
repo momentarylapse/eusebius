@@ -19,7 +19,7 @@ use io.text
 func sys_open(out t: Task, addr: int64, flags: int) -> int
 	var filename = _i2p(addr) as cstring&
 	for of in kernel_open(filename, flags, t.cur_dir)
-		let index = t.add_handle(of)
+		let index = t.add_handle(&of)
 		if index < 0
 			of.unref()
 		return index
@@ -67,7 +67,7 @@ func sys_close(out t: Task, handle: int) -> int
 
 func sys_dup(out t: Task, fd: int) -> int
 	for of in t.get_handle(fd)
-		return t.add_handle(of)
+		return t.add_handle(&of)
 	return -EBADF
 	
 func sys_pipe(out t: Task, addr: int64) -> int
@@ -77,8 +77,8 @@ func sys_pipe(out t: Task, addr: int64) -> int
 	for of_in in kernel_open_entry(e, O_RDONLY)
 		for of_out in kernel_open_entry(e, O_WRONLY)
 			var fd = _i2p(addr) as int[2]&
-			fd[0] = t.add_handle(of_in)
-			fd[1] = t.add_handle(of_out)
+			fd[0] = t.add_handle(&of_in)
+			fd[1] = t.add_handle(&of_out)
 			if fd[0] < 0 or fd[1] < 0
 				return -2
 #	if !page_dir.memcpy2task(addr, &fd, 8)
@@ -156,7 +156,7 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 		if !SocketManager.create(e, p1)
 			return -3
 		for of in kernel_open_entry(e, O_RDWR)
-			return t.add_handle(of)
+			return t.add_handle(&of)
 	else if cmd == SYS_BIND
 		for of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
@@ -199,7 +199,7 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 				# port
 				for ss in SocketManager.get_by_port(e)
 					for _of in kernel_open_entry(ss.e, O_RDWR)
-						return t.add_handle(_of)
+						return t.add_handle(&_of)
 				return -1
 		return -EBADF
 	return -EINVAL

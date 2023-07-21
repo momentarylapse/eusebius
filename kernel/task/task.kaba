@@ -180,7 +180,7 @@ class Task
 		for e in get_file(dir)
 			if e.type != FileType.DIR
 				return -2
-			cur_dir := e
+			cur_dir := &e
 			return 0
 		return -1
 		

@@ -71,7 +71,7 @@ func sys_ipc(out t: Task, cmd: int, p1: int64, p2: int64, p3: int) -> int64
 func sys_blockinfo(major: int, minor: int, addr: int64) -> int64
 	var bd = _i2p(addr) as BlockDevice&
 	for d in BlockDevManager.get(major, minor)
-		memcpy(bd as void&, d as void&, sizeof(BlockDevice))
+		memcpy(bd, &d, sizeof(BlockDevice))
 		return 0
 	return -1
 

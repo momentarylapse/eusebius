@@ -87,7 +87,7 @@ class KSocket as @noauto
 				var e = create_file_entry(":sock:", FileType.SOCKET, &FileSystem.dummy_mount)
 				for s in SocketManager.create(e, type)
 					s.assign_available_port()
-					s.link(rs)
+					s.link(&rs)
 					self.set_state(SocketState.LISTENING)
 					rs.set_state(SocketState.NONE)
 					return s.port

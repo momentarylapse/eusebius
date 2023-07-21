@@ -147,7 +147,7 @@ class PageRootTable extends PageTable
 									Paging.free_physical_page(pt.e[i] & 0xfffffffffffff000)
 								pt.e[i] = 0
 						if pt.count_entries() == 0
-							Paging.free_physical_page(_p2i(pt))
+							Paging.free_physical_page(_p2i(&pt))
 							pdt.e[dir_no] = 0
 					npages -= i1-i0
 					dir_no ++

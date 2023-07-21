@@ -35,12 +35,14 @@ func main()
 		printi(i)
 		prints("   ")
 		for q in p[i]
-			Heap.free(q)
+			prints("- ")
+			Heap.free(p[i])
 			p[i] = nil
 		else
+			prints("+ ")
 			p[i] = Heap.malloc(4 + _rand(1000))
-		prints("    ")
 		printi(Heap.allocated)
+		
 	
 	prints("\nOK\n")
 	

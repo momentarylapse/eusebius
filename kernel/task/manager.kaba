@@ -337,18 +337,18 @@ class TaskManager as @noauto
 						break
 					code += r
 				of.clean_up()
-				return t
+				return &t
 		return nil
 		
 	func static execute_user_task(filename: cstring, parent: Task*, fin: OpenFileData*, fout: OpenFileData*) -> Task*
 		for t in load_user_task(filename, parent)
 			memcpy(&t.arg, &filename, sizeof(cstring))
 			for of in fin
-				t.add_handle(of)
+				t.add_handle(&of)
 			for of in fout
-				t.add_handle(of)
+				t.add_handle(&of)
 			t.status = TaskStatus.RUNNING
-			return t
+			return &t
 		return nil
 
 	func static load_user_task_checked(filename: cstring, parent: Task*, fin: OpenFileData*, fout: OpenFileData*) -> Task*
@@ -357,7 +357,7 @@ class TaskManager as @noauto
 		prints("... ")
 		for t in execute_user_task(filename, parent, fin, fout)
 			prints("ok\n")
-			return t
+			return &t
 		panic("can not open file")
 		return nil
 
@@ -406,7 +406,7 @@ class TaskManager as @noauto
 						t.frame.rax = -2  # return -2
 						for ss in SocketManager.get_by_port(e)
 							for of in kernel_open_entry(ss.e, O_RDWR)
-								t.frame.rax = t.add_handle(of) # return 0
+								t.frame.rax = t.add_handle(&of) # return 0
 					t.activate()
 			else
 				t.frame.rax = -EINVAL # return ...
