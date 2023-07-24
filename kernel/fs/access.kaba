@@ -172,7 +172,7 @@ class OpenFileData as @noauto
 		for e in entry.first_sub
 			var ee = &e
 			for i in 0:offset
-				for n in e.next
+				for n in ee.next
 					ee := &n
 				else
 					return 0
