@@ -680,7 +680,7 @@ func lib__@fa2s(a: lib__float@list) -> lib__string
 	return r
 
 # FIXME OMG \(O_O)/
-func lib__@sorted(_a: void*, t: kaba.Class*, x: string) -> lib__int@list # lib__@DynamicArray
+func lib__@sorted(_a: void*, t: kaba.Class&, x: string) -> lib__int@list # lib__@DynamicArray
 	if t == int or true
 		var pa = _a as lib__int@list*
 		for a in pa
