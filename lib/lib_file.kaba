@@ -3,7 +3,7 @@ use lib_syscalls
 use lib_array
 
 
-func open(filename: lib__Path, flags: int) -> int
+func open(filename: lib__os@@Path, flags: int) -> int
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -17,7 +17,7 @@ func open(filename: lib__Path, flags: int) -> int
 	}
 	return __temp_i__
 
-func create(filename: lib__Path) -> int
+func create(filename: lib__os@@Path) -> int
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -41,7 +41,7 @@ func create(filename: lib__Path) -> int
 #		stdout = open(*p, O_RDONLY)
 #	return __temp_i__
 
-func mkdir(filename: lib__Path) -> bool
+func mkdir(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -53,7 +53,7 @@ func mkdir(filename: lib__Path) -> bool
 	}
 	return lib_error == 0
 
-func rmdir(filename: lib__Path) -> bool
+func rmdir(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -66,7 +66,7 @@ func rmdir(filename: lib__Path) -> bool
 	return lib_error == 0
 
 
-func mkfifo(filename: lib__Path) -> bool
+func mkfifo(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -78,7 +78,7 @@ func mkfifo(filename: lib__Path) -> bool
 	}
 	return lib_error == 0
 
-func unlink(filename: lib__Path) -> bool
+func unlink(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -90,7 +90,7 @@ func unlink(filename: lib__Path) -> bool
 	}
 	return lib_error == 0
 
-func chdir(dir: lib__Path) -> bool
+func chdir(dir: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(dir.s, tt)
 	__temp_p__ := &tt
@@ -102,10 +102,10 @@ func chdir(dir: lib__Path) -> bool
 	}
 	return lib_error == 0
 
-func lib__fs@@set_current_directory(dir: lib__Path)
+func lib__os@@fs@@set_current_directory(dir: lib__os@@Path)
 	chdir(dir)
 
-func lib__fs@@current_directory() -> lib__string
+func lib__os@@fs@@current_directory() -> lib__base@@string
 	var tt: cstring
 	__temp_p__ := &tt
 	asm{
@@ -115,7 +115,7 @@ func lib__fs@@current_directory() -> lib__string
 		syscall
 		mov lib_error, eax
 	}
-	var r: lib__string
+	var r: Ret
 	if lib_error == 0
 		_cs2s(tt, r)
 	return r
@@ -127,10 +127,8 @@ class StatData
 	var inode: int
 	var mp_inode: int
 	var time: int
-	func __assign__(o: StatData)
-		pass
 
-func stat(filename: lib__Path, buf: StatData) -> bool
+func stat(filename: lib__os@@Path, buf: StatData) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -145,13 +143,13 @@ func stat(filename: lib__Path, buf: StatData) -> bool
 	return __temp_i__ == 0
 
 
-class lib__Path
-	var s: lib__string
+class lib__os@@Path
+	var s: lib__base@@string
 	func __init__()
-	func __init__(p: lib__string)
+	func __init__(p: lib__base@@string)
 		s = p
 	func __delete__()
-	func __str__() -> lib__string
+	func __str__() -> lib__base@@string
 		return s
 	func is_empty() -> bool
 		return len(s) == 0
@@ -169,32 +167,32 @@ class lib__Path
 		for d in s.data
 			return d[len(s)-1] == '/'
 		return false
-	func const __bitor__(p: lib__Path) -> lib__string
+	func const __bitor__(p: Self) -> lib__base@@string
 		if is_empty()
 			return p.s
 		if has_dir_ending()
 			return s + p.s
-		var r: lib__string = s
+		var r: Ret = s
 		r.add('/')
 		return r + p.s
-	func static @from_str(p: lib__string) -> lib__Path
-		return lib__Path(p)
-	func __assign__(p: lib__Path)
+	func static @from_str(p: lib__base@@string) -> Self
+		return Self(p)
+	func __assign__(p: Self)
 		s = p.s
 
 
 #class lib__Path@list extends lib__string@list
 # not working because this does not export new functions...
 
-class lib__Path@list
-	var l: lib__string@list
-	func mut add(p: lib__Path)
+class lib__os@@Path@list
+	var l: lib__base@@string@list
+	func mut add(p: lib__os@@Path)
 		l.add(p.s)
-	func __add__(o: lib__Path@list) -> lib__string@list
+	func __add__(o: Self) -> lib__base@@string@list
 		return l + o.l
-	func mut __iadd__(o: lib__Path@list)
+	func mut __iadd__(o: Self)
 		l + o.l
-	func mut __assign__(o: lib__Path@list)
+	func mut __assign__(o: Self)
 		l = o.l
 		
 
@@ -211,15 +209,15 @@ class dirent_struct
 
 
 
-func lib__fs@@search(dirname: lib__Path, filter: string, options: string) -> lib__string@list
-	var list_dirs, list_files: lib__string@list
+func lib__os@@fs@@search(dirname: lib__os@@Path, filter: string, options: string) -> lib__base@@string@list
+	var list_dirs, list_files: lib__base@@string@list
 	var h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
 		return list_files
 	var d: dirent_struct
 	while getdents(h, &d)
-		var s: lib__string
+		var s: lib__base@@string
 		_cs2s(d.name, s)
 		if d.type == 1
 			list_dirs.add(s)
@@ -363,23 +361,23 @@ func lib__fs@@search(dirname: lib__Path, filter: string, options: string) -> lib
 #	return content
 
 
-func lib__fs@@exists(filename: lib__Path) -> bool
+func lib__os@@fs@@exists(filename: lib__os@@Path) -> bool
 	var d: StatData
 	return stat(filename, &d)
 
-func lib__fs@@is_directory(filename: lib__Path) -> bool
+func lib__os@@fs@@is_directory(filename: lib__os@@Path) -> bool
 	var d: StatData
 	if stat(filename, &d)
 		return d.type == 1
 	return false
 
-func lib__fs@@size(filename: lib__Path) -> int64
+func lib__os@@fs@@size(filename: lib__os@@Path) -> int64
 	var d: StatData
 	if stat(filename, d)
 		return d.size
 	return -1
 
-func os_fs_size32(filename: lib__Path) -> int
+func os_fs_size32(filename: lib__os@@Path) -> int
 	var d: StatData
 	if stat(filename, &d)
 		return d.size

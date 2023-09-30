@@ -5,21 +5,21 @@ use kaba
 
 
 
-func _s2cs(s: lib__string, out cs: cstring)
+func _s2cs(s: lib__base@@string, out cs: cstring)
 	for d in s.data
 		for i in 0:s.num
 			cs[i] = d[i]
 	cs[s.num] = 0
 
-func _cs2s(cs: cstring, out s: lib__string)
+func _cs2s(cs: cstring, out s: lib__base@@string)
 	s.clear()
 	for i in 0:255
 		if cs[i] == 0
 			return
 		s.add(cs[i])
 
-func cs2s(cs: cstring) -> lib__string
-	var s: lib__string
+func cs2s(cs: cstring) -> lib__base@@string
+	var s: lib__base@@string
 	_cs2s(cs, s)
 	return s
 
@@ -41,7 +41,7 @@ func sa2cs(a: string[], out cs: cstring)
 #--------------------------------------------------------------------------
 # arrays
 
-class lib__@DynamicArray
+class lib__base@@@DynamicArray
 	var data: cstring*
 	var num: int
 	var allocated: int
@@ -97,7 +97,7 @@ class lib__@DynamicArray
 #				memcpy(d, ad, num * element_size)
 #		num = 0
 
-class lib__string extends lib__@DynamicArray
+class lib__base@@string extends lib__base@@@DynamicArray
 	var override data: char[0]*
 	func __init__()
 		__mem_init__(1)
@@ -118,25 +118,25 @@ class lib__string extends lib__@DynamicArray
 #		data[index] = c
 	func mut remove(index: int)
 		__mem_remove__(index)
-	func mut __assign__(o: lib__string)
+	func mut __assign__(o: Self)
 		__mem_resize__(o.num)
 		for d in data
 			for od in o.data
 				memcpy(&d, &od, num)
-	func mut __iadd__(o: lib__string)
+	func mut __iadd__(o: Self)
 		let n0 = num
 		__mem_resize__(num + o.num)
 		for d in data
 			for od in o.data
 				memcpy(&d[n0], &od, o.num)
-	func __add__(o: lib__string) -> lib__string
-		var r: lib__string
+	func __add__(o: Self) -> Self
+		var r: Ret
 		r = self
 		r += o
 		return r
 			
-	func substr(_start: int, _length: int) -> lib__string
-		var r: lib__string
+	func substr(_start: int, _length: int) -> Self
+		var r: Ret
 		var start = _start
 		var length = _length
 		if start >= num
@@ -157,13 +157,13 @@ class lib__string extends lib__@DynamicArray
 					memcpy(&rd, &d[start], length)
 		return r
 
-	func head(size: int) -> lib__string
+	func head(size: int) -> Self
 		return substr(0, size)
 
-	func tail(size: int) -> lib__string
+	func tail(size: int) -> Self
 		return substr(num - size, size)
 
-	func find(s: lib__string, start: int) -> int
+	func find(s: Self, start: int) -> int
 		for d in data
 			for sd in s.data
 				for i in start : num - s.num
@@ -176,7 +176,7 @@ class lib__string extends lib__@DynamicArray
 						return i
 		return -1
 		
-	func compare(s: lib__string) -> int
+	func compare(s: Self) -> int
 		var n = num
 		if s.num < num
 			n = s.num
@@ -189,15 +189,15 @@ class lib__string extends lib__@DynamicArray
 						return a - b
 		return num - s.num
 		
-	func __eq__(s: lib__string) -> bool
+	func __eq__(s: Self) -> bool
 		return compare(s) == 0
-	func __neq__(s: lib__string) -> bool
+	func __neq__(s: Self) -> bool
 		return compare(s) != 0
-	func __ne__(s: lib__string) -> bool
+	func __ne__(s: Self) -> bool
 		return compare(s) != 0
-	func __lt__(s: lib__string) -> bool
+	func __lt__(s: Self) -> bool
 		return compare(s) < 0
-	func __gt__(s: lib__string) -> bool
+	func __gt__(s: Self) -> bool
 		return compare(s) > 0
 
 #int string::rfind(const string &s, int start) const
@@ -252,8 +252,8 @@ class lib__string extends lib__@DynamicArray
 #	return num - s.num;
 #}
 
-	func reverse() -> lib__string
-		var r: lib__string
+	func reverse() -> Self
+		var r: Ret
 		r.resize(num)
 		for d in data
 			for rd in r.data
@@ -261,7 +261,7 @@ class lib__string extends lib__@DynamicArray
 					rd[num - i - 1] = d[i]
 		return r
 
-	func mut replace0(start: int, length: int, s: lib__string)
+	func mut replace0(start: int, length: int, s: Self)
 		if start + length > num
 			return
 		for dd in data
@@ -280,24 +280,24 @@ class lib__string extends lib__@DynamicArray
 						dd[i] = dd[i - d]
 					resize(num + d)
 
-	func replace(sub: lib__string, by: lib__string) -> lib__string
-		var r: lib__string = self
+	func replace(sub: Self, by: Self) -> Self
+		var r: Ret = self
 		var i = r.find(sub, 0)
 		while i >= 0
 			r.replace0(i, sub.num, by)
 			i = r.find(sub, i + by.num)
 		return r
 
-	func lower() -> lib__string
-		var r: lib__string = self
+	func lower() -> Self
+		var r: Ret = self
 		for d in r.data
 			for i in 0:num
 				if (d[i] >= 'A') and (d[i] <= 'Z')
 					d[i] += 'a' - 'A'
 		return r
 
-	func upper() -> lib__string
-		var r: lib__string = self
+	func upper() -> Self
+		var r: Ret = self
 		for d in r.data
 			for i in 0:num
 				if (d[i] >= 'a') and (d[i] <= 'z')
@@ -305,8 +305,8 @@ class lib__string extends lib__@DynamicArray
 		return r
 		
 
-	func explode(s: lib__string) -> lib__string@list
-		var r: lib__string@list
+	func explode(s: Self) -> lib__base@@string@list
+		var r: Ret
 
 		var pos = 0
 		while true
@@ -321,8 +321,8 @@ class lib__string extends lib__@DynamicArray
 			r.add(substr(pos, num - pos))
 		return r
 		
-	func hex() -> lib__string
-		var ttt: lib__string
+	func hex() -> Self
+		var ttt: Ret
 		for _data in data
 			for i in 0:num
 				let j = i
@@ -385,19 +385,19 @@ class lib__string extends lib__@DynamicArray
 				return -r
 			return r
 		return 0.0
-	func format(f: lib__string) -> lib__string
+	func format(f: Self) -> Self
 		let n = int(f)
 		return str_fill(self, n, ' ')
 
-func lib__as_binary(p: void&, num: int) -> lib__string
-	var s: lib__string
+func lib__base@@as_binary(p: void&, num: int) -> lib__base@@string
+	var s: Ret
 	s.num = num
 	s.data = p
 	return s
 
-func str_fill(s: lib__string, n: int, space: char) -> lib__string
-	var ttt: lib__string = s
-	var filler: lib__string
+func str_fill(s: lib__base@@string, n: int, space: char) -> lib__base@@string
+	var ttt: Ret = s
+	var filler: Ret
 	if n < 0
 		while len(ttt) < -n
 			ttt.add(space)
@@ -409,10 +409,10 @@ func str_fill(s: lib__string, n: int, space: char) -> lib__string
 
 
 
-class lib__string@list extends lib__@DynamicArray
-	var override data: lib__string[0]*
+class lib__base@@string@list extends lib__base@@@DynamicArray
+	var override data: lib__base@@string[0]*
 	func __init__()
-		__mem_init__(sizeof(lib__string))
+		__mem_init__(sizeof(lib__base@@string))
 	func __delete__()
 		for d in data
 			for i in 0:num
@@ -431,11 +431,11 @@ class lib__string@list extends lib__@DynamicArray
 			for d in data
 				for i in num0:size
 					d[i].__init__()
-	func mut add(s: lib__string)
+	func mut add(s: lib__base@@string)
 		resize(num + 1)
 		for d in data
 			d[num - 1] = s
-	func mut __assign__(o: lib__string@list)
+	func mut __assign__(o: lib__base@@string@list)
 		resize(o.num)
 		for d in data
 			for od in o.data
@@ -451,32 +451,32 @@ class lib__string@list extends lib__@DynamicArray
 		#data[index].__clear__()
 		#__mem_remove__(index)
 
-	func join(glue: lib__string) -> lib__string
-		var r: lib__string
+	func join(glue: lib__base@@string) -> lib__base@@string
+		var r: Ret
 		for d in data
 			for i in 0:num
 				if i > 0
 					r += glue
 				r += d[i]
 		return r
-	func __str__() -> lib__string
-		return lib__@sa2s(self)
+	func __str__() -> lib__base@@string
+		return lib__base@@@sa2s(self)
 	func mut swap(i: int, j: int)
 		for d in data
 			var t = d[i]
 			d[i] = d[j]
 			d[j] = t
-	func mut __add__(o: lib__string@list) -> lib__string@list
-		var r: lib__string@list = self
+	func mut __add__(o: Self) -> Self
+		var r: Ret = self
 		r += o
 		return r
-	func mut __iadd__(o: lib__string@list)
+	func mut __iadd__(o: Self)
 		for od in o.data
 			for i in 0:len(o)
 				add(od[i])
 
-func lib__@sa2s(a: lib__string@list) -> lib__string
-	var r: lib__string
+func lib__base@@@sa2s(a: lib__base@@string@list) -> lib__base@@string
+	var r: Ret
 	r.add('[')
 	for i in 0:a.num
 		if i > 0
@@ -490,7 +490,7 @@ func lib__@sa2s(a: lib__string@list) -> lib__string
 
 
 
-class lib__int@list extends lib__@DynamicArray
+class lib__base@@int@list extends lib__base@@@DynamicArray
 	var override data: int[0]*
 	func __init__()
 		__mem_init__(sizeof(int))
@@ -513,7 +513,7 @@ class lib__int@list extends lib__@DynamicArray
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
-	func mut __assign__(o: lib__int@list)
+	func mut __assign__(o: Self)
 		resize(o.num)
 		for d in data
 			for od in o.data
@@ -527,17 +527,17 @@ class lib__int@list extends lib__@DynamicArray
 						let t = d[i]
 						d[i] = d[j]
 						d[j] = t
-	func __str__() -> lib__string
-		return lib__@ia2s(self)
+	func __str__() -> lib__base@@string
+		return lib__base@@@ia2s(self)
 
-func lib__sum(l: lib__int@list) -> int
+func lib__sum(l: lib__base@@int@list) -> int
 	var s = 0
 	for d in l.data
 		for i in 0:l.num
 			s += d[i]
 	return s
 
-class lib__float@list extends lib__@DynamicArray
+class lib__base@@float@list extends lib__base@@@DynamicArray
 	var override data: float[0]*
 	func __init__()
 		__mem_init__(sizeof(float))
@@ -560,7 +560,7 @@ class lib__float@list extends lib__@DynamicArray
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
-	func mut __assign__(o: lib__float@list)
+	func mut __assign__(o: Self)
 		resize(o.num)
 		for d in data
 			for od in o.data
@@ -575,7 +575,7 @@ class lib__float@list extends lib__@DynamicArray
 						d[i] = d[j]
 						d[j] = t
 
-class lib__bool@list extends lib__@DynamicArray
+class lib__base@@bool@list extends lib__base@@@DynamicArray
 	var override data: bool[0]*
 	func __init__()
 		__mem_init__(sizeof(bool))
@@ -598,7 +598,7 @@ class lib__bool@list extends lib__@DynamicArray
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
-	func mut __assign__(o: lib__bool@list)
+	func mut __assign__(o: Self)
 		resize(o.num)
 		for d in data
 			for od in o.data
@@ -606,12 +606,12 @@ class lib__bool@list extends lib__@DynamicArray
 					d[i] = od[i]
 
 
-func i2s(_i: int) -> lib__string
+func base@@i2s(_i: int) -> lib__base@@string
 	var i = _i
 	let sign = i >= 0
 	if !sign
 		i = -i
-	var s: lib__string
+	var s: Ret
 	while true
 		s.add((i % 10) + 0x30)
 		i /= 10
@@ -622,14 +622,14 @@ func i2s(_i: int) -> lib__string
 	return s.reverse()
 
 
-func f2s(_f: float, n: int) -> lib__string
+func base@@f2s(_f: float, n: int) -> lib__base@@string
 	var f = _f
-	var s: lib__string
+	var s: Ret
 	
 	if f < 0.0
 		s.add('-')
 		f = -f
-	s += i2s(f)
+	s += base@@i2s(f)
 	if n > 0
 		s.add('.')
 		var e = 1
@@ -643,46 +643,46 @@ func f2s(_f: float, n: int) -> lib__string
 			s.add(((after / e) % 10) + 0x30)
 	return s
 
-func b2s(b: bool) -> lib__string
-	var r: lib__string
+func base@@b2s(b: bool) -> lib__base@@string
+	var r: Ret
 	if b
 		r.add('1')
 	else
 		r.add('0')
 	return r
 
-class lib__bool
-	func static __str__(b: bool) -> lib__string
-		return b2s(b)
+class lib__base@@bool
+	func static __str__(b: bool) -> lib__base@@string
+		return base@@b2s(b)
 
-func lib__@ia2s(a: lib__int@list) -> lib__string
-	var r: lib__string
+func lib__base@@@ia2s(a: lib__base@@int@list) -> lib__base@@string
+	var r: Ret
 	r.add('[')
 	for i in 0:a.num
 		if i > 0
 			r.add(',')
 			r.add(' ')
 		for d in a.data
-			r += i2s(d[i])
+			r += base@@i2s(d[i])
 	r.add(']')
 	return r
 
-func lib__@fa2s(a: lib__float@list) -> lib__string
-	var r: lib__string
+func lib__base@@@fa2s(a: lib__base@@float@list) -> lib__base@@string
+	var r: Ret
 	r.add('[')
 	for i in 0:a.num
 		if i > 0
 			r.add(',')
 			r.add(' ')
 		for d in a.data
-			r += f2s(d[i], 6)
+			r += base@@f2s(d[i], 6)
 	r.add(']')
 	return r
 
 # FIXME OMG \(O_O)/
-func lib__@sorted(_a: void*, t: kaba.Class&, x: string) -> lib__int@list # lib__@DynamicArray
+func lib__base@@@sorted(_a: void*, t: kaba.Class&, x: string) -> lib__base@@int@list # lib__@DynamicArray
 	if t == int or true
-		var pa = _a as lib__int@list*
+		var pa = _a as lib__base@@int@list*
 		for a in pa
 			var o = a
 			o.sort()

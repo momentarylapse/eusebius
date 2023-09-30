@@ -25,21 +25,21 @@ func hex_nibble(i: int) -> char
 		return 'a' + i - 10
 	return '0' + i
 
-class lib__int
+class lib__base@@int
 	_i: int
 	# FIXME: @callbyvalue
 	
-	func __str__() -> lib__string
+	func __str__() -> lib__base@@string
 		let i = _p2i(&self) # (T_T)
-		return i2s(i)
-	func static hex(i: int, n: int) -> lib__string
-		var r: lib__string
+		return base@@i2s(i)
+	func static hex(i: int, n: int) -> lib__base@@string
+		var r: Ret
 		r.resize(n)
 		for d in r.data
 			for k in 0:n
 				d[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
 		return r
-	func format(f: lib__string) -> lib__string
+	func format(f: lib__base@@string) -> lib__base@@string
 		let i = _p2i(&self) # (T_T)
 		for fd in f.data
 			if fd[f.num - 1] == 'x'
@@ -49,24 +49,24 @@ class lib__int
 		for fd in f.data
 			if fd[0] == '0'
 				space = '0'
-		return str_fill(i2s(i), n, space)
+		return str_fill(base@@i2s(i), n, space)
 
-class lib__int64
+class lib__base@@int64
 	_i: int64
 	# FIXME: @callbyvalue
 	
-	func __str__() -> lib__string
+	func __str__() -> lib__base@@string
 		let i = _p2i(&self) # (T_T)
-		return i2s(i)
+		return base@@i2s(i)
 
-class lib__float
+class lib__base@@float
 	_f: float # FIXME @callbyvalue
-	func static __str__() -> lib__string
+	func static __str__() -> lib__base@@string
 		asm {
 			movss __temp_f__, xmm0
 		}
 		var f = __temp_f__
-		return f2s(f, 6)
+		return base@@f2s(f, 6)
 
 func lib__sin(f: float) -> float
 	if f < 0.0
@@ -187,19 +187,19 @@ func lib__loop(f: float, min: float, max: float) -> float
 
 
 
-class lib__complex
+class lib__math@@complex
 	var x, y: float
 	
-	func __str__() -> lib__string
+	func __str__() -> lib__base@@string
 		return _complex2s(self)
 
-func _complex2s(c: lib__complex) -> lib__string
-	var r: lib__string
+func _complex2s(c: lib__math@@complex) -> lib__base@@string
+	var r: Ret
 	r.add('(')
-	r += f2s(c.x, 6)
+	r += base@@f2s(c.x, 6)
 	r.add(',')
 	r.add(' ')
-	r += f2s(c.y, 6)
+	r += base@@f2s(c.y, 6)
 	r.add(')')
 	return r
 
@@ -231,10 +231,10 @@ func _complex2s(c: lib__complex) -> lib__string
 #			data[i] = o.data[i]
 #
 #
-func lib__p2s(p: void*) -> lib__string
-	var r: lib__string
+func lib__base@@p2s(p: void*) -> lib__base@@string
+	var r: Ret
 	#var i = &p as int64*
 	r.add('0')
 	r.add('x')
-	return r + lib__as_binary(&p, 8).hex()#lib__int.hex(*i, 8)
+	return r + lib__base@@as_binary(&p, 8).hex()#lib__int.hex(*i, 8)
 	

@@ -5,16 +5,16 @@ use lib_syscalls
 use lib_file
 use image
 
-class lib__color
+class lib__math@@color
 	var a, r, g, b: float
-	func __str__() -> lib__string
-		var s: lib__string
+	func __str__() -> lib__base@@string
+		var s: lib__base@@string
 		return s
 
-class lib__Image
+class lib__image@@Image
 	var width, height: int
 	var mode, __align__: int
-	var data: lib__int@list
+	var data: lib__base@@int@list
 	var alpha_used: bool
 	var error: bool
 	func __init__(w: int, h: int, c: color)
@@ -29,14 +29,14 @@ class lib__Image
 				for i in 0:len(data)
 					d[i] = ic
 	
-	func static _create_dummy() -> xfer[lib__Image]
-		for im in lib__@malloc(sizeof(lib__Image)) as lib__Image*
+	func static _create_dummy() -> xfer[Self]
+		for im in lib__@malloc(sizeof(Self)) as Self*
 			im.__init__(0, 0, color(0,0,0,0))
-			return &im as xfer[lib__Image]
+			return &im as xfer[Self]
 
 	# TODO this should return xfer?[]
-	func static load(filename: lib__Path) -> xfer[lib__Image]
-		var temp: lib__string
+	func static load(filename: lib__os@@Path) -> xfer[Self]
+		var temp: lib__base@@string
 		var h = open(filename, O_RDONLY)
 		if h < 0
 			return _create_dummy()
@@ -46,7 +46,7 @@ class lib__Image
 			if r < 0
 				close(h)
 				return _create_dummy()
-			for im in lib__@malloc(sizeof(lib__Image)) as lib__Image*
+			for im in lib__@malloc(sizeof(Self)) as Self*
 				var offset: int = t[0]
 				var ww: int = t[13]
 				var width: int = t[12]
@@ -77,7 +77,7 @@ class lib__Image
 #							im.data.data[x + y * width] = 0xffff0000
 				
 				close(h)
-				return &im as xfer[lib__Image]
+				return &im as xfer[Self]
 		close(h)
 		return _create_dummy()
 

@@ -25,7 +25,7 @@ func execute(arg: string[], fd_in: int, fd_out: int) -> int
 	return lib_error
 
 
-func get_args() -> lib__string@list
+func get_args() -> lib__base@@string@list
 	var cs: cstring
 	__temp_p__ := &cs
 	asm{
@@ -33,8 +33,8 @@ func get_args() -> lib__string@list
 		mov rdi, __temp_p__
 		syscall
 	}
-	var args: lib__string@list
-	var s: lib__string
+	var args: Ret
+	var s: lib__base@@string
 	var p = 0
 	var first = true
 	for i in 0:250
@@ -53,14 +53,14 @@ func get_args() -> lib__string@list
 
 
 
-class lib__Exception
-	var msg: lib__string
-	func __init__(_msg: lib__string)
+class lib__base@@Exception
+	var msg: lib__base@@string
+	func __init__(_msg: lib__base@@string)
 		msg = _msg
-	func virtual __str__() -> lib__string
+	func virtual __str__() -> lib__base@@string
 		return msg
 
-func lib__raise(e: xfer[lib__Exception])
+func lib__base@@raise(e: xfer[lib__base@@Exception])
 #	var msg: string& = &e.msg
 #	lib_print_endl = false
 #	lib__print("\n  EXCEPTION:    ")
