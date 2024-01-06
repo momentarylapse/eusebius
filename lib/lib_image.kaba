@@ -37,7 +37,7 @@ class lib__image@@Image
 	# TODO this should return xfer?[]
 	func static load(filename: lib__os@@Path) -> xfer[Self]
 		var temp: lib__base@@string
-		var h = open(filename, O_RDONLY)
+		var h = lib__os@@open(filename, O_RDONLY)
 		if h < 0
 			return _create_dummy()
 		temp.resize(32)

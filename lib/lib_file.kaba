@@ -3,7 +3,7 @@ use lib_syscalls
 use lib_array
 
 
-func open(filename: lib__os@@Path, flags: int) -> int
+func lib__os@@open(filename: lib__os@@Path, flags: int) -> int
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -211,7 +211,7 @@ class dirent_struct
 
 func lib__os@@fs@@search(dirname: lib__os@@Path, filter: string, options: string) -> lib__base@@string@list
 	var list_dirs, list_files: lib__base@@string@list
-	var h = open(dirname, O_RDONLY)
+	var h = lib__os@@open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
 		return list_files
