@@ -1,12 +1,12 @@
-use common
-use task
-use mem.paging
-use task.manager
-use time.timevalue
-use time.timer
-use op_fs
+use common.*
+use task.*
+use mem.paging.*
+use task.manager.*
+use time.timevalue.*
+use time.timer.*
+use op_fs.*
 
-use io.text
+use io.text.*
 
 
 func sys_set_cur_dir(out t: Task, faddr: int64) -> int

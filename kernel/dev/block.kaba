@@ -1,6 +1,6 @@
-use common
-use io.text
-use ata
+use common.*
+use io.text.*
+use ata.*
 
 
 class BlockDevice as @noauto

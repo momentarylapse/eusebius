@@ -1,12 +1,12 @@
-use common
-use io.text
-use io.io
-use fs.fs
-use mem.paging
-use irq.irq
-use task.task
-use ps2
-use tty
+use common.*
+use io.text.*
+use io.port.*
+use fs.fs.*
+use mem.paging.*
+use irq.irq.*
+use task.task.*
+use ps2.*
+use tty.*
 
 
 

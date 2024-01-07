@@ -1,11 +1,11 @@
-use common
-use common.macros
-use io.text
-use io.io
-use fs.fs
-use mem.paging
-use irq.irq
-use tty
+use common.*
+use common.macros.*
+use io.text.*
+use io.port.*
+use fs.*
+use mem.paging.*
+use irq.irq.*
+use tty.*
 
 let KEYBOARD_IRQ = 1
 let MOUSE_IRQ = 12

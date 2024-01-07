@@ -1,7 +1,7 @@
 #define __STRING_CONST_AS_CSTRING__
 
-use common
-use io.text
+use common.*
+use io.text.*
 
 func main()
 

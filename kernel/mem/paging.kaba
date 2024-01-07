@@ -1,7 +1,7 @@
-use common
-use io.text
-use mem.memory
-use mem.heap
+use common.*
+use io.text.*
+use mem.memory.*
+use mem.heap.*
 
 let PAGE_SIZE = 4096
 let PAGE_TABLE_ENTRIES = PAGE_SIZE / 8 #512

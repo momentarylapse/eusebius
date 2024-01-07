@@ -1,5 +1,5 @@
-use common
-use io
+use common.*
+use port.*
 
 let SCREEN_WIDTH = 80
 let SCREEN_HEIGHT = 25

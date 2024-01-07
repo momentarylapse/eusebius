@@ -1,18 +1,19 @@
-use common
-use dev.block
-use mem.memory
-use mem.paging
-use mem.heap
-use mem.shared
-use task.task
-use task.manager
-use fs.fs
-use fs.access
-use time.timevalue
-use time.timer
+use common.*
+use dev.block.*
+use mem.memory.*
+use mem.paging.*
+use mem.heap.*
+use mem.shared.*
+use task.task.*
+use task.manager.*
+use fs.*
+use fs.access.*
+use time.timevalue.*
+use time.timer.*
 
-use op_fs
-use io.text
+use op_fs.*
+use io.text.*
+
 
 func sys_hi() -> int64
 	TextMode.text_color = 0x04

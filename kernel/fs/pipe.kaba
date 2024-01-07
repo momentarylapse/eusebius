@@ -1,8 +1,8 @@
-use common
-use io.text
-use fs.fs
-use mem.heap
-use mem.paging
+use common.*
+use io.text.*
+use fs.fs.*
+use mem.heap.*
+use mem.paging.*
 
 
 

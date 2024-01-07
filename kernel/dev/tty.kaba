@@ -1,9 +1,9 @@
-use common
-use io.text
-use io.io
-use fs.fs
-use mem.paging
-use irq.irq
+use common.*
+use io.text.*
+use io.port.*
+use fs.*
+use mem.paging.*
+use irq.irq.*
 
 class FileOperationsTTY extends FileOperations
 	var static key_buf: cstring

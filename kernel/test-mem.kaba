@@ -1,11 +1,11 @@
 #define __STRING_CONST_AS_CSTRING__
 #define __FUNCTION_POINTER_AS_CODE__
 
-use common
-use io.text
-use mem.memory
-use mem.paging
-use mem.heap
+use common.*
+use io.text.*
+use mem.memory.*
+use mem.paging.*
+use mem.heap.*
 
 var rand_state: int64
 func _rand(max: int) -> int

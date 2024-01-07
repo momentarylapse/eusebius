@@ -1,12 +1,12 @@
-use common
-use common.macros
-use io.text
-use io.io
-use task.task
-use task.manager
-use time.timevalue
-use time.timer
-use irq.irq
+use common.*
+use common.macros.*
+use io.text.*
+use io.port.*
+use task.task.*
+use task.manager.*
+use time.timevalue.*
+use time.timer.*
+use irq.irq.*
 
 #const SCHEDULER_STACK_SIZE = 8192
 

@@ -1,15 +1,15 @@
-use common
-use io.text
-use fs
-use fs.access
-use mem.heap
-use mem.paging
-use task
-use gdt
+use common.*
+use io.text.*
+use fs.*
+use fs.access.*
+use mem.heap.*
+use mem.paging.*
+use task.*
+use gdt.*
 
-use syscall.op_fs
-use net.socket
-use time.timevalue
+use syscall.op_fs.*
+use net.socket.*
+use time.timevalue.*
 
 let MAX_TASKS = 64#256
 let IRQ_STACK_SIZE = 2048*4

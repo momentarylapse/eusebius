@@ -1,8 +1,8 @@
-use common
-use io.io
-use io.text
-use time.timevalue
-use irq.irq
+use common.*
+use io.port.*
+use io.text.*
+use time.timevalue.*
+use irq.irq.*
 
 let TIMER_IRQ = 0
 

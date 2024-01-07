@@ -1,13 +1,13 @@
-use common
-use io.text
-use fs.fs
-use fs.pipe
-use net.socket
-use mem.heap
-use mem.paging
+use common.*
+use io.text.*
+use fs.*
+use fs.pipe.*
+use net.socket.*
+use mem.heap.*
+use mem.paging.*
 
 
-const MAX_OPEN_FILES = 128
+let MAX_OPEN_FILES = 128
 
 
 

@@ -1,6 +1,6 @@
-use common
-use io.text
-use io.io
+use common.*
+use io.text.*
+use io.port.*
 
 
 

@@ -1,21 +1,21 @@
-use common
-use common.macros
-use io.text
-use cpu
-use dev.block
-use mem.heap
-use mem.paging
-#use mem.shared
-use task.task
-use task.manager
-use task.scheduler
-use time.timer
-use syscall.op_fs
-use syscall.op_sys
-use syscall.op_task
-#use irq.irq
+use common.*
+use common.macros.*
+use io.text.*
+use cpu.*
+use dev.block.*
+use mem.heap.*
+use mem.paging.*
+#use mem.shared.*
+use task.task.*
+use task.manager.*
+use task.scheduler.*
+use time.timer.*
+use syscall.op_fs.*
+use syscall.op_sys.*
+use syscall.op_task.*
+#use irq.irq.*
 
-use fs # experiment
+use fs.* # experiment
 
 #let SYSCALL_STACK_SIZE = 65536
 

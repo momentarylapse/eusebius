@@ -1,15 +1,15 @@
-use common
-use io.text
-use fs.fs
-use fs.pipe
-use fs.access
-##use mem.heap
-use mem.paging
-use mem.shared
-use net.socket
-use irq.irq
-use time.timevalue
-##use gdt
+use common.*
+use io.text.*
+use fs.*
+use fs.pipe.*
+use fs.access.*
+##use mem.heap.*
+use mem.paging.*
+use mem.shared.*
+use net.socket.*
+use irq.irq.*
+use time.timevalue.*
+##use gdt.*
 
 
 

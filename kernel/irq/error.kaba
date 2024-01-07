@@ -1,9 +1,9 @@
-use common
-use common.macros
-use io.text
-use task.task
-use task.scheduler
-use irq.irq
+use common.*
+use common.macros.*
+use io.text.*
+use task.task.*
+use task.scheduler.*
+use irq.irq.*
 use kaba
 
 const ERROR_STACK_SIZE = 4096

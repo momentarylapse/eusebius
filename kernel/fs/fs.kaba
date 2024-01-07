@@ -1,9 +1,9 @@
-use common
-use mem.heap
-use mem.paging
-use dev.ata
-use dev.block
-use io.text
+use common.*
+use mem.heap.*
+use mem.paging.*
+use dev.ata.*
+use dev.block.*
+use io.text.*
 use kaba
 
 enum FileType as @noauto
