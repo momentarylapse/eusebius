@@ -4,14 +4,14 @@ KABA  = ~/Projekte/Kaba/kaba
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --arch amd64:gnu
 FLAGS =  $(MACHINE) --no-std-lib
-LOADERFLAGS = --arch x86:gnu --os --code-origin 0x7c00
-INITFLAGS = --arch x86:gnu --os --code-origin 0x7e00
-#KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
-KERNELFLAGS = $(MACHINE) --os --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
+LOADERFLAGS = --arch x86:gnu --code-origin 0x7c00
+INITFLAGS = --arch x86:gnu --code-origin 0x7e00
+#KERNELFLAGS = $(MACHINE) --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
+KERNELFLAGS = $(MACHINE) --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 # --remove-unused
-PFLAGS =  $(MACHINE) --os --no-std-lib --code-origin 0x40000000 --variable-offset 0x40080000 --add-entry-point --import-symbols kalib_symbols
+PFLAGS =  $(MACHINE) --no-std-lib --code-origin 0x40000000 --variable-offset 0x40080000 --add-entry-point --import-symbols kalib_symbols
 
-LIBFLAGS = $(MACHINE) --no-std-lib --os --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
+LIBFLAGS = $(MACHINE) --no-std-lib --no-std-lib --code-origin 0x00050000 --variable-offset 0x00a3f000
 #MAKEMFS = ./tools/makemfs/makemfs
 MAKEMFS = $(KABA) tools/makemfs.kaba
 BINS = \
@@ -63,6 +63,8 @@ PDEPX = $(PDEP) bin/lib/x.kaba bin/lib/ttfx.kaba bin/lib/draw.kaba
 LIBS = lib/kalib
 
 all : bochs/c.img
+
+test : bochs/c-test.img
 
 init : init.kaba
 	$(KABA) $(INITFLAGS) -o init init.kaba
@@ -236,6 +238,28 @@ img.ext2: $(BINS) img.mfs
 	#mkfs.ext2 -b 2048 -N 256 -Fq -d img-src img.ext2 8M
 
 bochs/c.img: img.mfs img.ext2 loader_fake
+	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160
+	dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc
+	dd if=loader_fake of=bochs/c.img conv=notrunc
+	dd if=img.mfs of=bochs/c.img bs=1024 seek=8 conv=notrunc
+	# ext2 @ 0x9d8000
+	dd if=img.ext2 of=bochs/c.img bs=1024 seek=10080 conv=notrunc
+	
+
+
+img-test.ext2: img.mfs
+	mkdir -p img-src
+	mkdir -p img-src/dev
+	mkdir -p img-src/boot
+	mkdir -p img-src/home
+	mkdir -p img-src/images
+	mkdir -p img-src/tmp
+	# block-size 1k, 256 inodes, size 4M
+	#genext2fs -b 4096 -N 256 -d img-src img.ext2
+	mkfs.ext2 -b 1024 -N 256 -Fq -d img-src img.ext2 4M
+	#mkfs.ext2 -b 2048 -N 256 -Fq -d img-src img.ext2 8M
+
+bochs/c-test.img: img.mfs img-test.ext2 loader_fake
 	dd if=/dev/zero of=bochs/c.img bs=1024 count=20160
 	dd if=bochs/mbr0_ext2 of=bochs/c.img conv=notrunc
 	dd if=loader_fake of=bochs/c.img conv=notrunc

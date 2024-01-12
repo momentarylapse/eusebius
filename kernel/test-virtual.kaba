@@ -1,8 +1,8 @@
 #define __STRING_CONST_AS_CSTRING__
 #define __FUNCTION_POINTER_AS_CODE__
 
-use common
-use io.text
+use common.*
+use io.text.*
 
 class Base
 	func __init__()

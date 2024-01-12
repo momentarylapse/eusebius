@@ -2,13 +2,13 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
 
-use kernel
-#use "test-base.kaba"
-#use "test-mem.kaba"
-#use "test-virtual.kaba"
-#use "test-func-pointer.kaba"
-#use "test-sound.kaba"
-#use "test-irq-key.kaba"
+use kernel.*
+#use test_base.*
+#use test_mem.*
+#use test_virtual.*
+#use test_func_pointer.*
+#use test_sound.*
+#use test_irq_key.*
 
 #func main()
 #	var p: void*
