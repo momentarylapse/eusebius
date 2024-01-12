@@ -1,6 +1,6 @@
-use lib.std
-use lib.std.sys
-use lib.vesa
+use lib.std.*
+use lib.std.sys.*
+use lib.vesa.*
 
 func main()
 	init_lib()

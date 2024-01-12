@@ -1,8 +1,8 @@
-use lib.std
-use lib.std.sys
-use lib.x
-use lib.draw
-#use lib.ttfx
+use lib.std.*
+use lib.std.sys.*
+use lib.x.*
+use lib.draw.*
+#use lib.ttfx.*
 
 class CWindow extends XWindow
 	var p: owned![XPainter]

@@ -1,9 +1,9 @@
-use lib.std
-use lib.std.file
+use lib.std.*
+use lib.std.file.*
 use os
 
 
-func _mkdir(path: Path)
+func _mkdir(path: os.Path)
 	if !mkdir(path)
 		print("mkdir: can not create directory: {{path}}")
 		exit(lib_error)

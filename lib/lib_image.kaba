@@ -1,20 +1,20 @@
-use lib_base
-use lib_array
-use lib_mem
-use lib_syscalls
-use lib_file
-use image
+use lib_base.*
+use lib_array.*
+use lib_mem.*
+use lib_syscalls.*
+use lib_file.*
+use image.*
 
 class lib__math@@color
 	var a, r, g, b: float
-	func __str__() -> lib__base@@string
-		var s: lib__base@@string
+	func __str__() -> lib__string
+		var s: lib__string
 		return s
 
 class lib__image@@Image
 	var width, height: int
 	var mode, __align__: int
-	var data: lib__base@@int@list
+	var data: lib__int@list
 	var alpha_used: bool
 	var error: bool
 	func __init__(w: int, h: int, c: color)
@@ -36,8 +36,8 @@ class lib__image@@Image
 
 	# TODO this should return xfer?[]
 	func static load(filename: lib__os@@Path) -> xfer[Self]
-		var temp: lib__base@@string
-		var h = lib__os@@open(filename, O_RDONLY)
+		var temp: lib__string
+		var h = open(filename, O_RDONLY)
 		if h < 0
 			return _create_dummy()
 		temp.resize(32)

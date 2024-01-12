@@ -1,7 +1,7 @@
-use lib.std.sys
-use lib.std
-use lib.vesa
-use image
+use lib.std.sys.*
+use lib.std.*
+use lib.vesa.*
+use image.Image
 
 let WF_TRANSPARENT = 1024
 let WF_DONT_INVALIDATE = 2048

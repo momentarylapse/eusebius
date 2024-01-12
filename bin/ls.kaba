@@ -1,9 +1,9 @@
 use os
-use lib.std
-use lib.std.file
+use lib.std.*
+use lib.std.file.*
 
 
-func ftype(path: Path) -> string
+func ftype(path: os.Path) -> string
 	if os.fs.is_directory(path)
 		return "d"
 	else
@@ -42,7 +42,7 @@ func print_table(list: string[])
 			o.add(' ')
 	print(o)
 
-func ls(dirname: Path, extended: bool)
+func ls(dirname: os.Path, extended: bool)
 	var list = os.fs.search(dirname, "", "df")
 	if lib_error != 0
 		print("ls: can not read directory: {{dirname}}\n")
@@ -62,7 +62,7 @@ func main()
 	
 	var extended = false
 
-	var paths: Path[]
+	var paths: os.Path[]
 
 	for a in args
 		if a == "-l"

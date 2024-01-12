@@ -1,7 +1,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
-use lib.std
-use lib.std.sys
+use lib.std.*
+use lib.std.sys.*
 use os
 
 #func @noframe main()

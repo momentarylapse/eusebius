@@ -1,6 +1,6 @@
 #define __FUNCTION_POINTER_AS_CODE__
 use os
-use common
+use common.*
 
 let EXPORT_IMPORTS = true
 

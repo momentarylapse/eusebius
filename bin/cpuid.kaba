@@ -1,6 +1,6 @@
-use lib.std
-use lib.std.io
-use lib.pci
+use lib.std.*
+use lib.std.io.*
+use lib.pci.*
 
 var temp1, temp2, temp3, temp4: int
 

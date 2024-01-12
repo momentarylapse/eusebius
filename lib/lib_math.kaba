@@ -1,6 +1,6 @@
-use lib_base
-use lib_array
-use lib_syscalls
+use lib_base.*
+use lib_array.*
+use lib_syscalls.*
 
 var rand_state: int
 
@@ -8,16 +8,16 @@ func rand_next() -> int
 	rand_state = rand_state * 1664525 + 1013904223
 	return rand_state & 0x00ffffff
 
-func lib__rand_seed(s: int)
+func lib__math@@rand_seed(s: int)
 	rand_state = s
 
 func rand_u(m: float) -> float
 	return rand_next() * m / float(0x01000000)
 
-func lib__rand(m: float) -> float
+func lib__math@@rand(m: float) -> float
 	return rand_u(m)
 
-func lib__rand(m: int) -> int
+func lib__math@@rand(m: int) -> int
 	return rand_u(m)
 
 func hex_nibble(i: int) -> char
@@ -25,21 +25,21 @@ func hex_nibble(i: int) -> char
 		return 'a' + i - 10
 	return '0' + i
 
-class lib__base@@int
+class lib__int
 	_i: int
 	# FIXME: @callbyvalue
 	
-	func __str__() -> lib__base@@string
+	func __str__() -> lib__string
 		let i = _p2i(&self) # (T_T)
 		return base@@i2s(i)
-	func static hex(i: int, n: int) -> lib__base@@string
+	func static hex(i: int, n: int) -> lib__string
 		var r: Ret
 		r.resize(n)
 		for d in r.data
 			for k in 0:n
 				d[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
 		return r
-	func format(f: lib__base@@string) -> lib__base@@string
+	func format(f: lib__string) -> lib__string
 		let i = _p2i(&self) # (T_T)
 		for fd in f.data
 			if fd[f.num - 1] == 'x'
@@ -51,26 +51,26 @@ class lib__base@@int
 				space = '0'
 		return str_fill(base@@i2s(i), n, space)
 
-class lib__base@@int64
+class lib__int64
 	_i: int64
 	# FIXME: @callbyvalue
 	
-	func __str__() -> lib__base@@string
+	func __str__() -> lib__string
 		let i = _p2i(&self) # (T_T)
 		return base@@i2s(i)
 
-class lib__base@@float
+class lib__float
 	_f: float # FIXME @callbyvalue
-	func static __str__() -> lib__base@@string
+	func static __str__() -> lib__string
 		asm {
 			movss __temp_f__, xmm0
 		}
 		var f = __temp_f__
 		return base@@f2s(f, 6)
 
-func lib__sin(f: float) -> float
+func lib__math@@sin(f: float) -> float
 	if f < 0.0
-		return - lib__sin(-f)
+		return - lib__math@@sin(-f)
 	__temp_f__ = f * (2.0 / pi)
 	asm {
 		movss xmm0, __temp_f__
@@ -88,8 +88,8 @@ func lib__sin(f: float) -> float
 		return - x
 	return x
 
-func lib__cos(f: float) -> float
-	return lib__sin(f + pi/2)
+func lib__math@@cos(f: float) -> float
+	return lib__math@@sin(f + pi/2)
 #	if f < 0.0
 #		return lib__cos(-f)
 #	__temp_f__ = f * (2.0 / pi)
@@ -107,23 +107,23 @@ func lib__cos(f: float) -> float
 #	...
 #	return x
 
-func lib__min(a: float, b: float) -> float
+func lib__math@@min(a: float, b: float) -> float
 	if a < b
 		return a
 	return b
 
-func lib__max(a: float, b: float) -> float
+func lib__math@@max(a: float, b: float) -> float
 	if a > b
 		return a
 	return b
 
-func lib__abs(x: float) -> float
+func lib__math@@abs(x: float) -> float
 	if x < 0
 		return -x
 	return x
 	
 
-func lib__clamp(i: int, min: int, max: int) -> int
+func lib__math@@clamp(i: int, min: int, max: int) -> int
 	if max <= min
 		return min
 	if i > max
@@ -132,7 +132,7 @@ func lib__clamp(i: int, min: int, max: int) -> int
 		return min
 	return i
 
-func lib_loop(i: int, min: int, max: int) -> int
+func lib_math@@loop(i: int, min: int, max: int) -> int
 	if max <= min
 		return min
 	let d = max - min + 1
@@ -144,21 +144,21 @@ func lib_loop(i: int, min: int, max: int) -> int
 		return i - d * n
 	return i
 
-func lib__min(a: int, b: int) -> int
+func lib__math@@min(a: int, b: int) -> int
 	if a < b
 		return a
 	return b
 
-func lib__max(a: int, b: int) -> int
+func lib__math@@max(a: int, b: int) -> int
 	if a > b
 		return a
 	return b
 
 
-func lib__sqr(f: float) -> float
+func lib__math@@sqr(f: float) -> float
 	return f * f
 
-func lib__sqrt(f: float) -> float
+func lib__math@@sqrt(f: float) -> float
 	__temp_f__ = f
 	asm{
 		sqrtss xmm0, __temp_f__
@@ -166,7 +166,7 @@ func lib__sqrt(f: float) -> float
 	}
 	return __temp_f__
 
-func lib__clamp(f: float, min: float, max: float) -> float
+func lib__math@@clamp(f: float, min: float, max: float) -> float
 	if max < min
 		return min
 	if f > max
@@ -175,7 +175,7 @@ func lib__clamp(f: float, min: float, max: float) -> float
 		return min
 	return f
 
-func lib__loop(f: float, min: float, max: float) -> float
+func lib__math@@loop(f: float, min: float, max: float) -> float
 	let d = max - min
 	if f < min
 		let n = int( (min-f) / d ) + 1
@@ -190,10 +190,10 @@ func lib__loop(f: float, min: float, max: float) -> float
 class lib__math@@complex
 	var x, y: float
 	
-	func __str__() -> lib__base@@string
+	func __str__() -> lib__string
 		return _complex2s(self)
 
-func _complex2s(c: lib__math@@complex) -> lib__base@@string
+func _complex2s(c: lib__math@@complex) -> lib__string
 	var r: Ret
 	r.add('(')
 	r += base@@f2s(c.x, 6)
@@ -231,10 +231,10 @@ func _complex2s(c: lib__math@@complex) -> lib__base@@string
 #			data[i] = o.data[i]
 #
 #
-func lib__base@@p2s(p: void*) -> lib__base@@string
+func lib__p2s(p: void*) -> lib__string
 	var r: Ret
 	#var i = &p as int64*
 	r.add('0')
 	r.add('x')
-	return r + lib__base@@as_binary(&p, 8).hex()#lib__int.hex(*i, 8)
+	return r + lib__as_binary(&p, 8).hex()#lib__int.hex(*i, 8)
 	

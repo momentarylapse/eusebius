@@ -1,5 +1,5 @@
-use lib.std
-use lib.std.file
+use lib.std.*
+use lib.std.file.*
 use os
 
 
@@ -35,7 +35,7 @@ func main()
 	lib_print_endl = false
 	let args = get_args()
 	
-	var files: Path[]
+	var files: os.Path[]
 	
 	var length = 2000000000
 	var skip = 0

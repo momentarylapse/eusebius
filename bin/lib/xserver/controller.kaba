@@ -1,8 +1,8 @@
-use windows
-use lib.std
-use lib.std.sys
-use lib.std.net
-use lib.std.file
+use windows.*
+use lib.std.*
+use lib.std.sys.*
+use lib.std.net.*
+use lib.std.file.*
 
 const XCMD_KILL = 666
 const XCMD_NEW_WINDOW= 1024

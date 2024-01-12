@@ -1,4 +1,4 @@
-use lib.std
+use lib.std.*
 
 
 func main()

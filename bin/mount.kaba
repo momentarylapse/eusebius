@@ -1,5 +1,5 @@
-use lib.std
-use lib.std.sys
+use lib.std.*
+use lib.std.sys.*
 
 
 func show_mount(m: MountInfo)

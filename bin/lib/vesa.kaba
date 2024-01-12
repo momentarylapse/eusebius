@@ -1,6 +1,6 @@
-use lib.std
-use lib.std.io
-use lib.pci
+use lib.std.*
+use lib.std.io.*
+use lib.pci.*
 
 func extern _p2i(p: void*) -> int64
 func extern _i2p(i: int64) -> void*

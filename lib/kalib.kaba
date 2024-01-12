@@ -1,11 +1,11 @@
 #define __FUNCTION_POINTER_AS_CODE__
-use lib_base
-use lib_syscalls
-use lib_mem
-use lib_array
-use lib_math
-use lib_file
-use lib_image
+use lib_base.*
+use lib_syscalls.*
+use lib_mem.*
+use lib_array.*
+use lib_math.*
+use lib_file.*
+use lib_image.*
 
 
 func execute(arg: string[], fd_in: int, fd_out: int) -> int
@@ -25,7 +25,7 @@ func execute(arg: string[], fd_in: int, fd_out: int) -> int
 	return lib_error
 
 
-func get_args() -> lib__base@@string@list
+func get_args() -> lib__string@list
 	var cs: cstring
 	__temp_p__ := &cs
 	asm{
@@ -34,7 +34,7 @@ func get_args() -> lib__base@@string@list
 		syscall
 	}
 	var args: Ret
-	var s: lib__base@@string
+	var s: lib__string
 	var p = 0
 	var first = true
 	for i in 0:250
@@ -53,14 +53,14 @@ func get_args() -> lib__base@@string@list
 
 
 
-class lib__base@@Exception
-	var msg: lib__base@@string
-	func __init__(_msg: lib__base@@string)
+class lib__Exception
+	var msg: lib__string
+	func __init__(_msg: lib__string)
 		msg = _msg
-	func virtual __str__() -> lib__base@@string
+	func virtual __str__() -> lib__string
 		return msg
 
-func lib__base@@raise(e: xfer[lib__base@@Exception])
+func lib__raise(e: xfer[lib__Exception])
 #	var msg: string& = &e.msg
 #	lib_print_endl = false
 #	lib__print("\n  EXCEPTION:    ")

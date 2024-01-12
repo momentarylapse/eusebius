@@ -1,5 +1,5 @@
-use lib_base
-use lib_syscalls
+use lib_base.*
+use lib_syscalls.*
 
 let MALLOC_OFFSET = 0x40300000
 let MALLOC_STOPPER = 8
@@ -259,7 +259,7 @@ func __lib_free_error__()
 	exit(-1)
 
 
-func lib__@realloc(p: void&, size: int) -> void&
+func realloc(p: void&, size: int) -> void&
 	var h = _i2p(_p2i(p) - sizeof(MallocHeader)) as MallocHeader&
 	var old_size: int
 	let sm_index = small_malloc_no(p)

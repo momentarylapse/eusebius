@@ -1,9 +1,9 @@
-use lib_base
-use lib_syscalls
-use lib_array
+use lib_base.*
+use lib_syscalls.*
+use lib_array.*
 
 
-func lib__os@@open(filename: lib__os@@Path, flags: int) -> int
+func open(filename: lib__os@@Path, flags: int) -> int
 	var tt: cstring
 	_s2cs(filename.s, tt)
 	__temp_p__ := &tt
@@ -105,7 +105,7 @@ func chdir(dir: lib__os@@Path) -> bool
 func lib__os@@fs@@set_current_directory(dir: lib__os@@Path)
 	chdir(dir)
 
-func lib__os@@fs@@current_directory() -> lib__base@@string
+func lib__os@@fs@@current_directory() -> lib__string
 	var tt: cstring
 	__temp_p__ := &tt
 	asm{
@@ -144,12 +144,12 @@ func stat(filename: lib__os@@Path, buf: StatData) -> bool
 
 
 class lib__os@@Path
-	var s: lib__base@@string
+	var s: lib__string
 	func __init__()
-	func __init__(p: lib__base@@string)
+	func __init__(p: lib__string)
 		s = p
 	func __delete__()
-	func __str__() -> lib__base@@string
+	func __str__() -> lib__string
 		return s
 	func is_empty() -> bool
 		return len(s) == 0
@@ -167,7 +167,7 @@ class lib__os@@Path
 		for d in s.data
 			return d[len(s)-1] == '/'
 		return false
-	func const __bitor__(p: Self) -> lib__base@@string
+	func const __bitor__(p: Self) -> lib__string
 		if is_empty()
 			return p.s
 		if has_dir_ending()
@@ -175,7 +175,7 @@ class lib__os@@Path
 		var r: Ret = s
 		r.add('/')
 		return r + p.s
-	func static @from_str(p: lib__base@@string) -> Self
+	func static @from_str(p: lib__string) -> Self
 		return Self(p)
 	func __assign__(p: Self)
 		s = p.s
@@ -185,13 +185,13 @@ class lib__os@@Path
 # not working because this does not export new functions...
 
 class lib__os@@Path@list
-	var l: lib__base@@string@list
+	var l: lib__string@list
 	func mut add(p: lib__os@@Path)
 		l.add(p.s)
-	func __add__(o: Self) -> lib__base@@string@list
+	func __bitor__(o: Self) -> lib__string@list
 		return l + o.l
-	func mut __iadd__(o: Self)
-		l + o.l
+	func mut __iadd__(o: Self) # FIXME __ibitor__
+		l += o.l
 	func mut __assign__(o: Self)
 		l = o.l
 		
@@ -209,15 +209,15 @@ class dirent_struct
 
 
 
-func lib__os@@fs@@search(dirname: lib__os@@Path, filter: string, options: string) -> lib__base@@string@list
-	var list_dirs, list_files: lib__base@@string@list
-	var h = lib__os@@open(dirname, O_RDONLY)
+func lib__os@@fs@@search(dirname: lib__os@@Path, filter: string, options: string) -> lib__string@list
+	var list_dirs, list_files: lib__string@list
+	var h = open(dirname, O_RDONLY)
 	if h < 0
 		lib_error = -1
 		return list_files
 	var d: dirent_struct
 	while getdents(h, &d)
-		var s: lib__base@@string
+		var s: lib__string
 		_cs2s(d.name, s)
 		if d.type == 1
 			list_dirs.add(s)

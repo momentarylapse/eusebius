@@ -1,6 +1,6 @@
-use lib.std
-use lib.x
-use lib.draw
+use lib.std.*
+use lib.x.*
+use lib.draw.*
 
 
 var xcon: owned![XConnection]

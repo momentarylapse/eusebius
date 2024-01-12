@@ -1,5 +1,5 @@
-use lib.std
-use lib.std.file
+use lib.std.*
+use lib.std.file.*
 
 
 func _rmdir(filename: string)

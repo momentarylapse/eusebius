@@ -1,7 +1,7 @@
-use lib.std
-use lib.x
-use lib.draw
-#use lib.ttfx
+use lib.std.*
+use lib.x.*
+use lib.draw.*
+#use lib.ttfx.*
 
 
 var bg: color

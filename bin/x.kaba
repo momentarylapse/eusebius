@@ -1,16 +1,16 @@
-use image
-use lib.std
-use lib.std.sys
-use lib.std.file
-use lib.std.net
-use lib.std.io
-use lib.pci
-use lib.vesa
-#use lib.x
-use lib.xserver.mouse
-use lib.xserver.keyboard
-use lib.xserver.controller
-use lib.xserver.windows
+use image.Image
+use lib.std.*
+use lib.std.sys.*
+use lib.std.file.*
+use lib.std.net.*
+use lib.std.io.*
+use lib.pci.*
+use lib.vesa.*
+#use lib.x.*
+use lib.xserver.mouse.*
+use lib.xserver.keyboard.*
+use lib.xserver.controller.*
+use lib.xserver.windows.*
 use hui
 
 
