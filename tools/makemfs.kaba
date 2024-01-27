@@ -9,13 +9,12 @@ func main(arg: string[])
 	var dir = Path(arg[1])
 	var list = fs.search(dir, "*", "f")
 	print(str(list))
-	var h: shared![FileStream] = fs.open(arg[0], "wb")
-	var f = new BinaryFormatter(h)
+	var f = fs.open(arg[0], "wb")
 	#f.stream.seek(ClusterSize)
 	#h.seek(ClusterSize)
 	var dummy: string
 	dummy.resize(ClusterSize)
-	h.write(dummy)
+	f.write(dummy)
 
 	# root directory
 	var cluster = 2
@@ -37,8 +36,7 @@ func main(arg: string[])
 		offset += len(str(e)) + 22
 	#h.seek(ClusterSize * cluster)
 	dummy.resize(ClusterSize * cluster)
-	h.write(dummy)
-	#del f
+	f.write(dummy)
 
 	# files
 	cluster = 2
