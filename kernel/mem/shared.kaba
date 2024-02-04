@@ -13,7 +13,7 @@ class SharedMemory
 		var key: int
 		var pid: int
 		var size: int
-		var physical_addr: int64
+		var physical_addr: i64
 		var refcount: int
 		var flags: int
 	
@@ -53,7 +53,7 @@ class SharedMemory
 				# :P
 				b.physical_addr = key
 			else if absolute
-				let paddr = int64(key) & 0x00000000ffffffff
+				let paddr = i64(key) & 0x00000000ffffffff
 				if !Paging.reserve_physical_chunk(paddr, size, true)
 					return -ENOMEM
 				b.physical_addr = paddr
@@ -85,7 +85,7 @@ class SharedMemory
 			return nil
 		return &blocks[id]
 		
-	func static shm_get(key: int, size: int, flags: int, pid: int) -> int64
+	func static shm_get(key: int, size: int, flags: int, pid: int) -> i64
 		for s in get_by_key(key)
 			if (flags & IPC_CREAT) > 0 and (flags & IPC_EXCL) > 0
 				return -EEXIST

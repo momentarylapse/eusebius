@@ -125,27 +125,27 @@ func strcmp(a: cstring, b: cstring) -> int
 func ceil_quot(n: int, m: int) -> int
 	return (n + m - 1) / m
 
-func ceil_quot(n: int64, m: int64) -> int64
+func ceil_quot(n: i64, m: i64) -> i64
 	return (n + m - 1) / m
 
 var __temp_i__, __temp_i2__, __temp_i3__, __temp_i4__: int
-var __temp_i64__: int64
+var __temp_i64__: i64
 var __temp_p__, __temp_p2__, __temp_p3__, __temp_p4__: void*
 var __temp_r__: void&
-func _p2i(p: void*) -> int64
-	return &p as int64&
+func _p2i(p: void*) -> i64
+	return &p as i64&
 
 class PointerWrapper as @noauto
 	var p: void&
 
 ## FIXME
-func _i2p(i: int64) -> void&
+func _i2p(i: i64) -> void&
 	var p = &i as PointerWrapper&
 	return p.p
 
 
 class Word
-	var c: char[2]
+	var c: i8[2]
 	func __int__() -> int
 		let a: int = c[0]
 		let b: int = c[1]

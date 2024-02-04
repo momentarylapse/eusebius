@@ -323,7 +323,7 @@ func exec(cmd: string)
 		return
 	#print(c.join(" - ")+"|\n")
 	let cc = c[0]
-	if cc.find("=", 0) > 0
+	if cc.find("=", 0).has_value()
 		execute_assign(cc)
 	else if cc == "vars"
 		variable_set.show()

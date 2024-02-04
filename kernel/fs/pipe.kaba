@@ -16,7 +16,7 @@ class Pipe as @noauto
 	var e: FileEntry&
 	var read_ref_count: int
 	var write_ref_count: int
-	var buffer: char[0]&
+	var buffer: i8[0]&
 	var buffer_used: int
 	func mut write(data: void&, size: int) -> int
 		if buffer_used + size > PIPE_BUFFER_SIZE

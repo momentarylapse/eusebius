@@ -7,7 +7,7 @@ let SCREEN_HEIGHT = 25
 class TextMode as @noauto
 
 	var static video_memory: cstring&
-	var static text_color, text_color2: char
+	var static text_color, text_color2: i8
 	var static pos, line: int
 
 	func static clear()
@@ -79,7 +79,7 @@ func _i2s(_i: int, out s: cstring)
 	var i = _i
 	if not sign
 		i = -i
-	var ttt: char[16]
+	var ttt: i8[16]
 	ttt[15] = 0
 	var offset = 14
 	while true

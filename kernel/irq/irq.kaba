@@ -23,10 +23,10 @@ let PIC2_COMMAND = 0xa0
 let PIC2_DATA = 0xa1
 
 class InterruptFrame as @noauto
-	cr4, cr3, cr2, cr0: int64
-	reg8ff: int64[8]
-	rsi, rdi, rbp, rdx, rcx, rbx, rax: int64
-	rip, cs, rflags, rsp, ss: int64
+	cr4, cr3, cr2, cr0: i64
+	reg8ff: i64[8]
+	rsi, rdi, rbp, rdx, rcx, rbx, rax: i64
+	rip, cs, rflags, rsp, ss: i64
 
 class InterruptDescriptor as @noauto
 	var a, b, c, d: int

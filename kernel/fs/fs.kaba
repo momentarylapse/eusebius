@@ -23,9 +23,9 @@ class FileOperations as @noauto
 		return 0
 	func virtual mut close(e: FileEntry) -> int
 		return 0
-	func virtual mut read(e: FileEntry, addr: int64, size: int) -> int
+	func virtual mut read(e: FileEntry, addr: i64, size: int) -> int
 		return 0
-	func virtual mut write(e: FileEntry, addr: int64, size: int) -> int
+	func virtual mut write(e: FileEntry, addr: i64, size: int) -> int
 		return 0
 
 class FileEntry as @noauto
@@ -165,10 +165,10 @@ class Ext2SuperBlock as @noauto
 	var inode_size: Word
 	var block_group_nr: Word
 	var feature_compat, feature_incompat, feature_ro_compat: int
-	var uuid: char[16]
-	var volume_name: char[16]
-	var last_mounted: char[64]
-	var _filler_: char[1024-200]
+	var uuid: i8[16]
+	var volume_name: i8[16]
+	var last_mounted: i8[64]
+	var _filler_: i8[1024-200]
 
 class Ext2BlockGroupDescriptor as @noauto
 	var block_bitmap: int
@@ -185,8 +185,8 @@ class Ext2BlockGroupDescriptor as @noauto
 class Ext2DirEntryHeader as @noauto
 	var inode: int
 	var rec_len: Word
-	var name_len: char
-	var file_type: char
+	var name_len: i8
+	var file_type: i8
 
 
 class MountPoint as @noauto
@@ -389,7 +389,7 @@ class FileSystem as @noauto
 
 class MountPointMichiFS extends MountPoint
 	
-	var buf: char[0]&
+	var buf: i8[0]&
 	var buf_used: int
 	
 	func mut read_int() -> int
@@ -426,7 +426,7 @@ class MountPointMichiFS extends MountPoint
 
 
 class MountPointExt2 extends MountPoint
-	var buf: char[0]&
+	var buf: i8[0]&
 	var inode_bitmap: int[0]&
 	var block_bitmap: int[0]&
 

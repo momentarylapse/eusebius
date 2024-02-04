@@ -22,7 +22,7 @@ let MAX_PAGE_MASKS = 32768 # 2^32 / PAGE_SIZE / 32
 # PageRoot(L4) -> PageDirectoryPointerTable -> PageDirectoryTable -> PageTable -> Page
 
 class Page as @noauto
-	var e: int64[PAGE_TABLE_ENTRIES]
+	var e: i64[PAGE_TABLE_ENTRIES]
 	
 	func mut clear()
 		for i in 0:PAGE_TABLE_ENTRIES
@@ -58,7 +58,7 @@ class PageTable extends Page
 
 
 # split virtual address -> page indices
-func page_params(vaddr: int64) -> (int,int,int,int)
+func page_params(vaddr: i64) -> (int,int,int,int)
 	let dirp_no = int(vaddr >> 30)
 	let dir_no = int(vaddr >> 21) & 0x000001ff # 512 dirs
 	let page_no = int (vaddr >> 12) & 0x000001ff
@@ -68,7 +68,7 @@ func page_params(vaddr: int64) -> (int,int,int,int)
 class PageRootTable extends PageTable
 
 	# (does not reserve pages, but page tables)
-	func mut map_linear(_vaddr: int64, _paddr: int64, size: int, _flags: PageFlags)
+	func mut map_linear(_vaddr: i64, _paddr: i64, size: int, _flags: PageFlags)
 		let vaddr = _vaddr & 0xfffffffffffff000
 		var paddr = _paddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
@@ -96,7 +96,7 @@ class PageRootTable extends PageTable
 			dir_no ++
 			page_no = 0
 
-	func mut map_by_alloc(_vaddr: int64, size: int, _flags: PageFlags) -> bool
+	func mut map_by_alloc(_vaddr: i64, size: int, _flags: PageFlags) -> bool
 		var vaddr = _vaddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
@@ -125,7 +125,7 @@ class PageRootTable extends PageTable
 			page_no = 0
 		return true
 	
-	func mut unmap(_vaddr: int64, size: int, dealloc: bool)
+	func mut unmap(_vaddr: i64, size: int, dealloc: bool)
 		var vaddr = _vaddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
@@ -157,7 +157,7 @@ class PageRootTable extends PageTable
 #		prints("   XXX ")
 		
 
-	func mut update_flags(_vaddr: int64, size: int, _flags: PageFlags)
+	func mut update_flags(_vaddr: i64, size: int, _flags: PageFlags)
 		let vaddr = _vaddr & 0xfffffffffffff000
 		var (dirp_no, dir_no, page_no, offset) = page_params(vaddr)
 		var npages = ceil_quot(size, PAGE_SIZE)
@@ -178,7 +178,7 @@ class PageRootTable extends PageTable
 						dir_no ++
 						page_no = 0
 	
-	func find_unmapped_space(vaddr_start: int64, size: int) -> int64
+	func find_unmapped_space(vaddr_start: i64, size: int) -> i64
 		var start = (vaddr_start & 0xfffffffffffff000)
 		let npages = ceil_quot(size, PAGE_SIZE)
 		var (dirp_no, _dir_no, _page_no, offset) = page_params(start)
@@ -221,7 +221,7 @@ class PageRootTable extends PageTable
 				dir_no = 0
 		return -1
 
-	func virtual_to_physical(addr: int64) -> int64
+	func virtual_to_physical(addr: i64) -> i64
 		var (dirp_no, dir_no, page_no, offset) = page_params(addr)
 		for pdpt in get_sub(0)
 			for pdt in pdpt.get_sub(dirp_no)
@@ -380,7 +380,7 @@ class Paging as @noauto
 				continue
 			
 			let p0 = m.offset / PAGE_SIZE
-			let p1 = ceil_quot(m.offset + m.size, int64(PAGE_SIZE))
+			let p1 = ceil_quot(m.offset + m.size, i64(PAGE_SIZE))
 			#printh(&m.offset, 8)
 			#prints("  ")
 			#printh(&p0, 8)
@@ -406,7 +406,7 @@ class Paging as @noauto
 					return pos
 		return -1
 	
-	func static free_physical_page(paddr: int64)
+	func static free_physical_page(paddr: i64)
 		let page_no = paddr / PAGE_SIZE
 		let mask_no = int(page_no / 32)
 		if mask_no > num_physical_masks or mask_no < 0

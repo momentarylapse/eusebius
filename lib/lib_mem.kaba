@@ -9,8 +9,8 @@ let MALLOC_SMALL_NUM = 4096*16
 
 
 func memcpy(_dest: void&, _source: void&, size: int)
-	var dest = _dest as char[0]&
-	var source = _source as char[0]&
+	var dest = _dest as i8[0]&
+	var source = _source as i8[0]&
 	for i in 0:size
 		dest[i] = source[i]
 
@@ -23,10 +23,10 @@ class MallocHeader
 	var next: MallocHeader*
 	var prev: MallocHeader*
 	func after() -> void&
-		var pp = &self as char[0]&
+		var pp = &self as i8[0]&
 		return &pp[size]
 	func payload() -> void&
-		var pp = &self as char[0]&
+		var pp = &self as i8[0]&
 		return &pp[sizeof(MallocHeader)]
 var malloc_first_free: MallocHeader&
 var malloc_end_marker: MallocHeader&
@@ -278,7 +278,7 @@ func realloc(p: void&, size: int) -> void&
 
 class MallocSmallBlock
 	var mask: int[MALLOC_SMALL_NUM / 32]
-	var buf: char[MALLOC_SMALL_SIZE * MALLOC_SMALL_NUM]
+	var buf: i8[MALLOC_SMALL_SIZE * MALLOC_SMALL_NUM]
 	var delta: int
 	var full_below: int
 	

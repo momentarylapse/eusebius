@@ -20,7 +20,7 @@ func lib__math@@rand(m: float) -> float
 func lib__math@@rand(m: int) -> int
 	return rand_u(m)
 
-func hex_nibble(i: int) -> char
+func hex_nibble(i: int) -> i8
 	if i >= 10
 		return 'a' + i - 10
 	return '0' + i
@@ -51,8 +51,8 @@ class lib__int
 				space = '0'
 		return str_fill(base@@i2s(i), n, space)
 
-class lib__int64
-	_i: int64
+class lib__i64
+	_i: i64
 	# FIXME: @callbyvalue
 	
 	func __str__() -> lib__string

@@ -29,7 +29,7 @@ class BlockDevice
 	var disk_no: int
 	var offset, size: int
 	var block_size: int
-	var type: char
+	var type: i8
 	var active: bool
 	var name: cstring
 	var p: void*

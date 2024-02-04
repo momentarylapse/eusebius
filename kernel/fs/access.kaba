@@ -19,7 +19,7 @@ class OpenFileData as @noauto
 	var entry: FileEntry&
 	var offset: int
 	#int block_size
-	var buffer: char[0]&
+	var buffer: i8[0]&
 	var pipe: Pipe*
 	var socket: KSocket*
 	var ref_count: int
@@ -42,7 +42,7 @@ class OpenFileData as @noauto
 		for s in socket
 			s.blocking = blocking
 
-	func mut read(_addr: int, _size: int64) -> int
+	func mut read(_addr: int, _size: i64) -> int
 		var r = 0
 		var size = _size
 		var addr = _addr
@@ -99,7 +99,7 @@ class OpenFileData as @noauto
 		entry.shrink_block_list(ceil_quot(entry.size, entry.mount.block_size))
 		inode_dirty = true
 
-	func mut write(_addr: int64, _size: int) -> int
+	func mut write(_addr: i64, _size: int) -> int
 		var r=0
 		var addr = _addr
 		var size = _size
@@ -257,7 +257,7 @@ class OpenFileData as @noauto
 
 
 var OpenFiles: OpenFileData[MAX_OPEN_FILES]
-var _dummy_buffer: char[8]
+var _dummy_buffer: i8[8]
 
 func create_handle(flags: int) -> OpenFileData*
 	for o in OpenFiles

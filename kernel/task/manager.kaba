@@ -48,7 +48,7 @@ class TaskManager as @noauto
 				return i
 		return -1
 
-	func static add_user_task(name: cstring, F: int64, parent: Task*) -> Task*
+	func static add_user_task(name: cstring, F: i64, parent: Task*) -> Task*
 
 		let pid = get_next_unused_pid()
 		if pid < 0

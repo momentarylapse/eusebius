@@ -9,7 +9,7 @@ use op_fs.*
 use io.text.*
 
 
-func sys_set_cur_dir(out t: Task, faddr: int64) -> int
+func sys_set_cur_dir(out t: Task, faddr: i64) -> int
 	var filename = _i2p(faddr) as cstring&
 #	if !memcpy2kernel(&filename, faddr, sizeof(cstring))
 #		return -EFAULT
@@ -30,7 +30,7 @@ func sys_kill(_pid: int, signal: int) -> int
 #		return t.handle_signal_link_iret(signal)
 	return -ESRCH
 
-func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int64
+func sys_nanosleep(out t: Task, p1: i64, p2: i64) -> i64
 	var tv = _i2p(p1) as TimeValue&
 	tv.add(KernelTimer.tv)
 	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
@@ -39,7 +39,7 @@ func sys_nanosleep(out t: Task, p1: int64, p2: int64) -> int64
 func sys_exit(out t: Task, r: int)
 	TaskManager.die(t, r)
 
-func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> int64
+func sys_waitpid(out t: Task, _pid: int, status_addr: i64, options: int) -> i64
 	for o in TaskManager.get_task(_pid)
 		# already (un-) dead?
 		if o.status == TaskStatus.ZOMBIE
@@ -58,7 +58,7 @@ func sys_waitpid(out t: Task, _pid: int, status_addr: int64, options: int) -> in
 	return -ECHILD
 
 
-func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
+func sys_execute(out t: Task, faddr: i64, fd_in: int, fd_out: int) -> i64
 	var filename = _i2p(faddr) as cstring&
 	#for tt in TaskManager.execute_user_task(filename, nil,nil)
 	for tt in TaskManager.execute_user_task(filename, &t, t.get_handle(fd_in), t.get_handle(fd_out))
@@ -95,7 +95,7 @@ func sys_execute(out t: Task, faddr: int64, fd_in: int, fd_out: int) -> int64
 #	sys_close(t, h)
 #	return -1
 
-func sys_getcwd(out t: Task, addr: int64) -> int64
+func sys_getcwd(out t: Task, addr: i64) -> i64
 	var pf = _i2p(addr) as cstring&
 	t.cur_dir.get_path(pf)
 	return 0

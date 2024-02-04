@@ -7,7 +7,7 @@ use irq.irq.*
 let TIMER_IRQ = 0
 
 class KernelTimer as @noauto
-	var static state: int64
+	var static state: i64
 	var static tv: TimeValue
 	
 	func static update_state()
@@ -20,7 +20,7 @@ class KernelTimer as @noauto
 		# (O__O)  int64 arithmetic...
 		# also bug in constant system 0x00000000ffffffff = -1
 		__temp_i64__ = (__temp_i64__ << 32) >> 32
-		state = int64(__temp_i2__)<<32
+		state = i64(__temp_i2__)<<32
 		state += __temp_i64__
 	
 	# seems non-monotonic

@@ -98,7 +98,7 @@ class lib__@DynamicArray
 #		num = 0
 
 class lib__string extends lib__@DynamicArray
-	var override data: char[0]*
+	var override data: i8[0]*
 	func __init__()
 		__mem_init__(1)
 	func __delete__()
@@ -107,7 +107,7 @@ class lib__string extends lib__@DynamicArray
 		__mem_resize__(size)
 	func mut clear()
 		__mem_clear__()
-	func mut add(c: char)
+	func mut add(c: i8)
 		__mem_resize__(num + 1)
 		for d in data
 			d[num - 1] = c
@@ -163,7 +163,7 @@ class lib__string extends lib__@DynamicArray
 	func tail(size: int) -> Self
 		return substr(num - size, size)
 
-	func find(s: Self, start: int) -> int
+	func find(s: Self, start: int) -> lib__int@optional
 		for d in data
 			for sd in s.data
 				for i in start : num - s.num
@@ -173,8 +173,8 @@ class lib__string extends lib__@DynamicArray
 							ok = false
 							break
 					if ok
-						return i
-		return -1
+						return lib__int@optional(i)
+		return lib__int@optional()
 		
 	func compare(s: Self) -> int
 		var n = num
@@ -282,10 +282,14 @@ class lib__string extends lib__@DynamicArray
 
 	func replace(sub: Self, by: Self) -> Self
 		var r: Ret = self
-		var i = r.find(sub, 0)
-		while i >= 0
-			r.replace0(i, sub.num, by)
-			i = r.find(sub, i + by.num)
+		var i = 0
+		while true
+			let _i = r.find(sub, i)
+			if _i._has_value
+				r.replace0(_i._value, sub.num, by)
+				i = _i._value + by.num
+			else
+				break
 		return r
 
 	func lower() -> Self
@@ -311,12 +315,11 @@ class lib__string extends lib__@DynamicArray
 		var pos = 0
 		while true
 			let pos2 = find(s, pos)
-			if pos2 < 0
+			if pos2._has_value
+				r.add(substr(pos, pos2._value - pos))
+				pos = s.num + pos2._value
+			else
 				break
-
-			r.add(substr(pos, pos2 - pos))
-
-			pos = s.num + pos2
 		if (r.num > 0) or (pos < num)
 			r.add(substr(pos, num - pos))
 		return r
@@ -395,7 +398,7 @@ func lib__as_binary(p: void&, num: int) -> lib__string
 	s.data = p
 	return s
 
-func str_fill(s: lib__string, n: int, space: char) -> lib__string
+func str_fill(s: lib__string, n: int, space: i8) -> lib__string
 	var ttt: Ret = s
 	var filler: Ret
 	if n < 0

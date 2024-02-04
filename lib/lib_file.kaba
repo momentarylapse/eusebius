@@ -371,7 +371,7 @@ func lib__os@@fs@@is_directory(filename: lib__os@@Path) -> bool
 		return d.type == 1
 	return false
 
-func lib__os@@fs@@size(filename: lib__os@@Path) -> int64
+func lib__os@@fs@@size(filename: lib__os@@Path) -> i64
 	var d: StatData
 	if stat(filename, d)
 		return d.size

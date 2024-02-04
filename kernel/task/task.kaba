@@ -57,7 +57,7 @@ enum WaitingMode as @noauto
 
 class TaskSharedMemoryRef as @noauto
 	var s: SharedMemory.Block*
-	var vaddr: int64
+	var vaddr: i64
 
 class Task
 	var stack: void&
@@ -91,7 +91,7 @@ class Task
 	
 	var first_time_running: bool
 	
-	func mut init(_pid: int, _name: cstring, F: int64, _parent: Task*)
+	func mut init(_pid: int, _name: cstring, F: i64, _parent: Task*)
 		for h in handles
 			h = nil
 		for s in shmem

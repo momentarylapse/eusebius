@@ -4,8 +4,8 @@ use io.text.*
 var memory_size: int
 
 class BiosMemoryMapEntry as @noauto
-	var offset: int64
-	var size: int64
+	var offset: i64
+	var size: i64
 	var type, dummy: int # type < 0 -> end
 
 var bios_mem_map: BiosMemoryMapEntry[64]

@@ -20,7 +20,7 @@ class AtaDiskInfo as @noauto
 
 
 # FIXME: some compiler bug.... &global does not work....
-func __fff(b: char[512]) -> int&
+func __fff(b: i8[512]) -> int&
 	return &b[0] as int&
 
 class AtaController as @noauto
@@ -28,13 +28,13 @@ class AtaController as @noauto
 	var static nAta: int
 	var static Status: int
 	var static IOBase, IOCtrl, ide_no, ide_ms: int
-	var static MSMask: char
+	var static MSMask: i8
 
-	var static buffer: char[512]
+	var static buffer: i8[512]
 	var static BufferDW: int[0]&
 	var static Size: int
 
-	var static atapi_buffer: char[16]
+	var static atapi_buffer: i8[16]
 	
 	var static disk_info: AtaDiskInfo[4]
 
@@ -42,7 +42,7 @@ class AtaController as @noauto
 		for i in 0:100
 			inportb(IOBase + 7)
 
-	func static wait_status(mask: char, value: char) -> bool
+	func static wait_status(mask: i8, value: i8) -> bool
 		var AtaStatusChar = inportb(IOBase + 7)
 		var n = 1000000000
 		while ((AtaStatusChar & mask)!=value) and (n >= 0)
@@ -186,7 +186,7 @@ class AtaController as @noauto
 		prints("AtaReset ")
 		set_disk_add(disk_no)
 	
-		var status: char
+		var status: i8
 		status = inportb(IOBase+7)
 		printh(&status,1)
 		status = inportb(IOBase+1)
@@ -224,7 +224,7 @@ class AtaController as @noauto
 		# num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
 	
-		var status: char
+		var status: i8
 
 
 		
@@ -271,7 +271,7 @@ class AtaController as @noauto
 		# num_sectors=1...
 		outportb(IOBase + 0x206, 0x0a)
 	
-		var status: char
+		var status: i8
 
 
 		

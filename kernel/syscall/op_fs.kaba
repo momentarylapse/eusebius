@@ -17,7 +17,7 @@ use time.timer.*
 use io.text
 
 
-func sys_open(out t: Task, addr: int64, flags: int) -> int
+func sys_open(out t: Task, addr: i64, flags: int) -> int
 	var filename = _i2p(addr) as cstring&
 	for of in kernel_open(filename, flags, t.cur_dir)
 		let index = t.add_handle(&of)
@@ -27,7 +27,7 @@ func sys_open(out t: Task, addr: int64, flags: int) -> int
 	return -ENOENT
 
 
-func sys_read(out t: Task, handle: int, addr: int64, size: int) -> int
+func sys_read(out t: Task, handle: int, addr: i64, size: int) -> int
 	for of in t.get_handle(handle)
 		let r = of.read(addr, size)
 		if r == -EWOULDBLOCK and of.blocking
@@ -45,7 +45,7 @@ func sys_write(out t: Task, handle: int, addr: int, size: int) -> int
 	else
 		return -EBADF
 
-func sys_getdents(out t: Task, handle: int, addr: int64, num: int) -> int
+func sys_getdents(out t: Task, handle: int, addr: i64, num: int) -> int
 	for of in t.get_handle(handle)
 		return of.getdents(_i2p(addr) as dirent_struct&, num)
 	else
@@ -71,7 +71,7 @@ func sys_dup(out t: Task, fd: int) -> int
 		return t.add_handle(&of)
 	return -EBADF
 	
-func sys_pipe(out t: Task, addr: int64) -> int
+func sys_pipe(out t: Task, addr: i64) -> int
 	var e = create_file_entry(":pipe:", FileType.PIPE, &FileSystem.dummy_mount)
 	if !PipeManager.create(e)
 		return -3
@@ -132,7 +132,7 @@ class StatData as @noauto
 		#panic(filename)
 		return 1
 
-func sys_stat(out t: Task, fn: int64, addr: int64) -> int64
+func sys_stat(out t: Task, fn: i64, addr: i64) -> i64
 	var pd = _i2p(addr) as StatData&
 	var pf = _i2p(fn) as cstring&
 	return pd.get(pf, t.cur_dir)
