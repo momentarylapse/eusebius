@@ -12,7 +12,7 @@ func main(arg: string[])
 	var f = fs.open(arg[0], "wb")
 	#f.stream.seek(ClusterSize)
 	#h.seek(ClusterSize)
-	var dummy: string
+	var dummy: bytes
 	dummy.resize(ClusterSize)
 	f.write(dummy)
 
@@ -30,7 +30,7 @@ func main(arg: string[])
 		f << size
 		f << 1 # number of file parts
 		f << cluster
-		var num_clusters = (size - 1) / ClusterSize + 1
+		let num_clusters = (size - 1) / ClusterSize + 1
 		f << num_clusters
 		cluster += num_clusters
 		offset += len(str(e)) + 22
@@ -42,10 +42,10 @@ func main(arg: string[])
 	cluster = 2
 	for e in list
 		let ee = dir | e
-		var s = "dd if='{{ee}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
+		let s = "dd if='{{ee}}' of='{{arg[0]}}' bs=2048 seek={{cluster}}"
 		shell_execute(s)
-		var size = fs.size(ee)
-		var num_clusters = (size - 1) / ClusterSize + 1
+		let size = fs.size(ee)
+		let num_clusters = (size - 1) / ClusterSize + 1
 		cluster += num_clusters
 		#string t = FileRead(arg[1] + e.name)
 #		t += "        "

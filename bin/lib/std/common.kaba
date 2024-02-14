@@ -1,26 +1,26 @@
 #define __FUNCTION_POINTER_AS_CODE__
 
 
-const EWOULDBLOCK = 128
-const ENOSPC = 127
-const EACCES = 126
-const EEXIST = 125
-const EINVAL = 124
-const ENOENT = 123
-const ENOMEM = 122
-const ESRCH = 121
-const ECHILD = 120
-const EBADF = 119
-const ENFILE = 118
-const EFAULT = 117
-const ENOSYS = 116
-const ENOTDIR = 115
-const EISDIR = 114
-const ENOTEMPTY = 113
-const ENOTSOCK = 112
-const EADDRINUSE = 111
-const ECONNREFUSED = 110
-const ENOTCONN = 109
+let EWOULDBLOCK = 128
+let ENOSPC = 127
+let EACCES = 126
+let EEXIST = 125
+let EINVAL = 124
+let ENOENT = 123
+let ENOMEM = 122
+let ESRCH = 121
+let ECHILD = 120
+let EBADF = 119
+let ENFILE = 118
+let EFAULT = 117
+let ENOSYS = 116
+let ENOTDIR = 115
+let EISDIR = 114
+let ENOTEMPTY = 113
+let ENOTSOCK = 112
+let EADDRINUSE = 111
+let ECONNREFUSED = 110
+let ENOTCONN = 109
 
 
 class TimeValue

@@ -97,6 +97,108 @@ class lib__@DynamicArray
 #				memcpy(d, ad, num * element_size)
 #		num = 0
 
+
+class lib__bytes extends lib__@DynamicArray
+	var override data: i8[0]*
+	func __init__()
+		__mem_init__(1)
+	func __delete__()
+		__mem_clear__()
+	func mut resize(size: int)
+		__mem_resize__(size)
+	func mut clear()
+		__mem_clear__()
+	func mut add(c: i8)
+		__mem_resize__(num + 1)
+		for d in data
+			d[num - 1] = c
+	#void mut insert(int index, char c)
+#		__mem_resize__(num + 1)
+#		for i in 1:num-index-1
+#			data[num - i] = data[num - i - 1]
+#		data[index] = c
+	func mut remove(index: int)
+		__mem_remove__(index)
+	func mut __assign__(o: Self)
+		__mem_resize__(o.num)
+		for d in data
+			for od in o.data
+				memcpy(&d, &od, num)
+	func mut __iadd__(o: Self)
+		let n0 = num
+		__mem_resize__(num + o.num)
+		for d in data
+			for od in o.data
+				memcpy(&d[n0], &od, o.num)
+	func __add__(o: Self) -> Self
+		var r: Ret
+		r = self
+		r += o
+		return r
+			
+	func substr(_start: int, _length: int) -> Self
+		var r: Ret
+		var start = _start
+		var length = _length
+		if start >= num
+			return r
+		if start < 0
+			# start from the end
+			start = num + start
+			if start < 0
+				return r
+		if length < 0
+			length = num - start + length + 1
+		if start + length > num
+			length = num - start
+		if length > 0
+			r.resize(length)
+			for d in data
+				for rd in r.data
+					memcpy(&rd, &d[start], length)
+		return r
+
+	func compare(s: Self) -> int
+		var n = num
+		if s.num < num
+			n = s.num
+		for d in data
+			for sd in s.data
+				for i in 0:n
+					let a = d[i]
+					let b = sd[i]
+					if a != b
+						return a - b
+		return num - s.num
+		
+	func __eq__(s: Self) -> bool
+		return compare(s) == 0
+	func __neq__(s: Self) -> bool
+		return compare(s) != 0
+
+	func hex() -> Self
+		var ttt: Ret
+		for _data in data
+			for i in 0:num
+				let j = i
+				let d = _data[j]
+				let d1 = (d>>4)
+				let d2 = (d&15)
+				if d1 < 10
+					ttt.add(d1+48)
+				else
+					ttt.add(d1+87)
+				if d2<10
+					ttt.add(d2+48)
+				else
+					ttt.add(d2+87)
+				if i == num-1
+					ttt.add(' ')
+				else
+					ttt.add('.')
+		return ttt
+
+
 class lib__string extends lib__@DynamicArray
 	var override data: i8[0]*
 	func __init__()
