@@ -185,7 +185,7 @@ class TaskManager as @noauto
 		# user data
 #		gdt[4].set_data(0, 0xffffffff, false, 0)#3)
 
-		for t in tasks
+		for mut t in tasks
 			t.status = TaskStatus.UNUSED
 
 		next_pid_to_assign = 0
@@ -291,7 +291,7 @@ class TaskManager as @noauto
 	
 	func static send_death_message(t: Task) -> bool
 		var sent = false
-		for tt in tasks
+		for mut tt in tasks
 			if tt.status == TaskStatus.WAITING
 				if tt.waiting_mode == WaitingMode.TASK_EXIT and tt.waiting_param_i1 == t.pid
 					tt.frame.rax = 0 # return waitpid()
@@ -362,7 +362,7 @@ class TaskManager as @noauto
 		return nil
 
 	func static process_waiting_tasks(now: TimeValue)
-		for t in TaskManager.tasks
+		for mut t in TaskManager.tasks
 			if t.status == TaskStatus.WAITING
 				if t.waiting_mode == WaitingMode.TIME
 					var tv = &t.waiting_param_i1 as TimeValue&

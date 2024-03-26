@@ -75,7 +75,7 @@ class PipeManager as @noauto
 	var static pipes: Pipe[MAX_PIPES]
 
 	func static create(e: FileEntry) -> Pipe*
-		for p in pipes
+		for mut p in pipes
 			if !p.used
 				p.used = true
 				p.e := &e
@@ -94,5 +94,5 @@ class PipeManager as @noauto
 
 
 	func static init()
-		for p in pipes
+		for mut p in pipes
 			p.used = false

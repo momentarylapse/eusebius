@@ -94,7 +94,7 @@ class Client
 				if w.id == buf[1]
 					invalidated.add(w.r)
 		else if buf[0] == XCMD_WINDOW_MOVE
-			for w in win
+			for mut w in win
 				if w.id == buf[1]
 					w.move(buf[2], buf[3])
 		else if buf[0] == XCMD_WINDOW_GET_POS
@@ -118,7 +118,7 @@ class Client
 #					mouse.drag_win = nil
 #					break
 		else if buf[0] == XCMD_WINDOW_ACTIVATE
-			for w in win
+			for mut w in win
 				if w.id == buf[1]
 					w.level = 3
 					sort_windows()
@@ -179,7 +179,7 @@ class CommandController
 			fcntl(ss, F_SETFL, O_RDWR | O_NONBLOCK)
 			clients.add(new Client(ss))
 			
-		for c in clients
+		for mut c in clients
 			c.poll()
 		for i in 0:len(clients)
 			if clients[i].kill_me

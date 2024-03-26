@@ -167,7 +167,7 @@ class lib__os@@Path
 		for d in s.data
 			return d[len(s)-1] == '/'
 		return false
-	func const __bitor__(p: Self) -> lib__string
+	func __bitor__(p: Self) -> lib__string
 		if is_empty()
 			return p.s
 		if has_dir_ending()

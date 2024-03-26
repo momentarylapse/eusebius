@@ -6,7 +6,9 @@ func main()
 	print("dying...")
 	var p: int* = nil
 	trust_me
-		*p = 13
+		#*p = 13
+		# oh great, we are not allowed to do illegal stuff now :D
+		pass
 	print("should be dead already???...")
 	
 	exit(0)

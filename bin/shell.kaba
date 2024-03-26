@@ -224,7 +224,7 @@ class JobManager
 		jobs.add(give(j))
 		return weak(jobs[len(jobs) - 1])
 	func mut test_all()
-		for j in jobs
+		for mut j in jobs
 			j.test()
 		for i=>j in jobs
 			if j.done
@@ -248,10 +248,10 @@ func parse_var_name(cmd: string, pos: int) -> string
 		name.add(cmd[i])
 	return name
 
-func parse_single(cmd: string, out pos: int&) -> string
+func parse_single(cmd: string, out pos: int) -> string
 	var t: string
 	var in_string = false
-	for j in *pos:len(cmd)
+	for j in pos:len(cmd)
 		#if (cmd[j] == ' ' or cmd[j] == '<' or cmd[j] == '>' or cmd[j] == '|') and !in_string
 		if cmd[j] == ' ' and !in_string
 			break
@@ -263,7 +263,7 @@ func parse_single(cmd: string, out pos: int&) -> string
 			j += len(var_name)
 		else
 			t.add(cmd[j])
-		*pos = j
+		pos = j
 	return t
 
 func parse(cmd0: string, out c: string[])

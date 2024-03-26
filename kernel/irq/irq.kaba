@@ -142,7 +142,7 @@ class IrqManager as @noauto
 	func static init()
 		prints("loading interrupt table...")
 
-		for i in idt
+		for mut i in idt
 			i.clear()
 			#i.set(raw_function_pointer(int_ignore))
 

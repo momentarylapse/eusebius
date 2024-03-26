@@ -83,11 +83,11 @@ class XWindow
 		con.send(XCMD_WINDOW_INVALIDATE, id, -1, -1, -1, -1)
 	func mut move(x: int, y: int)
 		con.send(XCMD_WINDOW_MOVE, id, x, y, 0, 0)
-	func mut get_size(out w: int&, out h: int&)
+	func mut get_size(out w: int, out h: int)
 		con.just_send(XCMD_WINDOW_GET_SIZE, id, 0, 0, 0, 0)
 		con.wait_recv(XCMD_WINDOW_GET_SIZE)
-		*w = con.buf[2]
-		*h = con.buf[3]
+		w = con.buf[2]
+		h = con.buf[3]
 	func mut activate()
 		con.send(XCMD_WINDOW_ACTIVATE, id, 0, 0, 0, 0)
 	func mut drag_start()
@@ -231,7 +231,7 @@ class XConnection
 			let new_lbut = (flags & 1) > 0
 			let new_mbut = (flags & 2) > 0
 			let new_rbut = (flags & 4) > 0
-			for w in windows
+			for mut w in windows
 				if w != cursor_win
 					continue
 				w.mx = x - w.x
@@ -260,7 +260,7 @@ class XConnection
 		else if buf[0] == XCMD_EVENT_KEY
 			#kprint("client: key\n")
 			let key = buf[1]
-			for w in windows
+			for mut w in windows
 				if w.active
 					w.on_key(key)
 		else if buf[0] == XCMD_EVENT_DRAW
@@ -269,14 +269,14 @@ class XConnection
 		else if buf[0] == XCMD_WINDOW_MOVE
 			#kprint("client: move\n")
 			let id = buf[1]
-			for w in windows
+			for mut w in windows
 				if w.id == id
 					w.x = buf[2]
 					w.y = buf[3]
 		else if buf[0] == XCMD_WINDOW_ACTIVATE
 			#kprint(" activate  ")
 			let id = buf[1]
-			for w in windows
+			for mut w in windows
 				let old_active = w.active
 				w.active = (w.id == id)
 				if w.active != old_active

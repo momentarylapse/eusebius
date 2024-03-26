@@ -92,11 +92,11 @@ class Task
 	var first_time_running: bool
 	
 	func mut init(_pid: int, _name: cstring, F: i64, _parent: Task*)
-		for h in handles
+		for mut h in handles
 			h = nil
-		for s in shmem
+		for mut s in shmem
 			s.s = nil
-		for s in signal_handlers
+		for mut s in signal_handlers
 			s = 0
 		sleep_and_wait = false
 		first_time_running = true
@@ -104,7 +104,7 @@ class Task
 		pid = _pid
 
 		strcpy(name, _name)
-		for a in arg
+		for mut a in arg
 			a = 0
 		status = TaskStatus.SLEEPING
 		parent = _parent

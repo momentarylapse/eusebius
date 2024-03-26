@@ -30,7 +30,7 @@ class ProcessManager
 			pids.add(r)
 		return r
 	func mut update()
-		for p in pids
+		for mut p in pids
 			var status: int
 			if waitpid(p, &status, false) == -2
 				continue

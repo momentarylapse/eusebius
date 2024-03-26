@@ -31,7 +31,7 @@ class SharedMemory
 	var static blocks: Block[MAX_SHARED_MEMORY_BLOCKS]
 	
 	func static init()
-		for i=>b in blocks
+		for mut i=>b in blocks
 			b.id = i
 			b.key = -1
 	
@@ -46,7 +46,7 @@ class SharedMemory
 		let absolute = (flags & SHM_ABSOLUTE) != 0
 		if key < 0 and !absolute
 			return -EINVAL
-		for i=>b in blocks
+		for mut i=>b in blocks
 			if b.key != -1
 				continue
 			if absolute and key == 0x00700000

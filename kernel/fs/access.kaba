@@ -260,7 +260,7 @@ var OpenFiles: OpenFileData[MAX_OPEN_FILES]
 var _dummy_buffer: i8[8]
 
 func create_handle(flags: int) -> OpenFileData*
-	for o in OpenFiles
+	for mut o in OpenFiles
 		if !o.used
 #			prints(" <+HANDLE ")
 #			#var p = &o
@@ -389,7 +389,7 @@ class dirent_struct as @noauto
 	var name: cstring
 
 func InitFileAccessData()
-	for o in OpenFiles
+	for mut o in OpenFiles
 		o.used = false
-	for p in PipeManager.pipes
+	for mut p in PipeManager.pipes
 		p.used = false

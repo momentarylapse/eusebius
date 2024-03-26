@@ -269,7 +269,7 @@ class FileSystem as @noauto
 	var static root: FileEntry&
 	
 	func static init()
-		for m in mounts
+		for mut m in mounts
 			m.dev = nil
 		dummy_mount.block_size = 1024
 		dummy_mount.dev_blocks_per_block = 1
@@ -382,7 +382,7 @@ class FileSystem as @noauto
 		return nil
 	
 	func static sync()
-		for m in mounts
+		for mut m in mounts
 			if m.dev
 				m.sync()
 

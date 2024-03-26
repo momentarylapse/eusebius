@@ -180,9 +180,9 @@ class Scheduler
 #	#	prints(">")
 
 	func static update_times()
-		if !KernelTimer.tv.is_before(next_perf_calc)
+		if not KernelTimer.tv.is_before(next_perf_calc)
 			#prints("<PERF>")
 			next_perf_calc.inc_nanosec(PERF_UPDATE_DT)
-			for t in TaskManager.tasks
+			for mut t in TaskManager.tasks
 				t.cpu_load = t.time_temp.nanosec / (PERF_UPDATE_DT / 1000)
 				t.time_temp.clear()

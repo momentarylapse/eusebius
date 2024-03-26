@@ -32,10 +32,10 @@ func sys_ipc(out t: Task, cmd: int, p1: i64, p2: i64, p3: int) -> i64
 	if cmd == SHMGET
 		return SharedMemory.shm_get(p1, p2, p3, t.pid)
 	else if cmd == SHMAT
-		for r in t.shmem
-			if !r.s
+		for mut r in t.shmem
+			if not r.s
 				r.s = SharedMemory.get(p1)
-				for s in r.s
+				for mut s in r.s
 					r.vaddr = t.page_root_dir.find_unmapped_space(0x00000000e0000000, s.size) #0xa0000000
 					if r.vaddr == -1
 						return -ENOMEM
@@ -50,8 +50,8 @@ func sys_ipc(out t: Task, cmd: int, p1: i64, p2: i64, p3: int) -> i64
 				return -ENOENT
 		return -1
 	else if cmd == SHMDT
-		for r in t.shmem
-			for s in r.s
+		for mut r in t.shmem
+			for mut s in r.s
 				if r.vaddr == p1
 					t.page_root_dir.unmap(r.vaddr, s.size, false)
 					s.unref()
@@ -89,7 +89,7 @@ class SysInfo as @noauto
 	func mut get()
 		KernelTimer.update()
 		uptime = KernelTimer.tv.sec
-		for l in loads
+		for mut l in loads
 			l = 0
 		mem_unit = 1024 #PAGE_SIZE
 		totalram = memory_size / mem_unit
