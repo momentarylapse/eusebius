@@ -146,7 +146,9 @@ class TaskManager as @noauto
 		}
 		# irq stack
 		ist1 = Heap.malloc(IRQ_STACK_SIZE)
-		tss.ist1 = _i2p(_p2i(ist1) + IRQ_STACK_SIZE)
+		let _ist1 = _p2i(ist1) + IRQ_STACK_SIZE
+		tss.ist1[0] = _ist1
+		tss.ist1[1] = _ist1 >> 32
 		prints("ltr...")
 		asm{
 			mov ax, 0x0028

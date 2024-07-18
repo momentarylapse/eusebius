@@ -146,7 +146,7 @@ func _i2p(i: i64) -> void&
 
 class Word
 	var c: i8[2]
-	func __int__() -> int
+	func __i32__() -> int
 		let a: int = c[0]
 		let b: int = c[1]
 		return a + b * 256

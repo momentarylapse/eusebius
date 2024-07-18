@@ -14,7 +14,7 @@ class lib__math@@color
 class lib__image@@Image
 	var width, height: int
 	var mode, __align__: int
-	var data: lib__int@list
+	var data: lib__i32@list
 	var alpha_used: bool
 	var error: bool
 	func __init__(w: int, h: int, c: color)

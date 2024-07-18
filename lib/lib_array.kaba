@@ -265,7 +265,7 @@ class lib__string extends lib__@DynamicArray
 	func tail(size: int) -> Self
 		return substr(num - size, size)
 
-	func find(s: Self, start: int) -> lib__int@optional
+	func find(s: Self, start: int) -> lib__i32@optional
 		for d in data
 			for sd in s.data
 				for i in start : num - s.num
@@ -275,8 +275,8 @@ class lib__string extends lib__@DynamicArray
 							ok = false
 							break
 					if ok
-						return lib__int@optional(i)
-		return lib__int@optional()
+						return lib__i32@optional(i)
+		return lib__i32@optional()
 		
 	func compare(s: Self) -> int
 		var n = num
@@ -448,7 +448,7 @@ class lib__string extends lib__@DynamicArray
 					ttt.add('.')
 		return ttt
 	
-	func __int__() -> int
+	func __i32__() -> int
 		if num == 0
 			return 0
 		for _data in data
@@ -466,7 +466,7 @@ class lib__string extends lib__@DynamicArray
 			return r
 		return 0
 	
-	func __float__() -> float
+	func __f32__() -> float
 		if num == 0
 			return 0.0
 		for _data in data
@@ -595,10 +595,10 @@ func lib__@sa2s(a: lib__string@list) -> lib__string
 
 
 
-class lib__int@list extends lib__@DynamicArray
-	var override data: int[0]*
+class lib__i32@list extends lib__@DynamicArray
+	var override data: i32[0]*
 	func __init__()
-		__mem_init__(sizeof(int))
+		__mem_init__(sizeof(i32))
 	func __delete__()
 		clear()
 	func mut clear()
@@ -635,17 +635,17 @@ class lib__int@list extends lib__@DynamicArray
 	func __str__() -> lib__string
 		return lib__@ia2s(self)
 
-func lib__math@@sum(l: lib__int@list) -> int
+func lib__math@@sum(l: lib__i32@list) -> i32
 	var s = 0
 	for d in l.data
 		for i in 0:l.num
 			s += d[i]
 	return s
 
-class lib__float@list extends lib__@DynamicArray
-	var override data: float[0]*
+class lib__f32@list extends lib__@DynamicArray
+	var override data: f32[0]*
 	func __init__()
-		__mem_init__(sizeof(float))
+		__mem_init__(sizeof(f32))
 	func __delete__()
 		clear()
 	func mut clear()
@@ -760,7 +760,7 @@ class lib__bool
 	func static __str__(b: bool) -> lib__string
 		return base@@b2s(b)
 
-func lib__@ia2s(a: lib__int@list) -> lib__string
+func lib__@ia2s(a: lib__i32@list) -> lib__string
 	var r: Ret
 	r.add('[')
 	for i in 0:a.num
@@ -772,7 +772,7 @@ func lib__@ia2s(a: lib__int@list) -> lib__string
 	r.add(']')
 	return r
 
-func lib__@fa2s(a: lib__float@list) -> lib__string
+func lib__@fa2s(a: lib__f32@list) -> lib__string
 	var r: Ret
 	r.add('[')
 	for i in 0:a.num
@@ -785,16 +785,16 @@ func lib__@fa2s(a: lib__float@list) -> lib__string
 	return r
 
 # FIXME OMG \(O_O)/
-func lib__@sorted(_a: void*, t: kaba.Class&, x: string) -> lib__int@list # lib__@DynamicArray
+func lib__@sorted(_a: void*, t: kaba.Class&, x: string) -> lib__i32@list # lib__@DynamicArray
 	if t == int or true
-		var pa = _a as lib__int@list*
+		var pa = _a as lib__i32@list*
 		for a in pa
 			var o = a
 			o.sort()
 			return o
 #	if t == float
 #		kprint("sort float")
-#		var pa = _a as lib__float@list*
+#		var pa = _a as lib__f32@list*
 #		for a in pa
 #			var o = a
 #			o.sort()

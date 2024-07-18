@@ -4,17 +4,18 @@ use io.text.*
 
 class TaskStateSegment as @noauto
 	var _prev: int
-	var rsp0: void*
-	var rsp1: void*
-	var rsp2: void*
+	# who decided this stupid mis-aligned layout?!?
+	var rsp0: int[2] # low, high
+	var rsp1: int[2]
+	var rsp2: int[2]
 	var _a, _b: int
-	var ist1: void*
-	var ist2: void*
-	var ist3: void*
-	var ist4: void*
-	var ist5: void*
-	var ist6: void*
-	var ist7: void*
+	var ist1: int[2]
+	var ist2: int[2]
+	var ist3: int[2]
+	var ist4: int[2]
+	var ist5: int[2]
+	var ist6: int[2]
+	var ist7: int[2]
 	var _c, _d: int
 	var iomap: int
 

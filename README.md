@@ -11,7 +11,7 @@ Mostly, you need the **kaba** compiler.
 ```
 git clone https://github.com/momentarylapse/kaba.git
 cd kaba
-git checkout 588a4a67fac7ef68f23a15357531d0d8259435f4
+git checkout a437b2e369cd230c5c851e8f10a296c423a96f3b
 mkdir build
 cd build
 ccmake ..

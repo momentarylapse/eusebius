@@ -25,8 +25,8 @@ func hex_nibble(i: int) -> i8
 		return 'a' + i - 10
 	return '0' + i
 
-class lib__int
-	_i: int
+class lib__i32
+	_i: i32
 	# FIXME: @callbyvalue
 	
 	func __str__() -> lib__string
@@ -59,14 +59,15 @@ class lib__i64
 		let i = _p2i(&self) # (T_T)
 		return base@@i2s(i)
 
-class lib__float
-	_f: float # FIXME @callbyvalue
+class lib__f32
+	_f: f32 # FIXME @callbyvalue
 	func static __str__() -> lib__string
 		asm {
 			movss __temp_f__, xmm0
 		}
 		var f = __temp_f__
 		return base@@f2s(f, 6)
+
 
 func lib__math@@sin(f: float) -> float
 	if f < 0.0

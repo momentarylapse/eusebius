@@ -44,17 +44,17 @@ func _i2p(i: i64) -> void&
 	return __temp_p__
 
 
-class lib__int@optional
-	var _value: int
+class lib__i32@optional
+	var _value: i32
 	var _has_value = false
 
 	func __init__()
 		_has_value = false
-	func __init__(i: int)
+	func __init__(i: i32)
 		_value = i
 		_has_value = true
 	func __delete__()
-	func mut __assign__(other: lib__int@optional)
+	func mut __assign__(other: lib__i32@optional)
 		_value = other._value
 		_has_value = other._has_value
 	func has_value() -> bool
