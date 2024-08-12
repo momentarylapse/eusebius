@@ -20,7 +20,7 @@ func lib__math@@rand(m: float) -> float
 func lib__math@@rand(m: int) -> int
 	return rand_u(m)
 
-func hex_nibble(i: int) -> i8
+func hex_nibble(i: int) -> u8
 	if i >= 10
 		return 'a' + i - 10
 	return '0' + i

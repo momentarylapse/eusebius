@@ -20,10 +20,10 @@ class Heap as @noauto
 		var next: MallocHeader*
 		var prev: MallocHeader*
 		func after() -> void&
-			var pp = &self as i8[0]&
+			var pp = &self as u8[0]&
 			return &pp[size]
 		func payload() -> void&
-			var pp = &self as i8[0]&
+			var pp = &self as u8[0]&
 			return &pp[sizeof(MallocHeader)]
 	var static first_free: MallocHeader&
 	var static end_marker: MallocHeader&

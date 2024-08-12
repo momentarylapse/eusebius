@@ -2,7 +2,7 @@
 var _temp_port_no_: int
 var _temp_port_data_: int
 
-func outportb(port: int, data: i8)
+func outportb(port: int, data: u8)
 	_temp_port_no_ = port
 	_temp_port_data_ = data
 	asm{
@@ -20,7 +20,7 @@ func outportd(port: int, data: int)
 		out dx, eax
 	}
 
-func inportb(port: int) -> i8
+func inportb(port: int) -> u8
 	_temp_port_no_ = port
 	asm{
 		mov edx, _temp_port_no_

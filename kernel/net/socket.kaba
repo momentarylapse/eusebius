@@ -28,7 +28,7 @@ class KSocket as @noauto
 	var state: SocketState
 	var blocking: bool
 	var ref_count: int
-	var buffer: i8[0]&
+	var buffer: u8[0]&
 	var buffer_used: int
 	
 	var _accept_wait_port: int

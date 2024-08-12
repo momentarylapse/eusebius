@@ -19,7 +19,7 @@ class OpenFileData as @noauto
 	var entry: FileEntry&
 	var offset: int
 	#int block_size
-	var buffer: i8[0]&
+	var buffer: u8[0]&
 	var pipe: Pipe*
 	var socket: KSocket*
 	var ref_count: int
@@ -257,7 +257,7 @@ class OpenFileData as @noauto
 
 
 var OpenFiles: OpenFileData[MAX_OPEN_FILES]
-var _dummy_buffer: i8[8]
+var _dummy_buffer: u8[8]
 
 func create_handle(flags: int) -> OpenFileData*
 	for mut o in OpenFiles

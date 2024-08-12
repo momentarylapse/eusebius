@@ -99,7 +99,7 @@ class lib__@DynamicArray
 
 
 class lib__bytes extends lib__@DynamicArray
-	var override data: i8[0]*
+	var override data: u8[0]*
 	func __init__()
 		__mem_init__(1)
 	func __delete__()
@@ -108,7 +108,7 @@ class lib__bytes extends lib__@DynamicArray
 		__mem_resize__(size)
 	func mut clear()
 		__mem_clear__()
-	func mut add(c: i8)
+	func mut add(c: u8)
 		__mem_resize__(num + 1)
 		for d in data
 			d[num - 1] = c
@@ -200,7 +200,7 @@ class lib__bytes extends lib__@DynamicArray
 
 
 class lib__string extends lib__@DynamicArray
-	var override data: i8[0]*
+	var override data: u8[0]*
 	func __init__()
 		__mem_init__(1)
 	func __delete__()
@@ -209,7 +209,7 @@ class lib__string extends lib__@DynamicArray
 		__mem_resize__(size)
 	func mut clear()
 		__mem_clear__()
-	func mut add(c: i8)
+	func mut add(c: u8)
 		__mem_resize__(num + 1)
 		for d in data
 			d[num - 1] = c
@@ -500,7 +500,7 @@ func lib__as_binary(p: void&, num: int) -> lib__string
 	s.data = p
 	return s
 
-func str_fill(s: lib__string, n: int, space: i8) -> lib__string
+func str_fill(s: lib__string, n: int, space: u8) -> lib__string
 	var ttt: Ret = s
 	var filler: Ret
 	if n < 0

@@ -1,5 +1,5 @@
 #KABA  = kaba
-KABA  = ~/Projekte/Kaba/kaba
+KABA  = ~/Projects/Kaba/kaba
 #KABA  = ~/Projekte/Kaba/kaba --verbose
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --arch amd64:gnu

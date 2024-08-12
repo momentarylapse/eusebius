@@ -165,10 +165,10 @@ class Ext2SuperBlock as @noauto
 	var inode_size: Word
 	var block_group_nr: Word
 	var feature_compat, feature_incompat, feature_ro_compat: int
-	var uuid: i8[16]
-	var volume_name: i8[16]
-	var last_mounted: i8[64]
-	var _filler_: i8[1024-200]
+	var uuid: u8[16]
+	var volume_name: u8[16]
+	var last_mounted: u8[64]
+	var _filler_: u8[1024-200]
 
 class Ext2BlockGroupDescriptor as @noauto
 	var block_bitmap: int
@@ -185,8 +185,8 @@ class Ext2BlockGroupDescriptor as @noauto
 class Ext2DirEntryHeader as @noauto
 	var inode: int
 	var rec_len: Word
-	var name_len: i8
-	var file_type: i8
+	var name_len: u8
+	var file_type: u8
 
 
 class MountPoint as @noauto
@@ -389,7 +389,7 @@ class FileSystem as @noauto
 
 class MountPointMichiFS extends MountPoint
 	
-	var buf: i8[0]&
+	var buf: u8[0]&
 	var buf_used: int
 	
 	func mut read_int() -> int
@@ -426,7 +426,7 @@ class MountPointMichiFS extends MountPoint
 
 
 class MountPointExt2 extends MountPoint
-	var buf: i8[0]&
+	var buf: u8[0]&
 	var inode_bitmap: int[0]&
 	var block_bitmap: int[0]&
 

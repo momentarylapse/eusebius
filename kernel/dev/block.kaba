@@ -8,7 +8,7 @@ class BlockDevice as @noauto
 	var disk_no: int
 	var offset, size: int
 	var block_size: int
-	var type: i8
+	var type: u8
 	var active: bool
 	var name: cstring
 	var p_read_block: void*
