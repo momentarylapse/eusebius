@@ -30,9 +30,9 @@ class Page as @noauto
 
 enum PageFlags as @noauto
 	PRESENT = 0x100
-	GLOBAL = 0x01
-	WRITABLE = 0x02
-	USER = 0x04
+	GLOBAL = 0x0001
+	WRITABLE = 0x0002
+	USER = 0x0004
 
 
 class PageTable extends Page

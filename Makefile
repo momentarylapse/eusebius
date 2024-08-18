@@ -1,12 +1,11 @@
-#KABA  = kaba
-KABA  = ~/Projects/Kaba/kaba
+KABA  = kaba
+#KABA  = ~/Projects/Kaba/kaba
 #KABA  = ~/Projekte/Kaba/kaba --verbose
 #KABA  = valgrind ~/Projekte/Kaba/kaba --verbose
 MACHINE = --arch amd64:gnu
 FLAGS =  $(MACHINE) --no-std-lib
 LOADERFLAGS = --arch x86:gnu --code-origin 0x7c00
 INITFLAGS = --arch x86:gnu --code-origin 0x7e00
-#KERNELFLAGS = $(MACHINE) --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 KERNELFLAGS = $(MACHINE) --no-std-lib --code-origin 0x00010000 --add-entry-point --variable-offset 0x00100000 --no-std-lib
 # --remove-unused
 PFLAGS =  $(MACHINE) --no-std-lib --code-origin 0x40000000 --variable-offset 0x40080000 --add-entry-point --import-symbols kalib_symbols
