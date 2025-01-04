@@ -2,7 +2,7 @@ use lib.std
 
 
 func cmp(h1: int, h2: int)
-	string s1, s2
+	var s1, s2: string
 	while true
 		s1.resize(128)
 		s2.resize(128)

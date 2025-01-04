@@ -63,7 +63,7 @@ class Pipe as @noauto
 			clean_up()
 	
 	func mut clean_up()
-		if !e.parent
+		if not e.parent
 			# anonymous pipe
 			FileSystem.delete(e)
 
@@ -76,13 +76,13 @@ class PipeManager as @noauto
 
 	func static create(e: FileEntry) -> Pipe*
 		for mut p in pipes
-			if !p.used
+			if not p.used
 				p.used = true
 				p.e := &e
 				p.read_ref_count = 0
 				p.write_ref_count = 0
 				p.buffer_used = 0
-				p.buffer := Heap.malloc(PIPE_BUFFER_SIZE)
+				p.buffer := Heap.malloc(PIPE_BUFFER_SIZE) as u8[0]&
 				return &p
 		return nil
 

@@ -144,7 +144,7 @@ class SocketManager as @noauto
 
 	func static create(e: FileEntry, type: int) -> KSocket*
 		for mut s in sockets
-			if !s.used
+			if not s.used
 				s.used = true
 				s.e := &e
 				s.type = type
@@ -154,7 +154,7 @@ class SocketManager as @noauto
 				s.peer_port = -1
 				s.ref_count = 0
 				s.buffer_used = 0
-				s.buffer := Heap.malloc(SOCKET_BUFFER_SIZE)
+				s.buffer := Heap.malloc(SOCKET_BUFFER_SIZE) as u8[0]&
 				return &s
 		return nil
 

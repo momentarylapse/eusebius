@@ -3,10 +3,10 @@ use lib_syscalls.*
 use lib_array.*
 
 
-func open(filename: lib__os@@Path, flags: int) -> int
+func open(filename: lib__os@@Path, flags: i32) -> i32
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	__temp_i__ = flags
 	asm{
 		mov eax, 0x00000005
@@ -17,10 +17,10 @@ func open(filename: lib__os@@Path, flags: int) -> int
 	}
 	return __temp_i__
 
-func create(filename: lib__os@@Path) -> int
+func create(filename: lib__os@@Path) -> i32
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x00000008
 		mov rdi, __temp_p__
@@ -44,7 +44,7 @@ func create(filename: lib__os@@Path) -> int
 func mkdir(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x00000027
 		mov rdi, __temp_p__
@@ -56,7 +56,7 @@ func mkdir(filename: lib__os@@Path) -> bool
 func rmdir(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x00000028
 		mov rdi, __temp_p__
@@ -69,7 +69,7 @@ func rmdir(filename: lib__os@@Path) -> bool
 func mkfifo(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x0000000e
 		mov rdi, __temp_p__
@@ -81,7 +81,7 @@ func mkfifo(filename: lib__os@@Path) -> bool
 func unlink(filename: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x0000000a
 		mov rdi, __temp_p__
@@ -93,7 +93,7 @@ func unlink(filename: lib__os@@Path) -> bool
 func chdir(dir: lib__os@@Path) -> bool
 	var tt: cstring
 	_s2cs(dir.s, tt)
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x0000000c
 		mov rdi, __temp_p__
@@ -107,7 +107,7 @@ func lib__os@@fs@@set_current_directory(dir: lib__os@@Path)
 
 func lib__os@@fs@@current_directory() -> lib__string
 	var tt: cstring
-	__temp_p__ := &tt
+	__temp_p__ := &tt as void&
 	asm{
 		mov eax, 0x000000b7
 		mov rdi, __temp_p__
@@ -122,17 +122,17 @@ func lib__os@@fs@@current_directory() -> lib__string
 
 class StatData
 	var name: cstring
-	var type: int
-	var size: int
-	var inode: int
-	var mp_inode: int
-	var time: int
+	var type: i32
+	var size: i32
+	var inode: i32
+	var mp_inode: i32
+	var time: i32
 
 func stat(filename: lib__os@@Path, buf: StatData) -> bool
 	var tt: cstring
 	_s2cs(filename.s, tt)
-	__temp_p__ := &tt
-	__temp_p2__ := &buf
+	__temp_p__ := &tt as void&
+	__temp_p2__ := &buf as void&
 	asm {
 		mov rdi, __temp_p__
 		mov rsi, __temp_p2__
@@ -200,9 +200,9 @@ class lib__os@@Path@list
 # dir entry
 
 class dirent_struct
-	var struct_size: int
-	var size: int
-	var type: int
+	var struct_size: i32
+	var size: i32
+	var type: i32
 	var name: cstring
 #	func __assign__(o: dirent_struct)
 #		pass
@@ -377,7 +377,7 @@ func lib__os@@fs@@size(filename: lib__os@@Path) -> i64
 		return d.size
 	return -1
 
-func os_fs_size32(filename: lib__os@@Path) -> int
+func os_fs_size32(filename: lib__os@@Path) -> i32
 	var d: StatData
 	if stat(filename, &d)
 		return d.size

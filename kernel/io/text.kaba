@@ -19,7 +19,7 @@ class TextMode as @noauto
 		pos = 0
 
 	func static init()
-		video_memory := _i2p(0x000b8000)
+		video_memory := _i2p(0x000b8000) as cstring&
 		
 		clear()
 		text_color = 7
@@ -35,8 +35,7 @@ class TextMode as @noauto
 			d2[i * 2 + 1] = 0
 
 	func static prints_low(str: cstring&, size: int)
-		var d = video_memory
-		d := &d[2*(SCREEN_WIDTH * line + pos)]
+		var d = &video_memory[2*(SCREEN_WIDTH * line + pos)] as cstring&
 		for i in 0:size
 			if str[i] == 0x7f or str[i] == 0x08 # BACKSPACE
 				var N = 0
@@ -53,7 +52,7 @@ class TextMode as @noauto
 			if str[i] != '\n'
 				d[0] = str[i]
 				d[1] = text_color
-				d := &d[2]
+				d := &d[2] as cstring&
 				pos ++
 			if (pos >= SCREEN_WIDTH) or (str[i] == '\n')
 				pos = 0
@@ -61,8 +60,7 @@ class TextMode as @noauto
 				if line >= SCREEN_HEIGHT
 					etm_shift()
 					line --
-				d := video_memory
-				d := &d[2*(SCREEN_WIDTH * line)]
+				d := &video_memory[2*(SCREEN_WIDTH * line)] as cstring&
 		let position = (line * SCREEN_WIDTH) + pos
 		# cursor LOW port to vga INDEX register
 		outportb(0x3d4, 0x0f)

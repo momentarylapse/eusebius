@@ -23,15 +23,15 @@ func XExit()
 
 
 class ProcessManager
-	var pids: int[]
-	func mut run(cmd: string[]) -> int
+	var pids: i32[]
+	func mut run(cmd: string[]) -> i32
 		let r = execute(cmd, -1, -1)
 		if r >= 0
 			pids.add(r)
 		return r
 	func mut update()
 		for mut p in pids
-			var status: int
+			var status: i32
 			if waitpid(p, &status, false) == -2
 				continue
 			p = -1

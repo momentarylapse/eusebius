@@ -78,7 +78,7 @@ class XPainter
 		buf_width = p.buf_width
 		buf_x = x
 		buf_y = y
-		buf := &p.buf[x + y * buf_width]
+		buf := &p.buf[x + y * buf_width] as i32[0]&
 		width = w
 		height = h
 		

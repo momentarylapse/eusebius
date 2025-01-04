@@ -404,7 +404,7 @@ class MountPointMichiFS extends MountPoint
 		buf_used += l
 		s[l] = 0
 	func override mount() -> int
-		buf := Heap.malloc(2048)
+		buf := Heap.malloc(2048) as u8[0]&
 		update_sizes(2048, 0)
 		read_block(1, buf)
 		buf_used = 0
@@ -427,12 +427,12 @@ class MountPointMichiFS extends MountPoint
 
 class MountPointExt2 extends MountPoint
 	var buf: u8[0]&
-	var inode_bitmap: int[0]&
-	var block_bitmap: int[0]&
+	var inode_bitmap: i32[0]&
+	var block_bitmap: i32[0]&
 
-	func override mount() -> int
+	func override mount() -> i32
 		#prints("EXT2.mount\n")
-		buf := Heap.malloc(4096)
+		buf := Heap.malloc(4096) as u8[0]&
 		
 		# super block (always at 1024)
 		update_sizes(1024, 0) # temp
@@ -444,8 +444,8 @@ class MountPointExt2 extends MountPoint
 		inodes_per_block = block_size / inode_size
 		block_offset = 0
 		
-		inode_bitmap := Heap.malloc(block_size)
-		block_bitmap := Heap.malloc(block_size)
+		inode_bitmap := Heap.malloc(block_size) as i32[0]&
+		block_bitmap := Heap.malloc(block_size) as i32[0]&
 	
 		if block_size == 1024
 			read_block(2, buf)

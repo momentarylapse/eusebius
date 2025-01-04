@@ -8,18 +8,18 @@ let MALLOC_SMALL_SIZE = 8
 let MALLOC_SMALL_NUM = 4096*16
 
 
-func memcpy(_dest: void&, _source: void&, size: int)
+func memcpy(_dest: void&, _source: void&, size: i32)
 	var dest = _dest as u8[0]&
 	var source = _source as u8[0]&
 	for i in 0:size
 		dest[i] = source[i]
 
 
-var MemHeapAllocated: int # includes overhead of all headers
+var MemHeapAllocated: i32 # includes overhead of all headers
 
 class MallocHeader
-	var size: int
-	var magic: int
+	var size: i32
+	var magic: i32
 	var next: MallocHeader*
 	var prev: MallocHeader*
 	func after() -> void&
@@ -30,14 +30,14 @@ class MallocHeader
 		return &pp[sizeof(MallocHeader)]
 var malloc_first_free: MallocHeader&
 var malloc_end_marker: MallocHeader&
-var cur_break_value: int
+var cur_break_value: i32
 
 # heap is split into a (hole-free) list of blocks
 # blocks are either free or allocated
 # free blocks form a doubly-linked list (no loop)
 # allocated blocks are not linked
 
-func _align8_(size: int) -> int
+func _align8_(size: i32) -> i32
 	if (size & 0x00000007) == 0
 		return size
 	return (size & 0xfffffff8) + 8
@@ -51,10 +51,10 @@ func _init_memory()
 	var malloc_size_all = cur_break_value - MALLOC_OFFSET
 	
 	# intentionally leave a 8b gap to prevent merging
-	malloc_first_free := _i2p(MALLOC_OFFSET)
+	malloc_first_free := _i2p(MALLOC_OFFSET) as MallocHeader&
 	malloc_first_free.size = malloc_size_all - sizeof(MallocHeader) - MALLOC_STOPPER
 	malloc_first_free.prev = nil
-	malloc_end_marker := _i2p(cur_break_value - sizeof(MallocHeader))
+	malloc_end_marker := _i2p(cur_break_value - sizeof(MallocHeader)) as MallocHeader&
 	malloc_end_marker.size = sizeof(MallocHeader)
 	malloc_end_marker.next = nil
 	malloc_end_marker.prev = malloc_first_free
@@ -63,10 +63,10 @@ func _init_memory()
 	#kprintp(malloc_first_free)
 	#kprintp(malloc_end_marker)
 	
-	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock))
+	malloc_small_block := lib__@malloc(sizeof(MallocSmallBlock)) as MallocSmallBlock&
 	malloc_small_block.init()
 
-func lib__@malloc(_size: int) -> void&
+func lib__@malloc(_size: i32) -> void&
 	if _size <= MALLOC_SMALL_SIZE
 		for ppp in small_malloc()
 			return &ppp
@@ -140,7 +140,7 @@ func lib__@malloc(_size: int) -> void&
 	last_before_end_new.size = _p2i(hh) - _p2i(last_before_end_new)
 	
 	# create new end marker
-	malloc_end_marker := _i2p(cur_break_value - sizeof(MallocHeader))
+	malloc_end_marker := _i2p(cur_break_value - sizeof(MallocHeader)) as MallocHeader&
 	malloc_end_marker.size = sizeof(MallocHeader)
 	malloc_end_marker.next = nil
 	malloc_end_marker.prev = last_before_end_new
@@ -259,7 +259,7 @@ func __lib_free_error__()
 	exit(-1)
 
 
-func realloc(p: void&, size: int) -> void&
+func realloc(p: void&, size: i32) -> void&
 	var h = _i2p(_p2i(p) - sizeof(MallocHeader)) as MallocHeader&
 	var old_size: int
 	let sm_index = small_malloc_no(p)
@@ -277,10 +277,10 @@ func realloc(p: void&, size: int) -> void&
 	return pp
 
 class MallocSmallBlock
-	var mask: int[MALLOC_SMALL_NUM / 32]
+	var mask: i32[MALLOC_SMALL_NUM / 32]
 	var buf: u8[MALLOC_SMALL_SIZE * MALLOC_SMALL_NUM]
-	var delta: int
-	var full_below: int
+	var delta: i32
+	var full_below: i32
 	
 	
 	func mut init()
@@ -308,7 +308,7 @@ class MallocSmallBlock
 		#kprint " --[XXX]--"
 		return nil
 	
-	func to_index(p: void&) -> int
+	func to_index(p: void&) -> i32
 		let ip = _p2i(p)
 		#kprint(" - ")
 #		kprinti(ip)
@@ -316,7 +316,7 @@ class MallocSmallBlock
 #		kprinti((ip - delta) / MALLOC_SMALL_SIZE)
 		return (ip - delta) / MALLOC_SMALL_SIZE
 	
-	func mut free(index: int)
+	func mut free(index: i32)
 		#kprint " -sm "
 		let _mask = 1 << (index & 31)
 		let mn = index >> 5
@@ -330,10 +330,10 @@ var malloc_small_block: MallocSmallBlock&
 func small_malloc() -> void*
 	return malloc_small_block.alloc()
 
-func small_free(n: int)
+func small_free(n: i32)
 	malloc_small_block.free(n)
 
-func small_malloc_no(p: void&) -> int
+func small_malloc_no(p: void&) -> i32
 	let index = malloc_small_block.to_index(p)
 	if index < 0 or index >= MALLOC_SMALL_NUM
 		return -1

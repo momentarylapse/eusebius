@@ -8,12 +8,12 @@ let WF_DONT_INVALIDATE = 2048
 
 
 struct XRect
-	var x0, y0, x1, y1: int
-	func w() -> int
+	var x0, y0, x1, y1: i32
+	func w() -> i32
 		return x1 - x0
-	func h() -> int
+	func h() -> i32
 		return y1 - y0
-	func inside(x: int, y: int) -> bool
+	func inside(x: i32, y: i32) -> bool
 		return x >= x0 and x < x1 and y >= y0 and y < y1
 	func __str__() -> string
 		return "({{x0}}:{{x1}}, {{y0}}:{{y1}})"
@@ -22,15 +22,15 @@ struct XRect
 class XWindow
 	#var client: Client*
 	var client: void*
-	var id: int
+	var id: i32
 	var r: XRect
-	var shm_key: int
-	var shm_id: int
-	var buf: int[0]&
+	var shm_key: i32
+	var shm_id: i32
+	var buf: i32[0]&
 	var transparent: bool
-	var level: int
+	var level: i32
 	
-	func __init__(client: void*, _x: int, _y: int, w: int, h: int, flags: int)
+	func __init__(client: void*, _x: i32, _y: i32, w: i32, h: i32, flags: i32)
 		#kprint("x: new win\n")
 		self.client = client
 		var x = _x
@@ -56,7 +56,7 @@ class XWindow
 			# TODO clean-up
 		else
 			for b in shmat(shm_id, 0)
-				buf := &b
+				buf := &b as i32[0]&
 			windows.add(&self)
 			sort_windows()
 			if (flags & WF_DONT_INVALIDATE) == 0

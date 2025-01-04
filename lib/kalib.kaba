@@ -8,10 +8,10 @@ use lib_file.*
 use lib_image.*
 
 
-func execute(arg: string[], fd_in: int, fd_out: int) -> int
+func execute(arg: string[], fd_in: i32, fd_out: i32) -> i32
 	var tt_arg: cstring
 	sa2cs(arg, tt_arg)
-	__temp_p__ := &tt_arg
+	__temp_p__ := &tt_arg as void&
 	__temp_i__ = fd_in
 	__temp_i2__ = fd_out
 	asm{
@@ -27,7 +27,7 @@ func execute(arg: string[], fd_in: int, fd_out: int) -> int
 
 func get_args() -> lib__string@list
 	var cs: cstring
-	__temp_p__ := &cs
+	__temp_p__ := &cs as void&
 	asm{
 		mov eax, 0x00002001
 		mov rdi, __temp_p__

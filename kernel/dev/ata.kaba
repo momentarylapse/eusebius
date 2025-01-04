@@ -156,7 +156,7 @@ class AtaController as @noauto
 
 		#BufferDW
 		#let xx = &buffer
-		BufferDW := &buffer #__fff(buffer)
+		BufferDW := &buffer as i32[0]& #__fff(buffer)
 		for n in 0:128
 			BufferDW[n] = inportd(IOBase)
 		# die Bytes des Namens korregieren

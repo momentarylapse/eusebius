@@ -241,7 +241,7 @@ class OpenFileData as @noauto
 
 		if buffer != &_dummy_buffer
 			Heap.free(buffer)
-			buffer := &_dummy_buffer
+			buffer := &_dummy_buffer as u8[0]&
 		if entry.type == FileType.CHAR
 			for op in entry.op
 				op.close(entry)
@@ -259,16 +259,16 @@ class OpenFileData as @noauto
 var OpenFiles: OpenFileData[MAX_OPEN_FILES]
 var _dummy_buffer: u8[8]
 
-func create_handle(flags: int) -> OpenFileData*
+func create_handle(flags: i32) -> OpenFileData*
 	for mut o in OpenFiles
-		if !o.used
+		if not o.used
 #			prints(" <+HANDLE ")
 #			#var p = &o
 #			printh(&o, 2)
 #			prints("> ")
 			o.used = true
 			o.set_flags(flags)
-			o.buffer := &_dummy_buffer
+			o.buffer := &_dummy_buffer as u8[0]&
 			o.ref_count = 0
 			o.buffer_dirty = false
 			o.inode_dirty = false
@@ -287,7 +287,7 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 			#printh(&of.entry.mount, 4)
 			#printi(of.entry.mount.block_size)
 			#prints(" ")
-			of.buffer := Heap.malloc(of.entry.mount.block_size)
+			of.buffer := Heap.malloc(of.entry.mount.block_size) as u8[0]&
 			for b in of.entry.blocks
 				of.entry.mount.read_block(b[0], of.buffer)
 			if of.writing

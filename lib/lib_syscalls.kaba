@@ -104,7 +104,7 @@ func dup(h: int) -> int
 	return __temp_i__
 
 func pipe(out h: int[2]) -> bool
-	__temp_p__ := &h
+	__temp_p__ := &h as void&
 	asm{
 		mov eax, 0x0000002a
 		mov rdi, __temp_p__
@@ -194,7 +194,7 @@ func shmget(key: int, size: int, flags: int) -> int
 func shmat(id: int, flags: int) -> void*
 	var p: void*
 	__temp_i__ = id
-	__temp_p__ := &p
+	__temp_p__ := &p as void&
 	__temp_i2__ = flags
 	asm {
 		mov edi, 0x00000009
@@ -245,7 +245,7 @@ class SysInfo
 	var dummy: int
 
 func sysinfo(buf: SysInfo) -> bool
-	__temp_p__ := &buf
+	__temp_p__ := &buf as void&
 	asm{
 		mov eax, 0x00000074
 		mov rdi, __temp_p__
@@ -259,7 +259,7 @@ class TaskInfo
 
 func taskinfo(pid: int, buf: TaskInfo) -> bool
 	__temp_i__ = pid
-	__temp_p__ := &buf
+	__temp_p__ := &buf as void&
 	asm{
 		mov eax, 0x00002005
 		mov edi, __temp_i__
@@ -274,7 +274,7 @@ class MountInfo
 
 func mountinfo(pid: int, buf: MountInfo) -> bool
 	__temp_i__ = pid
-	__temp_p__ := &buf
+	__temp_p__ := &buf as void&
 	asm{
 		mov eax, 0x00002008
 		mov edi, __temp_i__
@@ -290,7 +290,7 @@ class BlockDevice
 func blockinfo(major: int, minor: int, buf: BlockDevice) -> bool
 	__temp_i__ = major
 	__temp_i2__ = minor
-	__temp_p__ := &buf
+	__temp_p__ := &buf as void&
 	asm{
 		mov eax, 0x00002009
 		mov edi, __temp_i__
@@ -316,7 +316,7 @@ struct TimeValue
 	var sec, nanosec: int
 
 func time(buf: TimeValue) -> bool
-	__temp_p__ := &buf
+	__temp_p__ := &buf as void&
 	asm{
 		mov eax, 0x00000019
 		mov rdi, __temp_p__
@@ -326,7 +326,7 @@ func time(buf: TimeValue) -> bool
 	return lib_error == 0
 
 func nanosleep(buf: TimeValue, buf2: TimeValue) -> bool
-	__temp_p__ := &buf
+	__temp_p__ := &buf as void&
 	asm{
 		mov eax, 0x000000a2
 		mov rdi, __temp_p__
@@ -358,7 +358,7 @@ func sched_yield(pid: int) -> bool
 	return lib_error == 0
 
 func kprint(s: string)
-	__temp_p__ := &s[0]
+	__temp_p__ := &s[0] as void&
 	__temp_i__ = len(s)
 	asm {
 		mov rdi, __temp_p__
@@ -384,7 +384,7 @@ func kprintp(p: void*)
 	}
 	
 func kprintc(s: cstring, l: int)
-	__temp_p__ := &s
+	__temp_p__ := &s as void&
 	__temp_i__ = l
 	asm {
 		mov rdi, __temp_p__
