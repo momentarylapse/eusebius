@@ -7,10 +7,12 @@ qemu-system-x86_64 \
  -boot c \
  -m 512 \
  -drive file='bochs/c.img',index=0,media=disk,format=raw \
- -device usb-ehci,id=ehci \
+ -device qemu-xhci,id=xhci \
+ -device usb-mouse \
+# -device usb-kbd \
  -audio driver=pa,model=hda \
  -vga std
-# -usb \
+# -usb
 ### not now... takes too much time to reset between runs
 ### -netdev user,id=network0 -device rtl8139,netdev=network0,mac=52:54:00:12:34:56 \
 # -device virtio-vga,virgl=on
