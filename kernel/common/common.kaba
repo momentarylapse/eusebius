@@ -52,13 +52,14 @@ const SYS_RECV = 12
 const SYS_RECVFROM = 13
 
 let SHM_ABSOLUTE = 1<<20
+let SHM_ULTRA_EVIL = 1<<21
 let SHM_DEST = 1<<11
 let IPC_CREAT = 1<<12
 let IPC_EXCL = 1<<13
 
 
 let KERNEL_NAME = "Eusebius"
-let KERNEL_VERSION = "0.2.99.0"
+let KERNEL_VERSION = "0.2.99.1"
 let MACHINE_TYPE = "x64"
 
 

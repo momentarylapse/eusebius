@@ -14,6 +14,7 @@ let SIGX = 23
 
 
 let SHM_ABSOLUTE = 1 << 20
+let SHM_ULTRA_EVIL = 1 << 21 # force mem mapping, even if impossible
 let SHM_DEST = 1<<11
 let IPC_CREAT = 1<<12
 let IPC_EXCL = 1<<13
@@ -22,31 +23,31 @@ let IPC_EXCL = 1<<13
 func extern init_lib()
 func extern get_args() -> string[]
 
-var extern stdin, stdout: int
-var extern lib_error: int
+var extern stdin, stdout: i32
+var extern lib_error: i32
 var extern lib_print_endl: bool
 
 func extern cs2s(cs: cstring) -> string
 #
-func extern exit(r: int) -> bool
-func extern execute(arg: string[], fd_in: int, fd_out: int) -> int
-#func extern fork() -> int
+func extern exit(r: i32) -> bool
+func extern execute(arg: string[], fd_in: i32, fd_out: i32) -> i32
+#func extern fork() -> i32
 
 
-func extern waitpid(pid: int, status: void&, block: bool) -> int
-func extern kill(pid: int, signal: int) -> bool
-func extern shmget(key: int, size: int, flags: int) -> int
-func extern shmat(id: int, flags: int) -> void*
+func extern waitpid(pid: i32, status: void&, block: bool) -> i32
+func extern kill(pid: i32, signal: i32) -> bool
+func extern shmget(key: i32, size: i32, flags: i32) -> i32
+func extern shmat(id: i32, flags: i32) -> void*
 func extern shmdt(p: void&) -> bool
 #func extern waitmsg() -> bool
-#func extern yield(pid: int) -> bool
-#func extern sched_yield(pid: int) -> bool
-func extern getpid() -> int
+#func extern yield(pid: i32) -> bool
+#func extern sched_yield(pid: i32) -> bool
+func extern getpid() -> i32
 func extern time(t: TimeValue) -> bool
 func extern nanosleep(a: TimeValue, b: TimeValue) -> bool
-func extern sleep(sec: int) -> bool
-func extern usleep(usec: int) -> bool
-#func extern sigaction(sig: int, f: void*) -> bool
-#func extern mapirq(irq: int, signal: int) -> bool
+func extern sleep(sec: i32) -> bool
+func extern usleep(usec: i32) -> bool
+#func extern sigaction(sig: i32, f: void*) -> bool
+#func extern mapirq(irq: i32, signal: i32) -> bool
 
 

@@ -1,0 +1,35 @@
+use lib.std.*
+use lib.pci.*
+
+func show_device(d: PCIDevice)
+	let addr = d.bar[0] # since bar[1] is 0...
+	
+	print("addr: 0x{{addr|8x}}\n")
+	var id = shmget(addr, 1024, IPC_CREAT | SHM_ABSOLUTE | SHM_ULTRA_EVIL)
+	print("id={{id}}\n")
+	var _p = shmat(id, 0) as i32[0]*
+	print(p2s(_p))
+	print("\n")
+	for p in _p
+		print(p[0])
+		print("\n")
+		print(p[1])
+		print("\n")
+		print(p[2])
+		print("\n")
+		print(p[3])
+		print("\n")
+		print(as_binary(&p, 64).hex())
+
+func main()
+	init_lib()
+	lib_print_endl = false
+	let args = get_args()
+	
+	var pci = new PCIController()
+	pci.scan()
+	for dev in pci.get(0x1b36, 0x000d)
+		print("FOUND!\n")
+		show_device(dev)
+	
+	exit(0)

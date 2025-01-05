@@ -9,13 +9,13 @@ use op_fs.*
 use io.text.*
 
 
-func sys_set_cur_dir(out t: Task, faddr: i64) -> int
+func sys_set_cur_dir(out t: Task, faddr: i64) -> i32
 	var filename = _i2p(faddr) as cstring&
 #	if !memcpy2kernel(&filename, faddr, sizeof(cstring))
 #		return -EFAULT
 	return t.set_cur_dir(filename)
 #		
-func sys_brk(out t: Task, _new_top: int) -> int
+func sys_brk(out t: Task, _new_top: i32) -> i32
 	let new_top = ceil_quot(_new_top, PAGE_SIZE) * PAGE_SIZE
 	let cur_top = t.memory_offset + t.memory_size
 	if new_top <= cur_top
@@ -25,7 +25,7 @@ func sys_brk(out t: Task, _new_top: int) -> int
 	t.memory_size = new_top - t.memory_offset
 	return new_top
 	
-func sys_kill(_pid: int, signal: int) -> int
+func sys_kill(_pid: i32, signal: i32) -> i32
 #	for t in TaskManager.get_task(_pid)
 #		return t.handle_signal_link_iret(signal)
 	return -ESRCH
@@ -36,14 +36,14 @@ func sys_nanosleep(out t: Task, p1: i64, p2: i64) -> i64
 	t.set_wait(WaitingMode.TIME, tv.sec, tv.nanosec, 0)
 	return 0
 
-func sys_exit(out t: Task, r: int)
+func sys_exit(out t: Task, r: i32)
 	TaskManager.die(t, r)
 
-func sys_waitpid(out t: Task, _pid: int, status_addr: i64, options: int) -> i64
+func sys_waitpid(out t: Task, _pid: i32, status_addr: i64, options: i32) -> i64
 	for o in TaskManager.get_task(_pid)
 		# already (un-) dead?
 		if o.status == TaskStatus.ZOMBIE
-			var p = _i2p(status_addr) as int&
+			var p = _i2p(status_addr) as i32&
 			p = o.return_status
 			o.clean_up_deep()
 			t.activate()
@@ -58,7 +58,7 @@ func sys_waitpid(out t: Task, _pid: int, status_addr: i64, options: int) -> i64
 	return -ECHILD
 
 
-func sys_execute(out t: Task, faddr: i64, fd_in: int, fd_out: int) -> i64
+func sys_execute(out t: Task, faddr: i64, fd_in: i32, fd_out: i32) -> i64
 	var filename = _i2p(faddr) as cstring&
 	#for tt in TaskManager.execute_user_task(filename, nil,nil)
 	for tt in TaskManager.execute_user_task(filename, &t, t.get_handle(fd_in), t.get_handle(fd_out))
@@ -101,7 +101,7 @@ func sys_getcwd(out t: Task, addr: i64) -> i64
 	return 0
 #	return -EFAULT
 
-#	func mut sys_fork() -> int
+#	func mut sys_fork() -> i32
 #		var t = TaskManager.add_task_user("-fork-", _i2p(TASK_IMAGE_POS), &self)
 #		if !t
 #			return -ENOMEM
@@ -133,7 +133,7 @@ func sys_getcwd(out t: Task, addr: i64) -> i64
 #		t.activate()
 #		return t.pid
 
-#	func mut sys_sigaction(sig: int, addr: int) -> int
+#	func mut sys_sigaction(sig: i32, addr: i32) -> i32
 #		if sig < 0 or sig >= MAX_SIGNALS or sig == SIGSTOP or sig == SIGKILL
 #			return -EINVAL
 #		#prints(" SIGAC ")
@@ -141,7 +141,7 @@ func sys_getcwd(out t: Task, addr: i64) -> i64
 #		signal_handlers[sig] = addr # task address space!
 #		return 0
 #		
-#	func mut sys_exit_signal() -> int
+#	func mut sys_exit_signal() -> i32
 #		if !in_signal
 #			return -1
 #		

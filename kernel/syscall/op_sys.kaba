@@ -28,7 +28,7 @@ func sys_stime(addr: i64) -> i64
 	#return -EFAULT
 	return 0
 
-func sys_ipc(out t: Task, cmd: int, p1: i64, p2: i64, p3: int) -> i64
+func sys_ipc(out t: Task, cmd: i32, p1: i64, p2: i64, p3: i32) -> i64
 	if cmd == SHMGET
 		return SharedMemory.shm_get(p1, p2, p3, t.pid)
 	else if cmd == SHMAT
@@ -69,7 +69,7 @@ func sys_ipc(out t: Task, cmd: int, p1: i64, p2: i64, p3: int) -> i64
 		return -1
 	return -EINVAL
 
-func sys_blockinfo(major: int, minor: int, addr: i64) -> i64
+func sys_blockinfo(major: i32, minor: i32, addr: i64) -> i64
 	var bd = _i2p(addr) as BlockDevice&
 	for d in BlockDevManager.get(major, minor)
 		memcpy(bd, &d, sizeof(BlockDevice))
@@ -77,15 +77,15 @@ func sys_blockinfo(major: int, minor: int, addr: i64) -> i64
 	return -1
 
 class SysInfo as @noauto
-	var uptime: int
-	var loads: int[3]
-	var totalram, freeram, sharedram, bufferram: int
-	var totalswap, freeswap: int
-	var procs: int
-	var totalhigh, freehigh: int
-	var mem_unit: int
-	var pad: int[2]
-	var totalheap, freeheap: int
+	var uptime: i32
+	var loads: i32[3]
+	var totalram, freeram, sharedram, bufferram: i32
+	var totalswap, freeswap: i32
+	var procs: i32
+	var totalhigh, freehigh: i32
+	var mem_unit: i32
+	var pad: i32[2]
+	var totalheap, freeheap: i32
 	func mut get()
 		KernelTimer.update()
 		uptime = KernelTimer.tv.sec
@@ -124,12 +124,12 @@ class UTSName as @noauto
 
 class TaskInfo as @noauto
 	var name: cstring
-	var pid, ppid, mode: int
+	var pid, ppid, mode: i32
 	var status: TaskStatus
-	var mem: int
-	var cpu: int
+	var mem: i32
+	var cpu: i32
 	var life: TimeValue
-	func mut get(_pid: int) -> int
+	func mut get(_pid: i32) -> i32
 		for t in TaskManager.get_task(_pid)
 			strcpy(name, t.name)
 			pid = t.pid
@@ -147,9 +147,9 @@ class TaskInfo as @noauto
 		return -1
 
 class MountInfo as @noauto
-	var major, minor: int
+	var major, minor: i32
 	var dir: cstring
-	func mut get(_index: int) -> int
+	func mut get(_index: i32) -> i32
 		var m = &FileSystem.mounts[_index]
 		for dev in m.dev
 			major = dev.major

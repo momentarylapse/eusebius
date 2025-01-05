@@ -38,6 +38,7 @@ BINS = \
  bin/top \
  bin/touch \
  bin/uname \
+ bin/usb \
  bin/vt \
  bin/x \
  bin/xcake \
@@ -131,6 +132,9 @@ bin/touch: bin/touch.kaba $(PDEP)
 
 bin/tr: bin/tr.kaba $(PDEP)
 	$(KABA) $(PFLAGS) -o bin/tr bin/tr.kaba
+
+bin/usb: bin/usb.kaba $(PDEP)
+	$(KABA) $(PFLAGS) -o bin/usb bin/usb.kaba
 
 bin/x: bin/x.kaba $(PDEP) bin/lib/xserver/*.kaba bin/lib/vesa.kaba bin/lib/pci.kaba
 	$(KABA) $(PFLAGS) -o bin/x bin/x.kaba

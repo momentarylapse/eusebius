@@ -9,13 +9,13 @@ let MAX_SHARED_MEMORY_BLOCKS = 256
 class SharedMemory
 
 	class Block as @noauto
-		var id: int
-		var key: int
-		var pid: int
-		var size: int
+		var id: i32
+		var key: i32
+		var pid: i32
+		var size: i32
 		var physical_addr: i64
-		var refcount: int
-		var flags: int
+		var refcount: i32
+		var flags: i32
 	
 		func mut unref()
 			refcount --
@@ -35,27 +35,26 @@ class SharedMemory
 			b.id = i
 			b.key = -1
 	
-	func static get_used() -> int
+	func static get_used() -> i32
 		var size = 0
 		for b in blocks
 			if b.key >= 0
 				size += b.size
 		return size
 	
-	func static create(key: int, size: int, flags: int, pid: int) -> int
+	func static create(key: i32, size: i32, flags: i32, pid: i32) -> i32
 		let absolute = (flags & SHM_ABSOLUTE) != 0
-		if key < 0 and !absolute
+		let evil = (flags & SHM_ULTRA_EVIL) != 0
+		if key < 0 and not absolute
 			return -EINVAL
 		for mut i=>b in blocks
 			if b.key != -1
 				continue
-			if absolute and key == 0x00700000
-				# :P
-				b.physical_addr = key
-			else if absolute
+			if absolute
 				let paddr = i64(key) & 0x00000000ffffffff
-				if !Paging.reserve_physical_chunk(paddr, size, true)
-					return -ENOMEM
+				if not Paging.reserve_physical_chunk(paddr, size, true)
+					if not evil and key != 0x00700000
+						return -ENOMEM
 				b.physical_addr = paddr
 			else
 				b.physical_addr = Paging.find_and_reserve_physical_chunk(size)
@@ -69,7 +68,7 @@ class SharedMemory
 			return i
 		return -ENOSPC
 		
-	func static get_by_key(key: int) -> Block*
+	func static get_by_key(key: i32) -> Block*
 		if key == -1
 			return nil
 		for i=>b in blocks
@@ -78,14 +77,14 @@ class SharedMemory
 				return &b
 		return nil
 		
-	func static get(id: int) -> Block*
+	func static get(id: i32) -> Block*
 		if id < 0 or id >= MAX_SHARED_MEMORY_BLOCKS
 			return nil
 		if blocks[id].key == -1
 			return nil
 		return &blocks[id]
 		
-	func static shm_get(key: int, size: int, flags: int, pid: int) -> i64
+	func static shm_get(key: i32, size: i32, flags: i32, pid: i32) -> i64
 		for s in get_by_key(key)
 			if (flags & IPC_CREAT) > 0 and (flags & IPC_EXCL) > 0
 				return -EEXIST
