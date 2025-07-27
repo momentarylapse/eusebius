@@ -18,7 +18,7 @@ let MAX_MOUNT_POINTS = 32
 
 
 
-class FileOperations as @noauto
+class FileOperations
 	func virtual mut open(e: FileEntry) -> int
 		return 0
 	func virtual mut close(e: FileEntry) -> int
