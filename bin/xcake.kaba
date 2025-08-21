@@ -4,7 +4,7 @@ use lib.draw.*
 #use lib.ttfx.*
 
 
-var bg: color
+var bg: Color
 
 var xcon: owned![XConnection]
 
@@ -46,7 +46,7 @@ func main()
 	#FontDB* font_db = new FontDB()
 	#p.font = font_db.get("Cantarell", 30)
 
-	bg = color(0.1765, 0.1608, 0.4706, 1)
+	bg = Color(0.1765, 0.1608, 0.4706, 1)
 	p.set_color(bg)
 	p.rectangle(p.all)
 	p.fill()

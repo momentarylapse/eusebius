@@ -3,51 +3,51 @@ use lib.std.*
 use lib.x.*
 #use lib.ttfx.*
 
-func col2i(c: color) -> int
-	let ir = int(c.r * 255.0)
-	let ig = int(c.g * 255.0)
-	let ib = int(c.b * 255.0)
-	let ia = int(c.a * 255.0)
+func col2i(c: Color) -> i32
+	let ir = i32(c.r * 255.0)
+	let ig = i32(c.g * 255.0)
+	let ib = i32(c.b * 255.0)
+	let ia = i32(c.a * 255.0)
 	return ib + (ig << 8) + (ir << 16) + (ia << 24)
 
-func i2col(out c: color, i: int)
+func i2col(out c: Color, i: i32)
 	let ir = (i >> 16) & 255
 	let ig = (i >> 8) & 255
 	let ib = i & 255
 	let ia = i >> 24
-	c = color(float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0, float(ia) / 255.0)
+	c = Color(f32(ir) / 255.0, f32(ig) / 255.0, f32(ib) / 255.0, f32(ia) / 255.0)
 
-func add_blend(i1: int, i2: int, t: float) -> int
+func add_blend(i1: i32, i2: i32, t: f32) -> i32
 	let s = 1 - t
-	var c1, c2: color
+	var c1, c2: Color
 	i2col(c1, i1)
 	i2col(c2, i2)
-	return col2i(color(s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b, 1))
+	return col2i(Color(s*c1.r+t*c2.r, s*c1.g+t*c2.g, s*c1.b+t*c2.b, 1))
 
 struct XCircle
 	var m: vec2
-	var r: float
+	var r: f32
 
 struct XLine
 	var a, b: vec2
 
 class XPainter
 	var buf: int[0]&
-	var width, height: int
-	var buf_width: int
-	var buf_x, buf_y: int
-	var all: rect
+	var width, height: i32
+	var buf_width: i32
+	var buf_x, buf_y: i32
+	var all: Rect
 	var error: bool
 	
-	var cur_color: int
+	var cur_color: i32
 	var pos: vec2
 	
-	var rects: rect[]
+	var rects: Rect[]
 	var circles: XCircle[]
 	var path: XLine[]
-	var last_path_start: int
+	var last_path_start: i32
 	
-	var line_width: float
+	var line_width: f32
 	var win: XWindow&
 #	var font: FontDescriptor*
 	
@@ -69,7 +69,7 @@ class XPainter
 		
 #		font = nil
 		set_color([0,0,0, 1]) #color.BLACK)
-		all = rect(0, width, 0, height)
+		all = Rect(0, width, 0, height)
 		pos = [0, 0]
 		line_width = 1.0
 		last_path_start = 0
@@ -85,10 +85,10 @@ class XPainter
 		#font = p.font
 		#line_width = p.line_width
 	
-	func mut set_color(c: color)
+	func mut set_color(c: Color)
 		cur_color = col2i(c)
 	
-	func mut rectangle(r: rect)
+	func mut rectangle(r: Rect)
 		rects.add(r)
 	
 	func mut draw_pixel(x: int, y: int)
@@ -99,7 +99,7 @@ class XPainter
 		let index = x + y * buf_width
 		buf[index] = cur_color
 	
-	func mut draw_rect(r: rect)
+	func mut draw_rect(r: Rect)
 		let x0 = max(int(r.x1), 0)
 		let y0 = max(int(r.y1), 0)
 		let x1 = min(int(r.x2), width)

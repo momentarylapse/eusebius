@@ -1,8 +1,8 @@
 use lib.std
-use lib.x
-use lib.draw
+use lib.x.*
+use lib.draw.*
 #use lib.ttfx
-use hui
+#use hui
 
 let FRAME_BAR = 30
 let FRAME_WIDTH = 2
@@ -12,18 +12,18 @@ let FONT_SIZE = 15.0
 let FONT_SIZE_BAR = 17.0
 let FONT_NAME = "Cantarell"
 
-var col_window_frame: color
-var col_text: color
-var col_background: color
-var col_title: color
-var col_button: color
-var col_button_frame: color
-var col_button_hover: color
-var col_button_hover_frame: color
-var col_button_click: color
-var col_button_click_frame: color
-var col_frame: color
-var col_frame_active: color
+var col_window_frame: Color
+var col_text: Color
+var col_background: Color
+var col_title: Color
+var col_button: Color
+var col_button_frame: Color
+var col_button_hover: Color
+var col_button_hover_frame: Color
+var col_button_click: Color
+var col_button_click_frame: Color
+var col_frame: Color
+var col_frame_active: Color
 
 
 func dir_append(dir: string, e: string) -> string

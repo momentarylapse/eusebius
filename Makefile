@@ -59,7 +59,7 @@ XXXBINS = \
  bin/xfiles \
  bin/xdesktop
 PDEP = kalib_symbols lib/*.kaba bin/lib/std/*.kaba
-PDEPX = $(PDEP) bin/lib/x.kaba bin/lib/ttfx.kaba bin/lib/draw.kaba
+PDEPX = $(PDEP) bin/lib/x/x.kaba bin/lib/ttfx.kaba bin/lib/draw.kaba
 LIBS = lib/kalib
 
 all : bochs/c.img

@@ -2,7 +2,7 @@ use os
 use lib.std
 use lib.mtk.mtk
 use lib.draw
-use hui
+#use hui
 
 class EditWindow extends MtkWindow
 	var filename: string

@@ -1,6 +1,7 @@
 use lib.std.file.*
+use lib.x.keyboard.*
 use controller.*
-use hui
+##use hui
 
 class KeyboardController
 	var key: int
@@ -42,123 +43,123 @@ class KeyboardController
 		if key < 0
 			return
 		if shift
-			key += hui.KEY_SHIFT
+			key += KEY_SHIFT
 		if control
-			key += hui.KEY_CONTROL
+			key += KEY_CONTROL
 		if altgr
-			key += hui.KEY_ALT
+			key += KEY_ALT
 		
 #		for cc in cmds.clients
 #			cc.send_key()
 
 	func getkey(k: int) -> int
 		if k == 0x1c
-			return hui.KEY_RETURN
+			return KEY_RETURN
 		if k == 0x39
-			return hui.KEY_SPACE
+			return KEY_SPACE
 		if k == 0x0e
-			return hui.KEY_BACKSPACE
+			return KEY_BACKSPACE
 		if k == 0xe053
-			return hui.KEY_DELETE
+			return KEY_DELETE
 		if k == 0xe048
-			return hui.KEY_UP
+			return KEY_UP
 		if k == 0xe050
-			return hui.KEY_DOWN
+			return KEY_DOWN
 		if k == 0xe04b
-			return hui.KEY_LEFT
+			return KEY_LEFT
 		if k == 0xe04d
-			return hui.KEY_RIGHT
+			return KEY_RIGHT
 		if k == 0x0b
-			return hui.KEY_0
+			return KEY_0
 		if k == 0x02
-			return hui.KEY_1
+			return KEY_1
 		if k == 0x03
-			return hui.KEY_2
+			return KEY_2
 		if k == 0x04
-			return hui.KEY_3
+			return KEY_3
 		if k == 0x05
-			return hui.KEY_4
+			return KEY_4
 		if k == 0x06
-			return hui.KEY_5
+			return KEY_5
 		if k == 0x07
-			return hui.KEY_6
+			return KEY_6
 		if k == 0x08
-			return hui.KEY_7
+			return KEY_7
 		if k == 0x09
-			return hui.KEY_8
+			return KEY_8
 		if k == 0x0a
-			return hui.KEY_9
+			return KEY_9
 		if k == 0x35
-			return hui.KEY_MINUS
+			return KEY_MINUS
 		if k == 0x34
-			return hui.KEY_DOT
+			return KEY_DOT
 		if k == 0x33
-			return hui.KEY_COMMA
+			return KEY_COMMA
 		if k == 0x56
-			return hui.KEY_LESS
+			return KEY_LESS
 		if k == 0x2b
-			return hui.KEY_FENCE
+			return KEY_FENCE
 		if k == 0x1b
-			return hui.KEY_PLUS
+			return KEY_PLUS
 		if k == 0x29
 			return -1 # '^'
 		if k == 0x0c
-			return hui.KEY_SZ
+			return KEY_SZ
 		if k == 0x0d
 			return -1 # '´'
 			
 		if k == 0x1e
-			return hui.KEY_A
+			return KEY_A
 		if k == 0x30
-			return hui.KEY_B
+			return KEY_B
 		if k == 0x2e
-			return hui.KEY_C
+			return KEY_C
 		if k == 0x20
-			return hui.KEY_D
+			return KEY_D
 		if k == 0x12
-			return hui.KEY_E
+			return KEY_E
 		if k == 0x21
-			return hui.KEY_F
+			return KEY_F
 		if k == 0x22
-			return hui.KEY_G
+			return KEY_G
 		if k == 0x23
-			return hui.KEY_H
+			return KEY_H
 		if k == 0x17
-			return hui.KEY_I
+			return KEY_I
 		if k == 0x24
-			return hui.KEY_J
+			return KEY_J
 		if k == 0x25
-			return hui.KEY_K
+			return KEY_K
 		if k == 0x26
-			return hui.KEY_L
+			return KEY_L
 		if k == 0x32
-			return hui.KEY_M
+			return KEY_M
 		if k == 0x31
-			return hui.KEY_N
+			return KEY_N
 		if k == 0x18
-			return hui.KEY_O
+			return KEY_O
 		if k == 0x19
-			return hui.KEY_P
+			return KEY_P
 		if k == 0x10
-			return hui.KEY_Q
+			return KEY_Q
 		if k == 0x13
-			return hui.KEY_R
+			return KEY_R
 		if k == 0x1f
-			return hui.KEY_S
+			return KEY_S
 		if k == 0x14
-			return hui.KEY_T
+			return KEY_T
 		if k == 0x16
-			return hui.KEY_U
+			return KEY_U
 		if k == 0x2f
-			return hui.KEY_V
+			return KEY_V
 		if k == 0x11
-			return hui.KEY_W
+			return KEY_W
 		if k == 0x2d
-			return hui.KEY_X
+			return KEY_X
 		if k == 0x2c
-			return hui.KEY_Y
+			return KEY_Y
 		if k == 0x15
-			return hui.KEY_Z
+			return KEY_Z
 		return -1
 
 	func mut poll()

@@ -5,19 +5,19 @@ use lib_syscalls.*
 use lib_file.*
 use image.*
 
-class lib__math@@color
-	var a, r, g, b: float
+class lib__math@@Color
+	var a, r, g, b: f32
 	func __str__() -> lib__string
 		var s: lib__string
 		return s
 
 class lib__image@@Image
-	var width, height: int
-	var mode, __align__: int
+	var width, height: i32
+	var mode, __align__: i32
 	var data: lib__i32@list
 	var alpha_used: bool
 	var error: bool
-	func __init__(w: int, h: int, c: color)
+	func __init__(w: i32, h: i32, c: Color)
 		width = w
 		height = h
 		error = true
@@ -31,7 +31,7 @@ class lib__image@@Image
 	
 	func static _create_dummy() -> xfer[Self]
 		for im in lib__@malloc(sizeof(Self)) as Self*
-			im.__init__(0, 0, color(0,0,0,0))
+			im.__init__(0, 0, Color(0,0,0,0))
 			return &im as xfer[Self]
 
 	# TODO this should return xfer?[]
@@ -47,15 +47,15 @@ class lib__image@@Image
 				close(h)
 				return _create_dummy()
 			for im in lib__@malloc(sizeof(Self)) as Self*
-				var offset: int = t[0]
-				var ww: int = t[13]
-				var width: int = t[12]
+				var offset = t[0] as i32
+				var ww = t[13] as i32
+				var width = t[12] as i32
 				width += (ww*256)
-				var hh: int = t[15]
-				var height: int = t[14]
+				var hh = t[15] as i32
+				var height = t[14] as i32
 				height += (hh*256)
 	
-				var c: color
+				var c: Color
 				c.r = 1
 				c.g = 0
 				c.b = 0
