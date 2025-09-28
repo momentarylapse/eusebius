@@ -61,6 +61,6 @@ func main()
 			print("hd: can not open file: {{f}}\n")
 			exit(-1)
 		hd(h, skip, length)
-		close(h)
+		let _ = close(h)
 	
 	exit(0)

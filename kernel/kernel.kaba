@@ -61,7 +61,7 @@ func main()
 	# assume a default disk layout...
 	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
 	for boot in FileSystem.get("/boot", FileSystem.root)
-		FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
+		let _ = FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	else
 		panic("/boot not found")
 	

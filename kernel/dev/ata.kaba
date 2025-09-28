@@ -40,7 +40,7 @@ class AtaController as @noauto
 
 	func static wait_400_ns()
 		for i in 0:100
-			inportb(IOBase + 7)
+			let _ = inportb(IOBase + 7)
 
 	func static wait_status(mask: u8, value: u8) -> bool
 		var AtaStatusChar = inportb(IOBase + 7)
@@ -210,7 +210,7 @@ class AtaController as @noauto
 		outportb(0x376, 0x0a)
 
 		for n in 0:4
-			test_disk(n)
+			let _ = test_disk(n)
 			
 	# 1 Sektor = 512 b
 	func static read_sector(disk_no: int, sector_offset: int, num_sectors: int, buf: void&) -> bool

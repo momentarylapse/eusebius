@@ -95,7 +95,7 @@ class FileEntry as @noauto
 	func mut shrink_block_list(n: int)
 		while num_blocks > n
 			for b in blocks
-				mount.free_block(b[num_blocks - 1])
+				let _ = mount.free_block(b[num_blocks - 1])
 			num_blocks --
 
 
@@ -226,7 +226,7 @@ class MountPoint as @noauto
 		var buf = _buf as cstring&
 		for d in dev
 			for i in 0:dev_blocks_per_block
-				AtaController.read_sector(d.disk_no, d.offset + block_no * dev_blocks_per_block + dev_block_offset + i, 1, &buf[d.block_size * i])
+				let _ = AtaController.read_sector(d.disk_no, d.offset + block_no * dev_blocks_per_block + dev_block_offset + i, 1, &buf[d.block_size * i])
 		
 #		if block_no <= 1
 #			prints("\n")
@@ -241,7 +241,7 @@ class MountPoint as @noauto
 		var but = _buf as cstring&
 		for d in dev
 			for i in 0:dev_blocks_per_block
-				AtaController.write_sector(d.disk_no, d.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &but[d.block_size * i])
+				let _ = AtaController.write_sector(d.disk_no, d.offset + block_no * dev_blocks_per_block + dev_block_offset + i    , 1, &but[d.block_size * i])
 	
 	func virtual mut alloc_block() -> int
 		return -1
@@ -309,7 +309,7 @@ class FileSystem as @noauto
 			e.mount.free_inode(e.mp_inode)
 		for _p in p
 			_p.mount.write_inode(_p)
-			_p.mount.sync()
+			let _ = _p.mount.sync()
 		Heap.free(e)
 	
 	func static get(path: cstring, cur_dir: FileEntry) -> FileEntry*

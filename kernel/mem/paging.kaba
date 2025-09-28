@@ -389,7 +389,7 @@ class Paging as @noauto
 			#prints("  ")
 			#printi(m.size)
 			#prints("\n")
-			reserve_physical_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
+			let _ = reserve_physical_chunk(p0 * PAGE_SIZE, (p1 - p0) * PAGE_SIZE, false)
 	
 	# does not clear
 	func static reserve_physical_page() -> int

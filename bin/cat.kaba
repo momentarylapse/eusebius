@@ -29,7 +29,7 @@ func main()
 			print("cat: can not open file: " + a)
 			exit(-1)
 		cat(h)
-		close(h)
+		let _ = close(h)
 		#print FileRead(arg[i])
 	
 	exit(0)

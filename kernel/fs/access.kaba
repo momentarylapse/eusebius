@@ -244,7 +244,7 @@ class OpenFileData as @noauto
 			buffer := &_dummy_buffer as u8[0]&
 		if entry.type == FileType.CHAR
 			for op in entry.op
-				op.close(entry)
+				let _ = op.close(entry)
 		if entry.type == FileType.PIPE
 			for p in pipe
 				p.unref(writing)
@@ -320,7 +320,7 @@ func kernel_open_entry(e: FileEntry, flags: int) -> OpenFileData*
 				return nil
 		else if of.entry.type == FileType.CHAR
 			for op in of.entry.op
-				op.open(of.entry)
+				let _ = op.open(of.entry)
 		return &of
 	else
 		return nil

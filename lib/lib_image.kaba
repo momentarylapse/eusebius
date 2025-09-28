@@ -62,11 +62,11 @@ class lib__image@@Image
 				im.__init__(width, height, c)#color.RED)
 	
 				for i in 0:offset
-					read(h, &t[0], 1)
+					let _ = read(h, &t[0], 1)
 	
 				for id in im.data.data
 					for y in 0:height
-						read(h, &id[y * width], 4*width)
+						let _ = read(h, &id[y * width], 4*width)
 				
 				#for y in 0:height
 #					for x in 0:width

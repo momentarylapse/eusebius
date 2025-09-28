@@ -346,9 +346,9 @@ class TaskManager as @noauto
 		for t in load_user_task(filename, parent)
 			memcpy(&t.arg, &filename, sizeof(cstring))
 			for of in fin
-				t.add_handle(&of)
+				let _ = t.add_handle(&of)
 			for of in fout
-				t.add_handle(&of)
+				let _ = t.add_handle(&of)
 			t.status = TaskStatus.RUNNING
 			return &t
 		return nil

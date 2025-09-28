@@ -168,7 +168,7 @@ class PCIController
 		for bus in 0:256
 			for slot in 0:32
 				for function in 0:8
-					check_device(bus, slot, function)
+					let _ = check_device(bus, slot, function)
 	
 	func mut scan()
 		for d in check_device(0, 0, 0)
@@ -185,7 +185,7 @@ class PCIController
 	func mut check_bus(bus: int)
  		for slot in 0:32
  			for function in 0:8
-				check_device(bus, slot, function)
+				let _ = check_device(bus, slot, function)
 	
 	func mut check_function(bus: int, slot: int, function: int)
 		for d in getx(bus, slot, function)
