@@ -1,6 +1,6 @@
-use lib.std.sys.*
-use lib.std.*
-use lib.vesa.*
+use ..std.sys.*
+use ..std.std.*
+use ..vesa.*
 use image.Image
 
 let WF_TRANSPARENT = 1024

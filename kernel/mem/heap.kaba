@@ -1,5 +1,5 @@
-use common.*
-use io.text.*
+use ..common.common.*
+use ..io.text.*
 
 
 #--------------------------------------------------------------
@@ -86,14 +86,14 @@ class Heap as @noauto
 			for n in h.next
 				h.size += n.size
 				h.next = n.next
-			for n in h.next
+			for mut n in h.next
 				n.prev = h
-		for p in h.prev
+		for mut p in h.prev
 			if p.after() == h
 				allocated -= sizeof(MallocHeader)
 				#prints(" merge before ")
 				p.size += h.size
-				for n in h.next
+				for mut n in h.next
 					n.prev = h.prev#&p
 				p.next = h.next
 
@@ -117,7 +117,7 @@ class Heap as @noauto
 			# find last free window before p
 			var cur = first_free
 			while true
-				for next in cur.next
+				for mut next in cur.next
 					if (ip >= _p2i(cur)) and (ip < _p2i(cur) + cur.size)
 						prints("\n")
 						printi(_p2i(cur))

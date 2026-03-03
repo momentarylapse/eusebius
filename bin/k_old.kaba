@@ -1,6 +1,6 @@
 use os
-use lib.std
-use lib.io
+use .lib.std.std
+use .lib.std.io
 
 const int CHAR_NL = 0x0a
 const int CHAR_TAB = 0x09

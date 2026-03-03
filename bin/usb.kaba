@@ -1,5 +1,5 @@
-use lib.std.*
-use lib.pci.*
+use .lib.std.std.*
+use .lib.pci.*
 
 func show_device(d: PCIDevice)
 	let addr = d.bar[0] # since bar[1] is 0...

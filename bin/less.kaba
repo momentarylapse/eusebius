@@ -1,4 +1,4 @@
-use lib.std
+use .lib.std.std
 
 var lines: string[]
 var cur_line: int
@@ -7,7 +7,7 @@ const WIDTH = 80
 const HEIGHT = 25
 
 func clear()
-	string s
+	var s: string
 	s.add(0x7f)
 	for y in 0:HEIGHT
 		for x in 0:WIDTH

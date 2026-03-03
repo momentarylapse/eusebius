@@ -1,7 +1,7 @@
 use image.Image
-use lib.std.*
-use lib.x.*
-#use lib.ttfx.*
+use .std.std.*
+use .x.x.*
+#use .ttfx.*
 
 func col2i(c: Color) -> i32
 	let ir = i32(c.r * 255.0)

@@ -1,28 +1,28 @@
 #define __STRING_CONST_AS_CSTRING__
 #define __FUNCTION_POINTER_AS_CODE__
-use common.*
-use io.text.*
-use io.port.*
-use dev.ata.*
-use dev.block.*
-use dev.std_char_devs.*
-use fs.fs.*
-use fs.access.*
-use mem.memory.*
-use mem.heap.*
-use mem.paging.*
-use mem.shared.*
-use task.task.*
-use task.manager.*
-use task.scheduler.*
-use irq.irq.*
-use irq.error.*
+use .common.common.*
+use .io.text.*
+use .io.port.*
+use .dev.ata.*
+use .dev.block.*
+use .dev.std_char_devs.*
+use .fs.fs.*
+use .fs.access.*
+use .mem.memory.*
+use .mem.heap.*
+use .mem.paging.*
+use .mem.shared.*
+use .task.task.*
+use .task.manager.*
+use .task.scheduler.*
+use .irq.irq.*
+use .irq.error.*
 
 
 const MEM_ADDR = 0x00700000 #0x0e680000
 
-var io_base: int
-var mem: int[0]&
+var io_base: i32
+var mem: i32[0]&
 
 func sb16_reset()
 	prints("reset...")
@@ -38,12 +38,12 @@ func sb16_reset()
 		pass
 	prints("  ok\n")
 
-func sb16_write(cmd: int)
+func sb16_write(cmd: i32)
 	while (inportb(io_base + 0x0c) & 0x80) != 0
 		pass
 	outportb(io_base + 0x0c, cmd)
 
-func sb16_read() -> int
+func sb16_read() -> i32
 	while (inportb(io_base + 0x0e) & 0x80) == 0
 		pass
 	return inportb(io_base + 0x0a)
@@ -67,7 +67,7 @@ func sb16_setup_dma()
 	outportb(0xc6, 0x7f) # hi
 	prints("   ok\n")
 
-func sb16_set_sample_rate(sample_rate: int)
+func sb16_set_sample_rate(sample_rate: i32)
 	prints("sample rate")
 	sb16_write(0x41)
 	prints("2")
@@ -82,7 +82,7 @@ func test_sb16()
 	io_base = 0x220
 	
 	# 64k... enough
-	mem := _i2p(MEM_ADDR)
+	mem := _i2p(MEM_ADDR) as i32[0]&
 	printh(&mem, 4)
 	
 
@@ -140,8 +140,8 @@ func main()
 	
 	TaskManager.init()
 	
-	irq.init()
-	Error.init()
+	IrqManager.init()
+	ErrorManager.init()
 	#InitSysCall()
 	
 	TextMode.clear()

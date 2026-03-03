@@ -1,6 +1,6 @@
-use lib.std.*
-use lib.std.io.*
-use lib.pci.*
+use .std.std.*
+use .std.io.*
+use .pci.*
 
 func extern _p2i(p: void*) -> i64
 func extern _i2p(i: i64) -> void*
@@ -89,7 +89,7 @@ func set_pixels(x: int, y: int, cc: int&, n: int)
 		return
 	let col = cc as int[0]&
 	var p = x + y * screen_width
-	for m2 in vga_mem
+	for mut m2 in vga_mem
 		for i in 0:n
 			m2[p] = col[i]
 			p ++
@@ -98,7 +98,7 @@ func set_pixels(x: int, y: int, cc: int&, n: int)
 
 func set_pixel(x: int, y: int, col: int)
 	let p = x + y * screen_width
-	for m2 in vga_mem
+	for mut m2 in vga_mem
 		m2[p] = col
 
 func vesa_init()

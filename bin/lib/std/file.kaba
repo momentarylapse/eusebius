@@ -1,5 +1,5 @@
 use os
-use common.*
+use .common.*
 
 
 let O_RDONLY = 1

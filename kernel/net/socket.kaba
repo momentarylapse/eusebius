@@ -1,8 +1,8 @@
-use common.*
-use fs.*
-use io.text.*
-use mem.heap.*
-use mem.paging.*
+use ..common.common.*
+use ..fs.fs.*
+use ..io.text.*
+use ..mem.heap.*
+use ..mem.paging.*
 
 
 
@@ -36,7 +36,7 @@ class KSocket as @noauto
 	func mut write(data: void&, size: int) -> int
 		if peer_port < 0
 			return -ENOTCONN
-		for s in SocketManager.get_by_port(peer_port)
+		for mut s in SocketManager.get_by_port(peer_port)
 			if s.buffer_used + size > SOCKET_BUFFER_SIZE
 				return -EWOULDBLOCK
 			memcpy(&s.buffer[s.buffer_used], data, size)
@@ -82,10 +82,10 @@ class KSocket as @noauto
 	func mut accept() -> int
 		if state == SocketState.WAIT_ACCEPT
 			# "remote socket"
-			for rs in SocketManager.get_by_port(_accept_wait_port)
+			for mut rs in SocketManager.get_by_port(_accept_wait_port)
 				# "return socket"
 				var e = create_file_entry(":sock:", FileType.SOCKET, &FileSystem.dummy_mount)
-				for s in SocketManager.create(e, type)
+				for mut s in SocketManager.create(e, type)
 					s.assign_available_port()
 					s.link(&rs)
 					self.set_state(SocketState.LISTENING)
@@ -100,7 +100,7 @@ class KSocket as @noauto
 		return -EWOULDBLOCK
 		
 	func mut connect(_port: int) -> int
-		for rs in SocketManager.get_by_port(_port)
+		for mut rs in SocketManager.get_by_port(_port)
 			if rs.state != SocketState.LISTENING
 				return -ECONNREFUSED
 		
@@ -131,7 +131,7 @@ class KSocket as @noauto
 	func mut clean_up()
 		if peer_port >= 0
 			# "unconnect"
-			for s in SocketManager.get_by_port(peer_port)
+			for mut s in SocketManager.get_by_port(peer_port)
 				s.peer_port = -1
 		FileSystem.delete(e)
 		Heap.free(buffer)
@@ -142,7 +142,7 @@ class SocketManager as @noauto
 	var static sockets: KSocket[MAX_SOCKETS]
 
 
-	func static create(e: FileEntry, type: int) -> KSocket*
+	func static globalref create(e: FileEntry, type: int) -> KSocket*
 		for mut s in sockets
 			if not s.used
 				s.used = true
@@ -159,13 +159,13 @@ class SocketManager as @noauto
 		return nil
 
 
-	func static get_by_port(port: int) -> KSocket*
+	func static globalref get_by_port(port: int) -> KSocket*
 		for s in sockets
 			if s.used and s.port == port
 				return &s
 		return nil
 	
-	func static get(e: FileEntry) -> KSocket*
+	func static globalref get(e: FileEntry) -> KSocket*
 		for s in sockets
 			if s.used and s.e == &e
 				return &s

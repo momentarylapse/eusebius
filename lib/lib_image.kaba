@@ -1,8 +1,8 @@
-use lib_base.*
-use lib_array.*
-use lib_mem.*
-use lib_syscalls.*
-use lib_file.*
+use .lib_base.*
+use .lib_array.*
+use .lib_mem.*
+use .lib_syscalls.*
+use .lib_file.*
 use image.*
 
 class lib__math@@Color
@@ -25,12 +25,12 @@ class lib__image@@Image
 			error = false
 			data.resize(w * h)
 			var ic = 0xff000000 + int(255.0 * c.b) + (int(255.0 * c.g) << 8) + (int(255.0 * c.r) << 16)
-			for d in data.data
+			for mut d in data.data
 				for i in 0:len(data)
 					d[i] = ic
 	
 	func static _create_dummy() -> xfer[Self]
-		for im in lib__@malloc(sizeof(Self)) as Self*
+		for mut im in lib__@malloc(sizeof(Self)) as Self*
 			im.__init__(0, 0, Color(0,0,0,0))
 			return &im as xfer[Self]
 
@@ -46,7 +46,7 @@ class lib__image@@Image
 			if r < 0
 				close(h)
 				return _create_dummy()
-			for im in lib__@malloc(sizeof(Self)) as Self*
+			for mut im in lib__@malloc(sizeof(Self)) as Self*
 				var offset = t[0] as i32
 				var ww = t[13] as i32
 				var width = t[12] as i32

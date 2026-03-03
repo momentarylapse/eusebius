@@ -1,6 +1,6 @@
-use lib_base.*
-use lib_mem.*
-use lib_syscalls.*
+use .lib_base.*
+use .lib_mem.*
+use .lib_syscalls.*
 use kaba
 
 
@@ -84,7 +84,7 @@ class lib__@DynamicArray
 	func mut __mem_remove__(index: int)
 		if index < 0 or index >= num
 			return
-		for d in data
+		for mut d in data
 			for i in index*element_size : (num-1)*element_size
 				d[i] = d[i+element_size]
 		__mem_resize__(num - 1)
@@ -110,7 +110,7 @@ class lib__bytes extends lib__@DynamicArray
 		__mem_clear__()
 	func mut add(c: u8)
 		__mem_resize__(num + 1)
-		for d in data
+		for mut d in data
 			d[num - 1] = c
 	#void mut insert(int index, char c)
 #		__mem_resize__(num + 1)
@@ -211,7 +211,7 @@ class lib__string extends lib__@DynamicArray
 		__mem_clear__()
 	func mut add(c: u8)
 		__mem_resize__(num + 1)
-		for d in data
+		for mut d in data
 			d[num - 1] = c
 	#void mut insert(int index, char c)
 #		__mem_resize__(num + 1)
@@ -358,7 +358,7 @@ class lib__string extends lib__@DynamicArray
 		var r: Ret
 		r.resize(num)
 		for d in data
-			for rd in r.data
+			for mut rd in r.data
 				for i in 0:num
 					rd[num - i - 1] = d[i]
 		return r
@@ -366,7 +366,7 @@ class lib__string extends lib__@DynamicArray
 	func mut replace0(start: int, length: int, s: Self)
 		if start + length > num
 			return
-		for dd in data
+		for mut dd in data
 			for sd in s.data
 				let d = s.num - length
 				if d > 0
@@ -396,7 +396,7 @@ class lib__string extends lib__@DynamicArray
 
 	func lower() -> Self
 		var r: Ret = self
-		for d in r.data
+		for mut d in r.data
 			for i in 0:num
 				if (d[i] >= 'A') and (d[i] <= 'Z')
 					d[i] += 'a' - 'A'
@@ -404,7 +404,7 @@ class lib__string extends lib__@DynamicArray
 
 	func upper() -> Self
 		var r: Ret = self
-		for d in r.data
+		for mut d in r.data
 			for i in 0:num
 				if (d[i] >= 'a') and (d[i] <= 'z')
 					d[i] += 'A' - 'a'
@@ -519,7 +519,7 @@ class lib__string@list extends lib__@DynamicArray
 	func __init__()
 		__mem_init__(sizeof(lib__string))
 	func __delete__()
-		for d in data
+		for mut d in data
 			for i in 0:num
 				d[i].__delete__()
 		#clear()
@@ -527,29 +527,29 @@ class lib__string@list extends lib__@DynamicArray
 		let num0 = num
 		if size < num0
 			# shrink -> destruct
-			for d in data
+			for mut d in data
 				for i in size:num0
 					d[i].__delete__()
 		__mem_resize__(size)
 		if size > num0
 			reserve(size)
-			for d in data
+			for mut d in data
 				for i in num0:size
 					d[i].__init__()
 	func mut add(s: lib__string)
 		resize(num + 1)
-		for d in data
+		for mut d in data
 			d[num - 1] = s
 	func mut __assign__(o: lib__string@list)
 		resize(o.num)
-		for d in data
+		for mut d in data
 			for od in o.data
 				for i in 0:num
 					d[i] = od[i]
 	func mut remove(index: int)
 		if (index < 0) or (index >= num)
 			return
-		for d in data
+		for mut d in data
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
@@ -567,7 +567,7 @@ class lib__string@list extends lib__@DynamicArray
 	func __str__() -> lib__string
 		return lib__@sa2s(self)
 	func mut swap(i: int, j: int)
-		for d in data
+		for mut d in data
 			var t = d[i]
 			d[i] = d[j]
 			d[j] = t
@@ -609,23 +609,23 @@ class lib__i32@list extends lib__@DynamicArray
 		num = size
 	func mut add(i: int)
 		resize(num + 1)
-		for d in data
+		for mut d in data
 			d[num - 1] = i
 	func mut remove(index: int)
 		if (index < 0) or (index >= num)
 			return
-		for d in data
+		for mut d in data
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
 	func mut __assign__(o: Self)
 		resize(o.num)
-		for d in data
+		for mut d in data
 			for od in o.data
 				for i in 0:num
 					d[i] = od[i]
 	func mut sort()
-		for d in data
+		for mut d in data
 			for i in 0:num
 				for j in i:num
 					if d[i] > d[j]
@@ -656,23 +656,23 @@ class lib__f32@list extends lib__@DynamicArray
 		num = size
 	func mut add(i: int)
 		resize(num + 1)
-		for d in data
+		for mut d in data
 			d[num - 1] = i
 	func mut remove(index: int)
 		if (index < 0) or (index >= num)
 			return
-		for d in data
+		for mut d in data
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
 	func mut __assign__(o: Self)
 		resize(o.num)
-		for d in data
+		for mut d in data
 			for od in o.data
 				for i in 0:num
 					d[i] = od[i]
 	func mut sort()
-		for d in data
+		for mut d in data
 			for i in 0:num
 				for j in i:num
 					if d[i] > d[j]
@@ -694,18 +694,18 @@ class lib__bool@list extends lib__@DynamicArray
 		num = size
 	func mut add(b: bool)
 		resize(num + 1)
-		for d in data
+		for mut d in data
 			d[num - 1] = b
 	func mut remove(index: int)
 		if (index < 0) or (index >= num)
 			return
-		for d in data
+		for mut d in data
 			for i in index : num - 1
 				d[i] = d[i+1]
 		resize(num - 1)
 	func mut __assign__(o: Self)
 		resize(o.num)
-		for d in data
+		for mut d in data
 			for od in o.data
 				for i in 0:num
 					d[i] = od[i]

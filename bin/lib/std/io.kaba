@@ -1,4 +1,4 @@
-use lib.std
+use .std
 
 
 var _temp_port_no_: int

@@ -1,5 +1,5 @@
-use lib.std.file.*
-use lib.x.keyboard.*
+use ..std.file.*
+use ..x.keyboard.*
 use controller.*
 ##use hui
 

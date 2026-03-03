@@ -1,4 +1,4 @@
-use io.io
+use .io.text
 
 const SCREEN_WIDTH = 80
 const SCREEN_HEIGHT = 25
@@ -7,8 +7,8 @@ const SCREEN_HEIGHT = 25
 class TextMode
 
 	var static video_memory: void*
-	var static text_color, text_color2: char
-	var static pos, line: int
+	var static text_color, text_color2: u8
+	var static pos, line: i32
 
 	func static clear()
 		cstring *d = video_memory
@@ -62,7 +62,7 @@ class TextMode
 					line --
 				d = video_memory
 				d = &d[2*(SCREEN_WIDTH * line)]
-		int position = (line * SCREEN_WIDTH) + pos
+		let position = (line * SCREEN_WIDTH) + pos
 		# cursor LOW port to vga INDEX register
 		outportb(0x3d4, 0x0f)
 		outportb(0x3d5, position)

@@ -1,12 +1,12 @@
-use common.*
-use common.macros.*
-use io.text.*
-use io.port.*
-use task.task.*
-use task.manager.*
-use time.timevalue.*
-use time.timer.*
-use irq.irq.*
+use ..common.common.*
+use ..common.macros.*
+use ..io.text.*
+use ..io.port.*
+use .task.*
+use .manager.*
+use ..time.timevalue.*
+use ..time.timer.*
+use ..irq.irq.*
 
 #const SCHEDULER_STACK_SIZE = 8192
 
@@ -99,12 +99,13 @@ class Scheduler
 			iret
 		}
 
-	func static handle_irq(_frame: InterruptFrame*)
+	func static handle_irq(__frame: InterruptFrame*)
+		var _frame = __frame # FIXME workaround mut
 		IrqManager.mask(TIMER_IRQ)
 		#prints("<timer>")
 		update_time()
 		
-		for frame in _frame
+		for mut frame in _frame
 			leave_task(frame)
 			TaskManager.process_waiting_tasks(KernelTimer.tv)
 			do_scheduling()
@@ -128,7 +129,7 @@ class Scheduler
 		update_times()
 		var dt = KernelTimer.tv
 		dt.sub(t_prev)
-		for t in cur
+		for mut t in cur
 			t.time_all.add(dt)
 			t.time_temp.add(dt)
 		t_prev = KernelTimer.tv	
@@ -144,7 +145,7 @@ class Scheduler
 #		TextMode.text_color = 0x05
 #		prints(" </irq> ")
 #		TextMode.text_color = 0x07
-		for t in cur
+		for mut t in cur
 			if t.first_time_running
 #				TextMode.text_color = 0x05
 #				prints(" <FIRST> ")

@@ -1,7 +1,7 @@
 #define __FUNCTION_POINTER_AS_CODE__
-use lib.std
-use lib.pci
-use lib.io
+use .lib.std.std
+use .lib.pci
+use .lib.std.io
 
 
 
@@ -27,7 +27,7 @@ class Driver
 		print("io: 0x{{io_base|4x}}")
 		
 		# 64k... enough
-		int shm_id = shmget(randi(10000000), 0x00010000, IPC_CREAT)
+		let shm_id = shmget(randi(10000000), 0x00010000, IPC_CREAT)
 		if shm_id < 0
 			raise(new Exception("can't create shared memory for send buffer"))
 		buf_send = shmat(shm_id, 0)
@@ -48,7 +48,7 @@ class Driver
 	func static choose() -> Driver*
 		var pci = new PCIController()
 		pci.scan()
-		Driver*[] drivers
+		var drivers: Driver*[]
 		drivers.add(new DriverNE2k())
 		drivers.add(new DriverRTL8139())
 		for d in drivers

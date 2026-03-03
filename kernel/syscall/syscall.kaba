@@ -1,21 +1,21 @@
-use common.*
-use common.macros.*
-use io.text.*
-use cpu.*
-use dev.block.*
-use mem.heap.*
-use mem.paging.*
-#use mem.shared.*
-use task.task.*
-use task.manager.*
-use task.scheduler.*
-use time.timer.*
-use syscall.op_fs.*
-use syscall.op_sys.*
-use syscall.op_task.*
-#use irq.irq.*
+use ..common.common.*
+use ..common.macros.*
+use ..io.text.*
+use ..cpu.cpu.*
+use ..dev.block.*
+use ..mem.heap.*
+use ..mem.paging.*
+#use ..mem.shared.*
+use ..task.task.*
+use ..task.manager.*
+use ..task.scheduler.*
+use ..time.timer.*
+use .op_fs.*
+use .op_sys.*
+use .op_task.*
+#use ..irq.irq.*
 
-use fs.* # experiment
+use ..fs.fs.* # experiment
 
 #let SYSCALL_STACK_SIZE = 65536
 
@@ -143,7 +143,7 @@ class Syscall
 		Scheduler.update_time()
 		
 		# prepare current task to be awoken by returning from a timer interrupt
-		for t in Scheduler.cur
+		for mut t in Scheduler.cur
 			memcpy(&t.frame.reg8ff, &frame, sizeof(i64) * (8 + 7))
 			#t.syscall_rsp
 			t.frame.rsp = _p2i(Syscall.task_frame_rsp) + sizeof(Frame)
@@ -229,7 +229,7 @@ class Syscall
 #		prints(" SC")
 #		printh(&index, 2)
 		
-		for t in Scheduler.cur
+		for mut t in Scheduler.cur
 			if index == 0x0001 # exit
 				sys_exit(t, frame.rdi)
 				return 0

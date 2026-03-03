@@ -1,9 +1,9 @@
-use common
+use ..common.common
 
 
 struct TimeValue
-	var sec: int
-	var nanosec: int
+	var sec: i32
+	var nanosec: i32
 
 	func mut clear()
 		sec = 0
@@ -19,13 +19,13 @@ struct TimeValue
 	func is_valid() -> bool
 		return (nanosec >= 0) and (nanosec < 1000000000)
 	
-	func mut inc_nanosec(ns: int)
+	func mut inc_nanosec(ns: i32)
 		nanosec += ns
   		if nanosec > 1000000000
   			sec ++
   			nanosec -= 1000000000
 	
-	func mut dec_nanosec(ns: int)
+	func mut dec_nanosec(ns: i32)
 		nanosec -= ns
 		if nanosec < 0
 			sec --

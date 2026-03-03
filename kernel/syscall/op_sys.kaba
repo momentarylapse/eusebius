@@ -1,15 +1,15 @@
-use common.*
-use dev.block.*
-use mem.memory.*
-use mem.paging.*
-use mem.heap.*
-use mem.shared.*
-use task.task.*
-use task.manager.*
-use fs.*
-use fs.access.*
-use time.timevalue.*
-use time.timer.*
+use ..common.common.*
+use ..dev.block.*
+use ..mem.memory.*
+use ..mem.paging.*
+use ..mem.heap.*
+use ..mem.shared.*
+use ..task.task.*
+use ..task.manager.*
+use ..fs.fs.*
+use ..fs.access.*
+use ..time.timevalue.*
+use ..time.timer.*
 
 use op_fs.*
 use io.text.*
@@ -62,7 +62,7 @@ func sys_ipc(out t: Task, cmd: i32, p1: i64, p2: i64, p3: i32) -> i64
 		t.set_wait(WaitingMode.MESSAGE, 0, 0, 0)
 		return 0
 	else if cmd == 1002 # yield / wake-up
-		for tt in TaskManager.get_task(p1)
+		for mut tt in TaskManager.get_task(p1)
 			tt.activate()
 			t.set_wait(WaitingMode.TIME, 0, 0, 0)
 			return 0

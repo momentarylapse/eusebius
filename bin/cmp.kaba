@@ -1,4 +1,4 @@
-use lib.std
+use .lib.std.std
 
 
 func cmp(h1: int, h2: int)
@@ -7,11 +7,11 @@ func cmp(h1: int, h2: int)
 		s1.resize(128)
 		s2.resize(128)
 		
-		int r1 = read(h1, &s1[0], 128)
+		let r1 = read(h1, &s1[0], 128)
 		if r1 < 0
 			print("\nerror reading...(1)")
 		
-		int r2 = read(h2, &s2[0], 128)
+		let r2 = read(h2, &s2[0], 128)
 		if r2 < 0
 			print("\nerror reading...(2)")
 			
@@ -32,16 +32,16 @@ func cmp(h1: int, h2: int)
 
 func main()
 	init_lib()
-	string[] arg
+	var arg: string[]
 	get_args(arg)
 	
 	if arg.num != 3
 		raise(new Exception("call: cmp FILE1 FILE2"))
 		
-	int h1 = open(arg[1], O_RDONLY)
+	let h1 = open(arg[1], O_RDONLY)
 	if h1 < 0
 		raise(new Exception("cat: can not open file: " + arg[1]))
-	int h2 = open(arg[2], O_RDONLY)
+	let h2 = open(arg[2], O_RDONLY)
 	if h2 < 0
 		raise(new Exception("cat: can not open file: " + arg[2]))
 	cmp(h1, h2)

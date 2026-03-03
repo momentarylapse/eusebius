@@ -1,8 +1,8 @@
-use vesa.*
-use std.file.*
+use ..vesa.*
+use ..std.file.*
 use image.Image
-use controller.*
-use windows.*
+use .controller.*
+use .windows.*
 
 
 class MouseController

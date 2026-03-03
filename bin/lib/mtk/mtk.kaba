@@ -1,6 +1,7 @@
-use lib.std
-use lib.x.*
-use lib.draw.*
+use ..std.std
+use ..x.x.*
+use ..x.keyboard.*
+use ..draw.*
 #use lib.ttfx
 #use hui
 
@@ -167,7 +168,7 @@ class MtkWidget
 	
 	func mut set_win(win: MtkWindow&, x: int, y: int, w: int, h: int)
 		self.win = win
-		for _w in self.win
+		for mut _w in self.win
 			_w.widgets.add(&self)
 			p = new XPainter(_w)
 #			p.font = font
@@ -309,13 +310,13 @@ class MtkGrid extends MtkWidget
 		var child_x, child_y: int[]
 		var x0 = r.x0
 		var y0 = r.y0
-		for w,i in child_w
+		for mut i=>w in child_w
 			child_x.add(x0)
 			w = child_min_w[i]
 			if child_exp_x[i]
 				w += exp_x
 			x0 += w + GRID_MARGIN
-		for h,j in child_h
+		for mut j=>h in child_h
 			child_y.add(y0)
 			h = child_min_h[j]
 			if child_exp_y[j]
@@ -323,7 +324,7 @@ class MtkGrid extends MtkWidget
 			y0 += h + GRID_MARGIN
 			
 		# apply
-		for c,ci in children
+		for mut ci=>c in children
 			if c
 				var i = ci % nx
 				var j = ci / nx
@@ -432,7 +433,7 @@ class MtkTextView extends MtkWidget
 		var lines = text.explode("\n")
 		var n = (y - 5) / 20
 		var pos = 0
-		for l,i in lines
+		for mut i=>l in lines
 			if i >= n
 				pos += (x - 5) / 16
 				break
@@ -461,7 +462,7 @@ class MtkTextView extends MtkWidget
 		
 		p.set_color(col_text)
 		var lines = text.explode("\n")
-		for l,i in lines
+		for mut i=>l in lines
 			p.draw_str(5, 5 + i * 20, l)
 		
 		if has_input()
@@ -743,7 +744,7 @@ func mtk_run()
 		for i in idles
 			i.do()
 		
-		for w,i in mtk_windows
+		for mut i=>w in mtk_windows
 			if w.killed
 				mtk_windows.remove(i)
 				del(w)

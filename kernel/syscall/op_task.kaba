@@ -1,12 +1,12 @@
-use common.*
-use task.*
-use mem.paging.*
-use task.manager.*
-use time.timevalue.*
-use time.timer.*
-use op_fs.*
+use ..common.common.*
+use ..task.task.*
+use ..mem.paging.*
+use ..task.manager.*
+use ..time.timevalue.*
+use ..time.timer.*
+use .op_fs.*
 
-use io.text.*
+use ..io.text.*
 
 
 func sys_set_cur_dir(out t: Task, faddr: i64) -> i32
@@ -40,7 +40,7 @@ func sys_exit(out t: Task, r: i32)
 	TaskManager.die(t, r)
 
 func sys_waitpid(out t: Task, _pid: i32, status_addr: i64, options: i32) -> i64
-	for o in TaskManager.get_task(_pid)
+	for mut o in TaskManager.get_task(_pid)
 		# already (un-) dead?
 		if o.status == TaskStatus.ZOMBIE
 			var p = _i2p(status_addr) as i32&

@@ -1,7 +1,7 @@
-use common.*
-use io.text.*
-use mem.heap.*
-use mem.paging.*
+use ..common.common.*
+use ..io.text.*
+use .heap.*
+use .paging.*
 
 let MAX_SHARED_MEMORY_BLOCKS = 256
 

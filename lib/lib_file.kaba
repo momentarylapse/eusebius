@@ -1,6 +1,6 @@
-use lib_base.*
-use lib_syscalls.*
-use lib_array.*
+use .lib_base.*
+use .lib_syscalls.*
+use .lib_array.*
 
 
 func open(filename: lib__os@@Path, flags: i32) -> i32

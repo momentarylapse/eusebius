@@ -1,6 +1,6 @@
-use lib_base.*
-use lib_array.*
-use lib_syscalls.*
+use .lib_base.*
+use .lib_array.*
+use .lib_syscalls.*
 
 var rand_state: int
 
@@ -35,7 +35,7 @@ class lib__i32
 	func static hex(i: int, n: int) -> lib__string
 		var r: Ret
 		r.resize(n)
-		for d in r.data
+		for mut d in r.data
 			for k in 0:n
 				d[n-k-1] = hex_nibble((i >> (k*4)) & 0xf)
 		return r

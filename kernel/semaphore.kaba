@@ -1,4 +1,4 @@
-use common
+use .common.common
 
 const MAX_SEMAPHORES_PER_SET = 32
 const MAX_SEMAPHORE_SETS = 64
@@ -15,14 +15,14 @@ class SemaphoreSet
 class SemaphoreController
 	var sets: SemaphoreSet[MAX_SEMAPHORE_SETS]
 	
-	func init()
-		for s in sets
+	func mut init()
+		for mut s in sets
 			s.key = -1
 	
-	func create(key: int, num: int, pid: int) -> int
+	func mut create(key: int, num: int, pid: int) -> int
 		if num > MAX_SEMAPHORES_PER_SET
 			return -1
-		for s,i in sets
+		for mut i=>s in sets
 			if s.key < 0
 				s.key = key
 				s.num = num

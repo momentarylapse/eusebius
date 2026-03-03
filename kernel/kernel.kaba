@@ -1,26 +1,26 @@
 #define __STRING_CONST_AS_CSTRING__
 #define __FUNCTION_POINTER_AS_CODE__
-use common.*
-use io.text.*
-use cpu.*
-use dev.ata.*
-use dev.block.*
-use dev.std_char_devs.*
-use fs.*
-use fs.access.*
-use fs.pipe.*
-use mem.memory.*
-use mem.heap.*
-use mem.paging.*
-use mem.shared.*
-use net.socket.*
-use task.manager.*
-use task.scheduler.*
-use task.task.*
-use irq.irq.*
-use irq.error.*
-use time.timer.*
-use syscall.*
+use .common.common.*
+use .io.text.*
+use .cpu.cpu.*
+use .dev.ata.*
+use .dev.block.*
+use .dev.std_char_devs.*
+use .fs.fs.*
+use .fs.access.*
+use .fs.pipe.*
+use .mem.memory.*
+use .mem.heap.*
+use .mem.paging.*
+use .mem.shared.*
+use .net.socket.*
+use .task.manager.*
+use .task.scheduler.*
+use .task.task.*
+use .irq.irq.*
+use .irq.error.*
+use .time.timer.*
+use .syscall.syscall.*
 
 
 func main()
@@ -32,7 +32,7 @@ func main()
 	prints(KERNEL_NAME)
 	prints(" ")
 	prints(KERNEL_VERSION)
-	prints("   (c) by MichiSoft TM 2025\n")
+	prints("   (c) by MichiSoft TM 2026\n")
 	prints("memory: ")
 	printi(memory_size / 1024 / 1024)
 	prints("m\n")
@@ -60,7 +60,7 @@ func main()
 
 	# assume a default disk layout...
 	FileSystem.mount(BlockDevManager.devs[2], FileSystem.root, "ext2")
-	for boot in FileSystem.get("/boot", FileSystem.root)
+	for mut boot in FileSystem.get("/boot", FileSystem.root)
 		let _ = FileSystem.mount(BlockDevManager.devs[1], boot, "michifs")
 	else
 		panic("/boot not found")

@@ -1,14 +1,14 @@
-use common.*
-use io.text.*
-use fs.*
-use fs.pipe.*
-use fs.access.*
-##use mem.heap.*
-use mem.paging.*
-use mem.shared.*
-use net.socket.*
-use irq.irq.*
-use time.timevalue.*
+use ..common.common.*
+use ..io.text.*
+use ..fs.fs.*
+use ..fs.pipe.*
+use ..fs.access.*
+##use ..mem.heap.*
+use ..mem.paging.*
+use ..mem.shared.*
+use ..net.socket.*
+use ..irq.irq.*
+use ..time.timevalue.*
 ##use gdt.*
 
 
@@ -63,35 +63,35 @@ class Task
 	var stack: void&
 	var frame: InterruptFrame
 	var syscall_rsp: void&
-#	var desc: int
-	var pid, puid: int
+#	var desc: i32
+	var pid, puid: i32
 	var status: TaskStatus
-	var return_status: int
+	var return_status: i32
 	var waiting_mode: WaitingMode
-	var waiting_param_i1, waiting_param_i2, waiting_param_i3: int
+	var waiting_param_i1, waiting_param_i2, waiting_param_i3: i32
 	var sleep_and_wait: bool
 	var parent: Task*
 	var name: cstring
 	var arg: cstring
 	var cur_dir: FileEntry&
 	var page_root_dir: PageRootTable&
-	var memory_offset, memory_size: int
+	var memory_offset, memory_size: i32
 	
 	var time_all, time_temp: TimeValue
-	var cpu_load: int
+	var cpu_load: i32
 	
 #	var kernel_mode: bool
 	var handles: OpenFileData*[MAX_OPEN_FILES_PER_TASK]
 	var shmem: TaskSharedMemoryRef[MAX_SHARED_MEMS_PER_TASK]
 #	
-	var signal_handlers: int[MAX_SIGNALS]
+	var signal_handlers: i32[MAX_SIGNALS]
 #	var signal_reg_buf: TaskStateSegment
 	var in_signal: bool
-	var in_hw_irq: int
+	var in_hw_irq: i32
 	
 	var first_time_running: bool
 	
-	func mut init(_pid: int, _name: cstring, F: i64, _parent: Task*)
+	func mut init(_pid: i32, _name: cstring, F: i64, _parent: Task*)
 		for mut h in handles
 			h = nil
 		for mut s in shmem
@@ -173,10 +173,10 @@ class Task
 #			#call_far [eax]
 #			#jmp_far 0x004000000000 #0x0040:0x00000000
 #		}
-#	func addr2kernel(addr: int) -> int
+#	func addr2kernel(addr: i32) -> i32
 #		return page_dir.addr2kernel(addr)
 	
-	func mut set_cur_dir(dir: cstring) -> int
+	func mut set_cur_dir(dir: cstring) -> i32
 		for e in get_file(dir)
 			if e.type != FileType.DIR
 				return -2
@@ -187,7 +187,7 @@ class Task
 	func get_file(path: cstring) -> FileEntry*
 		return FileSystem.get(path, cur_dir)
 		
-	func mut add_handle(oh: OpenFileData&) -> int
+	func mut add_handle(oh: OpenFileData&) -> i32
 		for i=>h in handles
 			if !h
 				handles[i] = oh
@@ -196,8 +196,8 @@ class Task
 		return -1
 
 	func mut clean_up_resources()
-		for i=>_h in handles
-			for h in _h
+		for mut i=>_h in handles
+			for mut h in _h
 				h.unref()
 				handles[i] = nil
 		
@@ -223,24 +223,24 @@ class Task
 #	func get_initial_stack_pos() -> void*
 #		return _i2p(_p2i(stack) + stack_size)
 	
-	func mut set_wait(mode: WaitingMode, param_i1: int, param_i2: int, param_i3: int)
+	func mut set_wait(mode: WaitingMode, param_i1: i32, param_i2: i32, param_i3: i32)
 		status = TaskStatus.WAITING
 		waiting_mode = mode
 		waiting_param_i1 = param_i1
 		waiting_param_i2 = param_i2
 		waiting_param_i3 = param_i3
 	
-	func pages_alloced() -> int
+	func pages_alloced() -> i32
 		var n = memory_size / PAGE_SIZE
 		n += page_root_dir.count_entries() # all page tables
 		n ++ # page_dir itself
 		return n
 
 		
-#	func get_prev_pid() -> int
+#	func get_prev_pid() -> i32
 #		return (tss.prev >> 3) - NUM_PRE_GDT_ENTRIES
 #		
-#	func mut handle_signal_link_iret(signal: int) -> int
+#	func mut handle_signal_link_iret(signal: i32) -> i32
 #		if signal < 0 or signal >= MAX_SIGNALS
 #			return -EINVAL
 #		#prints(" handle/link:")
@@ -286,7 +286,7 @@ class Task
 #--------------------------------------------------------------
 # file access
 	
-	func get_handle(handle: int) -> OpenFileData*
+	func selfref get_handle(handle: i32) -> OpenFileData*
 		if (handle < 0) or (handle >= MAX_OPEN_FILES_PER_TASK)
 			return nil
 		return handles[handle]

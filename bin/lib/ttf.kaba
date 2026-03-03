@@ -1,4 +1,4 @@
-use lib.std
+use .std.std
 use os
 
 func hex(p: void&, size: int) -> string

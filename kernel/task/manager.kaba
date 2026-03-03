@@ -1,15 +1,15 @@
-use common.*
-use io.text.*
-use fs.*
-use fs.access.*
-use mem.heap.*
-use mem.paging.*
-use task.*
-use gdt.*
+use ..common.common.*
+use ..io.text.*
+use ..fs.fs.*
+use ..fs.access.*
+use ..mem.heap.*
+use ..mem.paging.*
+use .task.*
+use .gdt.*
 
-use syscall.op_fs.*
-use net.socket.*
-use time.timevalue.*
+use ..syscall.op_fs.*
+use ..net.socket.*
+use ..time.timevalue.*
 
 let MAX_TASKS = 64#256
 let IRQ_STACK_SIZE = 2048*4
@@ -21,7 +21,7 @@ class TaskManager as @noauto
 	var static stack0: void*
 	var static ist1: void*
 	
-	func static get_task(pid: int) -> Task*
+	func static globalref get_task(pid: int) -> Task*
 		if pid < 0 or pid >= MAX_TASKS
 			return nil
 		var t = &tasks[pid]
@@ -48,7 +48,7 @@ class TaskManager as @noauto
 				return i
 		return -1
 
-	func static add_user_task(name: cstring, F: i64, parent: Task*) -> Task*
+	func static globalref add_user_task(name: cstring, F: i64, parent: Task*) -> Task*
 
 		let pid = get_next_unused_pid()
 		if pid < 0
@@ -66,7 +66,7 @@ class TaskManager as @noauto
 
 		return t
 		
-	func static create_page_root_table_for_task() -> PageRootTable&
+	func static globalref create_page_root_table_for_task() -> PageRootTable&
 		var table_flags = PageFlags.PRESENT | PageFlags.WRITABLE | PageFlags.GLOBAL | PageFlags.USER
 		let flags = PageFlags.WRITABLE | PageFlags.PRESENT | PageFlags.GLOBAL | PageFlags.USER
 
@@ -281,7 +281,7 @@ class TaskManager as @noauto
 
 
 	func static add_idle_task()
-		for t in add_user_task("idle", TASK_MEMORY_OFFSET, nil)
+		for mut t in add_user_task("idle", TASK_MEMORY_OFFSET, nil)
 			#_p2i(raw_function_pointer(f_idle)), nil)
 			t.status = TaskStatus.IDLE
 			var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
@@ -313,7 +313,7 @@ class TaskManager as @noauto
 	func static load_kalib()
 		prints("loading kalib... ")
 	
-		for of in kernel_open("/lib/kalib", O_RDONLY, FileSystem.root)
+		for mut of in kernel_open("/lib/kalib", O_RDONLY, FileSystem.root)
 			var addr = KALIB_LOCATION
 			var size = 0
 			Paging.kernel_root_table.update_flags(KALIB_LOCATION, 0x20000, PageFlags.USER)
@@ -329,9 +329,9 @@ class TaskManager as @noauto
 		else
 			panic("can not read /lib/kalib")
 
-	func static load_user_task(filename: cstring, parent: Task*) -> Task*
-		for of in kernel_open(filename, O_RDONLY, FileSystem.root)
-			for t in TaskManager.add_user_task(filename, TASK_MEMORY_OFFSET, parent)
+	func static globalref load_user_task(filename: cstring, parent: Task*) -> Task*
+		for mut of in kernel_open(filename, O_RDONLY, FileSystem.root)
+			for mut t in TaskManager.add_user_task(filename, TASK_MEMORY_OFFSET, parent)
 				var code = t.page_root_dir.virtual_to_physical(TASK_MEMORY_OFFSET)
 				while true
 					let r = of.read(code, 1024)
@@ -342,8 +342,8 @@ class TaskManager as @noauto
 				return &t
 		return nil
 		
-	func static execute_user_task(filename: cstring, parent: Task*, fin: OpenFileData*, fout: OpenFileData*) -> Task*
-		for t in load_user_task(filename, parent)
+	func static globalref execute_user_task(filename: cstring, parent: Task*, fin: OpenFileData*, fout: OpenFileData*) -> Task*
+		for mut t in load_user_task(filename, parent)
 			memcpy(&t.arg, &filename, sizeof(cstring))
 			for of in fin
 				let _ = t.add_handle(&of)
@@ -397,7 +397,7 @@ class TaskManager as @noauto
 ##				tss.eax = 0 # return 0
 ##				activate()
 		else if t.waiting_mode == WaitingMode.SOCKET_ACCEPT
-			for s in SocketManager.get_by_port(t.waiting_param_i1)
+			for mut s in SocketManager.get_by_port(t.waiting_param_i1)
 				if s.state == SocketState.WAIT_ACCEPT
 					let e = s.accept()
 					if e == -EWOULDBLOCK

@@ -1,6 +1,6 @@
 use os
-use lib.std.*
-use lib.std.file.*
+use .lib.std.std.*
+use .lib.std.file.*
 
 
 func ftype(path: os.Path) -> string

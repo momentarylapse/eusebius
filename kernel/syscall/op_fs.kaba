@@ -1,25 +1,25 @@
-use common.*
-use io.text.*
-use dev.block.*
-use mem.memory.*
-use mem.paging.*
-use mem.heap.*
-use mem.shared.*
-use net.socket.*
-use fs.pipe.*
-use task.task.*
-#use task.manager.*
-use fs.*
-use fs.access.*
-use time.timevalue.*
-use time.timer.*
+use ..common.common.*
+use ..io.text.*
+use ..dev.block.*
+use ..mem.memory.*
+use ..mem.paging.*
+use ..mem.heap.*
+use ..mem.shared.*
+use ..net.socket.*
+use ..fs.pipe.*
+use ..task.task.*
+#use ..task.manager.*
+use ..fs.fs.*
+use ..fs.access.*
+use ..time.timevalue.*
+use ..time.timer.*
 
-use io.text
+use ..io.text
 
 
 func sys_open(out t: Task, addr: i64, flags: int) -> int
 	var filename = _i2p(addr) as cstring&
-	for of in kernel_open(filename, flags, t.cur_dir)
+	for mut of in kernel_open(filename, flags, t.cur_dir)
 		let index = t.add_handle(&of)
 		if index < 0
 			of.unref()
@@ -28,7 +28,7 @@ func sys_open(out t: Task, addr: i64, flags: int) -> int
 
 
 func sys_read(out t: Task, handle: int, addr: i64, size: int) -> int
-	for of in t.get_handle(handle)
+	for mut of in t.get_handle(handle)
 		let r = of.read(addr, size)
 		if r == -EWOULDBLOCK and of.blocking
 			t.set_wait(WaitingMode.FILE_READ, handle, addr, size)
@@ -37,7 +37,7 @@ func sys_read(out t: Task, handle: int, addr: i64, size: int) -> int
 		return -EBADF
 
 func sys_write(out t: Task, handle: int, addr: int, size: int) -> int
-	for of in t.get_handle(handle)
+	for mut of in t.get_handle(handle)
 		let r = of.write(addr, size)
 		if r == -EWOULDBLOCK and of.blocking
 			t.set_wait(WaitingMode.FILE_WRITE, handle, addr, size)
@@ -46,20 +46,20 @@ func sys_write(out t: Task, handle: int, addr: int, size: int) -> int
 		return -EBADF
 
 func sys_getdents(out t: Task, handle: int, addr: i64, num: int) -> int
-	for of in t.get_handle(handle)
+	for mut of in t.get_handle(handle)
 		return of.getdents(_i2p(addr) as dirent_struct&, num)
 	else
 		return -EBADF
 
 
 func sys_seek(out t: Task, handle: int, offset: int, mode: int) -> int
-	for of in t.get_handle(handle)
+	for mut of in t.get_handle(handle)
 		return of.seek(offset, mode)
 	else
 		return -EBADF
 
 func sys_close(out t: Task, handle: int) -> int
-	for of in t.get_handle(handle)
+	for mut of in t.get_handle(handle)
 		of.unref()
 		t.handles[handle] = nil
 		return 0
@@ -139,7 +139,7 @@ func sys_stat(out t: Task, fn: i64, addr: i64) -> i64
 
 
 func sys_fcntl(out t: Task, fd: int, op: int, param: int) -> int
-	for of in t.get_handle(fd)
+	for mut of in t.get_handle(fd)
 		if op == F_GETFL
 			return of.get_flags()
 		if op == F_SETFL
@@ -159,17 +159,17 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 		for of in kernel_open_entry(e, O_RDWR)
 			return t.add_handle(&of)
 	else if cmd == SYS_BIND
-		for of in t.get_handle(p1)
+		for mut of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
-			for s in of.socket
+			for mut s in of.socket
 				return s.bind(p2)
 		return -EBADF
 	else if cmd == SYS_CONNECT
-		for of in t.get_handle(p1)
+		for mut of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
-			for s in of.socket
+			for mut s in of.socket
 				let e = s.connect(p2)
 				if e != -EWOULDBLOCK
 					return e
@@ -177,17 +177,17 @@ func sys_socket(out t: Task, cmd: int, p1: int, p2: int) -> int
 				return 0
 		return -EBADF
 	else if cmd == SYS_LISTEN
-		for of in t.get_handle(p1)
+		for mut of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
-			for s in of.socket
+			for mut s in of.socket
 				return s.listen()
 		return -EBADF
 	else if cmd == SYS_ACCEPT
-		for of in t.get_handle(p1)
+		for mut of in t.get_handle(p1)
 			if of.entry.type != FileType.SOCKET
 				return -ENOTSOCK
-			for s in of.socket
+			for mut s in of.socket
 				let e = s.accept()
 				if e == -EWOULDBLOCK
 					if s.blocking

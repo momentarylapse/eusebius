@@ -1,4 +1,4 @@
-use lib.std.*
+use .lib.std.std.*
 
 
 func main()
@@ -24,7 +24,7 @@ func main()
 	print(p2s(p))
 	print("\n")
 	
-	for ip in p
+	for mut ip in p
 	
 		print("read: ")
 		print(ip[0])

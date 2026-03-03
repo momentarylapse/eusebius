@@ -1,8 +1,8 @@
-use common.*
-use io.port.*
-use io.text.*
-use time.timevalue.*
-use irq.irq.*
+use ..common.common.*
+use ..io.port.*
+use ..io.text.*
+use .timevalue.*
+use ..irq.irq.*
 
 let TIMER_IRQ = 0
 
@@ -38,7 +38,7 @@ class KernelTimer as @noauto
 #		printh(&state, 8)
 #		prints("  ")
 
-	func static init(F: void*, dt_ms: int)
+	func static init(F: void*, dt_ms: i32)
 		# read year from CMOS
 		#outportb(0x70, 0x40 | 0x09)
 		#int rr = inportb(0x71)
